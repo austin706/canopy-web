@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertHome } from '@/services/supabase';
+import { upsertHome, updateProfile } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 
 export default function HomeDetails() {
@@ -39,6 +39,10 @@ export default function HomeDetails() {
         created_at: home?.created_at || new Date().toISOString(),
       };
       try { const saved = await upsertHome(homeData); setHome(saved); } catch { setHome(homeData); }
+      // Mark onboarding complete on first home save
+      if (!home && user) {
+        try { await updateProfile(user.id, { onboarding_complete: true }); } catch {}
+      }
       setEditing(false);
     } finally { setSaving(false); }
   };

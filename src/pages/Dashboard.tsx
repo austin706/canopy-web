@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { canAccess, getTaskLimit, PLANS } from '@/services/subscriptionGate';
@@ -16,6 +16,13 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user, home, weather, tasks, equipment, completeTask } = useStore();
   const tier = user?.subscription_tier || 'free';
+
+  // Redirect new users who haven't set up their home yet
+  useEffect(() => {
+    if (user && !user.onboarding_complete && !home) {
+      navigate('/home', { replace: true });
+    }
+  }, [user, home, navigate]);
   const hasWeather = canAccess(tier, 'weather_alerts');
   const hasAI = canAccess(tier, 'ai_task_generation');
   const taskLimit = getTaskLimit(tier);

@@ -35,11 +35,12 @@ export default function Login() {
       setUser(userData as any);
 
       // Load home data
+      let homeData = null;
       try {
-        const home = await getHome(authUser.id);
-        if (home) {
-          setHome(home);
-          const [equip, tasks] = await Promise.all([getEquipment(home.id), getTasks(home.id)]);
+        homeData = await getHome(authUser.id);
+        if (homeData) {
+          setHome(homeData);
+          const [equip, tasks] = await Promise.all([getEquipment(homeData.id), getTasks(homeData.id)]);
           setEquipment(equip);
           setTasks(tasks);
         }
@@ -50,9 +51,10 @@ export default function Login() {
         try { const a = await getAgent(userData.agent_id); setAgent(a); } catch {}
       }
 
-      // Route by role
+      // Route by role — but check onboarding first for regular users
       if (userData.role === 'admin') navigate('/admin');
       else if (userData.role === 'agent') navigate('/agent-portal');
+      else if (!userData.onboarding_complete && !homeData) navigate('/home');
       else navigate('/');
     } catch (err: any) {
       setError(err.message || 'Login failed');

@@ -108,7 +108,7 @@ export default function HomeDetails() {
           <div className="grid-2">
             <div className="form-group">
               <label>Lawn Type</label>
-              <select className="form-select" value={form.lawn_type} onChange={e => setForm({...form, lawn_type: e.target.value})}>
+              <select className="form-select" value={form.lawn_type} onChange={e => setForm({...form, lawn_type: e.target.value as any})}>
                 <option value="none">None</option>
                 {['bermuda','fescue','zoysia','st_augustine','bluegrass','buffalo','mixed'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
               </select>

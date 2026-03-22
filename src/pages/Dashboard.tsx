@@ -22,7 +22,7 @@ export default function Dashboard() {
   // Redirect new users who haven't set up their home yet
   useEffect(() => {
     if (user && !user.onboarding_complete && !home) {
-      navigate('/home', { replace: true });
+      navigate('/onboarding', { replace: true });
     }
   }, [user, home, navigate]);
   const hasWeather = canAccess(tier, 'weather_alerts');

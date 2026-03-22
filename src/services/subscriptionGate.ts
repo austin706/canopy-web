@@ -46,3 +46,31 @@ export function isPremium(tier: SubscriptionTier | undefined | null): boolean {
 export function isProOrHigher(tier: SubscriptionTier | undefined | null): boolean {
   return tier === 'pro' || tier === 'pro_plus';
 }
+
+// --- Service Area Gating ---
+// Pro services are only available in these geographic areas
+const PRO_SERVICE_AREAS = {
+  states: ['FL', 'OK'],
+  zipPrefixes: [
+    // Florida: 320-349
+    ...Array.from({ length: 30 }, (_, i) => String(320 + i)),
+    // Oklahoma: 730-749
+    ...Array.from({ length: 20 }, (_, i) => String(730 + i)),
+  ],
+};
+
+export function isProAvailableInArea(
+  _state?: string | null,
+  zip?: string | null,
+): boolean {
+  if (PRO_SERVICE_AREAS.zipPrefixes.length === 0) return true;
+  if (!zip) return true;
+  const prefix = zip.trim().substring(0, 3);
+  return PRO_SERVICE_AREAS.zipPrefixes.includes(prefix);
+}
+
+export function getNextTier(tier: SubscriptionTier | undefined | null): SubscriptionTier | null {
+  const order: SubscriptionTier[] = ['free', 'home', 'pro', 'pro_plus'];
+  const idx = order.indexOf(tier || 'free');
+  return idx < order.length - 1 ? order[idx + 1] : null;
+}

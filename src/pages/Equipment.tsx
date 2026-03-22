@@ -44,17 +44,23 @@ export default function Equipment() {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      try { await upsertEquipment(newItem); } catch {}
+      await upsertEquipment(newItem);
       addEquipment(newItem);
       setShowModal(false);
       setForm({ name: '', category: 'hvac', make: '', model: '', serial_number: '', install_date: '', expected_lifespan_years: '', location_in_home: '', notes: '' });
+    } catch (err: any) {
+      alert('Failed to save equipment: ' + (err.message || 'Unknown error'));
     } finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this equipment?')) return;
-    try { await deleteEquipApi(id); } catch {}
-    removeEquipment(id);
+    try {
+      await deleteEquipApi(id);
+      removeEquipment(id);
+    } catch (err: any) {
+      alert('Failed to delete: ' + (err.message || 'Unknown error'));
+    }
   };
 
   return (

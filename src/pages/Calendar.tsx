@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
+import { quickCompleteTask, quickSkipTask } from '@/services/utils';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 export default function Calendar() {
-  const { tasks, completeTask, skipTask } = useStore();
+  const { tasks } = useStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
@@ -115,8 +116,8 @@ export default function Calendar() {
                   </div>
                   {task.status !== 'completed' && task.status !== 'skipped' && (
                     <div className="flex gap-sm mt-sm" style={{ marginLeft: 20 }}>
-                      <button className="btn btn-sage btn-sm" onClick={() => completeTask(task.id)}>Complete</button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => skipTask(task.id)}>Skip</button>
+                      <button className="btn btn-sage btn-sm" onClick={() => quickCompleteTask(task)}>Complete</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => quickSkipTask(task)}>Skip</button>
                     </div>
                   )}
                 </div>

@@ -15,7 +15,29 @@ export interface User {
   subscription_expires_at?: string;
   onboarding_complete: boolean;
   created_at: string;
-  role?: 'user' | 'agent' | 'admin';
+  role?: 'user' | 'agent' | 'admin' | 'pro_provider';
+}
+
+export interface ProProvider {
+  id: string;
+  user_id: string;
+  business_name: string;
+  contact_name: string;
+  email: string;
+  phone: string;
+  license_number?: string;
+  insurance_info?: string;
+  bio?: string;
+  years_experience?: number;
+  service_categories: string[];
+  service_area_miles: number;
+  max_jobs_per_day: number;
+  is_available: boolean;
+  schedule?: any;
+  rating?: number;
+  total_reviews: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Home {

@@ -23,10 +23,28 @@ import AdminGiftCodes from '@/pages/AdminGiftCodes';
 import AdminProRequests from '@/pages/AdminProRequests';
 import AgentPortal from '@/pages/AgentPortal';
 import AgentClientHome from '@/pages/AgentClientHome';
+import TaskDetail from '@/pages/TaskDetail';
+import EquipmentDetail from '@/pages/EquipmentDetail';
+import Notifications from '@/pages/Notifications';
+import Documents from '@/pages/Documents';
+import Help from '@/pages/Help';
+import Onboarding from '@/pages/Onboarding';
+import ProPortal from '@/pages/ProPortal';
+import ProLogin from '@/pages/ProLogin';
+import ProJobs from '@/pages/ProJobs';
+import ProAvailability from '@/pages/ProAvailability';
+import ProProfile from '@/pages/ProProfile';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useStore();
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+function RoleRoute({ children, roles }: { children: React.ReactNode; roles: string[] }) {
+  const { isAuthenticated, user } = useStore();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!user?.role || !roles.includes(user.role)) return <Navigate to="/" replace />;
+  return <>{children}</>;
 }
 
 export default function App() {
@@ -52,25 +70,36 @@ export default function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/pro-login" element={<ProLogin />} />
+        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
         {/* Protected routes with sidebar */}
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/calendar" element={<Calendar />} />
+          <Route path="/task/:id" element={<TaskDetail />} />
           <Route path="/equipment" element={<Equipment />} />
+          <Route path="/equipment/:id" element={<EquipmentDetail />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/documents" element={<Documents />} />
+          <Route path="/help" element={<Help />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/subscription" element={<Subscription />} />
           <Route path="/pro-request" element={<ProRequest />} />
           <Route path="/agent" element={<AgentView />} />
           <Route path="/logs" element={<MaintenanceLogs />} />
           <Route path="/home" element={<HomeDetails />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/agents" element={<AdminAgents />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/gift-codes" element={<AdminGiftCodes />} />
-          <Route path="/admin/pro-requests" element={<AdminProRequests />} />
-          <Route path="/agent-portal" element={<AgentPortal />} />
-          <Route path="/agent-portal/client/:clientId" element={<AgentClientHome />} />
+          <Route path="/admin" element={<RoleRoute roles={['admin']}><AdminDashboard /></RoleRoute>} />
+          <Route path="/admin/agents" element={<RoleRoute roles={['admin']}><AdminAgents /></RoleRoute>} />
+          <Route path="/admin/users" element={<RoleRoute roles={['admin']}><AdminUsers /></RoleRoute>} />
+          <Route path="/admin/gift-codes" element={<RoleRoute roles={['admin']}><AdminGiftCodes /></RoleRoute>} />
+          <Route path="/admin/pro-requests" element={<RoleRoute roles={['admin']}><AdminProRequests /></RoleRoute>} />
+          <Route path="/agent-portal" element={<RoleRoute roles={['agent', 'admin']}><AgentPortal /></RoleRoute>} />
+          <Route path="/agent-portal/client/:clientId" element={<RoleRoute roles={['agent', 'admin']}><AgentClientHome /></RoleRoute>} />
+          <Route path="/pro-portal" element={<RoleRoute roles={['pro_provider', 'admin']}><ProPortal /></RoleRoute>} />
+          <Route path="/pro-portal/jobs" element={<RoleRoute roles={['pro_provider', 'admin']}><ProJobs /></RoleRoute>} />
+          <Route path="/pro-portal/availability" element={<RoleRoute roles={['pro_provider', 'admin']}><ProAvailability /></RoleRoute>} />
+          <Route path="/pro-portal/profile" element={<RoleRoute roles={['pro_provider', 'admin']}><ProProfile /></RoleRoute>} />
         </Route>
 
         {/* Catch-all */}

@@ -20,6 +20,7 @@ interface CanopyState {
   setTasks: (tasks: MaintenanceTask[]) => void;
   completeTask: (id: string, notes?: string, photoUrl?: string) => void;
   skipTask: (id: string) => void;
+  snoozeTask: (id: string, days: number) => void;
   maintenanceLogs: MaintenanceLog[];
   setMaintenanceLogs: (logs: MaintenanceLog[]) => void;
   addMaintenanceLog: (log: MaintenanceLog) => void;
@@ -29,6 +30,8 @@ interface CanopyState {
   setAgent: (agent: Agent | null) => void;
   isLoading: boolean;
   setLoading: (loading: boolean) => void;
+  onboardingStep: number;
+  setOnboardingStep: (step: number) => void;
   reset: () => void;
 }
 
@@ -51,6 +54,16 @@ export const useStore = create<CanopyState>()(
         tasks: s.tasks.map((t) => t.id === id ? { ...t, status: 'completed' as const, completed_date: new Date().toISOString(), completion_notes: notes, completion_photo_url: photoUrl } : t),
       })),
       skipTask: (id) => set((s) => ({ tasks: s.tasks.map((t) => t.id === id ? { ...t, status: 'skipped' as const } : t) })),
+      snoozeTask: (id, days) => set((s) => ({
+        tasks: s.tasks.map((t) => {
+          if (t.id === id) {
+            const newDate = new Date(t.due_date);
+            newDate.setDate(newDate.getDate() + days);
+            return { ...t, due_date: newDate.toISOString() };
+          }
+          return t;
+        }),
+      })),
       maintenanceLogs: [],
       setMaintenanceLogs: (maintenanceLogs) => set({ maintenanceLogs }),
       addMaintenanceLog: (log) => set((s) => ({ maintenanceLogs: [...s.maintenanceLogs, log] })),
@@ -60,7 +73,9 @@ export const useStore = create<CanopyState>()(
       setAgent: (agent) => set({ agent }),
       isLoading: false,
       setLoading: (isLoading) => set({ isLoading }),
-      reset: () => set({ user: null, isAuthenticated: false, home: null, equipment: [], tasks: [], maintenanceLogs: [], weather: null, agent: null }),
+      onboardingStep: 0,
+      setOnboardingStep: (onboardingStep) => set({ onboardingStep }),
+      reset: () => set({ user: null, isAuthenticated: false, home: null, equipment: [], tasks: [], maintenanceLogs: [], weather: null, agent: null, onboardingStep: 0 }),
     }),
     {
       name: 'canopy-web-store',
@@ -71,7 +86,9 @@ export const useStore = create<CanopyState>()(
         equipment: state.equipment,
         tasks: state.tasks,
         maintenanceLogs: state.maintenanceLogs,
+        weather: state.weather,
         agent: state.agent,
+        onboardingStep: state.onboardingStep,
       }),
     }
   )

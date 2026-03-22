@@ -18,11 +18,14 @@ export default function Layout() {
     { to: '/', icon: '&#127968;', label: 'Dashboard' },
     { to: '/calendar', icon: '&#128197;', label: 'Calendar' },
     { to: '/equipment', icon: '&#128736;', label: 'Equipment' },
+    { to: '/documents', icon: '&#128196;', label: 'Documents' },
     { to: '/pro-request', icon: '&#128295;', label: 'Pro Services' },
     { to: '/logs', icon: '&#128203;', label: 'Maintenance Log' },
+    { to: '/notifications', icon: '&#128276;', label: 'Notifications' },
     { to: '/agent', icon: '&#128100;', label: 'My Agent' },
     { to: '/home', icon: '&#127969;', label: 'Home Details' },
     { to: '/subscription', icon: '&#11088;', label: 'Subscription' },
+    { to: '/help', icon: '&#10067;', label: 'Help & FAQ' },
   ];
 
   return (
@@ -49,9 +52,14 @@ export default function Layout() {
               <span>&#128272;</span> Admin Portal
             </NavLink>
           )}
-          {user?.role === 'agent' && (
+          {(user?.role === 'agent' || user?.role === 'admin') && (
             <NavLink to="/agent-portal" className={({ isActive }) => isActive ? 'active' : ''}>
               <span>&#128188;</span> Agent Portal
+            </NavLink>
+          )}
+          {(user?.role === 'pro_provider' || user?.role === 'admin') && (
+            <NavLink to="/pro-portal" className={({ isActive }) => isActive ? 'active' : ''}>
+              <span>&#128736;</span> Pro Portal
             </NavLink>
           )}
         </div>

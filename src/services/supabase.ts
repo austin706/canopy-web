@@ -251,6 +251,18 @@ export const upsertClientHome = async (home: any) => {
   return data;
 };
 
+// --- Pro Interest Waitlist ---
+export const insertProInterest = async (interest: {
+  email: string;
+  zip_code?: string | null;
+  user_id?: string | null;
+  state?: string | null;
+}) => {
+  const { data, error } = await supabase.from('pro_interest').insert(interest).select().single();
+  if (error) throw error;
+  return data;
+};
+
 // --- Account Deletion ---
 export const deleteUserAccount = async (userId: string) => {
   const { error } = await supabase.rpc('delete_user_and_data', { target_user_id: userId });

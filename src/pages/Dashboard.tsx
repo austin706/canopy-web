@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { canAccess, getTaskLimit, PLANS } from '@/services/subscriptionGate';
 import { Colors, PriorityColors, StatusColors } from '@/constants/theme';
+import { quickCompleteTask } from '@/services/utils';
+import type { MaintenanceTask } from '@/types';
 
 const DEMO_TASKS = [
   { id: 'd1', home_id: '1', title: 'Replace HVAC Air Filters', description: 'Check and replace monthly.', category: 'hvac' as const, priority: 'high' as const, status: 'due' as const, frequency: 'monthly' as const, due_date: new Date().toISOString(), is_weather_triggered: false, applicable_months: [1,2,3,4,5,6,7,8,9,10,11,12], estimated_minutes: 10, created_at: '' },
@@ -14,7 +16,7 @@ const DEMO_WEATHER = { temperature: 72, feels_like: 74, humidity: 55, wind_speed
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, home, weather, tasks, equipment, completeTask } = useStore();
+  const { user, home, weather, tasks, equipment } = useStore();
   const tier = user?.subscription_tier || 'free';
 
   // Redirect new users who haven't set up their home yet
@@ -127,7 +129,7 @@ export default function Dashboard() {
                     <div className="task-actions">
                       <span className="badge" style={{ background: (StatusColors[task.status] || Colors.silver) + '20', color: StatusColors[task.status] || Colors.silver }}>{task.status}</span>
                       {task.status !== 'completed' && (
-                        <button className="btn btn-sage btn-sm" onClick={() => completeTask(task.id)}>Done</button>
+                        <button className="btn btn-sage btn-sm" onClick={() => quickCompleteTask(task)}>Done</button>
                       )}
                     </div>
                   </div>

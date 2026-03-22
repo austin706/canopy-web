@@ -1,0 +1,561 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useStore } from '@/store/useStore';
+import { upsertHome, upsertEquipment, updateProfile } from '@/services/supabase';
+import { Colors } from '@/constants/theme';
+import type { EquipmentCategory } from '@/types';
+
+const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
+  { value: 'hvac', label: 'HVAC' },
+  { value: 'water_heater', label: 'Water Heater' },
+  { value: 'appliance', label: 'Appliance' },
+  { value: 'roof', label: 'Roof' },
+  { value: 'plumbing', label: 'Plumbing' },
+  { value: 'electrical', label: 'Electrical' },
+  { value: 'outdoor', label: 'Outdoor' },
+  { value: 'safety', label: 'Safety' },
+  { value: 'pool', label: 'Pool' },
+  { value: 'garage', label: 'Garage' },
+];
+
+interface Equipment {
+  name: string;
+  category: EquipmentCategory;
+  make: string;
+  model: string;
+}
+
+export default function Onboarding() {
+  const navigate = useNavigate();
+  const { user, setHome, addEquipment } = useStore();
+  const [step, setStep] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  // Step 1: Address
+  const [addressForm, setAddressForm] = useState({
+    address: '',
+    city: '',
+    state: '',
+    zip_code: '',
+    year_built: '',
+    square_footage: '',
+    stories: '1',
+    bedrooms: '3',
+    bathrooms: '2',
+    garage_spaces: '0',
+  });
+
+  // Step 2: Home Systems
+  const [systemsForm, setSystemsForm] = useState({
+    foundation_type: '',
+    roof_type: '',
+    roof_age_years: '',
+    siding: '',
+    heating_type: '',
+    cooling_type: '',
+    water_source: '',
+    sewer_type: '',
+    lawn_type: 'none',
+    has_pool: false,
+    has_deck: false,
+    has_sprinkler_system: false,
+    has_fireplace: false,
+  });
+
+  // Step 3: Equipment
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [equipmentForm, setEquipmentForm] = useState<Equipment>({
+    name: '',
+    category: 'hvac',
+    make: '',
+    model: '',
+  });
+
+  const handleAddressSubmit = async () => {
+    if (!user || !addressForm.address || !addressForm.city || !addressForm.state || !addressForm.zip_code) {
+      alert('Please fill in address, city, state, and zip code');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const homeData: any = {
+        id: crypto.randomUUID(),
+        user_id: user.id,
+        ...addressForm,
+        year_built: addressForm.year_built ? parseInt(addressForm.year_built) : null,
+        square_footage: addressForm.square_footage ? parseInt(addressForm.square_footage) : null,
+        stories: parseInt(addressForm.stories) || 1,
+        bedrooms: parseInt(addressForm.bedrooms) || 3,
+        bathrooms: parseInt(addressForm.bathrooms) || 2,
+        garage_spaces: parseInt(addressForm.garage_spaces) || 0,
+        roof_age_years: null,
+        created_at: new Date().toISOString(),
+      };
+
+      try {
+        const saved = await upsertHome(homeData);
+        setHome(saved);
+      } catch {
+        setHome(homeData);
+      }
+
+      setStep(1);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSystemsSubmit = async () => {
+    if (!user) return;
+
+    setSaving(true);
+    try {
+      const { home } = useStore.getState();
+      if (!home) return;
+
+      const updatedHome: any = {
+        ...home,
+        ...systemsForm,
+        roof_age_years: systemsForm.roof_age_years ? parseInt(systemsForm.roof_age_years) : null,
+      };
+
+      try {
+        const saved = await upsertHome(updatedHome);
+        setHome(saved);
+      } catch {
+        setHome(updatedHome);
+      }
+
+      setStep(2);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddEquipment = () => {
+    if (!equipmentForm.name) {
+      alert('Please enter equipment name');
+      return;
+    }
+    setEquipmentList([...equipmentList, { ...equipmentForm }]);
+    setEquipmentForm({ name: '', category: 'hvac', make: '', model: '' });
+  };
+
+  const handleRemoveEquipment = (index: number) => {
+    setEquipmentList(equipmentList.filter((_, i) => i !== index));
+  };
+
+  const handleFinish = async () => {
+    if (!user) return;
+
+    setSaving(true);
+    try {
+      const { home } = useStore.getState();
+      if (!home) return;
+
+      // Save equipment items
+      for (const item of equipmentList) {
+        const equip: any = {
+          id: crypto.randomUUID(),
+          home_id: home.id,
+          category: item.category,
+          name: item.name,
+          make: item.make || undefined,
+          model: item.model || undefined,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        try {
+          await upsertEquipment(equip);
+          addEquipment(equip);
+        } catch {
+          addEquipment(equip);
+        }
+      }
+
+      // Mark onboarding complete
+      try {
+        await updateProfile(user.id, { onboarding_complete: true });
+      } catch {
+        // Continue even if profile update fails
+      }
+
+      navigate('/');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const progressPercent = ((step + 1) / 3) * 100;
+
+  return (
+    <div className="page" style={{ maxWidth: 600, margin: '0 auto', paddingTop: 40 }}>
+      {/* Progress Bar */}
+      <div style={{ marginBottom: 40 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+          {[0, 1, 2].map(i => (
+            <div
+              key={i}
+              style={{
+                flex: 1,
+                height: 4,
+                backgroundColor: i <= step ? Colors.copper : Colors.lightGray,
+                borderRadius: 2,
+                transition: 'background-color 0.3s ease',
+              }}
+            />
+          ))}
+        </div>
+        <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
+          Step {step + 1} of 3
+        </p>
+      </div>
+
+      {/* Step 1: Address */}
+      {step === 0 && (
+        <div className="card">
+          <h2 style={{ fontSize: 18, marginBottom: 20 }}>Where is your home?</h2>
+          <p style={{ color: Colors.medGray, marginBottom: 20, fontSize: 14 }}>
+            We'll use this to tailor maintenance tasks to your climate and local conditions.
+          </p>
+
+          <div className="form-group">
+            <label>Street Address *</label>
+            <input
+              className="form-input"
+              placeholder="123 Oak Street"
+              value={addressForm.address}
+              onChange={e => setAddressForm({ ...addressForm, address: e.target.value })}
+            />
+          </div>
+
+          <div className="grid-3">
+            <div className="form-group">
+              <label>City *</label>
+              <input
+                className="form-input"
+                placeholder="Tulsa"
+                value={addressForm.city}
+                onChange={e => setAddressForm({ ...addressForm, city: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>State *</label>
+              <input
+                className="form-input"
+                placeholder="OK"
+                value={addressForm.state}
+                onChange={e => setAddressForm({ ...addressForm, state: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>ZIP *</label>
+              <input
+                className="form-input"
+                placeholder="74103"
+                value={addressForm.zip_code}
+                onChange={e => setAddressForm({ ...addressForm, zip_code: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Year Built</label>
+              <input
+                className="form-input"
+                type="number"
+                placeholder="1998"
+                value={addressForm.year_built}
+                onChange={e => setAddressForm({ ...addressForm, year_built: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Sq Ft</label>
+              <input
+                className="form-input"
+                type="number"
+                placeholder="2400"
+                value={addressForm.square_footage}
+                onChange={e => setAddressForm({ ...addressForm, square_footage: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid-4">
+            <div className="form-group">
+              <label>Stories</label>
+              <input
+                className="form-input"
+                type="number"
+                value={addressForm.stories}
+                onChange={e => setAddressForm({ ...addressForm, stories: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Beds</label>
+              <input
+                className="form-input"
+                type="number"
+                value={addressForm.bedrooms}
+                onChange={e => setAddressForm({ ...addressForm, bedrooms: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Baths</label>
+              <input
+                className="form-input"
+                type="number"
+                value={addressForm.bathrooms}
+                onChange={e => setAddressForm({ ...addressForm, bathrooms: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Garage</label>
+              <input
+                className="form-input"
+                type="number"
+                value={addressForm.garage_spaces}
+                onChange={e => setAddressForm({ ...addressForm, garage_spaces: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-sm mt-lg">
+            <button className="btn btn-primary" onClick={handleAddressSubmit} disabled={saving}>
+              {saving ? 'Saving...' : 'Next'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: Home Systems */}
+      {step === 1 && (
+        <div className="card">
+          <h2 style={{ fontSize: 18, marginBottom: 20 }}>What systems does your home have?</h2>
+
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Roof Type</label>
+              <select
+                className="form-select"
+                value={systemsForm.roof_type}
+                onChange={e => setSystemsForm({ ...systemsForm, roof_type: e.target.value })}
+              >
+                <option value="">Select...</option>
+                {['asphalt_shingle', 'metal', 'tile', 'slate', 'flat', 'wood_shake'].map(v => (
+                  <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Roof Age (years)</label>
+              <input
+                className="form-input"
+                type="number"
+                value={systemsForm.roof_age_years}
+                onChange={e => setSystemsForm({ ...systemsForm, roof_age_years: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Heating</label>
+              <select
+                className="form-select"
+                value={systemsForm.heating_type}
+                onChange={e => setSystemsForm({ ...systemsForm, heating_type: e.target.value })}
+              >
+                <option value="">Select...</option>
+                {['forced_air', 'heat_pump', 'radiant', 'boiler', 'baseboard'].map(v => (
+                  <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Cooling</label>
+              <select
+                className="form-select"
+                value={systemsForm.cooling_type}
+                onChange={e => setSystemsForm({ ...systemsForm, cooling_type: e.target.value })}
+              >
+                <option value="">Select...</option>
+                {['central_ac', 'heat_pump', 'window_units', 'mini_split', 'none'].map(v => (
+                  <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Water Source</label>
+              <select
+                className="form-select"
+                value={systemsForm.water_source}
+                onChange={e => setSystemsForm({ ...systemsForm, water_source: e.target.value })}
+              >
+                <option value="">Select...</option>
+                {['municipal', 'well'].map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Sewer Type</label>
+              <select
+                className="form-select"
+                value={systemsForm.sewer_type}
+                onChange={e => setSystemsForm({ ...systemsForm, sewer_type: e.target.value })}
+              >
+                <option value="">Select...</option>
+                {['municipal', 'septic'].map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Lawn Type</label>
+            <select
+              className="form-select"
+              value={systemsForm.lawn_type}
+              onChange={e => setSystemsForm({ ...systemsForm, lawn_type: e.target.value as any })}
+            >
+              <option value="none">None</option>
+              {['bermuda', 'fescue', 'zoysia', 'st_augustine', 'bluegrass', 'buffalo', 'mixed'].map(v => (
+                <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid-2 mt-md">
+            {(['has_pool', 'has_deck', 'has_sprinkler_system', 'has_fireplace'] as const).map(key => (
+              <label key={key} className="flex items-center gap-sm" style={{ cursor: 'pointer', padding: '8px 0' }}>
+                <input
+                  type="checkbox"
+                  checked={systemsForm[key] as boolean}
+                  onChange={e => setSystemsForm({ ...systemsForm, [key]: e.target.checked })}
+                />
+                <span style={{ fontSize: 14 }}>{key.replace(/has_/, '').replace(/_/g, ' ')}</span>
+              </label>
+            ))}
+          </div>
+
+          <div className="flex gap-sm mt-lg">
+            <button className="btn btn-ghost" onClick={() => setStep(0)}>Back</button>
+            <button className="btn btn-primary" onClick={handleSystemsSubmit} disabled={saving}>
+              {saving ? 'Saving...' : 'Next'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Equipment */}
+      {step === 2 && (
+        <div className="card">
+          <h2 style={{ fontSize: 18, marginBottom: 20 }}>Add your equipment (optional)</h2>
+          <p style={{ color: Colors.medGray, marginBottom: 20, fontSize: 14 }}>
+            Add any home systems or appliances you'd like to track.
+          </p>
+
+          <div className="form-group">
+            <label>Equipment Name</label>
+            <input
+              className="form-input"
+              placeholder="e.g., Central AC Unit"
+              value={equipmentForm.name}
+              onChange={e => setEquipmentForm({ ...equipmentForm, name: e.target.value })}
+            />
+          </div>
+
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Category</label>
+              <select
+                className="form-select"
+                value={equipmentForm.category}
+                onChange={e => setEquipmentForm({ ...equipmentForm, category: e.target.value as EquipmentCategory })}
+              >
+                {EQUIPMENT_CATEGORIES.map(c => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Make</label>
+              <input
+                className="form-input"
+                placeholder="Carrier"
+                value={equipmentForm.make}
+                onChange={e => setEquipmentForm({ ...equipmentForm, make: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Model</label>
+            <input
+              className="form-input"
+              placeholder="24ACC636"
+              value={equipmentForm.model}
+              onChange={e => setEquipmentForm({ ...equipmentForm, model: e.target.value })}
+            />
+          </div>
+
+          <button className="btn btn-secondary" onClick={handleAddEquipment} style={{ marginBottom: 20 }}>
+            + Add Equipment
+          </button>
+
+          {equipmentList.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 10 }}>
+                {equipmentList.length} item{equipmentList.length !== 1 ? 's' : ''} added
+              </p>
+              {equipmentList.map((item, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '10px 0',
+                    borderBottom: `1px solid ${Colors.lightGray}`,
+                  }}
+                >
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 500 }}>{item.name}</p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: 12, color: Colors.medGray }}>
+                      {item.make} {item.model}
+                    </p>
+                  </div>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => handleRemoveEquipment(i)}
+                    title="Delete"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-sm mt-lg">
+            <button className="btn btn-ghost" onClick={() => setStep(1)}>Back</button>
+            <button className="btn btn-ghost" onClick={handleFinish} disabled={saving}>
+              Skip
+            </button>
+            <button className="btn btn-primary" onClick={handleFinish} disabled={saving}>
+              {saving ? 'Finishing...' : 'Done'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

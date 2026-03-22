@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAllUsers, updateProfile } from '@/services/supabase';
+import { getAllUsers, updateProfile, deleteUserAccount } from '@/services/supabase';
 
 
 export default function AdminUsers() {
@@ -28,6 +28,15 @@ export default function AdminUsers() {
     } catch (e: any) { alert(e.message); }
   };
 
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to delete ${userName || 'this user'}? This will permanently remove their account and all associated data.`)) return;
+    if (!confirm('This action cannot be undone. Type OK to confirm.')) return;
+    try {
+      await deleteUserAccount(userId);
+      setUsers(prev => prev.filter(u => u.id !== userId));
+    } catch (e: any) { alert('Failed to delete: ' + e.message); }
+  };
+
   const filtered = users.filter(u => u.full_name?.toLowerCase().includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase()));
 
   return (
@@ -43,7 +52,7 @@ export default function AdminUsers() {
       {loading ? <div className="text-center"><div className="spinner" /></div> : (
         <div className="card table-container">
           <table>
-            <thead><tr><th>Name</th><th>Email</th><th>Tier</th><th>Role</th><th>Joined</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Tier</th><th>Role</th><th>Joined</th><th></th></tr></thead>
             <tbody>
               {filtered.map(u => (
                 <tr key={u.id}>
@@ -60,9 +69,14 @@ export default function AdminUsers() {
                     </select>
                   </td>
                   <td className="text-sm text-gray">{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
+                  <td>
+                    {u.role !== 'admin' && (
+                      <button className="btn btn-danger btn-sm" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => handleDeleteUser(u.id, u.full_name)}>Delete</button>
+                    )}
+                  </td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={5} className="text-center text-gray" style={{ padding: 32 }}>No users found</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={6} className="text-center text-gray" style={{ padding: 32 }}>No users found</td></tr>}
             </tbody>
           </table>
         </div>

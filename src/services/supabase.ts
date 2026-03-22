@@ -225,3 +225,9 @@ export const createGiftCodes = async (codes: any[]) => {
   if (error) throw error;
   return data || [];
 };
+
+// --- Account Deletion ---
+export const deleteUserAccount = async (userId: string) => {
+  const { error } = await supabase.rpc('delete_user_and_data', { target_user_id: userId });
+  if (error) throw error;
+};

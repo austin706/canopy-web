@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { signOut, updateProfile, redeemGiftCode } from '@/services/supabase';
+import { signOut, updateProfile, redeemGiftCode, deleteUserAccount } from '@/services/supabase';
 import { PLANS } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
 
@@ -51,6 +51,20 @@ export default function Profile() {
     try { await signOut(); } catch {}
     reset();
     navigate('/login');
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    if (!confirm('Are you sure you want to delete your account? This will permanently remove all your data including your home, equipment, and maintenance history.')) return;
+    if (!confirm('This action cannot be undone. Are you absolutely sure?')) return;
+    try {
+      await deleteUserAccount(user.id);
+      try { await signOut(); } catch {}
+      reset();
+      navigate('/login');
+    } catch (e: any) {
+      setMessage('Failed to delete account: ' + e.message);
+    }
   };
 
   return (
@@ -135,6 +149,13 @@ export default function Profile() {
       </div>
 
       <button className="btn btn-danger btn-full" onClick={handleLogout}>Sign Out</button>
+
+      {/* Delete Account */}
+      <div className="card mt-lg" style={{ border: '1px solid #E5393540' }}>
+        <h3 style={{ fontSize: 16, marginBottom: 8, color: '#C62828' }}>Danger Zone</h3>
+        <p className="text-sm text-gray mb-md">Permanently delete your account and all associated data. This action cannot be undone.</p>
+        <button className="btn btn-danger btn-sm" onClick={handleDeleteAccount}>Delete My Account</button>
+      </div>
     </div>
   );
 }

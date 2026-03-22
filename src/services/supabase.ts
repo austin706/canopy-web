@@ -226,6 +226,31 @@ export const createGiftCodes = async (codes: any[]) => {
   return data || [];
 };
 
+// --- Agent Client Functions ---
+export const getClientHome = async (clientUserId: string) => {
+  const { data, error } = await supabase.from('homes').select('*').eq('user_id', clientUserId).single();
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+};
+
+export const getClientEquipment = async (homeId: string) => {
+  const { data, error } = await supabase.from('equipment').select('*').eq('home_id', homeId).order('category');
+  if (error) throw error;
+  return data || [];
+};
+
+export const getClientTasks = async (homeId: string) => {
+  const { data, error } = await supabase.from('maintenance_tasks').select('*').eq('home_id', homeId).order('due_date');
+  if (error) throw error;
+  return data || [];
+};
+
+export const upsertClientHome = async (home: any) => {
+  const { data, error } = await supabase.from('homes').upsert(home).select().single();
+  if (error) throw error;
+  return data;
+};
+
 // --- Account Deletion ---
 export const deleteUserAccount = async (userId: string) => {
   const { error } = await supabase.rpc('delete_user_and_data', { target_user_id: userId });

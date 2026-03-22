@@ -22,6 +22,7 @@ import AdminUsers from '@/pages/AdminUsers';
 import AdminGiftCodes from '@/pages/AdminGiftCodes';
 import AdminProRequests from '@/pages/AdminProRequests';
 import AgentPortal from '@/pages/AgentPortal';
+import AgentClientHome from '@/pages/AgentClientHome';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useStore();
@@ -69,6 +70,7 @@ export default function App() {
           <Route path="/admin/gift-codes" element={<AdminGiftCodes />} />
           <Route path="/admin/pro-requests" element={<AdminProRequests />} />
           <Route path="/agent-portal" element={<AgentPortal />} />
+          <Route path="/agent-portal/client/:clientId" element={<AgentClientHome />} />
         </Route>
 
         {/* Catch-all */}

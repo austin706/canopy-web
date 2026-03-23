@@ -36,6 +36,8 @@ import ProLogin from '@/pages/ProLogin';
 import ProJobs from '@/pages/ProJobs';
 import ProAvailability from '@/pages/ProAvailability';
 import ProProfile from '@/pages/ProProfile';
+import Terms from '@/pages/Terms';
+import Privacy from '@/pages/Privacy';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useStore();
@@ -74,6 +76,8 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/pro-login" element={<ProLogin />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
           {/* Protected routes with sidebar */}

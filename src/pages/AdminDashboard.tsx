@@ -58,17 +58,17 @@ export default function AdminDashboard() {
       <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Overview</h2>
       <div className="stats-grid">
         {[
-          { label: 'Users', value: stats?.totalUsers||0, color: Colors.copper, icon: '&#128101;' },
-          { label: 'Agents', value: stats?.totalAgents||0, color: Colors.sage, icon: '&#128188;' },
-          { label: 'Homes', value: stats?.totalHomes||0, color: Colors.info, icon: '&#127968;' },
-          { label: 'Equipment', value: stats?.totalEquipment||0, color: Colors.copperDark, icon: '&#128736;' },
-          { label: 'Total Tasks', value: stats?.totalTasks||0, color: Colors.sage, icon: '&#128203;' },
-          { label: 'Completed', value: stats?.completedTasks||0, color: Colors.success, icon: '&#9989;' },
-          { label: 'Active Codes', value: stats?.activeGiftCodes||0, color: Colors.copper, icon: '&#127873;' },
-          { label: 'Pro Requests', value: stats?.proRequests||0, color: Colors.warning, icon: '&#128295;' },
+          { label: 'Users', value: stats?.totalUsers||0, color: Colors.copper, abbr: 'US' },
+          { label: 'Agents', value: stats?.totalAgents||0, color: Colors.sage, abbr: 'AG' },
+          { label: 'Homes', value: stats?.totalHomes||0, color: Colors.info, abbr: 'HM' },
+          { label: 'Equipment', value: stats?.totalEquipment||0, color: Colors.copperDark, abbr: 'EQ' },
+          { label: 'Total Tasks', value: stats?.totalTasks||0, color: Colors.sage, abbr: 'TK' },
+          { label: 'Completed', value: stats?.completedTasks||0, color: Colors.success, abbr: 'OK' },
+          { label: 'Active Codes', value: stats?.activeGiftCodes||0, color: Colors.copper, abbr: 'GC' },
+          { label: 'Pro Requests', value: stats?.proRequests||0, color: Colors.warning, abbr: 'PR' },
         ].map(s => (
           <div key={s.label} className="card stat-card">
-            <div className="stat-icon" style={{ background: s.color + '15' }} dangerouslySetInnerHTML={{ __html: s.icon }} />
+            <div className="stat-icon" style={{ background: s.color + '15', fontSize: 12, fontWeight: 700, color: s.color }}>{s.abbr}</div>
             <div className="stat-value">{s.value}</div>
             <div className="stat-label">{s.label}</div>
           </div>
@@ -88,14 +88,13 @@ export default function AdminDashboard() {
       <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, marginTop: 24 }}>Manage</h2>
       <div className="grid-2">
         {[
-          { label: 'Agent Management', icon: '&#128188;', route: '/admin/agents', badge: stats?.totalAgents },
-          { label: 'Pro Service Requests', icon: '&#128295;', route: '/admin/pro-requests', badge: stats?.proRequests },
-          { label: 'User Accounts', icon: '&#128101;', route: '/admin/users', badge: stats?.totalUsers },
-          { label: 'Gift Codes', icon: '&#127873;', route: '/admin/gift-codes', badge: stats?.activeGiftCodes },
+          { label: 'Agent Management', route: '/admin/agents', badge: stats?.totalAgents },
+          { label: 'Pro Service Requests', route: '/admin/pro-requests', badge: stats?.proRequests },
+          { label: 'User Accounts', route: '/admin/users', badge: stats?.totalUsers },
+          { label: 'Gift Codes', route: '/admin/gift-codes', badge: stats?.activeGiftCodes },
         ].map(n => (
           <Link key={n.label} to={n.route} className="card" style={{ textDecoration: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div className="flex items-center gap-md">
-              <span style={{ fontSize: 20 }} dangerouslySetInnerHTML={{ __html: n.icon }} />
               <span style={{ fontWeight: 600, color: 'var(--charcoal)' }}>{n.label}</span>
             </div>
             <div className="flex items-center gap-sm">

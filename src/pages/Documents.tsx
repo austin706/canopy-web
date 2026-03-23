@@ -13,13 +13,13 @@ interface Document {
   url: string;
 }
 
-const CATEGORIES: { value: Document['category']; label: string; icon: string }[] = [
-  { value: 'warranty', label: 'Warranty', icon: '🛡️' },
-  { value: 'manual', label: 'Manual', icon: '📖' },
-  { value: 'receipt', label: 'Receipt', icon: '🧾' },
-  { value: 'inspection', label: 'Inspection', icon: '📋' },
-  { value: 'insurance', label: 'Insurance', icon: '📄' },
-  { value: 'other', label: 'Other', icon: '📁' },
+const CATEGORIES: { value: Document['category']; label: string; abbr: string }[] = [
+  { value: 'warranty', label: 'Warranty', abbr: 'WR' },
+  { value: 'manual', label: 'Manual', abbr: 'MN' },
+  { value: 'receipt', label: 'Receipt', abbr: 'RC' },
+  { value: 'inspection', label: 'Inspection', abbr: 'IN' },
+  { value: 'insurance', label: 'Insurance', abbr: 'IS' },
+  { value: 'other', label: 'Other', abbr: 'OT' },
 ];
 
 const SECURE_NOTE_CATEGORIES: { label: string; value: SecureNote['category'] }[] = [
@@ -223,7 +223,7 @@ export default function Documents() {
             textAlign: 'center',
             padding: 32
           }}>
-            <p style={{ fontSize: 32, marginBottom: 16 }}>🔒</p>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 16, color: Colors.copper }}>DV</div>
             <h3 style={{ color: Colors.charcoal, marginBottom: 8 }}>Document Vault is Locked</h3>
             <p className="text-sm text-gray" style={{ marginBottom: 16, lineHeight: 1.6 }}>
               Store and organize all your home documents in one secure place. Upgrade to Home plan or higher to access this feature.
@@ -270,7 +270,7 @@ export default function Documents() {
             padding: 32,
             textAlign: 'center'
           }}>
-            <p style={{ fontSize: 32, marginBottom: 16 }}>🔒</p>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 16, color: Colors.copper }}>PIN</div>
             <h3 style={{ color: Colors.charcoal, marginBottom: 8 }}>Vault Locked</h3>
             <p className="text-sm text-gray" style={{ marginBottom: 16, lineHeight: 1.6 }}>
               Enter your PIN to access secure notes and sensitive information.
@@ -337,7 +337,7 @@ export default function Documents() {
               padding: 0
             }}
           >
-            🔐 {vaultPin ? 'Change Vault PIN' : 'Set Vault PIN'}
+            {vaultPin ? 'Change Vault PIN' : 'Set Vault PIN'}
           </button>
         )}
 
@@ -413,7 +413,7 @@ export default function Documents() {
                   className={`tab ${filter === cat.value ? 'active' : ''}`}
                   onClick={() => setFilter(cat.value)}
                 >
-                  {cat.icon} {cat.label} ({count})
+                  {cat.label} ({count})
                 </button>
               );
             })}
@@ -423,7 +423,7 @@ export default function Documents() {
         {/* Documents List */}
         {filtered.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: 48 }}>
-            <p style={{ fontSize: 32, marginBottom: 16 }}>📁</p>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: Colors.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 16, color: Colors.copper }}>DOC</div>
             <h3 style={{ color: Colors.charcoal, marginBottom: 8 }}>No documents yet</h3>
             <p className="text-sm text-gray" style={{ marginBottom: 16 }}>
               Upload documents to organize warranties, manuals, receipts, and more.
@@ -448,7 +448,9 @@ export default function Documents() {
                     marginBottom: 12
                   }}>
                     <div style={{
-                      fontSize: 24,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: Colors.copper,
                       width: 40,
                       height: 40,
                       borderRadius: 4,
@@ -458,7 +460,7 @@ export default function Documents() {
                       justifyContent: 'center',
                       flexShrink: 0
                     }}>
-                      {catLabel?.icon}
+                      {catLabel?.abbr}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{
@@ -513,7 +515,7 @@ export default function Documents() {
         {hasSecureNotesAccess && isPinUnlocked && (
           <div style={{ marginTop: 48 }}>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: Colors.charcoal, marginBottom: 8 }}>
-              🔐 Secure Notes
+              Secure Notes
             </h2>
             <p className="text-sm text-gray" style={{ marginBottom: 16, lineHeight: 1.6 }}>
               Store sensitive info like alarm codes, door codes, WiFi passwords, and more.
@@ -629,7 +631,7 @@ export default function Documents() {
             {/* Notes List */}
             {secureNotes.length === 0 && !showAddNote ? (
               <div className="card" style={{ textAlign: 'center', padding: 32 }}>
-                <p style={{ fontSize: 28, marginBottom: 12 }}>🔑</p>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontWeight: 700, fontSize: 14, color: Colors.copper }}>SN</div>
                 <h3 style={{ color: Colors.charcoal, marginBottom: 8 }}>No secure notes yet</h3>
                 <p className="text-sm text-gray">
                   Add alarm codes, door codes, WiFi passwords, and other sensitive info here.
@@ -662,7 +664,7 @@ export default function Documents() {
                           justifyContent: 'center',
                           flexShrink: 0
                         }}>
-                          🔑
+                          SN
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{

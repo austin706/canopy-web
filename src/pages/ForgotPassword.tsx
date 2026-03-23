@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { resetPassword } from '@/services/supabase';
+import { CanopyLogo } from '@/components/icons/CanopyLogo';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -29,7 +30,7 @@ export default function ForgotPassword() {
       {/* Hero Panel - left side */}
       <div className="auth-hero">
         <div className="auth-hero-content">
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🌱</div>
+          <div style={{ marginBottom: 16 }}><CanopyLogo size={48} color="#fff" /></div>
           <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Canopy</h1>
           <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 32 }}>Smart home maintenance, powered by AI</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -48,7 +49,7 @@ export default function ForgotPassword() {
       <div className="auth-form-panel">
         <div className="auth-card">
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🔑</div>
+            <div style={{ marginBottom: 12 }}><CanopyLogo size={48} /></div>
             <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Reset Password</h1>
             <p className="subtitle">Enter your email to receive a reset link</p>
           </div>

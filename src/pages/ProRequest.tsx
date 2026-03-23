@@ -62,7 +62,7 @@ export default function ProRequest() {
       <div className="page" style={{ maxWidth: 600 }}>
         <div className="page-header"><h1>Pro Services</h1></div>
         <div className="card text-center" style={{ padding: 48 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>&#128274;</div>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 20, color: Colors.copper }}>PRO</div>
           <h2 style={{ fontSize: 20, marginBottom: 8 }}>Pro Services Locked</h2>
           <p className="text-gray mb-lg">Upgrade to a Pro plan to request professional maintenance visits including filter changes, gutter cleaning, and more.</p>
           <button className="btn btn-primary" onClick={() => navigate('/subscription')}>View Plans</button>
@@ -107,7 +107,7 @@ export default function ProRequest() {
       ) : (
         <div className="flex-col gap-md">
           {requestsWithProviders.length === 0 ? (
-            <div className="empty-state"><div className="icon">&#128203;</div><h3>No requests yet</h3><p>Submit a request to get started.</p></div>
+            <div className="empty-state"><div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>--</div><h3>No requests yet</h3><p>Submit a request to get started.</p></div>
           ) : requestsWithProviders.map(r => (
             <div key={r.id} className="card">
               <div className="flex items-center justify-between mb-sm">

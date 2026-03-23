@@ -73,7 +73,7 @@ export default function AgentPortal() {
       {loading ? <div className="text-center"><div className="spinner" /></div> : tab === 'clients' ? (
         <>
           {clients.length === 0 ? (
-            <div className="empty-state"><div className="icon">&#128101;</div><h3>No clients yet</h3><p>Share gift codes with your clients to connect with them.</p></div>
+            <div className="empty-state"><div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>--</div><h3>No clients yet</h3><p>Share gift codes with your clients to connect with them.</p></div>
           ) : (
             <div className="flex-col gap-md">
               {clients.map(c => (
@@ -99,7 +99,7 @@ export default function AgentPortal() {
                       ) : (
                         <span className="badge" style={{ background: '#E5393520', color: '#C62828', fontSize: 11 }}>No home</span>
                       )}
-                      <span style={{ color: 'var(--silver)', fontSize: 18, transform: expandedClient === c.id ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>&#9660;</span>
+                      <span style={{ color: 'var(--silver)', fontSize: 12, transform: expandedClient === c.id ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>&#9662;</span>
                     </div>
                   </div>
 
@@ -109,7 +109,7 @@ export default function AgentPortal() {
                       {c.home ? (
                         <div>
                           <div className="flex items-center justify-between mb-md">
-                            <h3 style={{ fontSize: 16 }}>&#127968; {c.home.address}</h3>
+                            <h3 style={{ fontSize: 16 }}>{c.home.address}</h3>
                             <button className="btn btn-secondary btn-sm" onClick={() => navigate(`/agent-portal/client/${c.id}`)}>Edit Home</button>
                           </div>
                           <p className="text-sm text-gray mb-md">{c.home.city}, {c.home.state} {c.home.zip_code}</p>

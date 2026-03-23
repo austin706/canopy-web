@@ -114,19 +114,6 @@ export default function CreateTask() {
     }
   };
 
-  const containerStyle: React.CSSProperties = {
-    maxWidth: '700px',
-    margin: '0 auto',
-    padding: '32px 20px',
-  };
-
-  const cardStyle: React.CSSProperties = {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: '12px',
-    padding: '32px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-  };
-
   const backLinkStyle: React.CSSProperties = {
     color: Colors.sage,
     textDecoration: 'none',
@@ -237,8 +224,8 @@ export default function CreateTask() {
   };
 
   return (
-    <div style={containerStyle}>
-      <div style={cardStyle}>
+    <div className="page" style={{ maxWidth: 700 }}>
+      <div className="card" style={{ padding: 32 }}>
         <a onClick={() => navigate('/')} style={backLinkStyle}>← Back to Dashboard</a>
 
         <h1 style={{ fontSize: '24px', fontWeight: '600', color: Colors.charcoal, margin: '16px 0 24px 0' }}>

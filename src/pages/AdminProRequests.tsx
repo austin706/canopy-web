@@ -153,7 +153,7 @@ export default function AdminProRequests() {
               </div>
             );
           })}
-          {filtered.length === 0 && <div className="empty-state"><div className="icon">&#128203;</div><h3>No requests</h3></div>}
+          {filtered.length === 0 && <div className="empty-state"><div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>--</div><h3>No requests</h3></div>}
         </div>
       )}
     </div>

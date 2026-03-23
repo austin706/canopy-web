@@ -259,7 +259,7 @@ export default function ProJobs() {
       {/* Jobs List */}
       {filteredJobs.length === 0 ? (
         <div className="empty-state">
-          <div className="icon">💼</div>
+          <div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>--</div>
           <h3>No {activeTab} jobs</h3>
           <p>Service requests matching your categories will appear here.</p>
         </div>
@@ -309,13 +309,13 @@ export default function ProJobs() {
               </div>
 
               <div style={{ fontSize: 13, color: Colors.medGray, marginBottom: 12, paddingBottom: 12, borderBottom: `1px solid ${Colors.lightGray}` }}>
-                {job.user?.full_name && <p style={{ margin: '0 0 4px 0' }}>👤 {job.user.full_name}</p>}
+                {job.user?.full_name && <p style={{ margin: '0 0 4px 0' }}>Client: {job.user.full_name}</p>}
                 {job.home && (
                   <p style={{ margin: '0 0 4px 0' }}>
-                    📍 {job.home.address}, {job.home.city}, {job.home.state}
+                    {job.home.address}, {job.home.city}, {job.home.state}
                   </p>
                 )}
-                <p style={{ margin: 0 }}>📅 Requested {new Date(job.created_at).toLocaleDateString()}</p>
+                <p style={{ margin: 0 }}>Requested {new Date(job.created_at).toLocaleDateString()}</p>
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>

@@ -6,17 +6,17 @@ import EquipmentScanner from '@/components/EquipmentScanner';
 import { Colors } from '@/constants/theme';
 import type { Equipment as EquipmentType, EquipmentCategory } from '@/types';
 
-const CATEGORIES: { value: EquipmentCategory; label: string; icon: string }[] = [
-  { value: 'hvac', label: 'HVAC', icon: '&#10052;&#65039;' },
-  { value: 'water_heater', label: 'Water Heater', icon: '&#128167;' },
-  { value: 'appliance', label: 'Appliance', icon: '&#127859;' },
-  { value: 'roof', label: 'Roof', icon: '&#127968;' },
-  { value: 'plumbing', label: 'Plumbing', icon: '&#128688;' },
-  { value: 'electrical', label: 'Electrical', icon: '&#9889;' },
-  { value: 'outdoor', label: 'Outdoor', icon: '&#127795;' },
-  { value: 'safety', label: 'Safety', icon: '&#128680;' },
-  { value: 'pool', label: 'Pool', icon: '&#127946;' },
-  { value: 'garage', label: 'Garage', icon: '&#128663;' },
+const CATEGORIES: { value: EquipmentCategory; label: string; abbr: string }[] = [
+  { value: 'hvac', label: 'HVAC', abbr: 'HC' },
+  { value: 'water_heater', label: 'Water Heater', abbr: 'WH' },
+  { value: 'appliance', label: 'Appliance', abbr: 'AP' },
+  { value: 'roof', label: 'Roof', abbr: 'RF' },
+  { value: 'plumbing', label: 'Plumbing', abbr: 'PL' },
+  { value: 'electrical', label: 'Electrical', abbr: 'EL' },
+  { value: 'outdoor', label: 'Outdoor', abbr: 'OD' },
+  { value: 'safety', label: 'Safety', abbr: 'SF' },
+  { value: 'pool', label: 'Pool', abbr: 'PO' },
+  { value: 'garage', label: 'Garage', abbr: 'GR' },
 ];
 
 export default function Equipment() {
@@ -54,7 +54,7 @@ export default function Equipment() {
   }, [home?.id]);
 
   const filtered = filter === 'all' ? equipment : equipment.filter(e => e.category === filter);
-  const catIcon = (cat: string) => CATEGORIES.find(c => c.value === cat)?.icon || '&#128736;';
+  const catAbbr = (cat: string) => CATEGORIES.find(c => c.value === cat)?.abbr || 'EQ';
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -120,7 +120,7 @@ export default function Equipment() {
           <p className="subtitle">{equipment.length} items registered {limit ? `(max ${limit})` : ''}</p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <button className="btn btn-secondary" onClick={() => setShowScanner(true)}>📸 Scan Label</button>
+          <button className="btn btn-secondary" onClick={() => setShowScanner(true)}>Scan Label</button>
           <button className="btn btn-primary" onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowModal(true)}>+ Add Equipment</button>
         </div>
       </div>
@@ -135,14 +135,14 @@ export default function Equipment() {
         <button className={`tab ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All ({equipment.length})</button>
         {CATEGORIES.filter(c => equipment.some(e => e.category === c.value)).map(c => (
           <button key={c.value} className={`tab ${filter === c.value ? 'active' : ''}`} onClick={() => setFilter(c.value)}>
-            <span dangerouslySetInnerHTML={{ __html: c.icon }} /> {c.label} ({equipment.filter(e => e.category === c.value).length})
+            {c.label} ({equipment.filter(e => e.category === c.value).length})
           </button>
         ))}
       </div>
 
       {filtered.length === 0 ? (
         <div className="empty-state">
-          <div className="icon">&#128736;</div>
+          <div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>EQ</div>
           <h3>No equipment yet</h3>
           <p>Add your home systems and appliances to get personalized maintenance schedules.</p>
           <button className="btn btn-primary mt-lg" onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowModal(true)}>Add Your First Item</button>
@@ -152,7 +152,7 @@ export default function Equipment() {
           {filtered.map(item => (
             <div key={item.id} className="card">
               <div className="equip-card">
-                <div className="equip-icon" style={{ background: Colors.copperMuted }} dangerouslySetInnerHTML={{ __html: catIcon(item.category) }} />
+                <div className="equip-icon" style={{ background: Colors.copperMuted, fontSize: 11, fontWeight: 700, color: Colors.copper }}>{catAbbr(item.category)}</div>
                 <div className="equip-info">
                   <div className="equip-name">{item.name}</div>
                   <div className="equip-detail">{item.make} {item.model}</div>
@@ -172,7 +172,7 @@ export default function Equipment() {
                     );
                   })()}
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(item.id)} title="Delete">&#128465;</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(item.id)} title="Delete" style={{ color: Colors.error }}>Delete</button>
               </div>
             </div>
           ))}

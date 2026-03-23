@@ -2,7 +2,7 @@ export default function Privacy() {
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: '#1a1a1a', lineHeight: 1.7 }}>
       <div style={{ marginBottom: 32 }}>
-        <a href="/" style={{ color: '#16a34a', textDecoration: 'none', fontSize: 14 }}>← Back to Canopy</a>
+        <a href="/" style={{ color: '#8B9E7E', textDecoration: 'none', fontSize: 14 }}>← Back to Canopy</a>
       </div>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Privacy Policy</h1>

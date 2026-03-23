@@ -9,7 +9,7 @@ export default function AgentView() {
       <div className="page" style={{ maxWidth: 600 }}>
         <div className="page-header"><h1>Your Agent</h1></div>
         <div className="card text-center" style={{ padding: 48 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>&#128100;</div>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: Colors.copper + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 20, color: Colors.copper }}>AG</div>
           <h2 style={{ fontSize: 20, marginBottom: 8 }}>No Agent Connected</h2>
           <p className="text-gray">Redeem a gift code from your real estate agent to connect with them and unlock premium features.</p>
         </div>
@@ -32,11 +32,11 @@ export default function AgentView() {
         </div>
         <div className="flex-col gap-md">
           <div className="flex items-center gap-md" style={{ padding: '12px 0', borderBottom: '1px solid var(--light-gray)' }}>
-            <span>&#128231;</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: Colors.copper }}>@</span>
             <div><p className="text-xs text-gray">Email</p><p style={{ fontSize: 14, fontWeight: 500 }}>{agent.email}</p></div>
           </div>
           <div className="flex items-center gap-md" style={{ padding: '12px 0', borderBottom: '1px solid var(--light-gray)' }}>
-            <span>&#128222;</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: Colors.copper }}>Tel</span>
             <div><p className="text-xs text-gray">Phone</p><p style={{ fontSize: 14, fontWeight: 500 }}>{agent.phone}</p></div>
           </div>
         </div>

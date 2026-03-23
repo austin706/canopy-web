@@ -170,7 +170,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
             onChange={handleInputChange}
             style={{ display: 'none' }}
           />
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📸</div>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 16, color: Colors.copper }}>IMG</div>
           <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 8, color: Colors.charcoal }}>
             Upload equipment label photo
           </p>

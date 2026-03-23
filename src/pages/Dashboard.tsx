@@ -11,6 +11,7 @@ import { HealthGauge } from '@/components/HealthGauge';
 import { generateTasksForHome } from '@/services/taskEngine';
 import { geocodeAddress } from '@/services/geocoding';
 import { upsertHome } from '@/services/supabase';
+import { CanopyLogo, NavWeather, NavHome } from '@/components/icons/CanopyLogo';
 import type { MaintenanceTask } from '@/types';
 
 const DEMO_TASKS = [
@@ -140,7 +141,7 @@ export default function Dashboard() {
           <p className="text-sm text-gray">{greeting}</p>
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>{user?.full_name || 'Homeowner'}</h1>
         </div>
-        <div style={{ fontSize: 32 }}>&#127793;</div>
+        <CanopyLogo size={32} />
       </div>
 
       <div className="dashboard-layout">
@@ -175,7 +176,7 @@ export default function Dashboard() {
                   </div>
                   {displayWeather.alerts.length > 0 && (
                     <div style={{ marginTop: 12, padding: '10px 14px', background: '#E5393520', borderRadius: 8, fontSize: 13, color: '#C62828' }}>
-                      &#9888;&#65039; {displayWeather.alerts.length} active weather alert{displayWeather.alerts.length > 1 ? 's' : ''}
+                      Warning: {displayWeather.alerts.length} active weather alert{displayWeather.alerts.length > 1 ? 's' : ''}
                     </div>
                   )}
                 </>
@@ -184,7 +185,7 @@ export default function Dashboard() {
           ) : (
             <div className="card" style={{ background: Colors.copperMuted, borderLeft: `4px solid ${Colors.copper}` }}>
               <div className="flex items-center gap-md">
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: Colors.white, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>&#9925;</div>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: Colors.white, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><NavWeather size={24} /></div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontWeight: 600 }}>Weather Alerts</p>
                   <p className="text-sm text-gray">Upgrade to get actionable weather alerts</p>
@@ -245,7 +246,7 @@ export default function Dashboard() {
                 </div>
               ))}
               {tasksToShow.length === 0 && (
-                <div className="empty-state"><div className="icon">&#9989;</div><h3>All caught up!</h3><p>No tasks due this month.</p></div>
+                <div className="empty-state"><div className="icon" style={{ color: Colors.success, fontSize: 40, fontWeight: 700 }}>&#10003;</div><h3>All caught up!</h3><p>No tasks due this month.</p></div>
               )}
             </div>
             )}
@@ -265,7 +266,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="card" style={{ textAlign: 'center', padding: 32, border: '2px dashed var(--light-gray)', cursor: 'pointer' }} onClick={() => navigate('/home')}>
-              <div style={{ fontSize: 28 }}>&#127968;</div>
+              <NavHome size={28} />
               <p className="text-sm text-copper fw-600 mt-sm">{home ? 'Add a photo of your home' : 'Set up your home'}</p>
             </div>
           )}
@@ -275,15 +276,15 @@ export default function Dashboard() {
             <p style={{ fontWeight: 600, marginBottom: 12 }}>Quick Actions</p>
             <div className="flex-col gap-sm">
               {[
-                { icon: '&#10133;', label: 'Create Custom Task', route: '/task/create' },
-                { icon: '&#128247;', label: 'Scan Equipment', route: '/equipment' },
-                { icon: '&#128736;', label: 'Pro Services', route: '/pro-services' },
-                { icon: '&#128222;', label: 'Contact Agent', route: '/agent' },
-                { icon: '&#128203;', label: 'Maintenance Log', route: '/logs' },
-                { icon: '&#128295;', label: 'Request Pro', route: '/pro-request' },
+                { label: 'Create Custom Task', route: '/task/create' },
+                { label: 'Scan Equipment', route: '/equipment' },
+                { label: 'Pro Services', route: '/pro-services' },
+                { label: 'Contact Agent', route: '/agent' },
+                { label: 'Maintenance Log', route: '/logs' },
+                { label: 'Request Pro', route: '/pro-request' },
               ].map(a => (
                 <button key={a.label} className="btn btn-ghost" style={{ justifyContent: 'flex-start', padding: '10px 12px' }} onClick={() => navigate(a.route)}>
-                  <span dangerouslySetInnerHTML={{ __html: a.icon }} /> {a.label}
+                  {a.label} &rarr;
                 </button>
               ))}
             </div>

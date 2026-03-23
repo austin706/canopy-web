@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { signOut } from '@/services/supabase';
 import { PLANS } from '@/services/subscriptionGate';
@@ -12,8 +12,25 @@ import {
 
 export default function Layout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, reset } = useStore();
   const tier = user?.subscription_tier || 'free';
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileMenuOpen]);
 
   const handleLogout = async () => {
     try { await signOut(); } catch {}
@@ -38,7 +55,27 @@ export default function Layout() {
 
   return (
     <div className="app-layout">
-      <nav className="sidebar">
+      {/* Mobile top bar */}
+      <header className="mobile-topbar">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CanopyLogo size={24} />
+          <span style={{ fontWeight: 700, fontSize: 18 }}>Canopy</span>
+        </div>
+        <button
+          className="hamburger-btn"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle navigation menu"
+        >
+          <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`} />
+          <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`} />
+          <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`} />
+        </button>
+      </header>
+
+      {/* Mobile overlay */}
+      {mobileMenuOpen && <div className="mobile-overlay" onClick={() => setMobileMenuOpen(false)} />}
+
+      <nav className={`sidebar ${mobileMenuOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-logo">
           {/* TODO: Replace CanopyLogo SVG with final branded logo asset when ready */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

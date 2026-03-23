@@ -128,22 +128,22 @@ export default function Profile() {
         <div className="flex-col">
           {user?.role === 'admin' && (
             <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/admin')}>
-              &#128272; Admin Portal
+              Admin Portal
             </button>
           )}
           {user?.role === 'agent' && (
             <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/agent-portal')}>
-              &#128188; Agent Portal
+              Agent Portal
             </button>
           )}
           <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/home')}>
-            &#127968; Home Details
+            Home Details
           </button>
           <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/agent')}>
-            &#128100; My Agent
+            My Agent
           </button>
           <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/logs')}>
-            &#128203; Maintenance Logs
+            Maintenance Logs
           </button>
         </div>
       </div>

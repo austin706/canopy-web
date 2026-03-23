@@ -533,7 +533,7 @@ export default function Onboarding() {
             <div style={{ marginBottom: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <h3 style={{ fontSize: 16, margin: 0 }}>Scan Equipment Label</h3>
-                <button className="btn btn-ghost btn-sm" onClick={() => setShowScanner(false)}>✕</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowScanner(false)}>Close</button>
               </div>
               <EquipmentScanner
                 onScanComplete={handleScannerComplete}
@@ -591,7 +591,7 @@ export default function Onboarding() {
                   + Add Equipment
                 </button>
                 <button className="btn btn-secondary" onClick={() => setShowScanner(true)}>
-                  📸 Scan Label
+                  Scan Label
                 </button>
               </div>
             </>
@@ -624,7 +624,7 @@ export default function Onboarding() {
                     onClick={() => handleRemoveEquipment(i)}
                     title="Delete"
                   >
-                    ✕
+                    Remove
                   </button>
                 </div>
               ))}

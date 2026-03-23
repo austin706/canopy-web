@@ -44,7 +44,7 @@ export default function MaintenanceLogs() {
           <p className="text-sm text-gray">Loading maintenance logs...</p>
         </div>
       ) : maintenanceLogs.length === 0 ? (
-        <div className="empty-state"><div className="icon">&#128203;</div><h3>No entries yet</h3><p>Track your maintenance activities and costs.</p></div>
+        <div className="empty-state"><div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>--</div><h3>No entries yet</h3><p>Track your maintenance activities and costs.</p></div>
       ) : (
         <div className="flex-col gap-md">
           {maintenanceLogs.map(log => (

@@ -168,7 +168,7 @@ export default function ProPortal() {
       <div className="grid-3 mb-lg" style={{ gap: 16 }}>
         <button
           className="card btn btn-primary"
-          onClick={() => navigate('/pro-jobs')}
+          onClick={() => navigate('/pro-portal/jobs')}
           style={{
             backgroundColor: Colors.sage,
             color: 'white',
@@ -183,7 +183,7 @@ export default function ProPortal() {
         </button>
         <button
           className="card btn"
-          onClick={() => navigate('/pro-availability')}
+          onClick={() => navigate('/pro-portal/availability')}
           style={{
             padding: '24px',
             textAlign: 'center',
@@ -195,7 +195,7 @@ export default function ProPortal() {
         </button>
         <button
           className="card btn"
-          onClick={() => navigate('/pro-profile')}
+          onClick={() => navigate('/pro-portal/profile')}
           style={{
             padding: '24px',
             textAlign: 'center',

@@ -58,7 +58,7 @@ export default function Weather() {
         <div className="page-header"><h1>Weather Alerts</h1></div>
         <div className="card" style={{ background: Colors.copperMuted, borderLeft: `4px solid ${Colors.copper}` }}>
           <div className="flex items-center gap-md">
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: Colors.white, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>&#9925;</div>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: Colors.white, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: Colors.sage }}>WX</div>
             <div style={{ flex: 1 }}>
               <p style={{ fontWeight: 600 }}>Weather Alerts Locked</p>
               <p className="text-sm text-gray">Upgrade to Home to get actionable weather alerts with maintenance tips</p>
@@ -93,7 +93,7 @@ export default function Weather() {
               <p className="text-sm text-gray" style={{ textTransform: 'capitalize', marginTop: 4 }}>{displayWeather.description}</p>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: 32 }}>☁️</p>
+              <p style={{ fontSize: 24, fontWeight: 700, color: Colors.sage }}>WX</p>
               <p className="text-sm text-gray mt-md">H: {displayWeather.high}&#176; L: {displayWeather.low}&#176;</p>
             </div>
           </div>
@@ -163,7 +163,7 @@ export default function Weather() {
 
         {visibleAlerts.length === 0 && (
           <div className="empty-state" style={{ padding: 48 }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>✓</div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: Colors.success, marginBottom: 12 }}>&#10003;</div>
             <h3 style={{ marginBottom: 6 }}>All Clear</h3>
             <p className="text-gray">No active weather alerts for your area.</p>
           </div>
@@ -178,11 +178,11 @@ export default function Weather() {
                 <p className="text-xs text-gray fw-600">
                   {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                 </p>
-                <p style={{ fontSize: 20, margin: '8px 0' }}>☁️</p>
+                <p style={{ fontSize: 14, fontWeight: 700, color: Colors.sage, margin: '8px 0' }}>--</p>
                 <p style={{ fontSize: 14, fontWeight: 600 }}>{day.high}&#176;</p>
                 <p className="text-xs text-gray">{day.low}&#176;</p>
                 {day.precipitation_chance > 0 && (
-                  <p className="text-xs text-gray mt-sm">💧 {day.precipitation_chance}%</p>
+                  <p className="text-xs text-gray mt-sm">{day.precipitation_chance}% precip</p>
                 )}
               </div>
             ))}

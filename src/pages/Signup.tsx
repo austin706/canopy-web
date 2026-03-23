@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signUp } from '@/services/supabase';
+import { CanopyLogo } from '@/components/icons/CanopyLogo';
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -84,14 +85,14 @@ export default function Signup() {
       <div className="auth-layout">
         <div className="auth-hero">
           <div className="auth-hero-content">
-            <div style={{ fontSize: 48, marginBottom: 16 }}>&#127793;</div>
+            <div style={{ marginBottom: 16 }}><CanopyLogo size={48} color="#fff" /></div>
             <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Welcome!</h1>
             <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)' }}>You're one step away from smart home maintenance.</p>
           </div>
         </div>
         <div className="auth-form-panel">
           <div className="auth-card" style={{ textAlign: 'center' }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#4CAF5020', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 28 }}>&#9989;</div>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#4CAF5020', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 24, fontWeight: 700, color: '#4CAF50' }}>&#10003;</div>
             <h1 style={{ fontSize: 24 }}>Check Your Email</h1>
             <p style={{ color: '#7A7A7A', margin: '12px 0 24px', lineHeight: 1.6 }}>We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.</p>
             <button className="btn btn-primary btn-lg btn-full" onClick={() => navigate('/login')}>Back to Login</button>
@@ -109,7 +110,7 @@ export default function Signup() {
     <div className="auth-layout">
       <div className="auth-hero">
         <div className="auth-hero-content">
-          <div style={{ fontSize: 48, marginBottom: 16 }}>&#127793;</div>
+          <div style={{ marginBottom: 16 }}><CanopyLogo size={48} color="#fff" /></div>
           <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Canopy</h1>
           <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 32 }}>Smart home maintenance, powered by AI</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

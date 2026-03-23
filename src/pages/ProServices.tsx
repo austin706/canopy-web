@@ -177,12 +177,6 @@ export default function ProServices() {
     }
   };
 
-  const containerStyle: React.CSSProperties = {
-    maxWidth: '900px',
-    margin: '0 auto',
-    padding: '32px 20px',
-  };
-
   const sectionStyle: React.CSSProperties = {
     marginBottom: '32px',
   };
@@ -296,7 +290,7 @@ export default function ProServices() {
 
   if (!home) {
     return (
-      <div style={containerStyle}>
+      <div className="page" style={{ maxWidth: 900 }}>
         <p>Please set up your home first.</p>
       </div>
     );
@@ -304,7 +298,7 @@ export default function ProServices() {
 
   if (!hasAccess) {
     return (
-      <div style={containerStyle}>
+      <div className="page" style={{ maxWidth: 900 }}>
         <h1 style={{ fontSize: '24px', fontWeight: '600', color: Colors.charcoal, marginBottom: '16px' }}>
           Pro Service Scheduler
         </h1>
@@ -336,7 +330,7 @@ export default function ProServices() {
   }
 
   return (
-    <div style={containerStyle}>
+    <div className="page" style={{ maxWidth: 900 }}>
       <h1 style={{ fontSize: '24px', fontWeight: '600', color: Colors.charcoal, marginBottom: '24px' }}>
         Pro Service Scheduler
       </h1>

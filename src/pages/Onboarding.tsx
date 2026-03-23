@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertHome, upsertEquipment, updateProfile } from '@/services/supabase';
+import { upsertHome, upsertEquipment, updateProfile, createTasks } from '@/services/supabase';
+import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
+import EquipmentScanner from '@/components/EquipmentScanner';
 import { Colors } from '@/constants/theme';
-import type { EquipmentCategory } from '@/types';
+import type { EquipmentCategory, Equipment as EquipmentType } from '@/types';
 
 const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
   { value: 'hvac', label: 'HVAC' },
@@ -27,9 +29,10 @@ interface Equipment {
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { user, setHome, addEquipment } = useStore();
+  const { user, setHome, addEquipment, setTasks } = useStore();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [generatingTasks, setGeneratingTasks] = useState(false);
 
   // Step 1: Address
   const [addressForm, setAddressForm] = useState({
@@ -70,6 +73,7 @@ export default function Onboarding() {
     make: '',
     model: '',
   });
+  const [showScanner, setShowScanner] = useState(false);
 
   const handleAddressSubmit = async () => {
     if (!user || !addressForm.address || !addressForm.city || !addressForm.state || !addressForm.zip_code) {
@@ -146,15 +150,30 @@ export default function Onboarding() {
     setEquipmentList(equipmentList.filter((_, i) => i !== index));
   };
 
+  const handleScannerComplete = (scannedData: any) => {
+    const { name, category, ...rest } = scannedData;
+    setEquipmentList([
+      ...equipmentList,
+      {
+        name,
+        category,
+        make: rest.make || '',
+        model: rest.model || '',
+      },
+    ]);
+    setShowScanner(false);
+  };
+
   const handleFinish = async () => {
     if (!user) return;
 
     setSaving(true);
     try {
-      const { home } = useStore.getState();
+      const { home, equipment: existingEquipment } = useStore.getState();
       if (!home) return;
 
       // Save equipment items
+      const allEquipment = [...existingEquipment];
       for (const item of equipmentList) {
         const equip: any = {
           id: crypto.randomUUID(),
@@ -170,9 +189,54 @@ export default function Onboarding() {
         try {
           await upsertEquipment(equip);
           addEquipment(equip);
+          allEquipment.push(equip);
         } catch {
           addEquipment(equip);
+          allEquipment.push(equip);
         }
+      }
+
+      // Generate and insert maintenance tasks
+      setGeneratingTasks(true);
+      try {
+        const { tasks: existingTasks } = useStore.getState();
+        const generatedTasks = generateTasksForHome(home, allEquipment, existingTasks);
+        const lifecycleAlerts = generateEquipmentLifecycleAlerts(allEquipment, home);
+        const allNewTasks = [...generatedTasks, ...lifecycleAlerts];
+
+        if (allNewTasks.length > 0) {
+          // Prepare tasks for Supabase insert
+          const tasksToInsert = allNewTasks.map((task) => ({
+            home_id: task.home_id,
+            equipment_id: task.equipment_id,
+            title: task.title,
+            description: task.description,
+            instructions: task.instructions,
+            category: task.category,
+            priority: task.priority,
+            frequency: task.frequency,
+            due_date: task.due_date,
+            status: task.status,
+            estimated_minutes: task.estimated_minutes,
+            estimated_cost: task.estimated_cost,
+            applicable_months: task.applicable_months,
+            is_weather_triggered: task.is_weather_triggered,
+          }));
+
+          try {
+            const createdTasks = await createTasks(tasksToInsert);
+            setTasks(createdTasks);
+          } catch (error) {
+            console.error('Error creating tasks:', error);
+            // Fallback: use client-generated tasks in local store
+            setTasks(allNewTasks);
+          }
+        }
+      } catch (error) {
+        console.error('Error generating tasks:', error);
+        // Continue even if task generation fails
+      } finally {
+        setGeneratingTasks(false);
       }
 
       // Mark onboarding complete
@@ -463,53 +527,73 @@ export default function Onboarding() {
             Add any home systems or appliances you'd like to track.
           </p>
 
-          <div className="form-group">
-            <label>Equipment Name</label>
-            <input
-              className="form-input"
-              placeholder="e.g., Central AC Unit"
-              value={equipmentForm.name}
-              onChange={e => setEquipmentForm({ ...equipmentForm, name: e.target.value })}
-            />
-          </div>
-
-          <div className="grid-2">
-            <div className="form-group">
-              <label>Category</label>
-              <select
-                className="form-select"
-                value={equipmentForm.category}
-                onChange={e => setEquipmentForm({ ...equipmentForm, category: e.target.value as EquipmentCategory })}
-              >
-                {EQUIPMENT_CATEGORIES.map(c => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Make</label>
-              <input
-                className="form-input"
-                placeholder="Carrier"
-                value={equipmentForm.make}
-                onChange={e => setEquipmentForm({ ...equipmentForm, make: e.target.value })}
+          {showScanner ? (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h3 style={{ fontSize: 16, margin: 0 }}>Scan Equipment Label</h3>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowScanner(false)}>✕</button>
+              </div>
+              <EquipmentScanner
+                onScanComplete={handleScannerComplete}
+                onClose={() => setShowScanner(false)}
               />
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="form-group">
+                <label>Equipment Name</label>
+                <input
+                  className="form-input"
+                  placeholder="e.g., Central AC Unit"
+                  value={equipmentForm.name}
+                  onChange={e => setEquipmentForm({ ...equipmentForm, name: e.target.value })}
+                />
+              </div>
 
-          <div className="form-group">
-            <label>Model</label>
-            <input
-              className="form-input"
-              placeholder="24ACC636"
-              value={equipmentForm.model}
-              onChange={e => setEquipmentForm({ ...equipmentForm, model: e.target.value })}
-            />
-          </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Category</label>
+                  <select
+                    className="form-select"
+                    value={equipmentForm.category}
+                    onChange={e => setEquipmentForm({ ...equipmentForm, category: e.target.value as EquipmentCategory })}
+                  >
+                    {EQUIPMENT_CATEGORIES.map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Make</label>
+                  <input
+                    className="form-input"
+                    placeholder="Carrier"
+                    value={equipmentForm.make}
+                    onChange={e => setEquipmentForm({ ...equipmentForm, make: e.target.value })}
+                  />
+                </div>
+              </div>
 
-          <button className="btn btn-secondary" onClick={handleAddEquipment} style={{ marginBottom: 20 }}>
-            + Add Equipment
-          </button>
+              <div className="form-group">
+                <label>Model</label>
+                <input
+                  className="form-input"
+                  placeholder="24ACC636"
+                  value={equipmentForm.model}
+                  onChange={e => setEquipmentForm({ ...equipmentForm, model: e.target.value })}
+                />
+              </div>
+
+              <div className="grid-2 mb-lg">
+                <button className="btn btn-secondary" onClick={handleAddEquipment}>
+                  + Add Equipment
+                </button>
+                <button className="btn btn-secondary" onClick={() => setShowScanner(true)}>
+                  📸 Scan Label
+                </button>
+              </div>
+            </>
+          )}
 
           {equipmentList.length > 0 && (
             <div style={{ marginBottom: 20 }}>
@@ -546,12 +630,12 @@ export default function Onboarding() {
           )}
 
           <div className="flex gap-sm mt-lg">
-            <button className="btn btn-ghost" onClick={() => setStep(1)}>Back</button>
-            <button className="btn btn-ghost" onClick={handleFinish} disabled={saving}>
+            <button className="btn btn-ghost" onClick={() => setStep(1)} disabled={saving || generatingTasks}>Back</button>
+            <button className="btn btn-ghost" onClick={handleFinish} disabled={saving || generatingTasks}>
               Skip
             </button>
-            <button className="btn btn-primary" onClick={handleFinish} disabled={saving}>
-              {saving ? 'Finishing...' : 'Done'}
+            <button className="btn btn-primary" onClick={handleFinish} disabled={saving || generatingTasks}>
+              {generatingTasks ? 'Generating plan...' : saving ? 'Finishing...' : 'Done'}
             </button>
           </div>
         </div>

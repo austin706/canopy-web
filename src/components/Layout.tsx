@@ -17,6 +17,7 @@ export default function Layout() {
   const navItems = [
     { to: '/', icon: '&#127968;', label: 'Dashboard' },
     { to: '/calendar', icon: '&#128197;', label: 'Calendar' },
+    { to: '/weather', icon: '&#9925;', label: 'Weather' },
     { to: '/equipment', icon: '&#128736;', label: 'Equipment' },
     { to: '/documents', icon: '&#128196;', label: 'Documents' },
     { to: '/pro-request', icon: '&#128295;', label: 'Pro Services' },

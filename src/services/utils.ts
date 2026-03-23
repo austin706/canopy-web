@@ -2,7 +2,7 @@
 // Canopy Web — Shared Utilities
 // ===============================================================
 import type { MaintenanceTask, MaintenanceLog } from '@/types';
-import { completeTaskApi, addMaintenanceLog, supabase } from '@/services/supabase';
+import { completeTask, addMaintenanceLog, supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 
 /** Generate a UUID v4 */
@@ -41,7 +41,7 @@ export const quickCompleteTask = async (task: MaintenanceTask): Promise<void> =>
   store.addMaintenanceLog(logEntry);
 
   // 3. Persist to Supabase (non-blocking — UI already updated)
-  try { await completeTaskApi(task.id); } catch (err) { console.warn('Task complete API call failed:', err); }
+  try { await completeTask(task.id); } catch (err) { console.warn('Task complete API call failed:', err); }
   try { await addMaintenanceLog(logEntry); } catch (err) { console.warn('Maintenance log save failed:', err); }
 };
 

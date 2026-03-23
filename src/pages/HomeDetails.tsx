@@ -20,9 +20,39 @@ export default function HomeDetails() {
     has_fireplace: home?.has_fireplace || false,
     lawn_type: home?.lawn_type || 'none',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    const currentYear = new Date().getFullYear();
+
+    if (!form.zip_code.trim()) {
+      newErrors.zip_code = 'ZIP code is required';
+    } else if (!/^\d{5}$/.test(form.zip_code.trim())) {
+      newErrors.zip_code = 'ZIP code must be 5 digits';
+    }
+
+    if (form.year_built) {
+      const year = parseInt(form.year_built);
+      if (isNaN(year) || year < 1800 || year > currentYear) {
+        newErrors.year_built = `Year built must be between 1800 and ${currentYear}`;
+      }
+    }
+
+    if (form.square_footage) {
+      const sqft = parseFloat(form.square_footage);
+      if (isNaN(sqft) || sqft <= 0) {
+        newErrors.square_footage = 'Square footage must be a positive number';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSave = async () => {
     if (!user || !form.address) return;
+    if (!validateForm()) return;
     setSaving(true);
     try {
       const homeData: any = {
@@ -71,11 +101,23 @@ export default function HomeDetails() {
           <div className="grid-3">
             <div className="form-group"><label>City</label><input className="form-input" value={form.city} onChange={e => setForm({...form, city: e.target.value})} /></div>
             <div className="form-group"><label>State</label><input className="form-input" value={form.state} onChange={e => setForm({...form, state: e.target.value})} /></div>
-            <div className="form-group"><label>Zip</label><input className="form-input" value={form.zip_code} onChange={e => setForm({...form, zip_code: e.target.value})} /></div>
+            <div className="form-group">
+              <label>Zip</label>
+              <input className="form-input" value={form.zip_code} onChange={e => setForm({...form, zip_code: e.target.value})} />
+              {errors.zip_code && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{errors.zip_code}</p>}
+            </div>
           </div>
           <div className="grid-2">
-            <div className="form-group"><label>Year Built</label><input className="form-input" type="number" value={form.year_built} onChange={e => setForm({...form, year_built: e.target.value})} /></div>
-            <div className="form-group"><label>Sq Ft</label><input className="form-input" type="number" value={form.square_footage} onChange={e => setForm({...form, square_footage: e.target.value})} /></div>
+            <div className="form-group">
+              <label>Year Built</label>
+              <input className="form-input" type="number" value={form.year_built} onChange={e => setForm({...form, year_built: e.target.value})} />
+              {errors.year_built && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{errors.year_built}</p>}
+            </div>
+            <div className="form-group">
+              <label>Sq Ft</label>
+              <input className="form-input" type="number" value={form.square_footage} onChange={e => setForm({...form, square_footage: e.target.value})} />
+              {errors.square_footage && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{errors.square_footage}</p>}
+            </div>
           </div>
           <div className="grid-4">
             <div className="form-group"><label>Stories</label><input className="form-input" type="number" value={form.stories} onChange={e => setForm({...form, stories: e.target.value})} /></div>

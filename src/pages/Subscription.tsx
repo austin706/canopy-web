@@ -1,17 +1,23 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { redeemGiftCode } from '@/services/supabase';
-import { PLANS } from '@/services/subscriptionGate';
+import { redeemGiftCode, insertProInterest } from '@/services/supabase';
+import { PLANS, isProAvailableInArea } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
 
 export default function Subscription() {
   const navigate = useNavigate();
-  const { user, setUser, setAgent } = useStore();
+  const { user, home, setUser, setAgent } = useStore();
   const [giftCode, setGiftCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
   const [message, setMessage] = useState('');
+  const [waitlistEmail, setWaitlistEmail] = useState(user?.email || '');
+  const [waitlistZip, setWaitlistZip] = useState(home?.zip_code || '');
+  const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
+  const [waitlistMessage, setWaitlistMessage] = useState('');
   const tier = user?.subscription_tier || 'free';
+
+  const proAvailable = isProAvailableInArea(home?.state, home?.zip_code);
 
   const handleRedeem = async () => {
     if (!giftCode.trim() || !user) return;
@@ -24,6 +30,28 @@ export default function Subscription() {
       setGiftCode('');
     } catch (e: any) { setMessage(e.message); }
     finally { setRedeeming(false); setTimeout(() => setMessage(''), 5000); }
+  };
+
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!waitlistEmail.trim() || !waitlistZip.trim()) return;
+    setSubmittingWaitlist(true);
+    try {
+      await insertProInterest({
+        email: waitlistEmail,
+        zip_code: waitlistZip,
+        user_id: user?.id || null,
+        state: home?.state || null,
+      });
+      setWaitlistMessage('Thanks! We'll notify you when Pro services are available in your area.');
+      setWaitlistEmail('');
+      setWaitlistZip('');
+      setTimeout(() => setWaitlistMessage(''), 5000);
+    } catch (e: any) {
+      setWaitlistMessage(e.message || 'Failed to join waitlist');
+    } finally {
+      setSubmittingWaitlist(false);
+    }
   };
 
   return (
@@ -88,6 +116,49 @@ export default function Subscription() {
           </button>
         </div>
       </div>
+
+      {/* Pro Interest Waitlist - Show if not in service area */}
+      {!proAvailable && (
+        <div className="card" style={{ background: Colors.copperMuted }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, color: Colors.copperDark, marginBottom: 8 }}>Join the Pro Waitlist</h3>
+          <p className="text-sm text-gray mb-md">Pro services aren't available in your area yet, but they're coming soon! Join the waitlist to be notified when professional maintenance visits become available.</p>
+
+          {waitlistMessage && <div style={{ padding: '10px 16px', borderRadius: 8, background: waitlistMessage.includes('Thanks') ? '#4CAF5020' : '#E5393520', color: waitlistMessage.includes('Thanks') ? '#2E7D32' : '#C62828', fontSize: 14, marginBottom: 12 }}>{waitlistMessage}</div>}
+
+          <form onSubmit={handleWaitlistSubmit}>
+            <div className="form-group">
+              <label>Email Address</label>
+              <input
+                className="form-input"
+                type="email"
+                value={waitlistEmail}
+                onChange={e => setWaitlistEmail(e.target.value)}
+                placeholder="your@email.com"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>ZIP Code</label>
+              <input
+                className="form-input"
+                type="text"
+                value={waitlistZip}
+                onChange={e => setWaitlistZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                placeholder="12345"
+                maxLength={5}
+                required
+              />
+            </div>
+            <button
+              className="btn btn-primary btn-full"
+              type="submit"
+              disabled={submittingWaitlist || !waitlistEmail.trim() || !waitlistZip.trim()}
+            >
+              {submittingWaitlist ? 'Joining...' : 'Join Waitlist'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

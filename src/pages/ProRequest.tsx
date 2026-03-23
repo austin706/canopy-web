@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { createProRequest, getProRequests } from '@/services/supabase';
+import { createProRequest, getProRequests, supabase } from '@/services/supabase';
 import { isProOrHigher } from '@/services/subscriptionGate';
 import { Colors, StatusColors } from '@/constants/theme';
+import type { ProRequest } from '@/types';
 
 const SERVICE_TYPES = ['HVAC Maintenance', 'Filter Change', 'Gutter Cleaning', 'Plumbing Repair', 'Electrical Inspection', 'Roof Inspection', 'Pool Service', 'Deck Maintenance', 'Lawn Care', 'General Handyman'];
 
@@ -11,16 +12,35 @@ export default function ProRequest() {
   const navigate = useNavigate();
   const { user, home } = useStore();
   const [requests, setRequests] = useState<any[]>([]);
+  const [requestsWithProviders, setRequestsWithProviders] = useState<any[]>([]);
   const [form, setForm] = useState({ service_type: SERVICE_TYPES[0], description: '', preferred_date: '' });
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [tab, setTab] = useState<'new' | 'history'>('new');
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const tier = user?.subscription_tier || 'free';
   const hasPro = isProOrHigher(tier);
 
   useEffect(() => {
-    if (user) getProRequests(user.id).then(setRequests).catch(() => {});
+    if (user) {
+      getProRequests(user.id).then(async (data) => {
+        setRequests(data);
+        // Enrich requests with provider information
+        const enriched = await Promise.all(data.map(async (req) => {
+          if (req.assigned_provider) {
+            try {
+              const { data: provider } = await supabase.from('pro_providers').select('*').eq('id', req.assigned_provider).single();
+              return { ...req, provider };
+            } catch {
+              return req;
+            }
+          }
+          return req;
+        }));
+        setRequestsWithProviders(enriched);
+      }).catch(() => {});
+    }
   }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,16 +106,33 @@ export default function ProRequest() {
         </div>
       ) : (
         <div className="flex-col gap-md">
-          {requests.length === 0 ? (
+          {requestsWithProviders.length === 0 ? (
             <div className="empty-state"><div className="icon">&#128203;</div><h3>No requests yet</h3><p>Submit a request to get started.</p></div>
-          ) : requests.map(r => (
+          ) : requestsWithProviders.map(r => (
             <div key={r.id} className="card">
               <div className="flex items-center justify-between mb-sm">
-                <p style={{ fontWeight: 600 }}>{r.service_type}</p>
+                <div>
+                  <p style={{ fontWeight: 600 }}>{r.service_type}</p>
+                  <p className="text-xs text-gray mt-xs">Submitted: {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                </div>
                 <span className="badge" style={{ background: (StatusColors[r.status] || '#ccc') + '20', color: StatusColors[r.status] }}>{r.status}</span>
               </div>
               <p className="text-sm text-gray">{r.description}</p>
-              <p className="text-xs text-gray mt-sm">Submitted: {new Date(r.created_at).toLocaleDateString()}{r.preferred_date ? ` | Preferred: ${new Date(r.preferred_date).toLocaleDateString()}` : ''}</p>
+
+              {r.provider && (
+                <div style={{ marginTop: 12, padding: 12, background: Colors.cream, borderRadius: 8 }}>
+                  <p className="text-xs fw-600 text-copper mb-xs">Assigned Provider</p>
+                  <p style={{ fontWeight: 500, fontSize: 13 }}>{r.provider.business_name}</p>
+                  <p className="text-xs text-gray">Contact: {r.provider.contact_name} · {r.provider.phone}</p>
+                </div>
+              )}
+
+              {r.preferred_date && (
+                <p className="text-xs text-gray mt-sm">Preferred Date: {new Date(r.preferred_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+              )}
+              {r.cost && (
+                <p className="text-xs text-gray mt-xs">Cost: ${r.cost}</p>
+              )}
             </div>
           ))}
         </div>

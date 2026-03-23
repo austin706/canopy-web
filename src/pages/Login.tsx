@@ -11,10 +11,44 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  const validateForm = (): boolean => {
+    setEmailError('');
+    setPasswordError('');
+    let isValid = true;
+
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      isValid = false;
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        setEmailError('Please enter a valid email address');
+        isValid = false;
+      }
+    }
+
+    if (!password) {
+      setPasswordError('Password is required');
+      isValid = false;
+    } else if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      isValid = false;
+    }
+
+    return isValid;
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
     try {
       const { user: authUser } = await signIn(email, password);
@@ -96,6 +130,7 @@ export default function Login() {
             <div className="form-group">
               <label>Email</label>
               <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" required />
+              {emailError && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{emailError}</p>}
             </div>
             <div className="form-group">
               <label>Password</label>
@@ -118,6 +153,7 @@ export default function Login() {
                   {showPassword ? '👁️' : '👁️‍🗨️'}
                 </button>
               </div>
+              {passwordError && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{passwordError}</p>}
             </div>
             <div style={{ textAlign: 'right', marginBottom: 20, marginTop: -8 }}>
               <Link to="/forgot-password" style={{ fontSize: 13, color: '#C4844E', textDecoration: 'none', fontWeight: 500 }}>Forgot password?</Link>

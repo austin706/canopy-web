@@ -7,14 +7,67 @@ export default function Signup() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [fullNameError, setFullNameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
+  const validateForm = (): boolean => {
+    setFullNameError('');
+    setEmailError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+    let isValid = true;
+
+    if (!fullName.trim()) {
+      setFullNameError('Full name is required');
+      isValid = false;
+    }
+
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      isValid = false;
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        setEmailError('Please enter a valid email address');
+        isValid = false;
+      }
+    }
+
+    if (!password) {
+      setPasswordError('Password is required');
+      isValid = false;
+    } else if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      isValid = false;
+    }
+
+    if (!confirmPassword) {
+      setConfirmPasswordError('Please confirm your password');
+      isValid = false;
+    } else if (password !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match');
+      isValid = false;
+    }
+
+    return isValid;
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
     try {
       await signUp(email, password, fullName);
@@ -81,10 +134,12 @@ export default function Signup() {
             <div className="form-group">
               <label>Full Name</label>
               <input className="form-input" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Jane Doe" required />
+              {fullNameError && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{fullNameError}</p>}
             </div>
             <div className="form-group">
               <label>Email</label>
               <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" required />
+              {emailError && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{emailError}</p>}
             </div>
             <div className="form-group">
               <label>Password</label>
@@ -92,6 +147,7 @@ export default function Signup() {
                 <input className="form-input" type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 6 characters" required minLength={6} />
                 <button type="button" className="password-toggle" onClick={() => setShowPw(!showPw)}>{showPw ? 'Hide' : 'Show'}</button>
               </div>
+              {passwordError && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{passwordError}</p>}
               {password.length > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
                   <div style={{ flex: 1, height: 4, borderRadius: 2, background: '#E8E2D8' }}>
@@ -100,6 +156,14 @@ export default function Signup() {
                   <span style={{ fontSize: 11, color: pwColors[pwStrength], fontWeight: 600 }}>{pwLabels[pwStrength]}</span>
                 </div>
               )}
+            </div>
+            <div className="form-group">
+              <label>Confirm Password</label>
+              <div className="password-wrapper">
+                <input className="form-input" type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm password" required />
+                <button type="button" className="password-toggle" onClick={() => setShowConfirm(!showConfirm)}>{showConfirm ? 'Hide' : 'Show'}</button>
+              </div>
+              {confirmPasswordError && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{confirmPasswordError}</p>}
             </div>
             <button className="btn btn-primary btn-lg btn-full" type="submit" disabled={loading}>
               {loading ? <span className="spinner" /> : 'Create Account'}

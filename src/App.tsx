@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import Layout from '@/components/Layout';
 import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
@@ -9,6 +10,7 @@ import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
 import Dashboard from '@/pages/Dashboard';
 import Calendar from '@/pages/Calendar';
+import Weather from '@/pages/Weather';
 import Equipment from '@/pages/Equipment';
 import Profile from '@/pages/Profile';
 import Subscription from '@/pages/Subscription';
@@ -64,47 +66,50 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/pro-login" element={<ProLogin />} />
-        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+      <ErrorBoundary>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/pro-login" element={<ProLogin />} />
+          <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
-        {/* Protected routes with sidebar */}
-        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/calendar" element={<Calendar />} />
-          <Route path="/task/:id" element={<TaskDetail />} />
-          <Route path="/equipment" element={<Equipment />} />
-          <Route path="/equipment/:id" element={<EquipmentDetail />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/help" element={<Help />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/subscription" element={<Subscription />} />
-          <Route path="/pro-request" element={<ProRequest />} />
-          <Route path="/agent" element={<AgentView />} />
-          <Route path="/logs" element={<MaintenanceLogs />} />
-          <Route path="/home" element={<HomeDetails />} />
-          <Route path="/admin" element={<RoleRoute roles={['admin']}><AdminDashboard /></RoleRoute>} />
-          <Route path="/admin/agents" element={<RoleRoute roles={['admin']}><AdminAgents /></RoleRoute>} />
-          <Route path="/admin/users" element={<RoleRoute roles={['admin']}><AdminUsers /></RoleRoute>} />
-          <Route path="/admin/gift-codes" element={<RoleRoute roles={['admin']}><AdminGiftCodes /></RoleRoute>} />
-          <Route path="/admin/pro-requests" element={<RoleRoute roles={['admin']}><AdminProRequests /></RoleRoute>} />
-          <Route path="/agent-portal" element={<RoleRoute roles={['agent', 'admin']}><AgentPortal /></RoleRoute>} />
-          <Route path="/agent-portal/client/:clientId" element={<RoleRoute roles={['agent', 'admin']}><AgentClientHome /></RoleRoute>} />
-          <Route path="/pro-portal" element={<RoleRoute roles={['pro_provider', 'admin']}><ProPortal /></RoleRoute>} />
-          <Route path="/pro-portal/jobs" element={<RoleRoute roles={['pro_provider', 'admin']}><ProJobs /></RoleRoute>} />
-          <Route path="/pro-portal/availability" element={<RoleRoute roles={['pro_provider', 'admin']}><ProAvailability /></RoleRoute>} />
-          <Route path="/pro-portal/profile" element={<RoleRoute roles={['pro_provider', 'admin']}><ProProfile /></RoleRoute>} />
-        </Route>
+          {/* Protected routes with sidebar */}
+          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/weather" element={<Weather />} />
+            <Route path="/task/:id" element={<TaskDetail />} />
+            <Route path="/equipment" element={<Equipment />} />
+            <Route path="/equipment/:id" element={<EquipmentDetail />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/subscription" element={<Subscription />} />
+            <Route path="/pro-request" element={<ProRequest />} />
+            <Route path="/agent" element={<AgentView />} />
+            <Route path="/logs" element={<MaintenanceLogs />} />
+            <Route path="/home" element={<HomeDetails />} />
+            <Route path="/admin" element={<RoleRoute roles={['admin']}><AdminDashboard /></RoleRoute>} />
+            <Route path="/admin/agents" element={<RoleRoute roles={['admin']}><AdminAgents /></RoleRoute>} />
+            <Route path="/admin/users" element={<RoleRoute roles={['admin']}><AdminUsers /></RoleRoute>} />
+            <Route path="/admin/gift-codes" element={<RoleRoute roles={['admin']}><AdminGiftCodes /></RoleRoute>} />
+            <Route path="/admin/pro-requests" element={<RoleRoute roles={['admin']}><AdminProRequests /></RoleRoute>} />
+            <Route path="/agent-portal" element={<RoleRoute roles={['agent', 'admin']}><AgentPortal /></RoleRoute>} />
+            <Route path="/agent-portal/client/:clientId" element={<RoleRoute roles={['agent', 'admin']}><AgentClientHome /></RoleRoute>} />
+            <Route path="/pro-portal" element={<RoleRoute roles={['pro_provider', 'admin']}><ProPortal /></RoleRoute>} />
+            <Route path="/pro-portal/jobs" element={<RoleRoute roles={['pro_provider', 'admin']}><ProJobs /></RoleRoute>} />
+            <Route path="/pro-portal/availability" element={<RoleRoute roles={['pro_provider', 'admin']}><ProAvailability /></RoleRoute>} />
+            <Route path="/pro-portal/profile" element={<RoleRoute roles={['pro_provider', 'admin']}><ProProfile /></RoleRoute>} />
+          </Route>
 
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

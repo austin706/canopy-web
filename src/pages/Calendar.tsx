@@ -1,16 +1,38 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask } from '@/services/utils';
+import { getTasks } from '@/services/supabase';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 export default function Calendar() {
-  const { tasks } = useStore();
+  const { home, tasks, setTasks } = useStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
+  const [loading, setLoading] = useState(false);
+
+  // Fetch tasks on mount if not already loaded
+  useEffect(() => {
+    const loadTasks = async () => {
+      if (!tasks.length && home) {
+        try {
+          setLoading(true);
+          const data = await getTasks(home.id);
+          if (data) setTasks(data);
+        } catch (err) {
+          console.warn('Failed to fetch tasks:', err);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+    loadTasks();
+  }, [home?.id]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -90,6 +112,11 @@ export default function Calendar() {
 
         {/* Task List */}
         <div className="flex-col gap-md">
+          {loading ? (
+            <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+              <p className="text-sm text-gray">Loading tasks...</p>
+            </div>
+          ) : (
           <div className="card">
             <p style={{ fontWeight: 600, marginBottom: 12 }}>
               {selectedDate ? `Tasks for ${new Date(parseInt(selectedDate.split('-')[0]), parseInt(selectedDate.split('-')[1]), parseInt(selectedDate.split('-')[2])).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}` : 'Select a date'}
@@ -128,6 +155,7 @@ export default function Calendar() {
               {!selectedDate && <p className="text-sm text-gray text-center" style={{ padding: 24 }}>Click a date to see tasks</p>}
             </div>
           </div>
+          )}
 
           {/* Monthly Summary */}
           <div className="card">

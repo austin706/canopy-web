@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Colors } from '@/constants/theme';
+import { useStore } from '@/store/useStore';
+import * as supabaseService from '@/services/supabase';
 
 interface NotificationPreferences {
   taskReminders: boolean;
@@ -16,30 +18,87 @@ const DEFAULT_PREFS: NotificationPreferences = {
 };
 
 export default function Notifications() {
+  const { user } = useStore();
   const [prefs, setPrefs] = useState<NotificationPreferences>(DEFAULT_PREFS);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load from localStorage
+  // Load from Supabase on mount
   useEffect(() => {
-    const stored = localStorage.getItem('notificationPreferences');
-    if (stored) {
-      try {
-        setPrefs(JSON.parse(stored));
-      } catch (err) {
-        console.warn('Failed to parse stored preferences');
-      }
-    }
-  }, []);
+    if (!user?.id) return;
 
-  const handleSave = () => {
-    localStorage.setItem('notificationPreferences', JSON.stringify(prefs));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    const loadPreferences = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const stored = await supabaseService.getNotificationPreferences(user.id);
+        if (stored) {
+          setPrefs(stored);
+        }
+      } catch (err) {
+        console.error('Failed to load notification preferences:', err);
+        setError('Failed to load preferences');
+        // Fall back to localStorage
+        const localStored = localStorage.getItem('notificationPreferences');
+        if (localStored) {
+          try {
+            setPrefs(JSON.parse(localStored));
+          } catch (parseErr) {
+            console.warn('Failed to parse stored preferences');
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPreferences();
+  }, [user?.id]);
+
+  const handleSave = async () => {
+    if (!user?.id) return;
+
+    try {
+      setError(null);
+      await supabaseService.updateNotificationPreferences(user.id, prefs);
+      localStorage.setItem('notificationPreferences', JSON.stringify(prefs));
+      setSaved(true);
+
+      // Clear any pending timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      saveTimeoutRef.current = setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error('Failed to save notification preferences:', err);
+      setError('Failed to save preferences. Please try again.');
+    }
   };
 
   const toggle = (key: keyof Omit<NotificationPreferences, 'reminderTiming'>) => {
     setPrefs(prev => ({ ...prev, [key]: !prev[key] }));
   };
+
+  if (loading) {
+    return (
+      <div className="page">
+        <div className="page-header">
+          <div>
+            <h1>Notifications</h1>
+            <p className="subtitle">Manage your notification preferences</p>
+          </div>
+        </div>
+        <div style={{ maxWidth: 600, margin: '0 auto' }}>
+          <div className="card">
+            <p style={{ textAlign: 'center', color: Colors.charcoal }}>Loading preferences...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -51,6 +110,13 @@ export default function Notifications() {
       </div>
 
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
+        {error && (
+          <div className="card" style={{ backgroundColor: '#ffebee', borderLeft: `4px solid ${Colors.error || '#d32f2f'}`, marginBottom: 16 }}>
+            <p style={{ color: '#d32f2f', fontSize: 14 }}>
+              {error}
+            </p>
+          </div>
+        )}
         {/* Notification Types */}
         <div className="card mb-lg">
           <p style={{ fontWeight: 600, marginBottom: 16 }}>Notification Types</p>

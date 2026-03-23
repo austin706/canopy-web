@@ -8,9 +8,16 @@ export default function MaintenanceLogs() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', category: 'general', completed_by: 'homeowner' as const, cost: '', notes: '' });
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (home) getMaintenanceLogs(home.id).then(setMaintenanceLogs).catch(() => {});
+    if (home) {
+      setLoading(true);
+      getMaintenanceLogs(home.id)
+        .then(setMaintenanceLogs)
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
   }, [home]);
 
   const handleAdd = async () => {
@@ -32,7 +39,11 @@ export default function MaintenanceLogs() {
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Add Entry</button>
       </div>
 
-      {maintenanceLogs.length === 0 ? (
+      {loading ? (
+        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+          <p className="text-sm text-gray">Loading maintenance logs...</p>
+        </div>
+      ) : maintenanceLogs.length === 0 ? (
         <div className="empty-state"><div className="icon">&#128203;</div><h3>No entries yet</h3><p>Track your maintenance activities and costs.</p></div>
       ) : (
         <div className="flex-col gap-md">

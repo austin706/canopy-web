@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import { upsertEquipment, deleteEquipment as deleteEquipApi } from '@/services/supabase';
+import { upsertEquipment, deleteEquipment as deleteEquipApi, getEquipment } from '@/services/supabase';
 import { getEquipmentLimit } from '@/services/subscriptionGate';
+import EquipmentScanner from '@/components/EquipmentScanner';
 import { Colors } from '@/constants/theme';
 import type { Equipment as EquipmentType, EquipmentCategory } from '@/types';
 
@@ -19,21 +20,56 @@ const CATEGORIES: { value: EquipmentCategory; label: string; icon: string }[] = 
 ];
 
 export default function Equipment() {
-  const { user, home, equipment, addEquipment, removeEquipment } = useStore();
+  const { user, home, equipment, setEquipment, addEquipment, removeEquipment } = useStore();
   const [showModal, setShowModal] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [filter, setFilter] = useState<string>('all');
   const [form, setForm] = useState({ name: '', category: 'hvac' as EquipmentCategory, make: '', model: '', serial_number: '', install_date: '', expected_lifespan_years: '', location_in_home: '', notes: '' });
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const tier = user?.subscription_tier || 'free';
   const limit = getEquipmentLimit(tier);
   const atLimit = limit !== null && equipment.length >= limit;
 
+  // Fetch equipment on mount if not already loaded
+  useEffect(() => {
+    const loadEquipment = async () => {
+      if (!equipment.length && home) {
+        try {
+          setLoading(true);
+          const data = await getEquipment(home.id);
+          if (data) setEquipment(data);
+        } catch (err) {
+          console.warn('Failed to fetch equipment:', err);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+    loadEquipment();
+  }, [home?.id]);
+
   const filtered = filter === 'all' ? equipment : equipment.filter(e => e.category === filter);
   const catIcon = (cat: string) => CATEGORIES.find(c => c.value === cat)?.icon || '&#128736;';
 
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!form.name.trim()) {
+      newErrors.name = 'Equipment name is required';
+    }
+
+    setFormErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = async () => {
-    if (!form.name || !home) return;
+    if (!home) return;
+    if (!validateForm()) return;
     setSaving(true);
     try {
       const newItem: any = {
@@ -63,6 +99,19 @@ export default function Equipment() {
     }
   };
 
+  const handleScannerComplete = (scannedData: any) => {
+    const { name, category, make, model, ...rest } = scannedData;
+    setForm({
+      ...form,
+      name,
+      category,
+      make,
+      model,
+    });
+    setShowScanner(false);
+    setShowModal(true);
+  };
+
   return (
     <div className="page">
       <div className="page-header">
@@ -70,9 +119,18 @@ export default function Equipment() {
           <h1>Equipment</h1>
           <p className="subtitle">{equipment.length} items registered {limit ? `(max ${limit})` : ''}</p>
         </div>
-        <button className="btn btn-primary" onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowModal(true)}>+ Add Equipment</button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button className="btn btn-secondary" onClick={() => setShowScanner(true)}>📸 Scan Label</button>
+          <button className="btn btn-primary" onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowModal(true)}>+ Add Equipment</button>
+        </div>
       </div>
 
+      {loading ? (
+        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+          <p className="text-sm text-gray">Loading equipment...</p>
+        </div>
+      ) : (
+      <>
       <div className="tabs mb-lg">
         <button className={`tab ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All ({equipment.length})</button>
         {CATEGORIES.filter(c => equipment.some(e => e.category === c.value)).map(c => (
@@ -120,6 +178,24 @@ export default function Equipment() {
           ))}
         </div>
       )}
+      </>
+      )}
+
+      {/* Scanner Modal */}
+      {showScanner && (
+        <div className="modal-overlay" onClick={() => setShowScanner(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 600 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ margin: 0 }}>Scan Equipment Label</h2>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowScanner(false)}>✕</button>
+            </div>
+            <EquipmentScanner
+              onScanComplete={handleScannerComplete}
+              onClose={() => setShowScanner(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Add Modal */}
       {showModal && (
@@ -129,6 +205,7 @@ export default function Equipment() {
             <div className="form-group">
               <label>Name *</label>
               <input className="form-input" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. Central AC Unit" />
+              {formErrors.name && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{formErrors.name}</p>}
             </div>
             <div className="form-group">
               <label>Category</label>

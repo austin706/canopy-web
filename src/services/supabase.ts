@@ -91,7 +91,7 @@ export const getTasks = async (homeId: string) => {
   return data || [];
 };
 
-export const completeTaskApi = async (taskId: string, notes?: string, photoUrl?: string) => {
+export const completeTask = async (taskId: string, notes?: string, photoUrl?: string) => {
   const { data, error } = await supabase.from('maintenance_tasks')
     .update({ status: 'completed', completed_date: new Date().toISOString(), completion_notes: notes, completion_photo_url: photoUrl })
     .eq('id', taskId).select().single();
@@ -267,4 +267,21 @@ export const insertProInterest = async (interest: {
 export const deleteUserAccount = async (userId: string) => {
   const { error } = await supabase.rpc('delete_user_and_data', { target_user_id: userId });
   if (error) throw error;
+};
+
+// --- Notification Preferences ---
+export const getNotificationPreferences = async (userId: string) => {
+  const { data, error } = await supabase.from('profiles').select('notification_preferences').eq('id', userId).single();
+  if (error && error.code !== 'PGRST116') throw error;
+  return data?.notification_preferences || null;
+};
+
+export const updateNotificationPreferences = async (userId: string, preferences: any) => {
+  const { data, error } = await supabase.from('profiles')
+    .update({ notification_preferences: preferences })
+    .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 };

@@ -1,9 +1,11 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { canAccess, getTaskLimit, PLANS } from '@/services/subscriptionGate';
 import { Colors, PriorityColors, StatusColors } from '@/constants/theme';
 import { quickCompleteTask } from '@/services/utils';
+import { getTasks } from '@/services/supabase';
+import { fetchWeather } from '@/services/weather';
 import type { MaintenanceTask } from '@/types';
 
 const DEMO_TASKS = [
@@ -16,8 +18,11 @@ const DEMO_WEATHER = { temperature: 72, feels_like: 74, humidity: 55, wind_speed
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, home, weather, tasks, equipment } = useStore();
+  const { user, home, weather, tasks, equipment, setWeather, setTasks } = useStore();
   const tier = user?.subscription_tier || 'free';
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [weatherError, setWeatherError] = useState<string | null>(null);
+  const [tasksLoading, setTasksLoading] = useState(false);
 
   // Redirect new users who haven't set up their home yet
   useEffect(() => {
@@ -25,6 +30,46 @@ export default function Dashboard() {
       navigate('/onboarding', { replace: true });
     }
   }, [user, home, navigate]);
+
+  // Fetch tasks on mount if not already loaded
+  useEffect(() => {
+    const loadTasks = async () => {
+      if (!tasks.length && home) {
+        try {
+          setTasksLoading(true);
+          const data = await getTasks(home.id);
+          if (data) setTasks(data);
+        } catch (err) {
+          console.warn('Failed to fetch tasks:', err);
+        } finally {
+          setTasksLoading(false);
+        }
+      } else {
+        setTasksLoading(false);
+      }
+    };
+    loadTasks();
+  }, [home?.id]);
+
+  // Fetch weather when home has coordinates and user has weather access
+  useEffect(() => {
+    if (home && home.latitude && home.longitude && canAccess(tier, 'weather_alerts')) {
+      const loadWeather = async () => {
+        try {
+          setWeatherLoading(true);
+          setWeatherError(null);
+          const weatherData = await fetchWeather(home.latitude, home.longitude);
+          setWeather(weatherData);
+        } catch (error) {
+          console.error('Failed to fetch weather:', error);
+          setWeatherError('Unable to load weather data');
+        } finally {
+          setWeatherLoading(false);
+        }
+      };
+      loadWeather();
+    }
+  }, [home, tier, setWeather]);
   const hasWeather = canAccess(tier, 'weather_alerts');
   const hasAI = canAccess(tier, 'ai_task_generation');
   const taskLimit = getTaskLimit(tier);
@@ -63,22 +108,35 @@ export default function Dashboard() {
           {/* Weather */}
           {hasWeather ? (
             <div className="card" style={{ background: `linear-gradient(135deg, ${Colors.sage}20, ${Colors.cream})` }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm fw-600 text-gray">Current Weather</p>
-                  <p style={{ fontSize: 36, fontWeight: 700 }}>{displayWeather.temperature}&#176;F</p>
-                  <p className="text-sm text-gray" style={{ textTransform: 'capitalize' }}>{displayWeather.description}</p>
+              {weatherLoading ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <p className="text-sm text-gray">Loading weather...</p>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p className="text-sm text-gray">H: {displayWeather.high}&#176; L: {displayWeather.low}&#176;</p>
-                  <p className="text-sm text-gray">Humidity: {displayWeather.humidity}%</p>
-                  <p className="text-sm text-gray">Wind: {displayWeather.wind_speed} mph</p>
+              ) : weatherError ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <p className="text-sm text-gray">{weatherError}</p>
+                  <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 8 }}>Please add home coordinates in settings</p>
                 </div>
-              </div>
-              {displayWeather.alerts.length > 0 && (
-                <div style={{ marginTop: 12, padding: '10px 14px', background: '#E5393520', borderRadius: 8, fontSize: 13, color: '#C62828' }}>
-                  &#9888;&#65039; {displayWeather.alerts.length} active weather alert{displayWeather.alerts.length > 1 ? 's' : ''}
-                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm fw-600 text-gray">Current Weather</p>
+                      <p style={{ fontSize: 36, fontWeight: 700 }}>{displayWeather.temperature}&#176;F</p>
+                      <p className="text-sm text-gray" style={{ textTransform: 'capitalize' }}>{displayWeather.description}</p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <p className="text-sm text-gray">H: {displayWeather.high}&#176; L: {displayWeather.low}&#176;</p>
+                      <p className="text-sm text-gray">Humidity: {displayWeather.humidity}%</p>
+                      <p className="text-sm text-gray">Wind: {displayWeather.wind_speed} mph</p>
+                    </div>
+                  </div>
+                  {displayWeather.alerts.length > 0 && (
+                    <div style={{ marginTop: 12, padding: '10px 14px', background: '#E5393520', borderRadius: 8, fontSize: 13, color: '#C62828' }}>
+                      &#9888;&#65039; {displayWeather.alerts.length} active weather alert{displayWeather.alerts.length > 1 ? 's' : ''}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ) : (
@@ -115,6 +173,11 @@ export default function Dashboard() {
               <h2 style={{ fontSize: 18, fontWeight: 600 }}>Due This Month</h2>
               <button className="btn btn-ghost btn-sm" onClick={() => navigate('/calendar')}>See All &rarr;</button>
             </div>
+            {tasksLoading ? (
+              <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+                <p className="text-sm text-gray">Loading tasks...</p>
+              </div>
+            ) : (
             <div className="flex-col gap-sm">
               {tasksToShow.slice(0, 5).map(task => (
                 <div key={task.id} className="card" style={{ padding: '14px 20px' }}>
@@ -139,6 +202,7 @@ export default function Dashboard() {
                 <div className="empty-state"><div className="icon">&#9989;</div><h3>All caught up!</h3><p>No tasks due this month.</p></div>
               )}
             </div>
+            )}
           </div>
         </div>
 

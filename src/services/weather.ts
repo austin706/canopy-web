@@ -1,48 +1,55 @@
 // ═══════════════════════════════════════════════════════════════
-// Weather Service — OpenWeatherMap Integration (Web)
+// Weather Service — Edge Function preferred, direct API fallback (Web)
 // ═══════════════════════════════════════════════════════════════
+//
+// PREFERRED: Calls the Supabase Edge Function `weather` which keeps the
+// OpenWeatherMap API key server-side. Falls back to direct client-side
+// API call only if the Edge Function is unavailable (dev/offline).
+//
+// Environment variables:
+// - VITE_SUPABASE_URL: Supabase project URL (enables Edge Function routing)
+// - VITE_SUPABASE_ANON_KEY: Supabase anonymous key (for auth header)
+// - VITE_OPENWEATHER_API_KEY: OpenWeatherMap key (fallback only — NOT needed in production)
+
 import type { WeatherData, WeatherAlert } from '@/types';
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY || '';
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 const NWS_BASE = 'https://api.weather.gov';
 
-/**
- * Fetch active weather alerts from the free NWS API (US locations only)
- */
-const fetchNWSAlerts = async (lat: number, lon: number): Promise<WeatherAlert[]> => {
-  try {
-    const res = await fetch(
-      `${NWS_BASE}/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`,
-      { headers: { 'User-Agent': '(Canopy Home App, austin@rvconnect.us)' } }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    if (!data.features || data.features.length === 0) return [];
-
-    return data.features.map((f: any) => {
-      const p = f.properties;
-      const type = classifyAlertType(p.event || '');
-      return {
-        id: p.id || `${p.event}-${p.onset}`,
-        type,
-        severity: classifySeverity(p.event || ''),
-        title: p.headline || p.event,
-        description: (p.description || '').slice(0, 500),
-        action_items: getActionItems(type),
-        start_time: p.onset || p.effective,
-        end_time: p.expires || p.ends,
-        source: p.senderName || 'NWS',
-      } as WeatherAlert;
-    });
-  } catch (err) {
-    console.warn('NWS alerts fetch failed (non-US location?):', err);
-    return [];
-  }
-};
-
 export const fetchWeather = async (lat: number, lon: number): Promise<WeatherData> => {
-  // Fetch current weather, 5-day forecast, and NWS alerts in parallel
+  // ─── Try Edge Function first (keeps API key server-side) ───
+  if (SUPABASE_URL) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/weather`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ lat, lon }),
+      });
+
+      if (res.ok) {
+        return await res.json() as WeatherData;
+      }
+      console.warn(`Weather Edge Function returned ${res.status}, falling back to direct API`);
+    } catch (err) {
+      console.warn('Weather Edge Function unreachable, falling back to direct API:', err);
+    }
+  }
+
+  // ─── Fallback: direct OpenWeatherMap + NWS (exposes API key on client) ───
+  if (!API_KEY) {
+    console.warn(
+      'VITE_OPENWEATHER_API_KEY not configured and Edge Function unavailable. ' +
+      'Set OPENWEATHER_API_KEY secret on the Supabase weather Edge Function.'
+    );
+  }
+
   const [currentRes, forecastRes, nwsAlerts] = await Promise.all([
     fetch(`${BASE_URL}/weather?lat=${lat}&lon=${lon}&units=imperial&appid=${API_KEY}`),
     fetch(`${BASE_URL}/forecast?lat=${lat}&lon=${lon}&units=imperial&appid=${API_KEY}`),
@@ -55,12 +62,11 @@ export const fetchWeather = async (lat: number, lon: number): Promise<WeatherDat
   const current = await currentRes.json();
   const forecast = await forecastRes.json();
 
-  // Extract daily summaries from 3-hour forecast data
   const dailyMap = new Map<string, { highs: number[]; lows: number[]; description: string; icon: string; pop: number[] }>();
   for (const item of forecast.list) {
     const dateStr = new Date(item.dt * 1000).toISOString().split('T')[0];
     const todayStr = new Date().toISOString().split('T')[0];
-    if (dateStr === todayStr) continue; // skip today (we have current weather)
+    if (dateStr === todayStr) continue;
     if (!dailyMap.has(dateStr)) {
       dailyMap.set(dateStr, { highs: [], lows: [], description: '', icon: '', pop: [] });
     }
@@ -68,7 +74,6 @@ export const fetchWeather = async (lat: number, lon: number): Promise<WeatherDat
     day.highs.push(item.main.temp_max);
     day.lows.push(item.main.temp_min);
     day.pop.push(item.pop || 0);
-    // Use the midday entry's description/icon if available
     const hour = new Date(item.dt * 1000).getHours();
     if (hour >= 11 && hour <= 15) {
       day.description = item.weather[0].description;
@@ -101,12 +106,46 @@ export const fetchWeather = async (lat: number, lon: number): Promise<WeatherDat
     icon: current.weather[0].icon,
     high: Math.round(current.main.temp_max),
     low: Math.round(current.main.temp_min),
-    alerts: nwsAlerts, // Fetched from free NWS API
+    alerts: nwsAlerts,
     forecast: dailyForecast,
   };
 };
 
-// ─── Alert Type Classification (for future use with One Call 3.0) ───
+// ─── NWS Alerts (free, US-only, no API key required) ───
+
+const fetchNWSAlerts = async (lat: number, lon: number): Promise<WeatherAlert[]> => {
+  try {
+    const res = await fetch(
+      `${NWS_BASE}/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`,
+      { headers: { 'User-Agent': '(Canopy Home App, austin@rvconnect.us)' } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data.features || data.features.length === 0) return [];
+
+    return data.features.map((f: any) => {
+      const p = f.properties;
+      const type = classifyAlertType(p.event || '');
+      return {
+        id: p.id || `${p.event}-${p.onset}`,
+        type,
+        severity: classifySeverity(p.event || ''),
+        title: p.headline || p.event,
+        description: (p.description || '').slice(0, 500),
+        action_items: getActionItems(type),
+        start_time: p.onset || p.effective,
+        end_time: p.expires || p.ends,
+        source: p.senderName || 'NWS',
+      } as WeatherAlert;
+    });
+  } catch (err) {
+    console.warn('NWS alerts fetch failed (non-US location?):', err);
+    return [];
+  }
+};
+
+// ─── Alert Classification ───
+
 const classifyAlertType = (event: string): WeatherAlert['type'] => {
   const lower = event.toLowerCase();
   if (lower.includes('freeze') || lower.includes('frost') || lower.includes('cold')) return 'freeze';
@@ -125,8 +164,6 @@ const classifySeverity = (event: string): WeatherAlert['severity'] => {
   return 'advisory';
 };
 
-// ─── Action Items by Alert Type ───
-// These are the specific "what to do" instructions shown to homeowners
 export const getActionItems = (type: WeatherAlert['type']): string[] => {
   const actions: Record<string, string[]> = {
     freeze: [

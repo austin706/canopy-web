@@ -36,6 +36,8 @@ import ProLogin from '@/pages/ProLogin';
 import ProJobs from '@/pages/ProJobs';
 import ProAvailability from '@/pages/ProAvailability';
 import ProProfile from '@/pages/ProProfile';
+import CreateTask from '@/pages/CreateTask';
+import ProServices from '@/pages/ProServices';
 import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
 
@@ -86,6 +88,7 @@ export default function App() {
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/weather" element={<Weather />} />
             <Route path="/task/:id" element={<TaskDetail />} />
+            <Route path="/task/create" element={<CreateTask />} />
             <Route path="/equipment" element={<Equipment />} />
             <Route path="/equipment/:id" element={<EquipmentDetail />} />
             <Route path="/notifications" element={<Notifications />} />
@@ -94,6 +97,7 @@ export default function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/pro-request" element={<ProRequest />} />
+            <Route path="/pro-services" element={<ProServices />} />
             <Route path="/agent" element={<AgentView />} />
             <Route path="/logs" element={<MaintenanceLogs />} />
             <Route path="/home" element={<HomeDetails />} />

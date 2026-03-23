@@ -229,7 +229,9 @@ export default function Dashboard() {
             <p style={{ fontWeight: 600, marginBottom: 12 }}>Quick Actions</p>
             <div className="flex-col gap-sm">
               {[
+                { icon: '&#10133;', label: 'Create Custom Task', route: '/task/create' },
                 { icon: '&#128247;', label: 'Scan Equipment', route: '/equipment' },
+                { icon: '&#128736;', label: 'Pro Services', route: '/pro-services' },
                 { icon: '&#128222;', label: 'Contact Agent', route: '/agent' },
                 { icon: '&#128203;', label: 'Maintenance Log', route: '/logs' },
                 { icon: '&#128295;', label: 'Request Pro', route: '/pro-request' },

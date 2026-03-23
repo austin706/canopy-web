@@ -3,6 +3,7 @@ import { useStore } from '@/store/useStore';
 import { uploadPhoto } from '@/services/supabase';
 import { canAccess } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
+import type { SecureNote } from '@/types';
 
 interface Document {
   id: string;
@@ -21,6 +22,16 @@ const CATEGORIES: { value: Document['category']; label: string; icon: string }[]
   { value: 'other', label: 'Other', icon: '📁' },
 ];
 
+const SECURE_NOTE_CATEGORIES: { label: string; value: SecureNote['category'] }[] = [
+  { label: 'Alarm Code', value: 'alarm_code' },
+  { label: 'Door Code', value: 'door_code' },
+  { label: 'Gate Code', value: 'gate_code' },
+  { label: 'WiFi Password', value: 'wifi_password' },
+  { label: 'Safe Combination', value: 'safe_combination' },
+  { label: 'Utility Account', value: 'utility_account' },
+  { label: 'Other', value: 'other' },
+];
+
 export default function Documents() {
   const { user } = useStore();
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -28,8 +39,68 @@ export default function Documents() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Secure Notes state
+  const [secureNotes, setSecureNotes] = useState<SecureNote[]>([]);
+  const [showAddNote, setShowAddNote] = useState(false);
+  const [newNoteTitle, setNewNoteTitle] = useState('');
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [newNoteCategory, setNewNoteCategory] = useState<SecureNote['category']>('other');
+  const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
+
+  // PIN Protection state
+  const [vaultPin, setVaultPin] = useState<string | null>(null);
+  const [pinInput, setPinInput] = useState('');
+  const [isPinUnlocked, setIsPinUnlocked] = useState(false);
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [pinError, setPinError] = useState('');
+
   const tier = user?.subscription_tier || 'free';
   const hasAccess = canAccess(tier, 'document_vault');
+  const hasSecureNotesAccess = canAccess(tier, 'secure_notes');
+
+  const handleSetPin = () => {
+    setPinError('');
+    if (pinInput.length < 4) {
+      setPinError('PIN must be at least 4 digits.');
+      return;
+    }
+    setVaultPin(pinInput);
+    setIsPinUnlocked(true);
+    setShowPinSetup(false);
+    setPinInput('');
+  };
+
+  const handleUnlockPin = () => {
+    setPinError('');
+    if (pinInput === vaultPin) {
+      setIsPinUnlocked(true);
+      setPinInput('');
+    } else {
+      setPinError('Incorrect PIN. Try again.');
+      setPinInput('');
+    }
+  };
+
+  const handleAddSecureNote = () => {
+    if (!newNoteTitle.trim() || !newNoteContent.trim()) {
+      alert('Please enter both a title and content for your secure note.');
+      return;
+    }
+    const newNote: SecureNote = {
+      id: Date.now().toString(),
+      home_id: user?.id || '',
+      title: newNoteTitle.trim(),
+      content: newNoteContent.trim(),
+      category: newNoteCategory,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setSecureNotes([newNote, ...secureNotes]);
+    setNewNoteTitle('');
+    setNewNoteContent('');
+    setNewNoteCategory('other');
+    setShowAddNote(false);
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -128,6 +199,140 @@ export default function Documents() {
       </div>
 
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+        {/* Secure Notes PIN Protection */}
+        {hasSecureNotesAccess && vaultPin && !isPinUnlocked && (
+          <div className="card" style={{
+            background: Colors.copperMuted,
+            border: `2px solid ${Colors.copper}`,
+            marginBottom: 24,
+            padding: 32,
+            textAlign: 'center'
+          }}>
+            <p style={{ fontSize: 32, marginBottom: 16 }}>🔒</p>
+            <h3 style={{ color: Colors.charcoal, marginBottom: 8 }}>Vault Locked</h3>
+            <p className="text-sm text-gray" style={{ marginBottom: 16, lineHeight: 1.6 }}>
+              Enter your PIN to access secure notes and sensitive information.
+            </p>
+            <input
+              type="password"
+              inputMode="numeric"
+              placeholder="Enter PIN"
+              value={pinInput}
+              onChange={(e) => {
+                setPinInput(e.target.value.replace(/\D/g, ''));
+                setPinError('');
+              }}
+              maxLength={8}
+              style={{
+                width: '100%',
+                padding: '12px',
+                marginBottom: 8,
+                fontSize: 20,
+                letterSpacing: 8,
+                textAlign: 'center',
+                border: `1px solid ${Colors.lightGray}`,
+                borderRadius: 4,
+                fontFamily: 'monospace'
+              }}
+            />
+            {pinError && (
+              <p style={{ color: Colors.warning, fontSize: 12, marginBottom: 16 }}>{pinError}</p>
+            )}
+            <button
+              className="btn btn-primary"
+              onClick={handleUnlockPin}
+              style={{ width: '100%' }}
+            >
+              Unlock
+            </button>
+          </div>
+        )}
+
+        {/* Set/Change PIN Button (when unlocked or no PIN) */}
+        {hasSecureNotesAccess && isPinUnlocked && (
+          <button
+            onClick={() => {
+              if (vaultPin) {
+                if (confirm('Change your vault PIN?')) {
+                  setPinInput('');
+                  setShowPinSetup(true);
+                }
+              } else {
+                setShowPinSetup(true);
+              }
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              marginBottom: 16,
+              fontSize: 13,
+              fontWeight: 600,
+              color: Colors.copper,
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0
+            }}
+          >
+            🔐 {vaultPin ? 'Change Vault PIN' : 'Set Vault PIN'}
+          </button>
+        )}
+
+        {/* PIN Setup Form */}
+        {hasSecureNotesAccess && showPinSetup && isPinUnlocked && (
+          <div className="card" style={{ marginBottom: 24 }}>
+            <h3 style={{ color: Colors.charcoal, marginBottom: 12, fontSize: 16, fontWeight: 600 }}>
+              {vaultPin ? 'Change' : 'Set'} Vault PIN
+            </h3>
+            <input
+              type="password"
+              inputMode="numeric"
+              placeholder="Enter 4+ digit PIN"
+              value={pinInput}
+              onChange={(e) => {
+                setPinInput(e.target.value.replace(/\D/g, ''));
+                setPinError('');
+              }}
+              maxLength={8}
+              style={{
+                width: '100%',
+                padding: '12px',
+                marginBottom: 8,
+                fontSize: 16,
+                letterSpacing: 6,
+                textAlign: 'center',
+                border: `1px solid ${Colors.lightGray}`,
+                borderRadius: 4,
+                fontFamily: 'monospace'
+              }}
+            />
+            {pinError && (
+              <p style={{ color: Colors.warning, fontSize: 12, marginBottom: 16 }}>{pinError}</p>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  setShowPinSetup(false);
+                  setPinInput('');
+                  setPinError('');
+                }}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSetPin}
+                style={{ flex: 1 }}
+              >
+                Save PIN
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Category Filter */}
         {documents.length > 0 && (
           <div className="tabs mb-lg" style={{ overflow: 'auto' }}>
@@ -233,6 +438,232 @@ export default function Documents() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Secure Notes Section */}
+        {hasSecureNotesAccess && isPinUnlocked && (
+          <div style={{ marginTop: 48 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: Colors.charcoal, marginBottom: 8 }}>
+              🔐 Secure Notes
+            </h2>
+            <p className="text-sm text-gray" style={{ marginBottom: 16, lineHeight: 1.6 }}>
+              Store sensitive info like alarm codes, door codes, WiFi passwords, and more.
+            </p>
+
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowAddNote(!showAddNote)}
+              style={{ marginBottom: 16 }}
+            >
+              + {showAddNote ? 'Cancel' : 'Add Secure Note'}
+            </button>
+
+            {/* Add Note Form */}
+            {showAddNote && (
+              <div className="card" style={{ marginBottom: 24 }}>
+                <h3 style={{ color: Colors.charcoal, marginBottom: 16, fontSize: 16, fontWeight: 600 }}>
+                  New Secure Note
+                </h3>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: Colors.charcoal, marginBottom: 6 }}>
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Front Door Code"
+                    value={newNoteTitle}
+                    onChange={(e) => setNewNoteTitle(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: `1px solid ${Colors.lightGray}`,
+                      borderRadius: 4,
+                      fontSize: 14,
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: Colors.charcoal, marginBottom: 6 }}>
+                    Content
+                  </label>
+                  <textarea
+                    placeholder="e.g., 1234#"
+                    value={newNoteContent}
+                    onChange={(e) => setNewNoteContent(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: `1px solid ${Colors.lightGray}`,
+                      borderRadius: 4,
+                      fontSize: 14,
+                      fontFamily: 'inherit',
+                      minHeight: 80,
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: Colors.charcoal, marginBottom: 8 }}>
+                    Category
+                  </label>
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 8
+                  }}>
+                    {SECURE_NOTE_CATEGORIES.map(cat => (
+                      <button
+                        key={cat.value}
+                        onClick={() => setNewNoteCategory(cat.value)}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: 20,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          border: `1px solid ${newNoteCategory === cat.value ? Colors.copper : Colors.lightGray}`,
+                          background: newNoteCategory === cat.value ? Colors.copper : 'transparent',
+                          color: newNoteCategory === cat.value ? Colors.white : Colors.charcoal,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      setShowAddNote(false);
+                      setNewNoteTitle('');
+                      setNewNoteContent('');
+                      setNewNoteCategory('other');
+                    }}
+                    style={{ flex: 1 }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleAddSecureNote}
+                    style={{ flex: 1 }}
+                  >
+                    Save Note
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Notes List */}
+            {secureNotes.length === 0 && !showAddNote ? (
+              <div className="card" style={{ textAlign: 'center', padding: 32 }}>
+                <p style={{ fontSize: 28, marginBottom: 12 }}>🔑</p>
+                <h3 style={{ color: Colors.charcoal, marginBottom: 8 }}>No secure notes yet</h3>
+                <p className="text-sm text-gray">
+                  Add alarm codes, door codes, WiFi passwords, and other sensitive info here.
+                </p>
+              </div>
+            ) : secureNotes.length > 0 ? (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: 16
+              }}>
+                {secureNotes.map(note => {
+                  const catLabel = SECURE_NOTE_CATEGORIES.find(c => c.value === note.category);
+                  const isExpanded = expandedNoteId === note.id;
+                  return (
+                    <div
+                      key={note.id}
+                      className="card"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+                        <div style={{
+                          fontSize: 20,
+                          width: 36,
+                          height: 36,
+                          borderRadius: 4,
+                          background: Colors.copperMuted,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          🔑
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{
+                            fontWeight: 600,
+                            fontSize: 14,
+                            color: Colors.charcoal,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {note.title}
+                          </p>
+                          <div style={{
+                            display: 'inline-block',
+                            background: Colors.copperMuted,
+                            color: Colors.copper,
+                            padding: '2px 8px',
+                            borderRadius: 12,
+                            fontSize: 11,
+                            fontWeight: 500,
+                            marginTop: 6
+                          }}>
+                            {catLabel?.label}
+                          </div>
+                        </div>
+                      </div>
+                      {isExpanded && (
+                        <div style={{
+                          background: Colors.cream,
+                          padding: 12,
+                          borderRadius: 4,
+                          marginBottom: 12,
+                          wordBreak: 'break-word',
+                          whiteSpace: 'pre-wrap',
+                          fontSize: 13,
+                          color: Colors.charcoal,
+                          fontFamily: 'monospace'
+                        }}>
+                          {note.content}
+                        </div>
+                      )}
+                      <p className="text-xs text-gray" style={{ marginBottom: 12 }}>
+                        {new Date(note.created_at).toLocaleDateString()}
+                      </p>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => setExpandedNoteId(isExpanded ? null : note.id)}
+                          style={{ flex: 1 }}
+                        >
+                          {isExpanded ? 'Hide' : 'View'}
+                        </button>
+                        <button
+                          className="btn btn-sm btn-ghost"
+                          onClick={() => {
+                            if (confirm('Delete this secure note?')) {
+                              setSecureNotes(prev => prev.filter(n => n.id !== note.id));
+                              if (expandedNoteId === note.id) setExpandedNoteId(null);
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
         )}
       </div>

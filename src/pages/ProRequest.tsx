@@ -64,7 +64,7 @@ export default function ProRequest() {
         <div className="card text-center" style={{ padding: 48 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>&#128274;</div>
           <h2 style={{ fontSize: 20, marginBottom: 8 }}>Pro Services Locked</h2>
-          <p className="text-gray mb-lg">Upgrade to Home + Pro to request professional maintenance visits including filter changes, gutter cleaning, and more.</p>
+          <p className="text-gray mb-lg">Upgrade to a Pro plan to request professional maintenance visits including filter changes, gutter cleaning, and more.</p>
           <button className="btn btn-primary" onClick={() => navigate('/subscription')}>View Plans</button>
         </div>
       </div>

@@ -71,7 +71,7 @@ export default function Subscription() {
           <div>
             <p className="text-xs fw-600 text-copper">CURRENT PLAN</p>
             <p style={{ fontSize: 22, fontWeight: 700, margin: '4px 0' }}>{PLANS.find(p => p.value === tier)?.name || 'Free'}</p>
-            <p style={{ fontSize: 24, fontWeight: 700 }}>${PLANS.find(p => p.value === tier)?.price || 0}<span className="text-sm text-gray">{PLANS.find(p => p.value === tier)?.period}</span></p>
+            <p style={{ fontSize: 24, fontWeight: 700 }}>{(PLANS.find(p => p.value === tier) as any)?.inquireForPricing ? 'Concierge Plan' : `$${PLANS.find(p => p.value === tier)?.price || 0}`}<span className="text-sm text-gray">{(PLANS.find(p => p.value === tier) as any)?.inquireForPricing ? '' : PLANS.find(p => p.value === tier)?.period}</span></p>
           </div>
           <div style={{ fontSize: 40, color: Colors.copper }}>&#10003;</div>
         </div>

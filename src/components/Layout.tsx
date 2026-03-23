@@ -20,7 +20,7 @@ export default function Layout() {
     { to: '/weather', icon: '&#9925;', label: 'Weather' },
     { to: '/equipment', icon: '&#128736;', label: 'Equipment' },
     { to: '/documents', icon: '&#128196;', label: 'Documents' },
-    { to: '/pro-request', icon: '&#128295;', label: 'Pro Services' },
+    { to: '/pro-services', icon: '&#128295;', label: 'Pro Services' },
     { to: '/logs', icon: '&#128203;', label: 'Maintenance Log' },
     { to: '/notifications', icon: '&#128276;', label: 'Notifications' },
     { to: '/agent', icon: '&#128100;', label: 'My Agent' },

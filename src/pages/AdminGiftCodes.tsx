@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllGiftCodes, createGiftCodes, getAllAgents } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
+import { PLANS } from '@/services/subscriptionGate';
 import type { SubscriptionTier } from '@/types';
 
 function generateCode(): string {
@@ -107,7 +108,9 @@ export default function AdminGiftCodes() {
             <div className="form-group">
               <label>Subscription Tier</label>
               <select className="form-select" value={form.tier} onChange={e => setForm({...form, tier: e.target.value as SubscriptionTier})}>
-                <option value="home">Home ($6.99/mo)</option><option value="pro">Home + Pro ($149/mo)</option><option value="pro_plus">Home + Pro+ ($179/mo)</option>
+                {PLANS.filter(p => p.value !== 'free').map(p => (
+                  <option key={p.value} value={p.value}>{p.name}{p.price ? ` ($${p.price}${p.period})` : ' (Concierge)'}</option>
+                ))}
               </select>
             </div>
             <div className="form-group"><label>Duration (months)</label><input className="form-input" type="number" min="1" max="24" value={form.duration_months} onChange={e => setForm({...form, duration_months: e.target.value})} /></div>

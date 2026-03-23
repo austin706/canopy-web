@@ -50,7 +50,7 @@ export default function Documents() {
   // PIN Protection state
   const [vaultPin, setVaultPin] = useState<string | null>(null);
   const [pinInput, setPinInput] = useState('');
-  const [isPinUnlocked, setIsPinUnlocked] = useState(false);
+  const [isPinUnlocked, setIsPinUnlocked] = useState(true); // Default unlocked; lock screen shows only when PIN exists
   const [showPinSetup, setShowPinSetup] = useState(false);
   const [pinError, setPinError] = useState('');
 

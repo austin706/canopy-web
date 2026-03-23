@@ -74,7 +74,7 @@ export default function Dashboard() {
   const hasAI = canAccess(tier, 'ai_task_generation');
   const taskLimit = getTaskLimit(tier);
 
-  const displayTasks = hasAI && tasks.length > 0 ? tasks : DEMO_TASKS;
+  const displayTasks = tasks.length > 0 ? tasks : DEMO_TASKS;
   const tasksToShow = taskLimit ? displayTasks.slice(0, taskLimit) : displayTasks;
   const displayWeather = weather || DEMO_WEATHER;
 
@@ -247,7 +247,7 @@ export default function Dashboard() {
           <div className="card" style={{ background: Colors.copperMuted }}>
             <p className="text-xs fw-600 text-copper mb-sm">YOUR PLAN</p>
             <p style={{ fontWeight: 700 }}>{PLANS.find(p => p.value === tier)?.name || 'Free'}</p>
-            <p className="text-sm text-gray">${PLANS.find(p => p.value === tier)?.price || 0}{PLANS.find(p => p.value === tier)?.period}</p>
+            <p className="text-sm text-gray">{(PLANS.find(p => p.value === tier) as any)?.inquireForPricing ? 'Concierge Plan' : `$${PLANS.find(p => p.value === tier)?.price || 0}${PLANS.find(p => p.value === tier)?.period}`}</p>
             {tier === 'free' && <button className="btn btn-primary btn-sm mt-md" onClick={() => navigate('/subscription')}>Upgrade</button>}
           </div>
 

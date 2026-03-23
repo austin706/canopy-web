@@ -4,7 +4,7 @@
 import type { WeatherData, WeatherAlert } from '@/types';
 
 const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY || '';
-const BASE_URL = 'https://api.openweathermap.org/data/3.0';
+const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 export const fetchWeather = async (lat: number, lon: number): Promise<WeatherData> => {
   const response = await fetch(

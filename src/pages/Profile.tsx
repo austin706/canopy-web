@@ -103,7 +103,7 @@ export default function Profile() {
           <div>
             <p className="text-xs fw-600 text-copper mb-sm">SUBSCRIPTION</p>
             <h3>{plan?.name || 'Free'}</h3>
-            <p className="text-sm text-gray">${plan?.price || 0}{plan?.period}</p>
+            <p className="text-sm text-gray">{(plan as any)?.inquireForPricing ? 'Concierge Plan' : `$${plan?.price || 0}${plan?.period}`}</p>
             {user?.subscription_expires_at && <p className="text-xs text-gray mt-sm">Expires: {new Date(user.subscription_expires_at).toLocaleDateString()}</p>}
           </div>
           <button className="btn btn-primary" onClick={() => navigate('/subscription')}>

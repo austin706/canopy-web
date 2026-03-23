@@ -72,13 +72,21 @@ export interface Home {
   photo_url?: string;
   climate_zone?: string;
   usda_zone?: string;
+
+  // Infrastructure locations
+  main_breaker_location?: string;
+  sub_panel_locations?: string;
+  water_shutoff_location?: string;
+  gas_meter_location?: string;
+  water_meter_location?: string;
+
   created_at: string;
 }
 
 export type EquipmentCategory =
   | 'hvac' | 'water_heater' | 'roof' | 'plumbing'
   | 'electrical' | 'appliance' | 'outdoor' | 'safety'
-  | 'pool' | 'garage';
+  | 'pool' | 'garage' | 'filter' | 'pest_control';
 
 export interface Equipment {
   id: string;
@@ -104,6 +112,17 @@ export interface Equipment {
   fuel_type?: 'gas' | 'electric' | 'propane' | 'solar';
   hose_bib_location?: string;
   is_frost_free?: boolean;
+
+  // Refrigerator/Freezer filter specific
+  filter_type?: string;
+  filter_model_number?: string;
+  filter_replacement_interval_months?: number;
+
+  // Garage door opener specific
+  opener_type?: 'chain' | 'belt' | 'screw' | 'direct_drive' | 'jackshaft';
+  remote_frequency?: string;
+  has_battery_backup?: boolean;
+
   created_at: string;
   updated_at: string;
 }
@@ -119,7 +138,7 @@ export interface MaintenanceTask {
   title: string;
   description: string;
   instructions?: string[];
-  category: EquipmentCategory | 'general' | 'lawn' | 'pool' | 'deck' | 'seasonal';
+  category: EquipmentCategory | 'general' | 'lawn' | 'pool' | 'deck' | 'seasonal' | 'pest_control';
   priority: TaskPriority;
   status: TaskStatus;
   frequency: TaskFrequency;
@@ -133,7 +152,52 @@ export interface MaintenanceTask {
   is_weather_triggered: boolean;
   applicable_months: number[];
   applicable_climate_zones?: string[];
+
+  // Custom task support
+  is_custom?: boolean;
+  created_by_user?: boolean;
+  template_id?: string;
+
+  // Pro service scheduler fields
+  service_purpose?: string;
+  items_to_have_on_hand?: string[];
+  pro_provider_id?: string;
+  scheduled_time?: string;
+  reminder_days_before?: number;
+
   created_at: string;
+}
+
+// ─── Secure Notes (Document Vault) ───
+export interface SecureNote {
+  id: string;
+  home_id: string;
+  title: string;
+  content: string;
+  category: 'alarm_code' | 'door_code' | 'gate_code' | 'wifi_password' | 'safe_combination' | 'utility_account' | 'other';
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Pro Service Appointment ───
+export interface ProServiceAppointment {
+  id: string;
+  home_id: string;
+  task_id?: string;
+  pro_provider_id?: string;
+  title: string;
+  description: string;
+  service_purpose: string;
+  items_to_have_on_hand: string[];
+  scheduled_date: string;
+  scheduled_time?: string;
+  reminder_days_before: number;
+  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+  notes?: string;
+  cost_estimate?: number;
+  actual_cost?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface WeatherAlert {

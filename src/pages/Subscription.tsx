@@ -80,15 +80,27 @@ export default function Subscription() {
       {/* Plans Grid */}
       <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Available Plans</h2>
       <div className="grid-2 mb-lg">
-        {PLANS.map(plan => (
+        {PLANS.map(plan => {
+          const isInquiry = (plan as any).inquireForPricing === true;
+          return (
           <div key={plan.id} className="card" style={tier === plan.value ? { border: `2px solid ${Colors.copper}` } : {}}>
             <div className="flex items-center justify-between mb-md">
               <div>
                 <p style={{ fontSize: 16, fontWeight: 700 }}>{plan.name}</p>
-                <p style={{ fontSize: 22, fontWeight: 700, color: Colors.copper }}>${plan.price}<span className="text-sm text-gray">{plan.period}</span></p>
+                {isInquiry ? (
+                  <p style={{ fontSize: 16, fontWeight: 600, color: Colors.copper }}>Inquire for Pricing</p>
+                ) : (
+                  <p style={{ fontSize: 22, fontWeight: 700, color: Colors.copper }}>${plan.price}<span className="text-sm text-gray">{plan.period}</span></p>
+                )}
               </div>
               {tier === plan.value && <span className="badge badge-copper">Current</span>}
+              {isInquiry && tier !== plan.value && <span className="badge" style={{ background: Colors.copperMuted, color: Colors.copper }}>Concierge</span>}
             </div>
+            {isInquiry && tier !== plan.value && (
+              <p style={{ fontSize: 13, color: '#666', marginBottom: 12, lineHeight: 1.5 }}>
+                Full property concierge — we manage every system in your home so you don't have to think about it.
+              </p>
+            )}
             <ul style={{ listStyle: 'none', padding: 0 }}>
               {plan.features.map((f, i) => (
                 <li key={i} className="flex items-center gap-sm" style={{ padding: '6px 0', fontSize: 14 }}>
@@ -96,13 +108,19 @@ export default function Subscription() {
                 </li>
               ))}
             </ul>
-            {tier !== plan.value && (
+            {tier !== plan.value && !isInquiry && (
               <button className="btn btn-primary btn-full mt-md" onClick={() => alert('Payment integration required. Use a gift code to upgrade, or configure Stripe/RevenueCat.')}>
-                {plan.price > (PLANS.find(p => p.value === tier)?.price || 0) ? 'Upgrade' : 'Change Plan'}
+                {(plan.price || 0) > (PLANS.find(p => p.value === tier)?.price || 0) ? 'Upgrade' : 'Change Plan'}
+              </button>
+            )}
+            {tier !== plan.value && isInquiry && (
+              <button className="btn btn-secondary btn-full mt-md" onClick={() => alert('Interested in our full property concierge service? Contact us at support@canopyhome.app and we\'ll build a custom plan for your home.')}>
+                Contact Us for Pricing
               </button>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Gift Code */}

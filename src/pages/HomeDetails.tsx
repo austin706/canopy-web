@@ -19,6 +19,12 @@ export default function HomeDetails() {
     has_pool: home?.has_pool || false, has_deck: home?.has_deck || false, has_sprinkler_system: home?.has_sprinkler_system || false,
     has_fireplace: home?.has_fireplace || false,
     lawn_type: home?.lawn_type || 'none',
+    // Infrastructure locations
+    main_breaker_location: home?.main_breaker_location || '',
+    sub_panel_locations: home?.sub_panel_locations || '',
+    water_shutoff_location: home?.water_shutoff_location || '',
+    gas_meter_location: home?.gas_meter_location || '',
+    water_meter_location: home?.water_meter_location || '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -169,6 +175,36 @@ export default function HomeDetails() {
               </label>
             ))}
           </div>
+          {/* Infrastructure Locations */}
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 24, marginBottom: 8 }}>Infrastructure Locations</h3>
+          <p className="text-xs text-gray" style={{ marginBottom: 12 }}>Know where your key systems are in an emergency.</p>
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Main Breaker</label>
+              <input className="form-input" value={form.main_breaker_location} onChange={e => setForm({...form, main_breaker_location: e.target.value})} placeholder="e.g., Garage wall, left side" />
+            </div>
+            <div className="form-group">
+              <label>Sub Panels</label>
+              <input className="form-input" value={form.sub_panel_locations} onChange={e => setForm({...form, sub_panel_locations: e.target.value})} placeholder="e.g., Master closet, basement" />
+            </div>
+          </div>
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Water Shutoff</label>
+              <input className="form-input" value={form.water_shutoff_location} onChange={e => setForm({...form, water_shutoff_location: e.target.value})} placeholder="e.g., Front yard, near sidewalk" />
+            </div>
+            <div className="form-group">
+              <label>Gas Meter</label>
+              <input className="form-input" value={form.gas_meter_location} onChange={e => setForm({...form, gas_meter_location: e.target.value})} placeholder="e.g., Right side of house" />
+            </div>
+          </div>
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Water Meter</label>
+              <input className="form-input" value={form.water_meter_location} onChange={e => setForm({...form, water_meter_location: e.target.value})} placeholder="e.g., Front yard, curb" />
+            </div>
+          </div>
+
           <div className="flex gap-sm mt-lg">
             {home && <button className="btn btn-ghost" onClick={() => setEditing(false)}>Cancel</button>}
             <button className="btn btn-primary" onClick={handleSave} disabled={saving || !form.address}>{saving ? 'Saving...' : 'Save Home'}</button>
@@ -193,6 +229,16 @@ export default function HomeDetails() {
               {!home.has_pool && !home.has_deck && !home.has_sprinkler_system && !home.has_fireplace && <span className="text-sm text-gray">None selected</span>}
             </div>
           </Field>
+          {(home.main_breaker_location || home.water_shutoff_location || home.gas_meter_location || home.water_meter_location || home.sub_panel_locations) && (
+            <>
+              <div style={{ fontSize: 15, fontWeight: 600, marginTop: 20, marginBottom: 8 }}>Infrastructure Locations</div>
+              {home.main_breaker_location && <Field label="Main Breaker"><p style={{ fontWeight: 500 }}>{home.main_breaker_location}</p></Field>}
+              {home.sub_panel_locations && <Field label="Sub Panels"><p style={{ fontWeight: 500 }}>{home.sub_panel_locations}</p></Field>}
+              {home.water_shutoff_location && <Field label="Water Shutoff"><p style={{ fontWeight: 500 }}>{home.water_shutoff_location}</p></Field>}
+              {home.gas_meter_location && <Field label="Gas Meter"><p style={{ fontWeight: 500 }}>{home.gas_meter_location}</p></Field>}
+              {home.water_meter_location && <Field label="Water Meter"><p style={{ fontWeight: 500 }}>{home.water_meter_location}</p></Field>}
+            </>
+          )}
         </div>
       ) : null}
     </div>

@@ -59,7 +59,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function ProServices() {
-  const { user, home, subscription } = useStore();
+  const { user, home } = useStore();
   const [appointments, setAppointments] = useState<ProServiceAppointment[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<ProServiceTemplate | null>(null);
   const [formData, setFormData] = useState({
@@ -72,7 +72,8 @@ export default function ProServices() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const hasAccess = canAccess(subscription?.tier, 'pro_service_scheduler');
+  const tier = user?.subscription_tier || 'free';
+  const hasAccess = canAccess(tier, 'pro_service_scheduler');
 
   useEffect(() => {
     if (home && hasAccess) {

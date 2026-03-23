@@ -58,7 +58,7 @@ export default function Dashboard() {
         try {
           setWeatherLoading(true);
           setWeatherError(null);
-          const weatherData = await fetchWeather(home.latitude, home.longitude);
+          const weatherData = await fetchWeather(home.latitude!, home.longitude!);
           setWeather(weatherData);
         } catch (error) {
           console.error('Failed to fetch weather:', error);

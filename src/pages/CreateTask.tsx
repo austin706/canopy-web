@@ -86,7 +86,7 @@ export default function CreateTask() {
         category: selectedCategory,
         priority: selectedPriority,
         frequency: selectedFrequency,
-        status: 'pending',
+        status: 'upcoming',
         due_date: dueDate || new Date().toISOString().split('T')[0],
         is_weather_triggered: false,
         applicable_months: [],

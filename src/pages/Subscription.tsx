@@ -43,7 +43,7 @@ export default function Subscription() {
         user_id: user?.id || null,
         state: home?.state || null,
       });
-      setWaitlistMessage('Thanks! We'll notify you when Pro services are available in your area.');
+      setWaitlistMessage('Thanks! We will notify you when Pro services are available in your area.');
       setWaitlistEmail('');
       setWaitlistZip('');
       setTimeout(() => setWaitlistMessage(''), 5000);

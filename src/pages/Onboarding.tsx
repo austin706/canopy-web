@@ -5,6 +5,7 @@ import { upsertHome, upsertEquipment, updateProfile, createTasks } from '@/servi
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
 import EquipmentScanner from '@/components/EquipmentScanner';
 import { Colors } from '@/constants/theme';
+import { CheckCircleIcon } from '@/components/icons/Icons';
 import type { EquipmentCategory, Equipment as EquipmentType } from '@/types';
 
 const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
@@ -246,13 +247,14 @@ export default function Onboarding() {
         // Continue even if profile update fails
       }
 
-      navigate('/');
+      // Show completion screen instead of immediately navigating
+      setStep(3);
     } finally {
       setSaving(false);
     }
   };
 
-  const progressPercent = ((step + 1) / 3) * 100;
+  const progressPercent = step >= 3 ? 100 : ((step + 1) / 3) * 100;
 
   return (
     <div className="page" style={{ maxWidth: 600, margin: '0 auto', paddingTop: 40 }}>
@@ -638,6 +640,60 @@ export default function Onboarding() {
               {generatingTasks ? 'Generating plan...' : saving ? 'Finishing...' : 'Done'}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Step 3: Completion / Welcome Screen */}
+      {step === 3 && (
+        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+          {/* TODO: Replace with final branded illustration when ready */}
+          <div style={{
+            width: 100,
+            height: 100,
+            borderRadius: '50%',
+            background: `linear-gradient(135deg, ${Colors.sage}30, ${Colors.copper}20)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 24px',
+            border: `3px solid ${Colors.sage}`,
+          }}>
+            <CheckCircleIcon size={48} color={Colors.sage} />
+          </div>
+
+          <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>You're All Set!</h2>
+          <p style={{ fontSize: 16, color: Colors.medGray, maxWidth: 400, margin: '0 auto 32px', lineHeight: 1.6 }}>
+            Your home profile is ready. Canopy has created a personalized maintenance plan based on your home and equipment.
+          </p>
+
+          <div className="card" style={{ textAlign: 'left', maxWidth: 400, margin: '0 auto 32px' }}>
+            <p style={{ fontWeight: 600, marginBottom: 12 }}>What's next:</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                { label: 'Check your calendar', desc: 'See upcoming maintenance tasks' },
+                { label: 'Explore weather alerts', desc: 'Stay ahead of severe weather' },
+                { label: 'Add more equipment', desc: 'Get tailored maintenance reminders' },
+              ].map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <span style={{ width: 24, height: 24, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: Colors.copper, flexShrink: 0, marginTop: 2 }}>
+                    {i + 1}
+                  </span>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: 14 }}>{item.label}</p>
+                    <p className="text-xs text-gray">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            className="btn btn-primary"
+            style={{ padding: '14px 48px', fontSize: 16 }}
+            onClick={() => navigate('/')}
+          >
+            Go to Dashboard
+          </button>
         </div>
       )}
     </div>

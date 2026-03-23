@@ -402,3 +402,44 @@ a:hover { opacity: 0.85; }
 
 /* Sidebar section divider */
 .sidebar-divider { height: 1px; background: var(--light-gray); margin: 8px 16px; }
+
+/* ─── Skeleton Loaders ─── */
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--cream) 0%, var(--warm-white) 40%, var(--cream) 80%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+.skeleton-text { height: 14px; width: 80%; margin-bottom: 10px; }
+.skeleton-text.short { width: 40%; }
+.skeleton-text.medium { width: 60%; }
+.skeleton-title { height: 20px; width: 50%; margin-bottom: 14px; }
+.skeleton-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }
+.skeleton-card {
+  background: var(--white);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 12px;
+}
+.skeleton-card .skeleton-row { display: flex; gap: 12px; align-items: center; }
+.skeleton-bar { height: 32px; border-radius: var(--radius-sm); }
+
+/* ─── Enhanced Card Variants ─── */
+.card-glass {
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.5);
+}
+.card-accent-left { border-left: 3px solid var(--copper); }
+.card-accent-sage { border-left: 3px solid var(--sage); }
+
+/* ─── Smooth transitions for interactive elements ─── */
+.btn, .tab, .form-input, .form-textarea, .form-select {
+  transition: all 0.2s ease;
+}

@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import { uploadPhoto } from '@/services/supabase';
+import { uploadPhoto, getDocuments, createDocument, deleteDocument, getSecureNotes, createSecureNote, deleteSecureNote, getVaultPin, upsertVaultPin } from '@/services/supabase';
 import { canAccess } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
 import type { SecureNote } from '@/types';
@@ -33,7 +33,7 @@ const SECURE_NOTE_CATEGORIES: { label: string; value: SecureNote['category'] }[]
 ];
 
 export default function Documents() {
-  const { user } = useStore();
+  const { user, home } = useStore();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [filter, setFilter] = useState<string>('all');
   const [uploading, setUploading] = useState(false);
@@ -46,6 +46,7 @@ export default function Documents() {
   const [newNoteContent, setNewNoteContent] = useState('');
   const [newNoteCategory, setNewNoteCategory] = useState<SecureNote['category']>('other');
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
+  const [notesLoading, setNotesLoading] = useState(false);
 
   // PIN Protection state
   const [vaultPin, setVaultPin] = useState<string | null>(null);
@@ -58,16 +59,57 @@ export default function Documents() {
   const hasAccess = canAccess(tier, 'document_vault');
   const hasSecureNotesAccess = canAccess(tier, 'secure_notes');
 
-  const handleSetPin = () => {
+  // Fetch documents, secure notes, and vault PIN on mount
+  useEffect(() => {
+    const loadData = async () => {
+      if (!home?.id || !user?.id) return;
+      setNotesLoading(true);
+      try {
+        const [docs, notes, pinData] = await Promise.all([
+          getDocuments(home.id),
+          getSecureNotes(home.id),
+          getVaultPin(user.id),
+        ]);
+        // Map DB rows to local Document shape
+        setDocuments(docs.map((row: any) => ({
+          id: row.id,
+          name: row.title,
+          category: row.category,
+          uploadDate: row.created_at,
+          url: row.file_url || '',
+        })));
+        setSecureNotes(notes);
+        if (pinData?.pin_hash) {
+          setVaultPin(pinData.pin_hash);
+          setIsPinUnlocked(false); // Lock vault when PIN exists
+        }
+      } catch (err) {
+        console.warn('Failed to load documents/notes/PIN:', err);
+      } finally {
+        setNotesLoading(false);
+      }
+    };
+    loadData();
+  }, [home?.id, user?.id]);
+
+  const handleSetPin = async () => {
     setPinError('');
     if (pinInput.length < 4) {
       setPinError('PIN must be at least 4 digits.');
       return;
     }
-    setVaultPin(pinInput);
-    setIsPinUnlocked(true);
-    setShowPinSetup(false);
-    setPinInput('');
+    try {
+      if (user?.id) {
+        await upsertVaultPin(user.id, pinInput);
+      }
+      setVaultPin(pinInput);
+      setIsPinUnlocked(true);
+      setShowPinSetup(false);
+      setPinInput('');
+    } catch (err) {
+      console.warn('Failed to save PIN:', err);
+      setPinError('Failed to save PIN. Please try again.');
+    }
   };
 
   const handleUnlockPin = () => {
@@ -81,25 +123,31 @@ export default function Documents() {
     }
   };
 
-  const handleAddSecureNote = () => {
+  const handleAddSecureNote = async () => {
     if (!newNoteTitle.trim() || !newNoteContent.trim()) {
       alert('Please enter both a title and content for your secure note.');
       return;
     }
-    const newNote: SecureNote = {
-      id: Date.now().toString(),
-      home_id: user?.id || '',
-      title: newNoteTitle.trim(),
-      content: newNoteContent.trim(),
-      category: newNoteCategory,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setSecureNotes([newNote, ...secureNotes]);
-    setNewNoteTitle('');
-    setNewNoteContent('');
-    setNewNoteCategory('other');
-    setShowAddNote(false);
+    if (!home?.id) {
+      alert('No home profile found. Please complete onboarding first.');
+      return;
+    }
+    try {
+      const saved = await createSecureNote({
+        home_id: home.id,
+        title: newNoteTitle.trim(),
+        content: newNoteContent.trim(),
+        category: newNoteCategory,
+      });
+      setSecureNotes([saved, ...secureNotes]);
+      setNewNoteTitle('');
+      setNewNoteContent('');
+      setNewNoteCategory('other');
+      setShowAddNote(false);
+    } catch (err: any) {
+      console.error('Failed to save secure note:', err);
+      alert('Failed to save note: ' + (err.message || 'Unknown error'));
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,17 +168,31 @@ export default function Documents() {
 
     const category = categoryMap[categoryPrompt] || 'other';
 
+    if (!home?.id || !user?.id) {
+      alert('No home profile found. Please complete onboarding first.');
+      return;
+    }
+
     setUploading(true);
     try {
-      const fileName = `${user?.id}/${Date.now()}-${file.name}`;
+      const fileName = `${user.id}/${Date.now()}-${file.name}`;
       const publicUrl = await uploadPhoto('documents', fileName, file);
 
-      const newDoc: Document = {
-        id: Date.now().toString(),
-        name: file.name,
+      // Persist metadata to Supabase
+      const saved = await createDocument({
+        home_id: home.id,
+        user_id: user.id,
+        title: file.name,
         category,
-        uploadDate: new Date().toISOString(),
-        url: publicUrl,
+        file_url: publicUrl,
+      });
+
+      const newDoc: Document = {
+        id: saved.id,
+        name: saved.title,
+        category: saved.category,
+        uploadDate: saved.created_at,
+        url: saved.file_url || publicUrl,
       };
 
       setDocuments(prev => [newDoc, ...prev]);
@@ -426,9 +488,15 @@ export default function Documents() {
                     </a>
                     <button
                       className="btn btn-sm btn-ghost"
-                      onClick={() => {
+                      onClick={async () => {
                         if (confirm('Delete this document?')) {
-                          setDocuments(prev => prev.filter(d => d.id !== doc.id));
+                          try {
+                            await deleteDocument(doc.id);
+                            setDocuments(prev => prev.filter(d => d.id !== doc.id));
+                          } catch (err) {
+                            console.error('Failed to delete document:', err);
+                            alert('Failed to delete document. Please try again.');
+                          }
                         }
                       }}
                     >
@@ -649,10 +717,16 @@ export default function Documents() {
                         </button>
                         <button
                           className="btn btn-sm btn-ghost"
-                          onClick={() => {
+                          onClick={async () => {
                             if (confirm('Delete this secure note?')) {
-                              setSecureNotes(prev => prev.filter(n => n.id !== note.id));
-                              if (expandedNoteId === note.id) setExpandedNoteId(null);
+                              try {
+                                await deleteSecureNote(note.id);
+                                setSecureNotes(prev => prev.filter(n => n.id !== note.id));
+                                if (expandedNoteId === note.id) setExpandedNoteId(null);
+                              } catch (err) {
+                                console.error('Failed to delete note:', err);
+                                alert('Failed to delete note. Please try again.');
+                              }
                             }
                           }}
                         >

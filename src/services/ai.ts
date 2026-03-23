@@ -138,11 +138,18 @@ Return ONLY valid JSON, no other text.`,
   }
 
   const data = await response.json();
-  const text = data.content[0].text;
 
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error('Failed to parse AI response');
+  // Edge Function returns parsed ScanResult directly;
+  // Direct API returns Anthropic format: { content: [{ text: "..." }] }
+  if (data.content && Array.isArray(data.content)) {
+    const text = data.content[0].text;
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error('Failed to parse AI response');
+    }
   }
+
+  // Already parsed by Edge Function
+  return data as ScanResult;
 };

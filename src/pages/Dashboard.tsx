@@ -6,6 +6,8 @@ import { Colors, PriorityColors, StatusColors } from '@/constants/theme';
 import { quickCompleteTask } from '@/services/utils';
 import { getTasks, createTasks } from '@/services/supabase';
 import { fetchWeather } from '@/services/weather';
+import { Skeleton } from '@/components/Skeleton';
+import { HealthGauge } from '@/components/HealthGauge';
 import { generateTasksForHome } from '@/services/taskEngine';
 import { geocodeAddress } from '@/services/geocoding';
 import { upsertHome } from '@/services/supabase';
@@ -147,8 +149,10 @@ export default function Dashboard() {
           {hasWeather ? (
             <div className="card" style={{ background: `linear-gradient(135deg, ${Colors.sage}20, ${Colors.cream})` }}>
               {weatherLoading ? (
-                <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                  <p className="text-sm text-gray">Loading weather...</p>
+                <div style={{ padding: '12px 0' }}>
+                  <Skeleton variant="title" width="40%" />
+                  <Skeleton variant="bar" width="60%" height={36} />
+                  <Skeleton variant="text" width="50%" />
                 </div>
               ) : weatherError ? (
                 <div style={{ textAlign: 'center', padding: '20px 0' }}>
@@ -190,19 +194,23 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Health Score */}
+          {/* Health Score Gauge */}
           <div className="card card-elevated">
-            <div className="flex items-center justify-between mb-md">
-              <div>
-                <p style={{ fontWeight: 600 }}>Home Health Score</p>
-                <p className="text-sm text-gray">{currentMonth} maintenance progress</p>
-              </div>
-              <div style={{ width: 56, height: 56, borderRadius: '50%', background: Colors.sage, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 700 }}>
-                {healthScore}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+              <HealthGauge score={healthScore} size={100} />
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>Home Health Score</p>
+                <p className="text-sm text-gray" style={{ marginBottom: 8 }}>{currentMonth} maintenance progress</p>
+                <p className="text-sm" style={{ color: Colors.charcoal }}>
+                  <strong>{completedCount}</strong> of <strong>{totalCount}</strong> tasks complete
+                </p>
+                <p className="text-xs text-gray mt-sm">
+                  {totalCount > completedCount
+                    ? `Complete ${totalCount - completedCount} more task${totalCount - completedCount > 1 ? 's' : ''} to improve your score`
+                    : 'Great job! All tasks complete this month'}
+                </p>
               </div>
             </div>
-            <div className="progress-bar"><div className="progress-fill" style={{ width: `${healthScore}%`, background: Colors.sage }} /></div>
-            <p className="text-xs text-gray mt-sm">{totalCount > completedCount ? `Complete ${totalCount - completedCount} more tasks to improve` : 'Great job! Keep it up'}</p>
           </div>
 
           {/* Tasks */}
@@ -212,8 +220,8 @@ export default function Dashboard() {
               <button className="btn btn-ghost btn-sm" onClick={() => navigate('/calendar')}>See All &rarr;</button>
             </div>
             {tasksLoading ? (
-              <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-                <p className="text-sm text-gray">Loading tasks...</p>
+              <div className="flex-col gap-sm">
+                <Skeleton variant="card" count={3} />
               </div>
             ) : (
             <div className="flex-col gap-sm">

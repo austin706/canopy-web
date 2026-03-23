@@ -1,21 +1,77 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { redeemGiftCode, insertProInterest } from '@/services/supabase';
+import { redeemGiftCode, insertProInterest, supabase } from '@/services/supabase';
 import { PLANS, isProAvailableInArea } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
+import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 
 export default function Subscription() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, home, setUser, setAgent } = useStore();
   const [giftCode, setGiftCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
   const [message, setMessage] = useState('');
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [waitlistEmail, setWaitlistEmail] = useState(user?.email || '');
   const [waitlistZip, setWaitlistZip] = useState(home?.zip_code || '');
   const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
   const [waitlistMessage, setWaitlistMessage] = useState('');
   const tier = user?.subscription_tier || 'free';
+
+  // Handle Stripe redirect success/cancel
+  useEffect(() => {
+    if (searchParams.get('success') === 'true') {
+      const plan = searchParams.get('plan');
+      setMessage(`Successfully upgraded to ${PLANS.find(p => p.value === plan)?.name || plan}! Your subscription is now active.`);
+      // Refresh user profile to pick up new tier
+      if (user?.id) {
+        supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }) => {
+          if (data) setUser({ ...user, ...data });
+        });
+      }
+    } else if (searchParams.get('canceled') === 'true') {
+      setMessage('Checkout was canceled. No charges were made.');
+    }
+  }, [searchParams]);
+
+  const handleStripeCheckout = async (plan: string) => {
+    if (!user || !SUPABASE_URL) {
+      setMessage('Payment system is not configured. Use a gift code to upgrade.');
+      return;
+    }
+    setCheckoutLoading(plan);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) throw new Error('Not authenticated');
+
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
+    } catch (e: any) {
+      setMessage(e.message || 'Checkout failed');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setCheckoutLoading(null);
+    }
+  };
 
   const proAvailable = isProAvailableInArea(home?.state, home?.zip_code);
 
@@ -73,7 +129,7 @@ export default function Subscription() {
             <p style={{ fontSize: 22, fontWeight: 700, margin: '4px 0' }}>{PLANS.find(p => p.value === tier)?.name || 'Free'}</p>
             <p style={{ fontSize: 24, fontWeight: 700 }}>{(PLANS.find(p => p.value === tier) as any)?.inquireForPricing ? 'Concierge Plan' : `$${PLANS.find(p => p.value === tier)?.price || 0}`}<span className="text-sm text-gray">{(PLANS.find(p => p.value === tier) as any)?.inquireForPricing ? '' : PLANS.find(p => p.value === tier)?.period}</span></p>
           </div>
-          <div style={{ fontSize: 40, color: Colors.copper }}>&#10003;</div>
+          <CheckCircleIcon size={40} color={Colors.copper} />
         </div>
       </div>
 
@@ -104,19 +160,36 @@ export default function Subscription() {
             <ul style={{ listStyle: 'none', padding: 0 }}>
               {plan.features.map((f, i) => (
                 <li key={i} className="flex items-center gap-sm" style={{ padding: '6px 0', fontSize: 14 }}>
-                  <span style={{ color: Colors.copper }}>&#10003;</span> {f}
+                  <CheckIcon size={14} color={Colors.copper} /> {f}
                 </li>
               ))}
             </ul>
-            {tier !== plan.value && !isInquiry && (
-              <button className="btn btn-primary btn-full mt-md" onClick={() => alert('Payment integration required. Use a gift code to upgrade, or configure Stripe/RevenueCat.')}>
-                {(plan.price || 0) > (PLANS.find(p => p.value === tier)?.price || 0) ? 'Upgrade' : 'Change Plan'}
+            {tier !== plan.value && !isInquiry && plan.value !== 'free' && (
+              <button
+                className="btn btn-primary btn-full mt-md"
+                onClick={() => handleStripeCheckout(plan.value)}
+                disabled={checkoutLoading === plan.value}
+              >
+                {checkoutLoading === plan.value
+                  ? 'Redirecting to checkout...'
+                  : (plan.price || 0) > (PLANS.find(p => p.value === tier)?.price || 0)
+                    ? 'Upgrade'
+                    : 'Change Plan'}
+              </button>
+            )}
+            {tier !== plan.value && !isInquiry && plan.value === 'free' && tier !== 'free' && (
+              <button className="btn btn-ghost btn-full mt-md" onClick={() => setMessage('To downgrade, cancel your subscription from your Stripe billing portal.')}>
+                Downgrade
               </button>
             )}
             {tier !== plan.value && isInquiry && (
-              <button className="btn btn-secondary btn-full mt-md" onClick={() => alert('Interested in our full property concierge service? Contact us at support@canopyhome.app and we\'ll build a custom plan for your home.')}>
+              <a
+                href="mailto:support@oakandsagerealty.com?subject=Canopy%20Pro%2B%20Inquiry"
+                className="btn btn-secondary btn-full mt-md"
+                style={{ textAlign: 'center', textDecoration: 'none', display: 'block' }}
+              >
                 Contact Us for Pricing
-              </button>
+              </a>
             )}
           </div>
           );

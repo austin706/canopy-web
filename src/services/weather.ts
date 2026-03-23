@@ -5,12 +5,48 @@ import type { WeatherData, WeatherAlert } from '@/types';
 
 const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY || '';
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
+const NWS_BASE = 'https://api.weather.gov';
+
+/**
+ * Fetch active weather alerts from the free NWS API (US locations only)
+ */
+const fetchNWSAlerts = async (lat: number, lon: number): Promise<WeatherAlert[]> => {
+  try {
+    const res = await fetch(
+      `${NWS_BASE}/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`,
+      { headers: { 'User-Agent': '(Canopy Home App, austin@rvconnect.us)' } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data.features || data.features.length === 0) return [];
+
+    return data.features.map((f: any) => {
+      const p = f.properties;
+      const type = classifyAlertType(p.event || '');
+      return {
+        id: p.id || `${p.event}-${p.onset}`,
+        type,
+        severity: classifySeverity(p.event || ''),
+        title: p.headline || p.event,
+        description: (p.description || '').slice(0, 500),
+        action_items: getActionItems(type),
+        start_time: p.onset || p.effective,
+        end_time: p.expires || p.ends,
+        source: p.senderName || 'NWS',
+      } as WeatherAlert;
+    });
+  } catch (err) {
+    console.warn('NWS alerts fetch failed (non-US location?):', err);
+    return [];
+  }
+};
 
 export const fetchWeather = async (lat: number, lon: number): Promise<WeatherData> => {
-  // Fetch current weather and 5-day forecast in parallel
-  const [currentRes, forecastRes] = await Promise.all([
+  // Fetch current weather, 5-day forecast, and NWS alerts in parallel
+  const [currentRes, forecastRes, nwsAlerts] = await Promise.all([
     fetch(`${BASE_URL}/weather?lat=${lat}&lon=${lon}&units=imperial&appid=${API_KEY}`),
     fetch(`${BASE_URL}/forecast?lat=${lat}&lon=${lon}&units=imperial&appid=${API_KEY}`),
+    fetchNWSAlerts(lat, lon),
   ]);
 
   if (!currentRes.ok) throw new Error(`Weather fetch failed: ${currentRes.status}`);
@@ -65,7 +101,7 @@ export const fetchWeather = async (lat: number, lon: number): Promise<WeatherDat
     icon: current.weather[0].icon,
     high: Math.round(current.main.temp_max),
     low: Math.round(current.main.temp_min),
-    alerts: [], // Free tier 2.5 API doesn't include alerts; would need One Call 3.0
+    alerts: nwsAlerts, // Fetched from free NWS API
     forecast: dailyForecast,
   };
 };

@@ -152,7 +152,8 @@ export const redeemGiftCode = async (code: string, userId: string) => {
   if (gc.redeemed_by) throw new Error('Code already redeemed');
   if (gc.expires_at && new Date(gc.expires_at) < new Date()) throw new Error('Code expired');
 
-  const newExpiry = new Date(Date.now() + gc.duration_months * 30 * 86400000);
+  const newExpiry = new Date();
+  newExpiry.setMonth(newExpiry.getMonth() + (gc.duration_months || 12));
   await supabase.from('gift_codes').update({ redeemed_by: userId, redeemed_at: new Date().toISOString() }).eq('id', gc.id);
   await supabase.from('profiles').update({ subscription_tier: gc.tier, subscription_expires_at: newExpiry.toISOString(), agent_id: gc.agent_id }).eq('id', userId);
 
@@ -193,6 +194,12 @@ export const updateProRequest = async (id: string, updates: any) => {
   const { data, error } = await supabase.from('pro_requests').update(updates).eq('id', id).select().single();
   if (error) throw error;
   return data;
+};
+
+export const getAllProProviders = async () => {
+  const { data, error } = await supabase.from('pro_providers').select('id, business_name, contact_name, service_categories, is_available').order('business_name');
+  if (error) throw error;
+  return data || [];
 };
 
 // --- Admin Functions ---
@@ -269,6 +276,29 @@ export const deleteUserAccount = async (userId: string) => {
   if (error) throw error;
 };
 
+// --- Notifications Feed ---
+export const getNotifications = async (userId: string, limit = 50) => {
+  const { data, error } = await supabase.from('notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data || [];
+};
+
+export const getUnreadNotificationCount = async (userId: string) => {
+  const { count, error } = await supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('read', false);
+  if (error) throw error;
+  return count || 0;
+};
+
+export const markNotificationRead = async (id: string) => {
+  const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);
+  if (error) throw error;
+};
+
+export const markAllNotificationsRead = async (userId: string) => {
+  const { error } = await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false);
+  if (error) throw error;
+};
+
 // --- Notification Preferences ---
 export const getNotificationPreferences = async (userId: string) => {
   const { data, error } = await supabase.from('profiles').select('notification_preferences').eq('id', userId).single();
@@ -280,6 +310,95 @@ export const updateNotificationPreferences = async (userId: string, preferences:
   const { data, error } = await supabase.from('profiles')
     .update({ notification_preferences: preferences })
     .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+// --- Documents ---
+export const getDocuments = async (homeId: string) => {
+  const { data, error } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('home_id', homeId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+};
+
+export const createDocument = async (doc: {
+  home_id: string;
+  user_id: string;
+  title: string;
+  category: string;
+  file_url: string;
+  thumbnail_url?: string;
+}) => {
+  const { data, error } = await supabase
+    .from('documents')
+    .insert(doc)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteDocument = async (id: string) => {
+  const { error } = await supabase.from('documents').delete().eq('id', id);
+  if (error) throw error;
+};
+
+// --- Secure Notes ---
+export const getSecureNotes = async (homeId: string) => {
+  const { data, error } = await supabase
+    .from('secure_notes')
+    .select('*')
+    .eq('home_id', homeId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+};
+
+export const createSecureNote = async (note: {
+  home_id: string;
+  title: string;
+  content: string;
+  category: string;
+}) => {
+  const { data, error } = await supabase
+    .from('secure_notes')
+    .insert(note)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteSecureNote = async (id: string) => {
+  const { error } = await supabase.from('secure_notes').delete().eq('id', id);
+  if (error) throw error;
+};
+
+// --- Vault PIN ---
+export const getVaultPin = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('vault_pins')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+};
+
+export const upsertVaultPin = async (userId: string, pinHash: string) => {
+  const { data, error } = await supabase
+    .from('vault_pins')
+    .upsert({
+      user_id: userId,
+      pin_hash: pinHash,
+      updated_at: new Date().toISOString(),
+    })
     .select()
     .single();
   if (error) throw error;

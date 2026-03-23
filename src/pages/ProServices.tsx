@@ -84,22 +84,47 @@ export default function ProServices() {
   const fetchAppointments = async () => {
     try {
       if (!home) return;
-      const { data, error: err } = await supabase
+      // Fetch direct appointments
+      const { data: apptData, error: apptErr } = await supabase
         .from('pro_service_appointments')
         .select('*')
         .eq('home_id', home.id)
         .order('scheduled_date', { ascending: true });
 
-      if (err) throw err;
-      // Map DB column names to component's interface
-      const mapped = (data || []).map((row: any) => ({
+      if (apptErr) throw apptErr;
+
+      const directAppts: ProServiceAppointment[] = (apptData || []).map((row: any) => ({
         id: row.id,
         title: row.title,
         date: row.scheduled_date,
         status: row.status,
         purpose: row.service_purpose || row.description || '',
       }));
-      setAppointments(mapped);
+
+      // Also fetch pro_requests that are matched/scheduled (pipeline-generated services)
+      const { data: reqData } = await supabase
+        .from('pro_requests')
+        .select('*, provider:provider_id(business_name)')
+        .eq('home_id', home.id)
+        .in('status', ['matched', 'scheduled'])
+        .order('created_at', { ascending: false });
+
+      // Filter out requests that already have a linked appointment
+      const linkedRequestIds = new Set(
+        (apptData || []).filter((a: any) => a.request_id).map((a: any) => a.request_id)
+      );
+
+      const requestAppts: ProServiceAppointment[] = (reqData || [])
+        .filter((r: any) => !linkedRequestIds.has(r.id))
+        .map((r: any) => ({
+          id: `req-${r.id}`,
+          title: `${r.category.charAt(0).toUpperCase() + r.category.slice(1)} Service`,
+          date: r.scheduled_date || r.created_at,
+          status: r.status === 'matched' ? 'confirmed' as const : 'scheduled' as const,
+          purpose: `${r.description}${r.provider?.business_name ? ` • Provider: ${r.provider.business_name}` : ''}`,
+        }));
+
+      setAppointments([...directAppts, ...requestAppts]);
     } catch (err) {
       console.warn('Failed to fetch appointments:', err);
     }

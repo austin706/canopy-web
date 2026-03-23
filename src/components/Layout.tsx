@@ -1,7 +1,14 @@
+import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { signOut } from '@/services/supabase';
 import { PLANS } from '@/services/subscriptionGate';
+import {
+  CanopyLogo,
+  NavDashboard, NavCalendar, NavWeather, NavEquipment, NavDocuments,
+  NavProServices, NavLogs, NavNotifications, NavAgent, NavHome,
+  NavSubscription, NavHelp, NavAdmin, NavAgentPortal, NavProPortal,
+} from '@/components/icons/CanopyLogo';
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -14,26 +21,30 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const navItems = [
-    { to: '/', icon: '&#127968;', label: 'Dashboard' },
-    { to: '/calendar', icon: '&#128197;', label: 'Calendar' },
-    { to: '/weather', icon: '&#9925;', label: 'Weather' },
-    { to: '/equipment', icon: '&#128736;', label: 'Equipment' },
-    { to: '/documents', icon: '&#128196;', label: 'Documents' },
-    { to: '/pro-services', icon: '&#128295;', label: 'Pro Services' },
-    { to: '/logs', icon: '&#128203;', label: 'Maintenance Log' },
-    { to: '/notifications', icon: '&#128276;', label: 'Notifications' },
-    { to: '/agent', icon: '&#128100;', label: 'My Agent' },
-    { to: '/home', icon: '&#127969;', label: 'Home Details' },
-    { to: '/subscription', icon: '&#11088;', label: 'Subscription' },
-    { to: '/help', icon: '&#10067;', label: 'Help & FAQ' },
+  const navItems: { to: string; icon: React.FC<{ size?: number; color?: string }>; label: string }[] = [
+    { to: '/', icon: NavDashboard, label: 'Dashboard' },
+    { to: '/calendar', icon: NavCalendar, label: 'Calendar' },
+    { to: '/weather', icon: NavWeather, label: 'Weather' },
+    { to: '/equipment', icon: NavEquipment, label: 'Equipment' },
+    { to: '/documents', icon: NavDocuments, label: 'Documents' },
+    { to: '/pro-services', icon: NavProServices, label: 'Pro Services' },
+    { to: '/logs', icon: NavLogs, label: 'Maintenance Log' },
+    { to: '/notifications', icon: NavNotifications, label: 'Notifications' },
+    { to: '/agent', icon: NavAgent, label: 'My Agent' },
+    { to: '/home', icon: NavHome, label: 'Home Details' },
+    { to: '/subscription', icon: NavSubscription, label: 'Subscription' },
+    { to: '/help', icon: NavHelp, label: 'Help & FAQ' },
   ];
 
   return (
     <div className="app-layout">
       <nav className="sidebar">
         <div className="sidebar-logo">
-          <h2>&#127793; Canopy</h2>
+          {/* TODO: Replace CanopyLogo SVG with final branded logo asset when ready */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CanopyLogo size={28} />
+            <h2 style={{ margin: 0 }}>Canopy</h2>
+          </div>
           <span>Oak &amp; Sage Realty</span>
         </div>
         <div className="sidebar-nav">
@@ -44,23 +55,23 @@ export default function Layout() {
               end={item.to === '/'}
               className={({ isActive }) => isActive ? 'active' : ''}
             >
-              <span dangerouslySetInnerHTML={{ __html: item.icon }} />
+              <item.icon size={18} />
               {item.label}
             </NavLink>
           ))}
           {user?.role === 'admin' && (
             <NavLink to="/admin" className={({ isActive }) => isActive ? 'active' : ''}>
-              <span>&#128272;</span> Admin Portal
+              <NavAdmin size={18} /> Admin Portal
             </NavLink>
           )}
           {(user?.role === 'agent' || user?.role === 'admin') && (
             <NavLink to="/agent-portal" className={({ isActive }) => isActive ? 'active' : ''}>
-              <span>&#128188;</span> Agent Portal
+              <NavAgentPortal size={18} /> Agent Portal
             </NavLink>
           )}
           {(user?.role === 'pro_provider' || user?.role === 'admin') && (
             <NavLink to="/pro-portal" className={({ isActive }) => isActive ? 'active' : ''}>
-              <span>&#128736;</span> Pro Portal
+              <NavProPortal size={18} /> Pro Portal
             </NavLink>
           )}
         </div>

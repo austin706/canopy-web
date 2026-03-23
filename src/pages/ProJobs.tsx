@@ -6,6 +6,7 @@ import { Colors } from '@/constants/theme';
 interface Job {
   id: string;
   user_id: string;
+  home_id?: string;
   provider_id?: string;
   category: string;
   description: string;
@@ -104,6 +105,53 @@ export default function ProJobs() {
     }
   };
 
+  const handleScheduleJob = async (jobId: string) => {
+    const dateStr = window.prompt('Enter scheduled date (YYYY-MM-DD):');
+    if (!dateStr) return;
+
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(dateStr)) {
+      alert('Please enter date in YYYY-MM-DD format');
+      return;
+    }
+
+    try {
+      const job = jobs.find(j => j.id === jobId);
+      if (!job) return;
+
+      // Update request status to scheduled
+      const { error: reqError } = await supabase
+        .from('pro_requests')
+        .update({ status: 'scheduled', scheduled_date: dateStr })
+        .eq('id', jobId);
+
+      if (reqError) throw reqError;
+
+      // Create linked pro_service_appointment so homeowner sees it
+      const { error: apptError } = await supabase
+        .from('pro_service_appointments')
+        .insert({
+          home_id: job.home_id || null,
+          title: `${job.category.charAt(0).toUpperCase() + job.category.slice(1)} Service`,
+          scheduled_date: dateStr,
+          scheduled_time: '09:00',
+          status: 'scheduled',
+          service_purpose: job.description,
+          pro_provider_id: providerId,
+          request_id: jobId,
+          notes: `Matched from service request`,
+        });
+
+      if (apptError) console.warn('Failed to create linked appointment:', apptError);
+
+      setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, status: 'scheduled', scheduled_date: dateStr } : j)));
+      alert('Job scheduled successfully.');
+    } catch (err) {
+      alert('Failed to schedule job');
+    }
+  };
+
   const handleCompleteJob = async (jobId: string) => {
     if (!window.confirm('Mark this job as completed?')) return;
 
@@ -111,6 +159,12 @@ export default function ProJobs() {
       const { error } = await supabase.from('pro_requests').update({ status: 'completed' }).eq('id', jobId);
 
       if (!error) {
+        // Also update the linked appointment if it exists
+        await supabase
+          .from('pro_service_appointments')
+          .update({ status: 'completed' })
+          .eq('request_id', jobId);
+
         setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, status: 'completed' } : j)));
         alert('Job marked as completed.');
       }
@@ -272,6 +326,15 @@ export default function ProJobs() {
                     style={{ flex: 1 }}
                   >
                     Accept Job
+                  </button>
+                )}
+                {job.status === 'matched' && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => handleScheduleJob(job.id)}
+                    style={{ flex: 1 }}
+                  >
+                    Schedule
                   </button>
                 )}
                 {['matched', 'scheduled'].includes(job.status) && (

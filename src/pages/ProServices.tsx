@@ -88,12 +88,20 @@ export default function ProServices() {
         .from('pro_service_appointments')
         .select('*')
         .eq('home_id', home.id)
-        .order('date', { ascending: true });
+        .order('scheduled_date', { ascending: true });
 
       if (err) throw err;
-      setAppointments(data || []);
+      // Map DB column names to component's interface
+      const mapped = (data || []).map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        date: row.scheduled_date,
+        status: row.status,
+        purpose: row.service_purpose || row.description || '',
+      }));
+      setAppointments(mapped);
     } catch (err) {
-      console.error('Failed to fetch appointments:', err);
+      console.warn('Failed to fetch appointments:', err);
     }
   };
 
@@ -112,13 +120,13 @@ export default function ProServices() {
         id: crypto.randomUUID(),
         home_id: home.id,
         title: selectedTemplate.title,
-        date: formData.date,
-        time: formData.time || '09:00',
+        scheduled_date: formData.date,
+        scheduled_time: formData.time || '09:00',
         status: 'scheduled',
-        purpose: selectedTemplate.description,
-        reminder_days: parseInt(formData.reminderDays, 10),
+        service_purpose: selectedTemplate.description,
+        reminder_days_before: parseInt(formData.reminderDays, 10),
         notes: formData.notes,
-        items_to_have: formData.itemsToHave.filter(s => s.trim()),
+        items_to_have_on_hand: formData.itemsToHave.filter(s => s.trim()),
         created_at: new Date().toISOString(),
       };
 
@@ -128,7 +136,13 @@ export default function ProServices() {
 
       if (err) throw err;
 
-      setAppointments([...appointments, appointment as ProServiceAppointment]);
+      setAppointments([...appointments, {
+        id: appointment.id,
+        title: appointment.title,
+        date: appointment.scheduled_date,
+        status: appointment.status,
+        purpose: appointment.service_purpose,
+      } as ProServiceAppointment]);
       setSelectedTemplate(null);
       setFormData({ date: '', time: '', reminderDays: '3', notes: '', itemsToHave: [''] });
     } catch (err) {

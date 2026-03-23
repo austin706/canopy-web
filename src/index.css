@@ -63,7 +63,7 @@ body {
 }
 .sidebar-logo h2 { font-size: 20px; font-weight: 700; color: var(--charcoal); }
 .sidebar-logo span { font-size: 12px; color: var(--copper); font-weight: 500; }
-.sidebar-nav { flex: 1; padding: 0 12px; }
+.sidebar-nav { flex: 1; padding: 0 12px; overflow-y: auto; min-height: 0; }
 .sidebar-nav a, .sidebar-nav button {
   display: flex;
   align-items: center;

@@ -23,8 +23,8 @@ export const TIER_FEATURES: Record<SubscriptionTier, Feature[]> = {
 export const PLANS = [
   { id: 'free', name: 'Free', price: 0, period: '/month', value: 'free' as SubscriptionTier, features: ['Basic calendar','5 equipment slots','Generic checklists'] },
   { id: 'home', name: 'Home Plan', price: 6.99, period: '/month', value: 'home' as SubscriptionTier, features: ['All 37 AI-powered tasks','Unlimited equipment','Personalized checklists','Weather alerts','Lawn & Pool & Deck care','Secure notes vault'] },
-  { id: 'pro', name: 'Home + Pro', price: 149, period: '/month', value: 'pro' as SubscriptionTier, features: ['Everything in Home Plan','Monthly pro visit','Filter changes','Gutter cleaning','Pro service scheduler','Pro support'] },
-  { id: 'pro_plus', name: 'Home + Pro+', price: null as any, period: '', value: 'pro_plus' as SubscriptionTier, inquireForPricing: true, features: ['Full property concierge','Management of all home systems','Pest control included','Extended pro visits','Pool, deck & lawn service','Priority support'] },
+  { id: 'pro', name: 'Home Pro', price: 149, period: '/month', value: 'pro' as SubscriptionTier, features: ['Everything in Home Plan','Monthly pro visit','Filter changes','Gutter cleaning','Pro service scheduler','Pro support'] },
+  { id: 'pro_plus', name: 'Home Pro+', price: null as any, period: '', value: 'pro_plus' as SubscriptionTier, inquireForPricing: true, features: ['Full property concierge','Management of all home systems','Pest control included','Extended pro visits','Pool, deck & lawn service','Priority support'] },
 ];
 
 export function canAccess(tier: SubscriptionTier | undefined | null, feature: Feature): boolean {

@@ -8,3 +8,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>
 );
+
+// Remove splash loader after React mounts
+const loader = document.getElementById('app-loader');
+if (loader) {
+  loader.classList.add('fade-out');
+  setTimeout(() => loader.remove(), 300);
+}

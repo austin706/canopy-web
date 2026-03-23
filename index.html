@@ -2,12 +2,47 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/canopy-logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Canopy Home by Oak & Sage — smart home maintenance tracking, weather alerts, equipment management, and seasonal task reminders for homeowners.">
+    <meta name="theme-color" content="#7A8B6F">
     <title>Canopy — Home Maintenance by Oak &amp; Sage</title>
+    <link rel="icon" type="image/svg+xml" href="/canopy-logo.svg" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/canopy-app-icon-1024.png">
+    <link rel="manifest" href="/manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      #app-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #F1EBDD;
+        z-index: 9999;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        transition: opacity 0.3s ease;
+      }
+      #app-loader.fade-out { opacity: 0; pointer-events: none; }
+      #app-loader svg { width: 64px; height: 64px; margin-bottom: 16px; animation: pulse 2s ease-in-out infinite; }
+      #app-loader p { color: #7A8B6F; font-size: 14px; font-weight: 500; letter-spacing: 0.5px; margin: 0; }
+      #app-loader .bar { width: 120px; height: 3px; background: #e0d9c8; border-radius: 3px; margin-top: 16px; overflow: hidden; }
+      #app-loader .bar::after { content: ''; display: block; width: 40%; height: 100%; background: #B87333; border-radius: 3px; animation: slide 1.2s ease-in-out infinite; }
+      @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.05); opacity: 1; } }
+      @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+    </style>
   </head>
   <body>
+    <div id="app-loader">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="64" height="64" rx="14" fill="#7A8B6F"/>
+        <path d="M32 12C32 12 20 22 20 36C20 42.6 25.4 48 32 48C38.6 48 44 42.6 44 36C44 22 32 12 32 12Z" fill="#F1EBDD" stroke="#F1EBDD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 28V42M32 42C28 38 26 34 26 32M32 42C36 38 38 34 38 32" stroke="#7A8B6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p>Loading Canopy</p>
+      <div class="bar"></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -4,8 +4,11 @@ import { useStore } from '@/store/useStore';
 import { canAccess, getTaskLimit, PLANS } from '@/services/subscriptionGate';
 import { Colors, PriorityColors, StatusColors } from '@/constants/theme';
 import { quickCompleteTask } from '@/services/utils';
-import { getTasks } from '@/services/supabase';
+import { getTasks, createTasks } from '@/services/supabase';
 import { fetchWeather } from '@/services/weather';
+import { generateTasksForHome } from '@/services/taskEngine';
+import { geocodeAddress } from '@/services/geocoding';
+import { upsertHome } from '@/services/supabase';
 import type { MaintenanceTask } from '@/types';
 
 const DEMO_TASKS = [
@@ -31,14 +34,28 @@ export default function Dashboard() {
     }
   }, [user, home, navigate]);
 
-  // Fetch tasks on mount if not already loaded
+  // Fetch tasks on mount; auto-generate if home exists but no tasks in DB
   useEffect(() => {
     const loadTasks = async () => {
       if (!tasks.length && home) {
         try {
           setTasksLoading(true);
           const data = await getTasks(home.id);
-          if (data) setTasks(data);
+          if (data && data.length > 0) {
+            setTasks(data);
+          } else {
+            // No tasks in DB — generate from home profile and persist
+            const generated = generateTasksForHome(home, equipment, []);
+            if (generated.length > 0) {
+              try {
+                const saved = await createTasks(generated);
+                setTasks(saved);
+              } catch (saveErr) {
+                console.warn('Failed to persist generated tasks:', saveErr);
+                setTasks(generated); // still show locally
+              }
+            }
+          }
         } catch (err) {
           console.warn('Failed to fetch tasks:', err);
         } finally {
@@ -49,6 +66,26 @@ export default function Dashboard() {
       }
     };
     loadTasks();
+  }, [home?.id]);
+
+  // Auto-geocode home address if lat/long are missing (needed for weather)
+  useEffect(() => {
+    const geocodeHome = async () => {
+      if (home && !home.latitude && !home.longitude && home.address) {
+        try {
+          const fullAddress = `${home.address}, ${home.city || ''}, ${home.state || ''} ${home.zip_code || ''}`;
+          const geo = await geocodeAddress(fullAddress);
+          if (geo.latitude && geo.longitude) {
+            const updatedHome = { ...home, latitude: geo.latitude, longitude: geo.longitude };
+            await upsertHome(updatedHome);
+            useStore.getState().setHome(updatedHome);
+          }
+        } catch (err) {
+          console.warn('Auto-geocode failed:', err);
+        }
+      }
+    };
+    geocodeHome();
   }, [home?.id]);
 
   // Fetch weather when home has coordinates and user has weather access
@@ -74,7 +111,8 @@ export default function Dashboard() {
   const hasAI = canAccess(tier, 'ai_task_generation');
   const taskLimit = getTaskLimit(tier);
 
-  const displayTasks = tasks.length > 0 ? tasks : DEMO_TASKS;
+  const isDemo = tasks.length === 0;
+  const displayTasks = isDemo ? DEMO_TASKS : tasks;
   const tasksToShow = taskLimit ? displayTasks.slice(0, taskLimit) : displayTasks;
   const displayWeather = weather || DEMO_WEATHER;
 
@@ -191,7 +229,7 @@ export default function Dashboard() {
                     </div>
                     <div className="task-actions">
                       <span className="badge" style={{ background: (StatusColors[task.status] || Colors.silver) + '20', color: StatusColors[task.status] || Colors.silver }}>{task.status}</span>
-                      {task.status !== 'completed' && (
+                      {task.status !== 'completed' && !isDemo && (
                         <button className="btn btn-sage btn-sm" onClick={() => quickCompleteTask(task)}>Done</button>
                       )}
                     </div>

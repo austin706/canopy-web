@@ -16,7 +16,8 @@ const DEMO_TASKS: MaintenanceTask[] = [
 
 export default function Calendar() {
   const { home, tasks: storeTasks, setTasks } = useStore();
-  const tasks = storeTasks.length > 0 ? storeTasks : DEMO_TASKS;
+  const isDemo = storeTasks.length === 0;
+  const tasks = isDemo ? DEMO_TASKS : storeTasks;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
@@ -149,7 +150,7 @@ export default function Calendar() {
                     </div>
                     <span className="badge" style={{ background: (StatusColors[task.status] || '#ccc') + '20', color: StatusColors[task.status] }}>{task.status}</span>
                   </div>
-                  {task.status !== 'completed' && task.status !== 'skipped' && (
+                  {task.status !== 'completed' && task.status !== 'skipped' && !isDemo && (
                     <div className="flex gap-sm mt-sm" style={{ marginLeft: 20 }}>
                       <button className="btn btn-sage btn-sm" onClick={() => quickCompleteTask(task)}>Complete</button>
                       <button className="btn btn-ghost btn-sm" onClick={() => quickSkipTask(task)}>Skip</button>

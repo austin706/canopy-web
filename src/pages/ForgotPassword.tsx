@@ -30,7 +30,7 @@ export default function ForgotPassword() {
       {/* Hero Panel - left side */}
       <div className="auth-hero">
         <div className="auth-hero-content">
-          <div style={{ marginBottom: 16 }}><CanopyLogo size={48} color="#fff" /></div>
+          <div style={{ marginBottom: 16 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 56, width: 'auto', objectFit: 'contain' }} /></div>
           <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Canopy</h1>
           <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 32 }}>Smart home maintenance, powered by AI</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

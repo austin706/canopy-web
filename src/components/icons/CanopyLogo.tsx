@@ -7,33 +7,18 @@ interface LogoProps {
 }
 
 /**
- * Canopy app logo — stylized tree canopy / leaf
- * Uses the brand's sage/copper color palette
+ * Canopy app logo — watercolor tree + house illustration
+ * Renders the branded PNG logo at the requested size
  */
-export const CanopyLogo: React.FC<LogoProps> = ({ size = 32, color = '#8B9D77', className }) => (
-  <svg
+export const CanopyLogo: React.FC<LogoProps> = ({ size = 32, className }) => (
+  <img
+    src="/canopy-watercolor-logo.png"
+    alt="Canopy"
     width={size}
     height={size}
-    viewBox="0 0 48 48"
-    fill="none"
     className={className}
-  >
-    {/* Tree canopy — layered leaf shapes */}
-    <path
-      d="M24 4C16 4 10 10 10 16c0 4 2 7.5 5 10h18c3-2.5 5-6 5-10 0-6-6-12-14-12z"
-      fill={color}
-      opacity="0.9"
-    />
-    <path
-      d="M24 8C18 8 13 12.5 13 17.5c0 3 1.5 5.5 4 7.5h14c2.5-2 4-4.5 4-7.5C35 12.5 30 8 24 8z"
-      fill={color}
-      opacity="0.6"
-    />
-    {/* Trunk */}
-    <rect x="22" y="26" width="4" height="14" rx="2" fill="#B87333" />
-    {/* Ground accent */}
-    <ellipse cx="24" cy="42" rx="8" ry="2" fill={color} opacity="0.3" />
-  </svg>
+    style={{ objectFit: 'contain' }}
+  />
 );
 
 /**

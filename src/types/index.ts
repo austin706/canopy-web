@@ -146,7 +146,7 @@ export interface MaintenanceTask {
   title: string;
   description: string;
   instructions?: string[];
-  category: EquipmentCategory | 'general' | 'lawn' | 'pool' | 'deck' | 'seasonal' | 'pest_control';
+  category: EquipmentCategory | 'general' | 'lawn' | 'pool' | 'deck' | 'seasonal' | 'pest_control' | 'fireplace';
   priority: TaskPriority;
   status: TaskStatus;
   frequency: TaskFrequency;
@@ -292,5 +292,167 @@ export interface GiftCode {
   redeemed_by?: string;
   redeemed_at?: string;
   expires_at?: string;
+  created_at: string;
+}
+
+// ─── Pro Monthly Visits ───
+export type VisitStatus = 'proposed' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'forfeited' | 'no_show';
+
+export interface ProMonthlyVisit {
+  id: string;
+  home_id: string;
+  homeowner_id: string;
+  pro_provider_id: string;
+  visit_month: string;
+  proposed_date?: string;
+  proposed_time_slot?: string;
+  homeowner_confirmed_at?: string;
+  confirmed_date?: string;
+  confirmed_start_time?: string;
+  confirmed_end_time?: string;
+  status: VisitStatus;
+  cancelled_at?: string;
+  cancelled_by?: string;
+  cancellation_reason?: string;
+  hours_before_cancellation?: number;
+  same_month_rebookable?: boolean;
+  selected_task_ids: string[];
+  started_at?: string;
+  completed_at?: string;
+  time_spent_minutes?: number;
+  max_minutes: number;
+  pro_notes?: string;
+  photos: { url: string; caption?: string }[];
+  summary_sent_at?: string;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  provider?: ProProvider;
+}
+
+export interface VisitAllocation {
+  id: string;
+  homeowner_id: string;
+  visit_month: string;
+  allocated_visits: number;
+  used_visits: number;
+  forfeited_visits: number;
+  created_at: string;
+}
+
+// ─── Pro+ Concierge Subscriptions ───
+export type ProPlusStatus = 'consultation_requested' | 'consultation_scheduled' | 'consultation_completed' | 'quote_pending' | 'quote_approved' | 'active' | 'paused' | 'cancelled';
+
+export interface ProPlusSubscription {
+  id: string;
+  homeowner_id: string;
+  home_id: string;
+  pro_provider_id: string;
+  consultation_requested_at?: string;
+  consultation_scheduled_date?: string;
+  consultation_completed_at?: string;
+  consultation_notes?: string;
+  quoted_monthly_rate?: number;
+  quoted_at?: string;
+  quote_valid_until?: string;
+  homeowner_approved_at?: string;
+  status: ProPlusStatus;
+  stripe_subscription_id?: string;
+  stripe_customer_id?: string;
+  current_monthly_rate?: number;
+  coverage_notes?: string;
+  scope_exclusions: string;
+  started_at?: string;
+  cancelled_at?: string;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  provider?: ProProvider;
+}
+
+// ─── Quotes ───
+export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'expired' | 'converted';
+
+export interface LineItem {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+}
+
+export interface Quote {
+  id: string;
+  home_id: string;
+  homeowner_id: string;
+  pro_provider_id: string;
+  quote_number: string;
+  title: string;
+  description?: string;
+  service_type?: 'add_on' | 'one_off' | 'pro_plus_extra';
+  status: QuoteStatus;
+  line_items: LineItem[];
+  subtotal: number;
+  tax_rate: number;
+  tax_amount: number;
+  total_amount: number;
+  issued_date: string;
+  valid_until?: string;
+  sent_at?: string;
+  homeowner_approved_at?: string;
+  homeowner_rejected_at?: string;
+  homeowner_notes?: string;
+  pro_notes?: string;
+  converted_to_invoice_id?: string;
+  converted_at?: string;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  provider?: ProProvider;
+}
+
+// ─── Invoices ───
+export type InvoiceStatus = 'draft' | 'sent' | 'viewed' | 'pending_payment' | 'paid' | 'partial' | 'overdue' | 'cancelled';
+
+export interface Invoice {
+  id: string;
+  home_id: string;
+  homeowner_id: string;
+  pro_provider_id: string;
+  invoice_number: string;
+  title: string;
+  description?: string;
+  source_type?: 'from_quote' | 'standalone' | 'subscription_adjustment';
+  line_items: LineItem[];
+  subtotal: number;
+  tax_rate: number;
+  tax_amount: number;
+  total_amount: number;
+  status: InvoiceStatus;
+  issued_date: string;
+  due_date: string;
+  sent_at?: string;
+  viewed_at?: string;
+  amount_paid: number;
+  stripe_payment_intent_id?: string;
+  stripe_invoice_id?: string;
+  paid_at?: string;
+  pro_notes?: string;
+  homeowner_notes?: string;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  provider?: ProProvider;
+}
+
+export interface InvoicePayment {
+  id: string;
+  invoice_id: string;
+  homeowner_id: string;
+  amount: number;
+  payment_method: 'stripe' | 'check' | 'ach' | 'cash' | 'other';
+  stripe_charge_id?: string;
+  transaction_reference?: string;
+  paid_at: string;
+  notes?: string;
   created_at: string;
 }

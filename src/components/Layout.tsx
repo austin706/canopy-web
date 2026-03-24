@@ -110,13 +110,13 @@ export default function Layout() {
             </>
           )}
           {/* Agent users see only Agent Portal */}
-          {user?.role === 'agent' && user?.role !== 'admin' && (
+          {user?.role === 'agent' && (
             <NavLink to="/agent-portal" className={({ isActive }) => isActive ? 'active' : ''}>
               <NavAgentPortal size={18} /> Agent Portal
             </NavLink>
           )}
           {/* Pro Provider users see only Pro Portal */}
-          {user?.role === 'pro_provider' && user?.role !== 'admin' && (
+          {user?.role === 'pro_provider' && (
             <NavLink to="/pro-portal" className={({ isActive }) => isActive ? 'active' : ''}>
               <NavProPortal size={18} /> Pro Portal
             </NavLink>

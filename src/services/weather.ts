@@ -117,7 +117,7 @@ const fetchNWSAlerts = async (lat: number, lon: number): Promise<WeatherAlert[]>
   try {
     const res = await fetch(
       `${NWS_BASE}/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`,
-      { headers: { 'User-Agent': '(Canopy Home App, austin@rvconnect.us)' } }
+      { headers: { 'User-Agent': '(Canopy Home App, support@canopyhome.app)' } }
     );
     if (!res.ok) return [];
     const data = await res.json();

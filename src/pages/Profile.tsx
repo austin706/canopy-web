@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { signOut, updateProfile, redeemGiftCode, deleteUserAccount } from '@/services/supabase';
+import { signOut, updateProfile, redeemGiftCode, deleteUserAccount, lookupAgentByCode, linkAgent } from '@/services/supabase';
 import { PLANS } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
 
@@ -15,6 +15,8 @@ export default function Profile() {
   const [giftCode, setGiftCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
   const [message, setMessage] = useState('');
+  const [agentCode, setAgentCode] = useState('');
+  const [linkingAgent, setLinkingAgent] = useState(false);
 
   const tier = user?.subscription_tier || 'free';
   const plan = PLANS.find(p => p.value === tier);
@@ -45,6 +47,21 @@ export default function Profile() {
     } catch (e: any) {
       setMessage(e.message || 'Failed to redeem');
     } finally { setRedeeming(false); setTimeout(() => setMessage(''), 5000); }
+  };
+
+  const handleLinkAgent = async () => {
+    if (!agentCode.trim() || !user) return;
+    setLinkingAgent(true);
+    try {
+      const agent = await lookupAgentByCode(agentCode);
+      await linkAgent(user.id, agent.id);
+      setUser({ ...user, agent_id: agent.id });
+      setAgent(agent);
+      setMessage(`Linked to agent: ${agent.name}`);
+      setAgentCode('');
+    } catch (e: any) {
+      setMessage(e.message || 'Failed to link agent');
+    } finally { setLinkingAgent(false); setTimeout(() => setMessage(''), 5000); }
   };
 
   const handleLogout = async () => {
@@ -122,6 +139,20 @@ export default function Profile() {
           </button>
         </div>
       </div>
+
+      {/* Link Agent */}
+      {!user?.agent_id && (
+        <div className="card mb-lg">
+          <h3 style={{ fontSize: 16, marginBottom: 4 }}>Link Your Agent</h3>
+          <p className="text-xs text-gray mb-md">Enter your real estate agent's email or agent code to connect with them.</p>
+          <div className="flex gap-sm">
+            <input className="form-input" value={agentCode} onChange={e => setAgentCode(e.target.value)} placeholder="Agent email or code" style={{ flex: 1 }} />
+            <button className="btn btn-primary" onClick={handleLinkAgent} disabled={linkingAgent || !agentCode.trim()}>
+              {linkingAgent ? 'Linking...' : 'Link'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <div className="card mb-lg">

@@ -104,7 +104,7 @@ export default function Login() {
       <div className="auth-hero">
         <div className="auth-hero-content">
           {/* TODO: Replace with final branded logo when ready */}
-          <div style={{ marginBottom: 16 }}><CanopyLogo size={48} color="#fff" /></div>
+          <div style={{ marginBottom: 16 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 56, width: 'auto', objectFit: 'contain' }} /></div>
           <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Canopy</h1>
           <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 32 }}>Smart home maintenance, powered by AI</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -124,7 +124,7 @@ export default function Login() {
         <div className="auth-card">
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
             {/* TODO: Replace with final branded logo when ready */}
-            <div style={{ marginBottom: 12 }}><CanopyLogo size={48} /></div>
+            <div style={{ marginBottom: 12 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 48, width: 'auto', objectFit: 'contain' }} /></div>
             <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Canopy</h1>
             <p className="subtitle">Sign in to your account</p>
           </div>

@@ -154,7 +154,7 @@ export default function Help() {
           <div className="card">
             <div className="flex-col gap-md">
               <a
-                href="mailto:support@oakandsagerealty.com"
+                href="mailto:support@canopyhome.app"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -171,7 +171,7 @@ export default function Help() {
                 <MailIcon size={22} color={Colors.copper} />
                 <div>
                   <p style={{ fontWeight: 600, color: Colors.charcoal, marginBottom: 2 }}>Email Support</p>
-                  <p className="text-xs text-gray">support@oakandsagerealty.com</p>
+                  <p className="text-xs text-gray">support@canopyhome.app</p>
                 </div>
               </a>
 
@@ -181,7 +181,7 @@ export default function Help() {
               }} />
 
               <a
-                href="tel:+19189840376"
+                href="tel:+19189480950"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -198,7 +198,7 @@ export default function Help() {
                 <PhoneIcon size={22} color={Colors.copper} />
                 <div>
                   <p style={{ fontWeight: 600, color: Colors.charcoal, marginBottom: 2 }}>Phone Support</p>
-                  <p className="text-xs text-gray">+1 (918) 984-0376</p>
+                  <p className="text-xs text-gray">+1 (918) 948-0950</p>
                 </div>
               </a>
             </div>

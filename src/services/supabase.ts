@@ -145,6 +145,23 @@ export const getProfile = async (userId: string) => {
   return data;
 };
 
+// --- Agent Linking ---
+export const lookupAgentByCode = async (code: string) => {
+  // Agents share a simple code (e.g., their email or a short code) for homeowners to link
+  const trimmed = code.trim().toLowerCase();
+  // Try lookup by email first, then by id
+  const { data: byEmail } = await supabase.from('agents').select('*').eq('email', trimmed).single();
+  if (byEmail) return byEmail;
+  const { data: byId } = await supabase.from('agents').select('*').eq('id', trimmed).single();
+  if (byId) return byId;
+  throw new Error('Agent not found. Check the code and try again.');
+};
+
+export const linkAgent = async (userId: string, agentId: string) => {
+  const { error } = await supabase.from('profiles').update({ agent_id: agentId }).eq('id', userId);
+  if (error) throw error;
+};
+
 // --- Gift Codes ---
 export const redeemGiftCode = async (code: string, userId: string) => {
   const { data: gc, error: lookupErr } = await supabase.from('gift_codes').select('*').eq('code', code.trim().toUpperCase()).single();

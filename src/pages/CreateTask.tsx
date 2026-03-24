@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Colors } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
 import { createTask } from '@/services/supabase';
+import { canAccess } from '@/services/subscriptionGate';
 import type { MaintenanceTask, EquipmentCategory, TaskPriority, TaskFrequency } from '@/types';
 
 type Category = EquipmentCategory | 'general' | 'lawn' | 'pool' | 'deck' | 'seasonal' | 'pest_control';
@@ -25,6 +26,22 @@ const PRIORITY_COLORS: Record<TaskPriority, string> = {
 export default function CreateTask() {
   const navigate = useNavigate();
   const { user, home, setTasks } = useStore();
+  const tier = user?.subscription_tier || 'free';
+
+  // Gate: custom tasks require Home tier or higher
+  if (!canAccess(tier, 'custom_tasks')) {
+    return (
+      <div className="page" style={{ maxWidth: 600 }}>
+        <div className="page-header"><h1>Create Custom Task</h1></div>
+        <div className="card text-center" style={{ padding: 48 }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 20, color: Colors.copper }}>+</div>
+          <h2 style={{ fontSize: 20, marginBottom: 8 }}>Custom Tasks Locked</h2>
+          <p className="text-gray mb-lg">Upgrade to the Home Plan to create custom maintenance tasks tailored to your home.</p>
+          <button className="btn btn-primary" onClick={() => navigate('/subscription')}>View Plans</button>
+        </div>
+      </div>
+    );
+  }
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');

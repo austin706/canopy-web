@@ -184,7 +184,7 @@ export default function Subscription() {
             )}
             {tier !== plan.value && isInquiry && (
               <a
-                href="mailto:support@oakandsagerealty.com?subject=Canopy%20Pro%2B%20Inquiry"
+                href="mailto:support@canopyhome.app?subject=Canopy%20Pro%2B%20Inquiry"
                 className="btn btn-secondary btn-full mt-md"
                 style={{ textAlign: 'center', textDecoration: 'none', display: 'block' }}
               >

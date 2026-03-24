@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertHome, updateProfile } from '@/services/supabase';
+import { upsertHome, updateProfile, uploadPhoto } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 
 export default function HomeDetails() {
@@ -9,6 +9,8 @@ export default function HomeDetails() {
   const { user, home, setHome } = useStore();
   const [editing, setEditing] = useState(!home);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     address: home?.address || '', city: home?.city || '', state: home?.state || '', zip_code: home?.zip_code || '',
     year_built: home?.year_built?.toString() || '', square_footage: home?.square_footage?.toString() || '',
@@ -18,13 +20,16 @@ export default function HomeDetails() {
     heating_type: home?.heating_type || '', cooling_type: home?.cooling_type || '',
     has_pool: home?.has_pool || false, has_deck: home?.has_deck || false, has_sprinkler_system: home?.has_sprinkler_system || false,
     has_fireplace: home?.has_fireplace || false,
+    fireplace_type: home?.fireplace_type || '',
     lawn_type: home?.lawn_type || 'none',
+    number_of_hvac_filters: home?.number_of_hvac_filters?.toString() || '',
     // Infrastructure locations
     main_breaker_location: home?.main_breaker_location || '',
     sub_panel_locations: home?.sub_panel_locations || '',
     water_shutoff_location: home?.water_shutoff_location || '',
     gas_meter_location: home?.gas_meter_location || '',
     water_meter_location: home?.water_meter_location || '',
+    hose_bib_locations: home?.hose_bib_locations || '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -72,6 +77,8 @@ export default function HomeDetails() {
         bathrooms: parseInt(form.bathrooms) || 2,
         garage_spaces: parseInt(form.garage_spaces) || 0,
         roof_age_years: form.roof_age_years ? parseInt(form.roof_age_years) : null,
+        number_of_hvac_filters: form.number_of_hvac_filters ? parseInt(form.number_of_hvac_filters) : null,
+        fireplace_type: form.has_fireplace && form.fireplace_type ? form.fireplace_type : null,
         created_at: home?.created_at || new Date().toISOString(),
       };
       try { const saved = await upsertHome(homeData); setHome(saved); } catch { setHome(homeData); }
@@ -81,6 +88,25 @@ export default function HomeDetails() {
       }
       setEditing(false);
     } finally { setSaving(false); }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !home) return;
+    setUploadingPhoto(true);
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `homes/${home.id}/photo.${ext}`;
+      const url = await uploadPhoto('photos', path, file);
+      const updated = { ...home, photo_url: url };
+      await upsertHome(updated);
+      setHome(updated);
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+      alert('Failed to upload photo. Please try again.');
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -175,6 +201,28 @@ export default function HomeDetails() {
               </label>
             ))}
           </div>
+          {/* Fireplace Type - shown when has_fireplace is checked */}
+          {form.has_fireplace && (
+            <div className="form-group mt-md">
+              <label>Fireplace Type</label>
+              <select className="form-select" value={form.fireplace_type} onChange={e => setForm({...form, fireplace_type: e.target.value})}>
+                <option value="">Select type...</option>
+                <option value="wood_burning">Wood Burning</option>
+                <option value="gas_starter">Gas Starter</option>
+                <option value="gas">Gas</option>
+              </select>
+            </div>
+          )}
+
+          {/* HVAC Filters */}
+          <div className="grid-2 mt-md">
+            <div className="form-group">
+              <label>Number of HVAC Filters</label>
+              <input className="form-input" type="number" min="0" value={form.number_of_hvac_filters} onChange={e => setForm({...form, number_of_hvac_filters: e.target.value})} placeholder="e.g., 3" />
+              <p className="text-xs text-gray" style={{ marginTop: 4 }}>Used to track filter replacement tasks</p>
+            </div>
+          </div>
+
           {/* Infrastructure Locations */}
           <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 24, marginBottom: 8 }}>Infrastructure Locations</h3>
           <p className="text-xs text-gray" style={{ marginBottom: 12 }}>Know where your key systems are in an emergency.</p>
@@ -203,6 +251,10 @@ export default function HomeDetails() {
               <label>Water Meter</label>
               <input className="form-input" value={form.water_meter_location} onChange={e => setForm({...form, water_meter_location: e.target.value})} placeholder="e.g., Front yard, curb" />
             </div>
+            <div className="form-group">
+              <label>Hose Bib Locations</label>
+              <input className="form-input" value={form.hose_bib_locations} onChange={e => setForm({...form, hose_bib_locations: e.target.value})} placeholder="e.g., Front, back, garage side" />
+            </div>
           </div>
 
           <div className="flex gap-sm mt-lg">
@@ -212,7 +264,29 @@ export default function HomeDetails() {
         </div>
       ) : home ? (
         <div className="card">
-          {home.photo_url && <img src={home.photo_url} alt="Home" style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 8, marginBottom: 20 }} />}
+          {/* Home Photo with upload */}
+          <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
+          {home.photo_url ? (
+            <div style={{ position: 'relative', marginBottom: 20 }}>
+              <img src={home.photo_url} alt="Home" style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 8 }} />
+              <button
+                className="btn btn-secondary btn-sm"
+                style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(255,255,255,0.9)' }}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? 'Uploading...' : 'Change Photo'}
+              </button>
+            </div>
+          ) : (
+            <div
+              style={{ textAlign: 'center', padding: 32, border: '2px dashed var(--light-gray)', borderRadius: 8, marginBottom: 20, cursor: 'pointer' }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <p style={{ fontWeight: 600, color: Colors.copper, marginBottom: 4 }}>{uploadingPhoto ? 'Uploading...' : 'Add a photo of your home'}</p>
+              <p className="text-xs text-gray">Click to upload a photo</p>
+            </div>
+          )}
           <h2 style={{ fontSize: 20, marginBottom: 4 }}>{home.address}</h2>
           <p className="text-sm text-gray mb-lg">{home.city}, {home.state} {home.zip_code}</p>
           <Field label="Year Built"><p style={{ fontWeight: 500 }}>{home.year_built || '—'}</p></Field>
@@ -225,11 +299,12 @@ export default function HomeDetails() {
               {home.has_pool && <span className="badge badge-info">Pool</span>}
               {home.has_deck && <span className="badge badge-sage">Deck</span>}
               {home.has_sprinkler_system && <span className="badge badge-success">Sprinklers</span>}
-              {home.has_fireplace && <span className="badge badge-warning">Fireplace</span>}
+              {home.has_fireplace && <span className="badge badge-warning">Fireplace{home.fireplace_type ? ` (${home.fireplace_type.replace(/_/g, ' ')})` : ''}</span>}
               {!home.has_pool && !home.has_deck && !home.has_sprinkler_system && !home.has_fireplace && <span className="text-sm text-gray">None selected</span>}
             </div>
           </Field>
-          {(home.main_breaker_location || home.water_shutoff_location || home.gas_meter_location || home.water_meter_location || home.sub_panel_locations) && (
+          {home.number_of_hvac_filters && <Field label="HVAC Filters"><p style={{ fontWeight: 500 }}>{home.number_of_hvac_filters} filter{home.number_of_hvac_filters > 1 ? 's' : ''}</p></Field>}
+          {(home.main_breaker_location || home.water_shutoff_location || home.gas_meter_location || home.water_meter_location || home.sub_panel_locations || home.hose_bib_locations) && (
             <>
               <div style={{ fontSize: 15, fontWeight: 600, marginTop: 20, marginBottom: 8 }}>Infrastructure Locations</div>
               {home.main_breaker_location && <Field label="Main Breaker"><p style={{ fontWeight: 500 }}>{home.main_breaker_location}</p></Field>}
@@ -237,6 +312,7 @@ export default function HomeDetails() {
               {home.water_shutoff_location && <Field label="Water Shutoff"><p style={{ fontWeight: 500 }}>{home.water_shutoff_location}</p></Field>}
               {home.gas_meter_location && <Field label="Gas Meter"><p style={{ fontWeight: 500 }}>{home.gas_meter_location}</p></Field>}
               {home.water_meter_location && <Field label="Water Meter"><p style={{ fontWeight: 500 }}>{home.water_meter_location}</p></Field>}
+              {home.hose_bib_locations && <Field label="Hose Bibs"><p style={{ fontWeight: 500 }}>{home.hose_bib_locations}</p></Field>}
             </>
           )}
         </div>

@@ -64,6 +64,7 @@ export default function Onboarding() {
     has_deck: false,
     has_sprinkler_system: false,
     has_fireplace: false,
+    fireplace_type: '',
   });
 
   // Step 3: Equipment
@@ -511,6 +512,23 @@ export default function Onboarding() {
               </label>
             ))}
           </div>
+
+          {/* Fireplace Type - shown when fireplace is checked */}
+          {systemsForm.has_fireplace && (
+            <div className="form-group mt-md">
+              <label>Fireplace Type</label>
+              <select
+                className="form-select"
+                value={systemsForm.fireplace_type}
+                onChange={e => setSystemsForm({ ...systemsForm, fireplace_type: e.target.value })}
+              >
+                <option value="">Select type...</option>
+                <option value="wood_burning">Wood Burning</option>
+                <option value="gas_starter">Gas Starter</option>
+                <option value="gas">Gas</option>
+              </select>
+            </div>
+          )}
 
           <div className="flex gap-sm mt-lg">
             <button className="btn btn-ghost" onClick={() => setStep(0)}>Back</button>

@@ -69,6 +69,9 @@ export interface Home {
   has_deck: boolean;
   has_sprinkler_system: boolean;
   has_fireplace: boolean;
+  fireplace_type?: 'wood_burning' | 'gas_starter' | 'gas';
+  hose_bib_locations?: string;
+  number_of_hvac_filters?: number;
   photo_url?: string;
   climate_zone?: string;
   usda_zone?: string;

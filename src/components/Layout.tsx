@@ -58,7 +58,7 @@ export default function Layout() {
       {/* Mobile top bar */}
       <header className="mobile-topbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CanopyLogo size={24} />
+          <img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
           <span style={{ fontWeight: 700, fontSize: 18 }}>Canopy</span>
         </div>
         <button
@@ -77,9 +77,8 @@ export default function Layout() {
 
       <nav className={`sidebar ${mobileMenuOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-logo">
-          {/* TODO: Replace CanopyLogo SVG with final branded logo asset when ready */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <CanopyLogo size={28} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 40, width: 'auto', objectFit: 'contain' }} />
             <h2 style={{ margin: 0 }}>Canopy</h2>
           </div>
           <span>Oak &amp; Sage Realty</span>

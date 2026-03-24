@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Colors } from '@/constants/theme';
 import { CheckCircleIcon, StormIcon, GearIcon, WrenchIcon, BellIcon } from '@/components/icons/Icons';
 import { useStore } from '@/store/useStore';
+import { canAccess } from '@/services/subscriptionGate';
 import * as supabaseService from '@/services/supabase';
 
 interface Notification {
@@ -216,23 +217,28 @@ export default function Notifications() {
             <div className="card mb-lg">
               <p style={{ fontWeight: 600, marginBottom: 16 }}>Notification Types</p>
               <div className="flex-col gap-md">
-                {[
-                  { key: 'taskReminders' as const, label: 'Task Reminders', desc: 'Get reminded about upcoming maintenance tasks' },
-                  { key: 'weatherAlerts' as const, label: 'Weather Alerts', desc: 'Notifications about severe weather events' },
-                  { key: 'equipmentLifecycle' as const, label: 'Equipment Lifecycle Warnings', desc: 'Alerts when equipment is nearing end of life' },
-                ].map((item, i, arr) => (
-                  <div key={item.key} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    paddingBottom: i < arr.length - 1 ? 16 : 0,
-                    borderBottom: i < arr.length - 1 ? `1px solid ${Colors.lightGray}` : 'none',
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal }}>{item.label}</p>
-                      <p className="text-xs text-gray">{item.desc}</p>
+                {(() => {
+                  const tier = useStore.getState().user?.subscription_tier || 'free';
+                  const hasWeather = canAccess(tier, 'weather_alerts');
+                  return [
+                    { key: 'taskReminders' as const, label: 'Task Reminders', desc: 'Get reminded about upcoming maintenance tasks', locked: false },
+                    { key: 'weatherAlerts' as const, label: 'Weather Alerts', desc: hasWeather ? 'Notifications about severe weather events' : 'Upgrade to Home Plan for weather alerts', locked: !hasWeather },
+                    { key: 'equipmentLifecycle' as const, label: 'Equipment Lifecycle Warnings', desc: 'Alerts when equipment is nearing end of life', locked: false },
+                  ].map((item, i, arr) => (
+                    <div key={item.key} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      paddingBottom: i < arr.length - 1 ? 16 : 0,
+                      borderBottom: i < arr.length - 1 ? `1px solid ${Colors.lightGray}` : 'none',
+                      opacity: item.locked ? 0.5 : 1,
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal }}>{item.label}</p>
+                        <p className="text-xs text-gray">{item.desc}</p>
+                      </div>
+                      <input type="checkbox" checked={item.locked ? false : prefs[item.key]} onChange={() => !item.locked && toggle(item.key)} disabled={item.locked} style={{ width: 20, height: 20, cursor: item.locked ? 'not-allowed' : 'pointer' }} />
                     </div>
-                    <input type="checkbox" checked={prefs[item.key]} onChange={() => toggle(item.key)} style={{ width: 20, height: 20, cursor: 'pointer' }} />
-                  </div>
-                ))}
+                  ));
+                })()}
               </div>
             </div>
 

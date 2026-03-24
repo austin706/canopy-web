@@ -141,7 +141,7 @@ export default function Dashboard() {
           <p className="text-sm text-gray">{greeting}</p>
           <h1 style={{ fontSize: 28, fontWeight: 700 }}>{user?.full_name || 'Homeowner'}</h1>
         </div>
-        <CanopyLogo size={32} />
+        <img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 40, width: 'auto', objectFit: 'contain' }} />
       </div>
 
       <div className="dashboard-layout">
@@ -276,17 +276,30 @@ export default function Dashboard() {
             <p style={{ fontWeight: 600, marginBottom: 12 }}>Quick Actions</p>
             <div className="flex-col gap-sm">
               {[
-                { label: 'Create Custom Task', route: '/task/create' },
-                { label: 'Scan Equipment', route: '/equipment' },
-                { label: 'Pro Services', route: '/pro-services' },
-                { label: 'Contact Agent', route: '/agent' },
-                { label: 'Maintenance Log', route: '/logs' },
-                { label: 'Request Pro', route: '/pro-request' },
-              ].map(a => (
-                <button key={a.label} className="btn btn-ghost" style={{ justifyContent: 'flex-start', padding: '10px 12px' }} onClick={() => navigate(a.route)}>
-                  {a.label} &rarr;
-                </button>
-              ))}
+                { label: 'Create Custom Task', route: '/task/create', free: false },
+                { label: 'Scan Equipment', route: '/equipment', free: true },
+                { label: 'Pro Services', route: '/pro-services', free: false },
+                { label: 'Contact Agent', route: '/agent', free: true },
+                { label: 'Maintenance Log', route: '/logs', free: true },
+                { label: 'Request Pro', route: '/pro-request', free: false },
+              ].map(a => {
+                const locked = tier === 'free' && !a.free;
+                return (
+                  <button
+                    key={a.label}
+                    className="btn btn-ghost"
+                    style={{
+                      justifyContent: 'flex-start',
+                      padding: '10px 12px',
+                      opacity: locked ? 0.5 : 1,
+                      position: 'relative',
+                    }}
+                    onClick={() => locked ? navigate('/subscription') : navigate(a.route)}
+                  >
+                    {a.label} {locked ? <span style={{ fontSize: 11, color: Colors.copper, marginLeft: 'auto' }}>Upgrade</span> : <span style={{ marginLeft: 'auto' }}>&rarr;</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

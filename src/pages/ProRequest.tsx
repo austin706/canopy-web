@@ -6,7 +6,7 @@ import { isProOrHigher } from '@/services/subscriptionGate';
 import { Colors, StatusColors } from '@/constants/theme';
 import type { ProRequest } from '@/types';
 
-const SERVICE_TYPES = ['HVAC Maintenance', 'Filter Change', 'Gutter Cleaning', 'Plumbing Repair', 'Electrical Inspection', 'Roof Inspection', 'Pool Service', 'Deck Maintenance', 'Lawn Care', 'General Handyman'];
+const SERVICE_TYPES = ['HVAC Maintenance', 'Filter Change', 'Gutter Cleaning', 'Plumbing Repair', 'Electrical Inspection', 'Roof Inspection', 'Pool Service', 'Deck Maintenance', 'Lawn Care', 'General Handyman', 'Custom/Other'];
 
 export default function ProRequest() {
   const navigate = useNavigate();

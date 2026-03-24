@@ -75,12 +75,33 @@ Standalone pages (no sidebar):
 - Fixed CreateTask + ProServices mobile padding (inline styles → CSS page class)
 - Full page-by-page audit of all 36 pages + 5 components — TypeScript clean
 
+### Session 8 (March 23 — Deep Logic Audit + Fixes):
+- **HomeDetails.tsx**: Added photo upload (click-to-upload area, change photo button), fireplace type dropdown (wood burning/gas starter/gas), hose bib locations field, HVAC filter count field
+- **Onboarding.tsx**: Added fireplace type selection when has_fireplace is checked
+- **types/index.ts**: Added fireplace_type, hose_bib_locations, number_of_hvac_filters to Home interface
+- **Signup.tsx**: Added mandatory Terms of Service + Privacy Policy acceptance checkbox
+- **Help.tsx**: Fixed support email (oakandsagerealty.com → canopyhome.app), phone (918-984-0376 → 918-948-0950)
+- **Subscription.tsx**: Fixed Pro+ inquiry email (oakandsagerealty.com → canopyhome.app)
+- **weather.ts**: Fixed NWS user agent email (austin@rvconnect.us → support@canopyhome.app)
+- **ProRequest.tsx**: Added "Custom/Other" service type category
+- **Profile.tsx**: Added "Link Agent" section with agent code/email lookup (separate from gift codes)
+- **supabase.ts**: Added lookupAgentByCode() and linkAgent() functions
+- **Dashboard.tsx**: Free tier quick actions now greyed out with "Upgrade" label for paid features
+- **CreateTask.tsx**: Added free tier gate — custom tasks locked for free users with upgrade prompt
+- **Notifications.tsx**: Weather alerts toggle disabled/greyed for free users
+
+### Session 9 (March 23 — Logo + Storage + Mobile Parity Sync):
+- **Layout.tsx, Dashboard.tsx, Login.tsx, Signup.tsx**: Replaced placeholder CanopyLogo SVG with Grok watercolor PNG (`/canopy-watercolor-logo.png`)
+- **Supabase**: Created "photos" storage bucket + RLS policies; added fireplace_type, hose_bib_locations, number_of_hvac_filters columns to homes table
+- **Mobile parity sync**: All Session 8 features now synced to mobile (fireplace type, hose bibs, filter count, terms checkbox, contact info, Custom/Other pro request)
+
 ## Remaining Before Launch (Austin's manual tasks)
 
 - [ ] Configure Stripe secrets + deploy Edge Functions on Supabase
 - [ ] Add stripe_customer_id / stripe_subscription_id to profiles table
-- [ ] Replace placeholder CanopyLogo SVG with final branded asset (search TODO)
 - [ ] App icon (1024x1024), App Store screenshots
 - [ ] Rotate exposed Supabase anon key + GitHub token
 - [ ] Batch git push both repos
-- [ ] Mobile app parity audit (web got fixes mobile may still need)
+- [x] Replace placeholder CanopyLogo SVG with branded asset — DONE (Session 9)
+- [x] Create Supabase storage bucket "photos" — DONE (Session 9)
+- [x] Mobile app parity audit — COMPLETE (Session 7-9)

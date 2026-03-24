@@ -18,12 +18,15 @@ export default function Signup() {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [termsError, setTermsError] = useState('');
 
   const validateForm = (): boolean => {
     setFullNameError('');
     setEmailError('');
     setPasswordError('');
     setConfirmPasswordError('');
+    setTermsError('');
     let isValid = true;
 
     if (!fullName.trim()) {
@@ -58,6 +61,11 @@ export default function Signup() {
       isValid = false;
     }
 
+    if (!acceptedTerms) {
+      setTermsError('You must accept the Terms of Service and Privacy Policy');
+      isValid = false;
+    }
+
     return isValid;
   };
 
@@ -85,7 +93,7 @@ export default function Signup() {
       <div className="auth-layout">
         <div className="auth-hero">
           <div className="auth-hero-content">
-            <div style={{ marginBottom: 16 }}><CanopyLogo size={48} color="#fff" /></div>
+            <div style={{ marginBottom: 16 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 56, width: 'auto', objectFit: 'contain' }} /></div>
             <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Welcome!</h1>
             <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)' }}>You're one step away from smart home maintenance.</p>
           </div>
@@ -110,7 +118,7 @@ export default function Signup() {
     <div className="auth-layout">
       <div className="auth-hero">
         <div className="auth-hero-content">
-          <div style={{ marginBottom: 16 }}><CanopyLogo size={48} color="#fff" /></div>
+          <div style={{ marginBottom: 16 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 56, width: 'auto', objectFit: 'contain' }} /></div>
           <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Canopy</h1>
           <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 32 }}>Smart home maintenance, powered by AI</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -166,7 +174,16 @@ export default function Signup() {
               </div>
               {confirmPasswordError && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{confirmPasswordError}</p>}
             </div>
-            <button className="btn btn-primary btn-lg btn-full" type="submit" disabled={loading}>
+            <div className="form-group">
+              <label className="flex items-center gap-sm" style={{ cursor: 'pointer', fontSize: 13 }}>
+                <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} />
+                <span style={{ color: '#555' }}>
+                  I agree to the <a href="/terms" target="_blank" style={{ color: '#C4844E', textDecoration: 'none', fontWeight: 600 }}>Terms of Service</a> and <a href="/privacy" target="_blank" style={{ color: '#C4844E', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
+                </span>
+              </label>
+              {termsError && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{termsError}</p>}
+            </div>
+            <button className="btn btn-primary btn-lg btn-full" type="submit" disabled={loading || !acceptedTerms}>
               {loading ? <span className="spinner" /> : 'Create Account'}
             </button>
           </form>

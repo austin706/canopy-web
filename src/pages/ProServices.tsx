@@ -49,6 +49,11 @@ const PRO_SERVICE_TEMPLATES: ProServiceTemplate[] = [
     title: 'Chimney Sweep',
     description: 'Professional chimney cleaning and inspection',
   },
+  {
+    id: 'custom-other',
+    title: 'Custom/Other',
+    description: 'Any other professional service or custom request',
+  },
 ];
 
 const STATUS_COLORS: Record<string, string> = {

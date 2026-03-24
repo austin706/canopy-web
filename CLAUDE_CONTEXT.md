@@ -95,6 +95,19 @@ Standalone pages (no sidebar):
 - **Supabase**: Created "photos" storage bucket + RLS policies; added fireplace_type, hose_bib_locations, number_of_hvac_filters columns to homes table
 - **Mobile parity sync**: All Session 8 features now synced to mobile (fireplace type, hose bibs, filter count, terms checkbox, contact info, Custom/Other pro request)
 
+### Session 10 (March 23 — Conditional Tasks + Calendar + Portal + AI Fix):
+- **maintenance.ts**: TaskTemplate gets `'fireplace'` category; gutter/fire extinguisher/countertop/water softener tasks now conditional on home features; 4 fireplace tasks + 3 sprinkler tasks added; getTasksForMonth uses `Record<string, any>` signature
+- **HomeDetails.tsx + Onboarding.tsx**: Added has_gutters, has_fire_extinguisher, has_water_softener toggles, countertop_type picker, fireplace_count input
+- **types/index.ts**: Added has_gutters, has_fire_extinguisher, has_water_softener, countertop_type, fireplace_count to Home interface
+- **taskEngine.ts**: Task date distribution now uses deterministic hash (days 1-28, was hardcoded to 15)
+- **Calendar.tsx**: Added useEffect to reset selectedDate on month/year change
+- **Layout.tsx**: Portal visibility — admin sees all 3 portals, agent/pro see only their own
+- **ai.ts**: Replaced raw fetch() with supabase.functions.invoke() to fix 404 JWT error
+- **ProServices.tsx**: Added Custom/Other to PRO_SERVICE_TEMPLATES
+- **CanopyLogo.tsx**: Component definition renders watercolor PNG (all call sites auto-updated)
+- **Supabase schema**: Added has_gutters, has_fire_extinguisher, has_water_softener, countertop_type, fireplace_count columns
+- **All changes synced to mobile** including maintenance.ts, home-details, onboarding, taskEngine, types
+
 ## Remaining Before Launch (Austin's manual tasks)
 
 - [ ] Configure Stripe secrets + deploy Edge Functions on Supabase
@@ -104,4 +117,4 @@ Standalone pages (no sidebar):
 - [ ] Batch git push both repos
 - [x] Replace placeholder CanopyLogo SVG with branded asset — DONE (Session 9)
 - [x] Create Supabase storage bucket "photos" — DONE (Session 9)
-- [x] Mobile app parity audit — COMPLETE (Session 7-9)
+- [x] Mobile app parity audit — COMPLETE (Session 7-10)

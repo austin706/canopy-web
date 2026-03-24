@@ -46,6 +46,11 @@ export default function Calendar() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
+  // Reset selectedDate when navigating to a different month to ensure task list updates
+  useEffect(() => {
+    setSelectedDate(null);
+  }, [month, year]);
+
   const calendarDays = useMemo(() => {
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();

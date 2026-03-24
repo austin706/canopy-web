@@ -117,7 +117,9 @@ export function generateTasksForHome(
     }
 
     // Create the new task
-    const dueDate = new Date(nextMonth.year, nextMonth.month - 1, 15); // Mid-month
+    // Distribute tasks across the month using a hash of the template ID
+    const dayHash = template.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 28 + 1;
+    const dueDate = new Date(nextMonth.year, nextMonth.month - 1, dayHash);
     const task: MaintenanceTask = {
       id: generateUUID(),
       home_id: home.id,

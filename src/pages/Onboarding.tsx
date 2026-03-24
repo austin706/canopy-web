@@ -65,6 +65,11 @@ export default function Onboarding() {
     has_sprinkler_system: false,
     has_fireplace: false,
     fireplace_type: '',
+    has_gutters: true,
+    has_fire_extinguisher: false,
+    has_water_softener: false,
+    countertop_type: '',
+    fireplace_count: '1',
   });
 
   // Step 3: Equipment
@@ -124,6 +129,8 @@ export default function Onboarding() {
         ...home,
         ...systemsForm,
         roof_age_years: systemsForm.roof_age_years ? parseInt(systemsForm.roof_age_years) : null,
+        countertop_type: systemsForm.countertop_type || null,
+        fireplace_count: systemsForm.has_fireplace ? (parseInt(systemsForm.fireplace_count) || 1) : null,
       };
 
       try {
@@ -501,7 +508,7 @@ export default function Onboarding() {
           </div>
 
           <div className="grid-2 mt-md">
-            {(['has_pool', 'has_deck', 'has_sprinkler_system', 'has_fireplace'] as const).map(key => (
+            {(['has_pool', 'has_deck', 'has_sprinkler_system', 'has_fireplace', 'has_gutters', 'has_fire_extinguisher', 'has_water_softener'] as const).map(key => (
               <label key={key} className="flex items-center gap-sm" style={{ cursor: 'pointer', padding: '8px 0' }}>
                 <input
                   type="checkbox"
@@ -513,22 +520,50 @@ export default function Onboarding() {
             ))}
           </div>
 
-          {/* Fireplace Type - shown when fireplace is checked */}
+          {/* Fireplace Type and Count - shown when fireplace is checked */}
           {systemsForm.has_fireplace && (
-            <div className="form-group mt-md">
-              <label>Fireplace Type</label>
-              <select
-                className="form-select"
-                value={systemsForm.fireplace_type}
-                onChange={e => setSystemsForm({ ...systemsForm, fireplace_type: e.target.value })}
-              >
-                <option value="">Select type...</option>
-                <option value="wood_burning">Wood Burning</option>
-                <option value="gas_starter">Gas Starter</option>
-                <option value="gas">Gas</option>
-              </select>
-            </div>
+            <>
+              <div className="form-group mt-md">
+                <label>Fireplace Type</label>
+                <select
+                  className="form-select"
+                  value={systemsForm.fireplace_type}
+                  onChange={e => setSystemsForm({ ...systemsForm, fireplace_type: e.target.value })}
+                >
+                  <option value="">Select type...</option>
+                  <option value="wood_burning">Wood Burning</option>
+                  <option value="gas_starter">Gas Starter</option>
+                  <option value="gas">Gas</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Number of Fireplaces</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  min="1"
+                  value={systemsForm.fireplace_count}
+                  onChange={e => setSystemsForm({ ...systemsForm, fireplace_count: e.target.value })}
+                  placeholder="1"
+                />
+              </div>
+            </>
           )}
+
+          {/* Countertop Type */}
+          <div className="form-group mt-md">
+            <label>Countertop Type</label>
+            <select
+              className="form-select"
+              value={systemsForm.countertop_type}
+              onChange={e => setSystemsForm({ ...systemsForm, countertop_type: e.target.value })}
+            >
+              <option value="">Select...</option>
+              {['granite', 'marble', 'quartz', 'butcher_block', 'laminate', 'tile', 'concrete', 'stainless_steel'].map(v => (
+                <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>
+              ))}
+            </select>
+          </div>
 
           <div className="flex gap-sm mt-lg">
             <button className="btn btn-ghost" onClick={() => setStep(0)}>Back</button>

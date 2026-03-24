@@ -95,17 +95,28 @@ export default function Layout() {
               {item.label}
             </NavLink>
           ))}
+          {/* Admin users see all three portals */}
           {user?.role === 'admin' && (
-            <NavLink to="/admin" className={({ isActive }) => isActive ? 'active' : ''}>
-              <NavAdmin size={18} /> Admin Portal
-            </NavLink>
+            <>
+              <NavLink to="/admin" className={({ isActive }) => isActive ? 'active' : ''}>
+                <NavAdmin size={18} /> Admin Portal
+              </NavLink>
+              <NavLink to="/agent-portal" className={({ isActive }) => isActive ? 'active' : ''}>
+                <NavAgentPortal size={18} /> Agent Portal
+              </NavLink>
+              <NavLink to="/pro-portal" className={({ isActive }) => isActive ? 'active' : ''}>
+                <NavProPortal size={18} /> Pro Portal
+              </NavLink>
+            </>
           )}
-          {(user?.role === 'agent' || user?.role === 'admin') && (
+          {/* Agent users see only Agent Portal */}
+          {user?.role === 'agent' && user?.role !== 'admin' && (
             <NavLink to="/agent-portal" className={({ isActive }) => isActive ? 'active' : ''}>
               <NavAgentPortal size={18} /> Agent Portal
             </NavLink>
           )}
-          {(user?.role === 'pro_provider' || user?.role === 'admin') && (
+          {/* Pro Provider users see only Pro Portal */}
+          {user?.role === 'pro_provider' && user?.role !== 'admin' && (
             <NavLink to="/pro-portal" className={({ isActive }) => isActive ? 'active' : ''}>
               <NavProPortal size={18} /> Pro Portal
             </NavLink>

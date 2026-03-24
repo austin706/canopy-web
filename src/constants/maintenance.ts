@@ -8,7 +8,7 @@ export interface TaskTemplate {
   title: string;
   description: string;
   instructions: string[];
-  category: EquipmentCategory | 'general' | 'lawn' | 'pool' | 'deck' | 'seasonal';
+  category: EquipmentCategory | 'general' | 'lawn' | 'pool' | 'deck' | 'seasonal' | 'pest_control' | 'fireplace';
   priority: TaskPriority;
   frequency: TaskFrequency;
   applicable_months: number[];
@@ -16,6 +16,8 @@ export interface TaskTemplate {
   estimated_cost: number;
   requires_equipment?: EquipmentCategory;
   requires_home_feature?: string; // e.g., 'has_pool', 'has_deck'
+  service_purpose?: string;
+  items_to_have_on_hand?: string[];
 }
 
 // ─── Monthly & Seasonal Task Templates ───
@@ -138,6 +140,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [4, 5],
     estimated_minutes: 60,
     estimated_cost: 0,
+    requires_home_feature: 'has_gutters',
   },
   {
     id: 'gutter-clean-fall',
@@ -156,6 +159,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [11],
     estimated_minutes: 60,
     estimated_cost: 0,
+    requires_home_feature: 'has_gutters',
   },
   {
     id: 'roof-inspection',
@@ -213,6 +217,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [1],
     estimated_minutes: 5,
     estimated_cost: 0,
+    requires_home_feature: 'has_fire_extinguisher',
   },
 
   // ═══ PLUMBING ═══
@@ -441,6 +446,152 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     requires_home_feature: 'has_deck',
   },
 
+  // ═══ FIREPLACE ═══
+  {
+    id: 'fireplace-chimney-inspection',
+    title: 'Annual Chimney Inspection & Sweep',
+    description: 'Have a certified chimney sweep inspect and clean your chimney annually before heating season. Creosote buildup is a leading cause of chimney fires.',
+    instructions: [
+      'Schedule a CSIA-certified chimney sweep',
+      'They will inspect the flue liner, damper, and cap',
+      'Creosote buildup greater than 1/8 inch should be removed',
+      'Check for cracks in the flue liner or mortar joints',
+      'Verify the chimney cap and spark arrestor are intact',
+      'Test the damper opens and closes fully',
+    ],
+    category: 'fireplace',
+    priority: 'high',
+    frequency: 'annual',
+    applicable_months: [9, 10],
+    estimated_minutes: 90,
+    estimated_cost: 200,
+    requires_home_feature: 'has_fireplace',
+  },
+  {
+    id: 'fireplace-wood-burning-clean',
+    title: 'Clean Firebox & Ash Removal (Wood Burning)',
+    description: 'Remove ash buildup from wood-burning fireplaces. A thin layer of ash (1 inch) helps insulate and improve combustion, but excess ash restricts airflow.',
+    instructions: [
+      'Wait at least 24 hours after the last fire before cleaning',
+      'Wear a dust mask and gloves',
+      'Use a fireplace shovel to scoop ash into a metal bucket',
+      'Leave about 1 inch of ash on the floor of the firebox',
+      'Dispose of ashes in a metal container outdoors, away from structures',
+      'Inspect the firebrick for cracks — replace any damaged bricks',
+      'Check the fireplace screen or glass doors for damage',
+    ],
+    category: 'fireplace',
+    priority: 'medium',
+    frequency: 'monthly',
+    applicable_months: [10, 11, 12, 1, 2, 3],
+    estimated_minutes: 20,
+    estimated_cost: 0,
+    requires_home_feature: 'has_fireplace',
+  },
+  {
+    id: 'fireplace-gas-inspection',
+    title: 'Gas Fireplace Annual Service',
+    description: 'Have a qualified technician inspect your gas fireplace annually. Check for gas leaks, clean the burner assembly, and verify the pilot light and thermocouple.',
+    instructions: [
+      'Schedule a gas fireplace service with a qualified technician',
+      'They should check all gas connections for leaks',
+      'Clean the burner ports and logs of dust and debris',
+      'Inspect the thermocouple and thermopile',
+      'Check the blower fan if equipped',
+      'Clean the glass panel inside and out',
+      'Test the remote control and wall switch',
+    ],
+    category: 'fireplace',
+    priority: 'high',
+    frequency: 'annual',
+    applicable_months: [9, 10],
+    estimated_minutes: 60,
+    estimated_cost: 150,
+    requires_home_feature: 'has_fireplace',
+  },
+  {
+    id: 'fireplace-check-damper',
+    title: 'Check Fireplace Damper & Seal',
+    description: 'Ensure your fireplace damper opens and closes properly. A stuck or leaky damper wastes energy and can let moisture, pests, and cold air into your home.',
+    instructions: [
+      'Open and close the damper — it should move freely',
+      'With the damper closed, hold a lit match near the opening — if the flame flickers, the damper is leaking',
+      'Check the damper handle or chain mechanism for rust or damage',
+      'If the damper leaks, consider a top-sealing damper replacement',
+      'For gas fireplaces: the damper must always be open or have a clamp — never fully close it',
+    ],
+    category: 'fireplace',
+    priority: 'medium',
+    frequency: 'annual',
+    applicable_months: [9],
+    estimated_minutes: 10,
+    estimated_cost: 0,
+    requires_home_feature: 'has_fireplace',
+  },
+
+  // ═══ SPRINKLER SYSTEM ═══
+  {
+    id: 'sprinkler-spring-startup',
+    title: 'Spring Sprinkler System Startup',
+    description: 'Activate your irrigation system for the season. Gradually pressurize the lines and check each zone for leaks, broken heads, and coverage gaps.',
+    instructions: [
+      'Slowly open the main water valve to the sprinkler system (avoid water hammer)',
+      'Walk each zone while it runs and check for broken or tilted heads',
+      'Look for pooling water that indicates a cracked line',
+      'Adjust sprinkler heads so they are not spraying sidewalks, driveways, or the house',
+      'Check the controller schedule and update run times for the season',
+      'Replace any cracked or broken sprinkler heads',
+      'Test rain sensor if you have one',
+    ],
+    category: 'outdoor',
+    priority: 'high',
+    frequency: 'annual',
+    applicable_months: [3, 4],
+    estimated_minutes: 45,
+    estimated_cost: 10,
+    requires_home_feature: 'has_sprinkler_system',
+  },
+  {
+    id: 'sprinkler-winterize',
+    title: 'Winterize Sprinkler System (Blowout)',
+    description: 'Hire a professional to blow out your sprinkler lines with compressed air before the first freeze. Trapped water in lines will freeze and crack pipes.',
+    instructions: [
+      'Schedule a sprinkler blowout with a landscape company',
+      'Turn off the main water supply to the sprinkler system',
+      'The technician will use an air compressor to blow water from each zone',
+      'Each zone should be blown until no water comes out of the heads',
+      'Insulate the backflow preventer with a cover or towels',
+      'Set the controller to rain/off mode for winter',
+    ],
+    category: 'outdoor',
+    priority: 'urgent',
+    frequency: 'annual',
+    applicable_months: [10, 11],
+    estimated_minutes: 30,
+    estimated_cost: 75,
+    requires_home_feature: 'has_sprinkler_system',
+  },
+  {
+    id: 'sprinkler-head-check',
+    title: 'Mid-Season Sprinkler Head Check',
+    description: 'Walk your property and check each sprinkler zone for tilted heads, clogged nozzles, and dry spots. Mowing and foot traffic knock heads out of alignment.',
+    instructions: [
+      'Run each zone one at a time for 2-3 minutes',
+      'Look for heads that are not popping up, are tilted, or spray erratically',
+      'Check for dry patches in the lawn — may indicate a clogged nozzle',
+      'Clear grass and dirt from around sunken heads',
+      'Adjust rotor heads for proper arc and distance',
+      'Replace any cracked or broken heads',
+    ],
+    category: 'outdoor',
+    priority: 'medium',
+    frequency: 'annual',
+    applicable_months: [6, 7],
+    estimated_minutes: 30,
+    estimated_cost: 5,
+    requires_home_feature: 'has_sprinkler_system',
+  },
+
   // ═══ SEASONAL GENERAL ═══
   {
     id: 'spring-exterior-walkthrough',
@@ -585,6 +736,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [4],
     estimated_minutes: 30,
     estimated_cost: 20,
+    requires_home_feature: 'countertop_type',
   },
 
   // ═══ BATHROOM & LAUNDRY (from Proventive) ═══
@@ -755,6 +907,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     estimated_minutes: 10,
     estimated_cost: 15,
+    requires_home_feature: 'has_water_softener',
   },
 
   // ═══ OUTDOOR (from Proventive) ═══
@@ -783,12 +936,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
 // ─── Get tasks applicable for a given month ───
 export const getTasksForMonth = (
   month: number,
-  homeFeatures: { has_pool: boolean; has_deck: boolean; has_sprinkler_system: boolean }
+  homeFeatures: Record<string, any>
 ): TaskTemplate[] => {
   return TASK_TEMPLATES.filter((task) => {
     if (!task.applicable_months.includes(month)) return false;
-    if (task.requires_home_feature === 'has_pool' && !homeFeatures.has_pool) return false;
-    if (task.requires_home_feature === 'has_deck' && !homeFeatures.has_deck) return false;
+    if (task.requires_home_feature && !homeFeatures[task.requires_home_feature]) return false;
     return true;
   });
 };

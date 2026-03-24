@@ -37,23 +37,16 @@ const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
   // Try Edge Function route if configured
   if (SUPABASE_URL) {
     try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
+      const action = (payload as Record<string, unknown>).action as string;
+      const response = await supabase.functions.invoke(action, {
+        body: payload,
+      });
 
-      if (token) {
-        const response = await fetch(
-          `${SUPABASE_URL}/functions/v1/scan-equipment`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify(payload),
-          }
-        );
-        return response;
-      }
+      // Convert response to Response object for consistency
+      return new Response(JSON.stringify(response), {
+        status: response.error ? 400 : 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
     } catch (error) {
       console.warn('Edge Function call failed, falling back to direct API:', error);
     }

@@ -21,6 +21,11 @@ export default function HomeDetails() {
     has_pool: home?.has_pool || false, has_deck: home?.has_deck || false, has_sprinkler_system: home?.has_sprinkler_system || false,
     has_fireplace: home?.has_fireplace || false,
     fireplace_type: home?.fireplace_type || '',
+    has_gutters: home?.has_gutters ?? true,
+    has_fire_extinguisher: home?.has_fire_extinguisher || false,
+    has_water_softener: home?.has_water_softener || false,
+    countertop_type: home?.countertop_type || '',
+    fireplace_count: home?.fireplace_count?.toString() || '1',
     lawn_type: home?.lawn_type || 'none',
     number_of_hvac_filters: home?.number_of_hvac_filters?.toString() || '',
     // Infrastructure locations
@@ -79,6 +84,11 @@ export default function HomeDetails() {
         roof_age_years: form.roof_age_years ? parseInt(form.roof_age_years) : null,
         number_of_hvac_filters: form.number_of_hvac_filters ? parseInt(form.number_of_hvac_filters) : null,
         fireplace_type: form.has_fireplace && form.fireplace_type ? form.fireplace_type : null,
+        has_gutters: form.has_gutters,
+        has_fire_extinguisher: form.has_fire_extinguisher,
+        has_water_softener: form.has_water_softener,
+        countertop_type: form.countertop_type || null,
+        fireplace_count: form.has_fireplace ? (parseInt(form.fireplace_count) || 1) : null,
         created_at: home?.created_at || new Date().toISOString(),
       };
       try { const saved = await upsertHome(homeData); setHome(saved); } catch { setHome(homeData); }
@@ -194,25 +204,40 @@ export default function HomeDetails() {
             <div className="form-group"><label>&nbsp;</label><p className="text-xs text-gray" style={{ padding: '10px 0' }}>Used for seasonal lawn care tasks</p></div>
           </div>
           <div className="grid-2 mt-md">
-            {(['has_pool','has_deck','has_sprinkler_system','has_fireplace'] as const).map(key => (
+            {(['has_pool','has_deck','has_sprinkler_system','has_fireplace','has_gutters','has_fire_extinguisher','has_water_softener'] as const).map(key => (
               <label key={key} className="flex items-center gap-sm" style={{ cursor: 'pointer', padding: '8px 0' }}>
                 <input type="checkbox" checked={form[key] as boolean} onChange={e => setForm({...form, [key]: e.target.checked})} />
                 <span style={{ fontSize: 14 }}>{key.replace(/has_/,'').replace(/_/g,' ')}</span>
               </label>
             ))}
           </div>
-          {/* Fireplace Type - shown when has_fireplace is checked */}
+          {/* Fireplace Type and Count - shown when has_fireplace is checked */}
           {form.has_fireplace && (
-            <div className="form-group mt-md">
-              <label>Fireplace Type</label>
-              <select className="form-select" value={form.fireplace_type} onChange={e => setForm({...form, fireplace_type: e.target.value})}>
-                <option value="">Select type...</option>
-                <option value="wood_burning">Wood Burning</option>
-                <option value="gas_starter">Gas Starter</option>
-                <option value="gas">Gas</option>
-              </select>
-            </div>
+            <>
+              <div className="form-group mt-md">
+                <label>Fireplace Type</label>
+                <select className="form-select" value={form.fireplace_type} onChange={e => setForm({...form, fireplace_type: e.target.value})}>
+                  <option value="">Select type...</option>
+                  <option value="wood_burning">Wood Burning</option>
+                  <option value="gas_starter">Gas Starter</option>
+                  <option value="gas">Gas</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Number of Fireplaces</label>
+                <input className="form-input" type="number" min="1" value={form.fireplace_count} onChange={e => setForm({...form, fireplace_count: e.target.value})} placeholder="1" />
+              </div>
+            </>
           )}
+
+          {/* Countertop Type */}
+          <div className="form-group mt-md">
+            <label>Countertop Type</label>
+            <select className="form-select" value={form.countertop_type} onChange={e => setForm({...form, countertop_type: e.target.value})}>
+              <option value="">Select...</option>
+              {['granite','marble','quartz','butcher_block','laminate','tile','concrete','stainless_steel'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
+            </select>
+          </div>
 
           {/* HVAC Filters */}
           <div className="grid-2 mt-md">
@@ -299,11 +324,15 @@ export default function HomeDetails() {
               {home.has_pool && <span className="badge badge-info">Pool</span>}
               {home.has_deck && <span className="badge badge-sage">Deck</span>}
               {home.has_sprinkler_system && <span className="badge badge-success">Sprinklers</span>}
-              {home.has_fireplace && <span className="badge badge-warning">Fireplace{home.fireplace_type ? ` (${home.fireplace_type.replace(/_/g, ' ')})` : ''}</span>}
-              {!home.has_pool && !home.has_deck && !home.has_sprinkler_system && !home.has_fireplace && <span className="text-sm text-gray">None selected</span>}
+              {home.has_fireplace && <span className="badge badge-warning">Fireplace{home.fireplace_type ? ` (${home.fireplace_type.replace(/_/g, ' ')})` : ''}{home.fireplace_count ? ` x${home.fireplace_count}` : ''}</span>}
+              {home.has_gutters && <span className="badge badge-info">Gutters</span>}
+              {home.has_fire_extinguisher && <span className="badge badge-warning">Fire Extinguisher</span>}
+              {home.has_water_softener && <span className="badge badge-sage">Water Softener</span>}
+              {!home.has_pool && !home.has_deck && !home.has_sprinkler_system && !home.has_fireplace && !home.has_gutters && !home.has_fire_extinguisher && !home.has_water_softener && <span className="text-sm text-gray">None selected</span>}
             </div>
           </Field>
           {home.number_of_hvac_filters && <Field label="HVAC Filters"><p style={{ fontWeight: 500 }}>{home.number_of_hvac_filters} filter{home.number_of_hvac_filters > 1 ? 's' : ''}</p></Field>}
+          {home.countertop_type && <Field label="Countertop Type"><p style={{ fontWeight: 500 }}>{home.countertop_type.replace(/_/g,' ')}</p></Field>}
           {(home.main_breaker_location || home.water_shutoff_location || home.gas_meter_location || home.water_meter_location || home.sub_panel_locations || home.hose_bib_locations) && (
             <>
               <div style={{ fontSize: 15, fontWeight: 600, marginTop: 20, marginBottom: 8 }}>Infrastructure Locations</div>

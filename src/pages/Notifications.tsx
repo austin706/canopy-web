@@ -262,7 +262,7 @@ export default function Notifications() {
                 </thead>
                 <tbody>
                   {(() => {
-                    const categories: Array<{ key: NotificationCategory; locked?: boolean; lockReason?: string }> = [
+                    const categories: Array<{ key: keyof NotificationPreferences; locked?: boolean; lockReason?: string }> = [
                       { key: 'home_maintenance' },
                       { key: 'weather_safety', locked: !canAccess(userTier, 'weather_alerts'), lockReason: 'Upgrade to access' },
                       { key: 'equipment_lifecycle' },
@@ -482,7 +482,7 @@ export default function Notifications() {
               <button className="btn btn-primary" onClick={handleSave} style={{ width: '100%', marginBottom: 12 }}>
                 Save Preferences
               </button>
-              {saved && <p style={{ textAlign: 'center', fontSize: 12, color: Colors.success, fontWeight: 600 }}><CheckCircleIcon size={14} style={{ display: 'inline-block', marginRight: 4, verticalAlign: 'middle' }} color={Colors.success} /> Preferences saved</p>}
+              {saved && <p style={{ textAlign: 'center', fontSize: 12, color: Colors.success, fontWeight: 600 }}><span style={{ display: 'inline-block', marginRight: 4, verticalAlign: 'middle' }}><CheckCircleIcon size={14} color={Colors.success} /></span> Preferences saved</p>}
             </div>
           </>
         )}

@@ -148,11 +148,11 @@ export default function Quotes() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
-                      <p style={{ fontWeight: 600, fontSize: 14 }}>Quote #{quote.number || quote.id.slice(0, 8).toUpperCase()}</p>
-                      <p className="text-xs text-gray">{formatDate(quote.date)}</p>
+                      <p style={{ fontWeight: 600, fontSize: 14 }}>Quote #{quote.quote_number || quote.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="text-xs text-gray">{formatDate(quote.issued_date)}</p>
                     </div>
                     <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{quote.title}</p>
-                    <p className="text-sm text-gray">{quote.provider_name}</p>
+                    <p className="text-sm text-gray">{quote.provider?.business_name}</p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{formatCurrency(quote.total_amount)}</p>
@@ -185,7 +185,7 @@ export default function Quotes() {
                   <div style={{ padding: 12, background: Colors.cream, borderRadius: 8, marginBottom: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                       <p className="text-sm">Subtotal</p>
-                      <p style={{ fontWeight: 600 }}>{formatCurrency(quote.subtotal_amount)}</p>
+                      <p style={{ fontWeight: 600 }}>{formatCurrency(quote.subtotal)}</p>
                     </div>
                     {quote.tax_amount > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>

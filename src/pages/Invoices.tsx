@@ -149,8 +149,8 @@ export default function Invoices() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
-                        <p style={{ fontWeight: 600, fontSize: 14 }}>Invoice #{invoice.number || invoice.id.slice(0, 8).toUpperCase()}</p>
-                        <p className="text-xs text-gray">{formatDate(invoice.date)}</p>
+                        <p style={{ fontWeight: 600, fontSize: 14 }}>Invoice #{invoice.invoice_number || invoice.id.slice(0, 8).toUpperCase()}</p>
+                        <p className="text-xs text-gray">{formatDate(invoice.issued_date)}</p>
                       </div>
                       <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{invoice.title}</p>
                       <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
@@ -198,7 +198,7 @@ export default function Invoices() {
                     <div style={{ padding: 12, background: Colors.cream, borderRadius: 8, marginBottom: 16 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                         <p className="text-sm">Subtotal</p>
-                        <p style={{ fontWeight: 600 }}>{formatCurrency(invoice.subtotal_amount)}</p>
+                        <p style={{ fontWeight: 600 }}>{formatCurrency(invoice.subtotal)}</p>
                       </div>
                       {invoice.tax_amount > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -224,11 +224,11 @@ export default function Invoices() {
                         {invoicePayments.map((payment, idx) => (
                           <div key={idx} style={{ padding: 8, background: '#F5F5F5', borderRadius: 4, marginBottom: 4, fontSize: 13 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <p style={{ margin: 0 }}>{formatDate(payment.date)}</p>
+                              <p style={{ margin: 0 }}>{formatDate(payment.paid_at)}</p>
                               <p style={{ margin: 0, fontWeight: 600 }}>{formatCurrency(payment.amount)}</p>
                             </div>
-                            {payment.method && (
-                              <p className="text-xs text-gray" style={{ margin: 0, marginTop: 4 }}>Method: {payment.method}</p>
+                            {payment.payment_method && (
+                              <p className="text-xs text-gray" style={{ margin: 0, marginTop: 4 }}>Method: {payment.payment_method}</p>
                             )}
                           </div>
                         ))}

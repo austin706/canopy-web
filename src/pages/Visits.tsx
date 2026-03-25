@@ -39,7 +39,15 @@ export default function Visits() {
       // const alloc = await getVisitAllocation(user!.id);
       setUpcomingVisit(null);
       setPastVisits([]);
-      setAllocation({ visits_available: 1, visits_used: 0, forfeited: false, month: new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }) });
+      setAllocation({
+        id: '',
+        homeowner_id: user!.id,
+        visit_month: new Date().toISOString().slice(0, 7),
+        allocated_visits: 1,
+        used_visits: 0,
+        forfeited_visits: 0,
+        created_at: new Date().toISOString(),
+      });
       setError('');
     } catch (err: any) {
       setError(err.message || 'Failed to load visits');
@@ -153,7 +161,7 @@ export default function Visits() {
                   Prepare for Your Visit
                 </h3>
                 <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 12 }}>
-                  <strong>{formatDate(upcomingVisit.confirmed_date || upcomingVisit.proposed_date)}</strong> • Your pro provider will be working on scheduled items. Please have these supplies ready:
+                  <strong>{formatDate(upcomingVisit.confirmed_date || upcomingVisit.proposed_date || '')}</strong> • Your pro provider will be working on scheduled items. Please have these supplies ready:
                 </p>
 
                 {(() => {
@@ -216,8 +224,8 @@ export default function Visits() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
               <div>
                 <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 4 }}>Scheduled for</p>
-                <p style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{formatDate(upcomingVisit.scheduled_date)}</p>
-                <p style={{ fontSize: 14, color: Colors.medGray }}>{upcomingVisit.scheduled_time}</p>
+                <p style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{formatDate(upcomingVisit.confirmed_date || upcomingVisit.proposed_date || '')}</p>
+                <p style={{ fontSize: 14, color: Colors.medGray }}>{upcomingVisit.confirmed_start_time || upcomingVisit.proposed_time_slot}</p>
               </div>
               <span className="badge" style={{ background: (StatusColors[upcomingVisit.status] || '#ccc') + '20', color: StatusColors[upcomingVisit.status] || '#ccc' }}>
                 {upcomingVisit.status}
@@ -226,15 +234,15 @@ export default function Visits() {
 
             <div style={{ padding: 12, background: Colors.cream, borderRadius: 8, marginBottom: 16 }}>
               <p className="text-xs fw-600 text-copper mb-xs">Provider</p>
-              <p style={{ fontWeight: 500, fontSize: 13 }}>{upcomingVisit.provider_name}</p>
+              <p style={{ fontWeight: 500, fontSize: 13 }}>{upcomingVisit.provider?.business_name}</p>
             </div>
 
-            {upcomingVisit.service_purpose && (
-              <p className="text-sm text-gray mb-lg">{upcomingVisit.service_purpose}</p>
+            {upcomingVisit.pro_notes && (
+              <p className="text-sm text-gray mb-lg">{upcomingVisit.pro_notes}</p>
             )}
 
             <div style={{ display: 'flex', gap: 8 }}>
-              {upcomingVisit.status === 'scheduled' && (
+              {upcomingVisit.status === 'proposed' && (
                 <>
                   <button className="btn btn-primary" onClick={handleConfirm} style={{ flex: 1 }}>Confirm</button>
                   <button className="btn btn-secondary" onClick={() => setShowRescheduleModal(true)} style={{ flex: 1 }}>Reschedule</button>
@@ -264,15 +272,15 @@ export default function Visits() {
           <h2 style={{ fontSize: 18, marginBottom: 16, fontWeight: 600 }}>Monthly Allocation</h2>
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ fontSize: 14 }}>{allocation.visits_used} of {allocation.visits_available} visits used this month</p>
-              <span className="badge" style={{ background: allocation.forfeited ? '#dc354520' : '#8B9E7E20', color: allocation.forfeited ? '#dc3545' : '#8B9E7E' }}>
-                {allocation.forfeited ? 'Forfeited' : 'Active'}
+              <p style={{ fontSize: 14 }}>{allocation.used_visits} of {allocation.allocated_visits} visits used this month</p>
+              <span className="badge" style={{ background: allocation.forfeited_visits > 0 ? '#dc354520' : '#8B9E7E20', color: allocation.forfeited_visits > 0 ? '#dc3545' : '#8B9E7E' }}>
+                {allocation.forfeited_visits > 0 ? 'Forfeited' : 'Active'}
               </span>
             </div>
             <div style={{ height: 8, background: Colors.lightGray, borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ height: '100%', background: Colors.sage, width: `${(allocation.visits_used / allocation.visits_available) * 100}%`, transition: 'width 0.3s' }}></div>
+              <div style={{ height: '100%', background: Colors.sage, width: `${(allocation.used_visits / allocation.allocated_visits) * 100}%`, transition: 'width 0.3s' }}></div>
             </div>
-            <p className="text-xs text-gray mt-sm">{allocation.month}</p>
+            <p className="text-xs text-gray mt-sm">{allocation.visit_month}</p>
           </div>
         </div>
       )}
@@ -292,19 +300,19 @@ export default function Visits() {
               <div key={visit.id} className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                   <div>
-                    <p style={{ fontWeight: 600, marginBottom: 4 }}>{formatDate(visit.scheduled_date)}</p>
-                    <p className="text-xs text-gray">{visit.provider_name}</p>
+                    <p style={{ fontWeight: 600, marginBottom: 4 }}>{formatDate(visit.confirmed_date || visit.proposed_date || '')}</p>
+                    <p className="text-xs text-gray">{visit.provider?.business_name}</p>
                   </div>
                   <span className="badge" style={{ background: '#4CAF5020', color: '#2E7D32' }}>Completed</span>
                 </div>
-                {visit.tasks_completed && (
-                  <p className="text-sm text-gray mb-sm">Tasks: {visit.tasks_completed.join(', ')}</p>
+                {visit.selected_task_ids && visit.selected_task_ids.length > 0 && (
+                  <p className="text-sm text-gray mb-sm">Tasks: {visit.selected_task_ids.length} completed</p>
                 )}
-                {visit.time_spent && (
-                  <p className="text-sm text-gray mb-sm">Duration: {visit.time_spent} minutes</p>
+                {visit.time_spent_minutes && (
+                  <p className="text-sm text-gray mb-sm">Duration: {visit.time_spent_minutes} minutes</p>
                 )}
-                {visit.notes && (
-                  <p className="text-sm text-gray">Notes: {visit.notes}</p>
+                {visit.pro_notes && (
+                  <p className="text-sm text-gray">Notes: {visit.pro_notes}</p>
                 )}
               </div>
             ))}

@@ -38,7 +38,7 @@ export default function ProPlusManage() {
     try {
       // await requestConsultation(user.id);
       // await loadSubscription();
-      alert('Consultation request submitted! We'll be in touch soon.');
+      alert('Consultation request submitted! We will be in touch soon.');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -130,7 +130,7 @@ export default function ProPlusManage() {
       {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: '#E5393520', color: '#C62828', fontSize: 14, marginBottom: 16 }}>{error}</div>}
 
       {/* No Subscription State */}
-      {!subscription || subscription.status === 'none' ? (
+      {!subscription ? (
         <div className="card" style={{ padding: 32, textAlign: 'center' }}>
           <div style={{ width: 64, height: 64, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 20, color: Colors.copper }}>+</div>
           <h2 style={{ fontSize: 20, marginBottom: 8 }}>Pro+ Maintenance</h2>
@@ -164,8 +164,8 @@ export default function ProPlusManage() {
 
           <div style={{ padding: 16, background: Colors.cream, borderRadius: 8, marginBottom: 20 }}>
             <p className="text-xs fw-600 text-copper mb-sm">Monthly Rate</p>
-            <p style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>{formatCurrency(subscription.monthly_rate)}</p>
-            <p className="text-xs text-gray">Valid until {formatDate(subscription.quote_valid_until)}</p>
+            <p style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>{formatCurrency(subscription.quoted_monthly_rate ?? 0)}</p>
+            <p className="text-xs text-gray">Valid until {formatDate(subscription.quote_valid_until ?? '')}</p>
           </div>
 
           {subscription.coverage_notes && (
@@ -202,14 +202,14 @@ export default function ProPlusManage() {
 
           <div style={{ padding: 16, background: Colors.cream, borderRadius: 8, marginBottom: 20 }}>
             <p className="text-xs fw-600 text-copper mb-sm">Monthly Rate</p>
-            <p style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{formatCurrency(subscription.monthly_rate)}</p>
-            <p className="text-xs text-gray">Next billing: {formatDate(subscription.next_billing_date)}</p>
+            <p style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{formatCurrency(subscription.current_monthly_rate ?? 0)}</p>
+            <p className="text-xs text-gray">Started: {formatDate(subscription.started_at ?? '')}</p>
           </div>
 
-          {subscription.provider_name && (
+          {subscription.provider?.business_name && (
             <div style={{ marginBottom: 16 }}>
               <p className="text-xs fw-600 mb-sm">Assigned Provider</p>
-              <p style={{ fontWeight: 500, fontSize: 13 }}>{subscription.provider_name}</p>
+              <p style={{ fontWeight: 500, fontSize: 13 }}>{subscription.provider.business_name}</p>
             </div>
           )}
 

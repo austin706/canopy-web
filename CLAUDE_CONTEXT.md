@@ -108,10 +108,28 @@ Standalone pages (no sidebar):
 - **Supabase schema**: Added has_gutters, has_fire_extinguisher, has_water_softener, countertop_type, fireplace_count columns
 - **All changes synced to mobile** including maintenance.ts, home-details, onboarding, taskEngine, types
 
+### Session 11 (March 23 — Pro Visits, Pro+ Concierge, Quotes & Invoices):
+- **Migration 005**: 6 new tables (pro_monthly_visits, pro_visit_allocations, pro_plus_subscriptions, quotes, invoices, invoice_payments) + stripe columns on profiles
+- **New types**: ProMonthlyVisit, ProPlusSubscription, Quote, Invoice, InvoicePayment, LineItem + status types
+- **New services**: proVisits.ts, proPlus.ts, quotesInvoices.ts (full CRUD + cancellation policy)
+- **New pages**: Visits.tsx, ProPlusManage.tsx, Quotes.tsx, Invoices.tsx, ProVisitSchedule.tsx, ProQuotesInvoices.tsx
+- **App.tsx**: 6 new routes added
+- **Layout.tsx**: sidebar links for Pro Visits, Quotes, Invoices
+- **ProPortal.tsx**: quick actions for Visit Schedule and Quotes & Invoices
+- **subscriptionGate.ts**: updated plan descriptions (44 tasks, Pro visit/concierge details)
+
+### Session 11 continued — Edge Functions + Mobile + Gating:
+- **Edge Functions deployed**: create-checkout (v3), stripe-webhook (v3), create-invoice-payment (v1), create-pro-plus-subscription (v1), send-notification (v1 — 13 email templates via Resend)
+- **Layout.tsx**: Pro Visits/Quotes/Invoices sidebar links gated to pro/pro_plus tiers only
+- **Mobile screens**: visits, quotes, invoices, pro-plus — all 4 created
+
 ## Remaining Before Launch (Austin's manual tasks)
 
-- [ ] Configure Stripe secrets + deploy Edge Functions on Supabase
-- [ ] Add stripe_customer_id / stripe_subscription_id to profiles table
+- [ ] Set Stripe secrets in Supabase: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_HOME_PRICE_ID, STRIPE_PRO_PRICE_ID, STRIPE_PRO_PLUS_PRODUCT_ID
+- [ ] Set RESEND_API_KEY in Supabase (sign up at resend.com for email notifications)
+- [ ] Configure Stripe webhook URL: https://uxxrmyxoyesipprwlxrn.supabase.co/functions/v1/stripe-webhook
+- [x] Add stripe_customer_id / stripe_subscription_id to profiles table — DONE (Migration 005)
+- [x] Deploy Edge Functions — DONE (5 functions active)
 - [ ] App icon (1024x1024), App Store screenshots
 - [ ] Rotate exposed Supabase anon key + GitHub token
 - [ ] Batch git push both repos

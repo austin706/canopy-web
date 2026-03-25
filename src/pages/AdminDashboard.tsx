@@ -93,6 +93,8 @@ export default function AdminDashboard() {
           { label: 'User Accounts', route: '/admin/users', badge: stats?.totalUsers },
           { label: 'Gift Codes', route: '/admin/gift-codes', badge: stats?.activeGiftCodes },
           { label: 'Service Areas', route: '/admin/service-areas', badge: undefined },
+          { label: 'Agent Portal (View as Agent)', route: '/agent-portal', badge: undefined },
+          { label: 'Pro Provider Portal (View as Pro)', route: '/pro-portal', badge: undefined },
         ].map(n => (
           <Link key={n.label} to={n.route} className="card" style={{ textDecoration: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div className="flex items-center gap-md">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
+import { supabase } from '@/services/supabase';
 import { Colors, StatusColors } from '@/constants/theme';
 import type { Quote } from '@/types';
 
@@ -26,9 +27,13 @@ export default function Quotes() {
   const loadQuotes = async () => {
     try {
       setLoading(true);
-      // const data = await getQuotes(user!.id);
-      // setQuotes(data);
-      setQuotes([]);
+      const { data, error: fetchErr } = await supabase
+        .from('quotes')
+        .select('*, provider:pro_providers(business_name, contact_name)')
+        .eq('homeowner_id', user!.id)
+        .order('created_at', { ascending: false });
+      if (fetchErr) throw fetchErr;
+      setQuotes((data || []) as Quote[]);
       setError('');
     } catch (err: any) {
       setError(err.message || 'Failed to load quotes');

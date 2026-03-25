@@ -28,6 +28,8 @@ export default function HomeDetails() {
     fireplace_count: home?.fireplace_count?.toString() || '1',
     lawn_type: home?.lawn_type || 'none',
     number_of_hvac_filters: home?.number_of_hvac_filters?.toString() || '',
+    hvac_filter_size: home?.hvac_filter_size || '',
+    hvac_return_location: home?.hvac_return_location || '',
     // Infrastructure locations
     main_breaker_location: home?.main_breaker_location || '',
     sub_panel_locations: home?.sub_panel_locations || '',
@@ -83,6 +85,8 @@ export default function HomeDetails() {
         garage_spaces: parseInt(form.garage_spaces) || 0,
         roof_age_years: form.roof_age_years ? parseInt(form.roof_age_years) : null,
         number_of_hvac_filters: form.number_of_hvac_filters ? parseInt(form.number_of_hvac_filters) : null,
+        hvac_filter_size: form.hvac_filter_size || null,
+        hvac_return_location: form.hvac_return_location || null,
         fireplace_type: form.has_fireplace && form.fireplace_type ? form.fireplace_type : null,
         has_gutters: form.has_gutters,
         has_fire_extinguisher: form.has_fire_extinguisher,
@@ -240,13 +244,29 @@ export default function HomeDetails() {
           </div>
 
           {/* HVAC Filters */}
-          <div className="grid-2 mt-md">
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 24, marginBottom: 8 }}>HVAC Filters</h3>
+          <div className="grid-3">
             <div className="form-group">
-              <label>Number of HVAC Filters</label>
+              <label>Number of Filters</label>
               <input className="form-input" type="number" min="0" value={form.number_of_hvac_filters} onChange={e => setForm({...form, number_of_hvac_filters: e.target.value})} placeholder="e.g., 3" />
-              <p className="text-xs text-gray" style={{ marginTop: 4 }}>Used to track filter replacement tasks</p>
+            </div>
+            <div className="form-group">
+              <label>Filter Size</label>
+              <input className="form-input" value={form.hvac_filter_size} onChange={e => setForm({...form, hvac_filter_size: e.target.value})} placeholder="e.g., 20x25x1" />
+            </div>
+            <div className="form-group">
+              <label>Return Location</label>
+              <select className="form-select" value={form.hvac_return_location} onChange={e => setForm({...form, hvac_return_location: e.target.value})}>
+                <option value="">Select...</option>
+                <option value="ceiling">Ceiling</option>
+                <option value="wall">Wall</option>
+                <option value="floor">Floor</option>
+                <option value="furnace">At Furnace</option>
+                <option value="multiple">Multiple Locations</option>
+              </select>
             </div>
           </div>
+          <p className="text-xs text-gray" style={{ marginTop: -8, marginBottom: 8 }}>Helps track filter replacement tasks and sizes to order</p>
 
           {/* Infrastructure Locations */}
           <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 24, marginBottom: 8 }}>Infrastructure Locations</h3>
@@ -331,7 +351,15 @@ export default function HomeDetails() {
               {!home.has_pool && !home.has_deck && !home.has_sprinkler_system && !home.has_fireplace && !home.has_gutters && !home.has_fire_extinguisher && !home.has_water_softener && <span className="text-sm text-gray">None selected</span>}
             </div>
           </Field>
-          {home.number_of_hvac_filters && <Field label="HVAC Filters"><p style={{ fontWeight: 500 }}>{home.number_of_hvac_filters} filter{home.number_of_hvac_filters > 1 ? 's' : ''}</p></Field>}
+          {home.number_of_hvac_filters && (
+            <Field label="HVAC Filters">
+              <p style={{ fontWeight: 500 }}>
+                {home.number_of_hvac_filters} filter{home.number_of_hvac_filters > 1 ? 's' : ''}
+                {home.hvac_filter_size ? ` (${home.hvac_filter_size})` : ''}
+                {home.hvac_return_location ? ` — ${home.hvac_return_location === 'furnace' ? 'at furnace' : home.hvac_return_location}` : ''}
+              </p>
+            </Field>
+          )}
           {home.countertop_type && <Field label="Countertop Type"><p style={{ fontWeight: 500 }}>{home.countertop_type.replace(/_/g,' ')}</p></Field>}
           {(home.main_breaker_location || home.water_shutoff_location || home.gas_meter_location || home.water_meter_location || home.sub_panel_locations || home.hose_bib_locations) && (
             <>

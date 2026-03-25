@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { isProOrHigher } from '@/services/subscriptionGate';
 import { Colors, StatusColors } from '@/constants/theme';
-import { getItemsToHaveOnHand } from '@/services/proVisits';
+import { getItemsToHaveOnHand, getUpcomingVisits, getPastVisits } from '@/services/proVisits';
 import type { ProMonthlyVisit, VisitAllocation } from '@/types';
 
 export default function Visits() {
@@ -33,18 +33,20 @@ export default function Visits() {
   const loadVisits = async () => {
     try {
       setLoading(true);
-      // Mock data fetch - replace with actual service calls
-      // const upcoming = await getUpcomingVisits(user!.id);
-      // const past = await getPastVisits(user!.id);
-      // const alloc = await getVisitAllocation(user!.id);
-      setUpcomingVisit(null);
-      setPastVisits([]);
+      const upcoming = await getUpcomingVisits(user!.id);
+      const past = await getPastVisits(user!.id);
+      setUpcomingVisit(upcoming.length > 0 ? upcoming[0] : null);
+      setPastVisits(past);
       setAllocation({
         id: '',
         homeowner_id: user!.id,
         visit_month: new Date().toISOString().slice(0, 7),
         allocated_visits: 1,
-        used_visits: 0,
+        used_visits: past.filter(v => {
+          const d = new Date(v.visit_month);
+          const now = new Date();
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        }).length,
         forfeited_visits: 0,
         created_at: new Date().toISOString(),
       });

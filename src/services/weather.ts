@@ -148,12 +148,14 @@ const fetchNWSAlerts = async (lat: number, lon: number): Promise<WeatherAlert[]>
 
 const classifyAlertType = (event: string): WeatherAlert['type'] => {
   const lower = event.toLowerCase();
-  if (lower.includes('freeze') || lower.includes('frost') || lower.includes('cold')) return 'freeze';
-  if (lower.includes('wind')) return 'wind';
+  if (lower.includes('fire') || lower.includes('red flag')) return 'fire';
+  if (lower.includes('freeze') || lower.includes('frost') || lower.includes('cold') || lower.includes('winter') || lower.includes('ice') || lower.includes('blizzard')) return 'freeze';
+  if (lower.includes('wind') && !lower.includes('fire')) return 'wind';
   if (lower.includes('hail')) return 'hail';
-  if (lower.includes('heat')) return 'heat';
+  if (lower.includes('heat') || lower.includes('excessive')) return 'heat';
   if (lower.includes('tornado')) return 'tornado';
-  if (lower.includes('flood')) return 'flood';
+  if (lower.includes('flood') || lower.includes('flash')) return 'flood';
+  if (lower.includes('hurricane') || lower.includes('tropical')) return 'storm';
   return 'storm';
 };
 
@@ -221,6 +223,16 @@ export const getActionItems = (type: WeatherAlert['type']): string[] => {
       'Check sump pump and ensure backup battery is charged',
       'Clear storm drains near your property if safe to do so',
       'Document water levels and damage for insurance',
+    ],
+    fire: [
+      'Clear dry brush and debris at least 30 feet from your home',
+      'Move firewood and propane tanks away from structures',
+      'Close all windows, doors, and vents to prevent ember entry',
+      'Shut off gas at the meter if evacuation seems likely',
+      'Connect garden hoses and fill any pools or large containers',
+      'Have an evacuation bag packed with documents and essentials',
+      'Keep car backed into driveway with windows closed and keys accessible',
+      'Monitor local fire department and emergency alerts continuously',
     ],
   };
   return actions[type] || actions.storm;

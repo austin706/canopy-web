@@ -56,7 +56,11 @@ export default function Subscription() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({
+          tier: plan,
+          success_url: `${window.location.origin}/subscription?success=true&plan=${plan}`,
+          cancel_url: `${window.location.origin}/subscription?canceled=true`,
+        }),
       });
       const data = await res.json();
 

@@ -3,6 +3,8 @@
 // ═══════════════════════════════════════════════════════════════
 import type { TaskFrequency, TaskPriority, EquipmentCategory } from '@/types';
 
+export type ClimateRegion = 'south' | 'north' | 'mountain' | 'coastal' | 'desert' | 'midwest' | 'all';
+
 export interface TaskTemplate {
   id: string;
   title: string;
@@ -18,7 +20,41 @@ export interface TaskTemplate {
   requires_home_feature?: string; // e.g., 'has_pool', 'has_deck'
   service_purpose?: string;
   items_to_have_on_hand?: string[];
+  applicable_regions?: ClimateRegion[]; // undefined = all regions
 }
+
+/**
+ * Maps US states to climate regions for task filtering.
+ * Tasks with applicable_regions will only show for homeowners in matching states.
+ */
+export const STATE_TO_REGION: Record<string, ClimateRegion> = {
+  // South / Hot-Humid
+  TX: 'south', FL: 'south', GA: 'south', AL: 'south', MS: 'south',
+  LA: 'south', SC: 'south', NC: 'south', TN: 'south', AR: 'south',
+  // North / Cold
+  MN: 'north', WI: 'north', MI: 'north', ME: 'north', VT: 'north',
+  NH: 'north', NY: 'north', MA: 'north', CT: 'north', RI: 'north',
+  PA: 'north', NJ: 'north', ND: 'north', SD: 'north',
+  // Mountain / High-altitude
+  CO: 'mountain', MT: 'mountain', WY: 'mountain', ID: 'mountain',
+  UT: 'mountain', NM: 'mountain',
+  // Coastal
+  CA: 'coastal', OR: 'coastal', WA: 'coastal', HI: 'coastal',
+  // Desert / Arid
+  AZ: 'desert', NV: 'desert',
+  // Midwest
+  OH: 'midwest', IN: 'midwest', IL: 'midwest', IA: 'midwest',
+  MO: 'midwest', KS: 'midwest', NE: 'midwest', OK: 'midwest',
+  // Default these to regions that fit best
+  VA: 'south', WV: 'north', KY: 'midwest', MD: 'north',
+  DE: 'north', DC: 'north', AK: 'north',
+};
+
+/** Returns the climate region for a state code, or 'midwest' as a reasonable default */
+export const getClimateRegion = (state?: string): ClimateRegion => {
+  if (!state) return 'midwest';
+  return STATE_TO_REGION[state.toUpperCase()] || 'midwest';
+};
 
 // ─── Monthly & Seasonal Task Templates ───
 export const TASK_TEMPLATES: TaskTemplate[] = [
@@ -931,16 +967,322 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 15,
     estimated_cost: 0,
   },
+
+  // ═══════════════════════════════════════════════════
+  // REGION-SPECIFIC TASKS
+  // ═══════════════════════════════════════════════════
+
+  // ── South / Hot-Humid Region ──
+  {
+    id: 'south-termite-inspection',
+    title: 'Schedule Annual Termite Inspection',
+    description: 'Southern climates have year-round termite activity. An annual professional inspection catches infestations before structural damage occurs.',
+    instructions: [
+      'Schedule a licensed pest control company for a termite inspection',
+      'Clear access to foundation walls, crawlspaces, and garage',
+      'Check for mud tubes along foundation walls yourself beforehand',
+      'Look for discarded wings near windows and doors',
+      'Ask about preventive treatment options (bait stations or barrier treatment)',
+      'Keep the inspection report for your records and future home sale',
+    ],
+    category: 'pest_control',
+    priority: 'high',
+    frequency: 'annual',
+    applicable_months: [3, 4],
+    estimated_minutes: 60,
+    estimated_cost: 100,
+    applicable_regions: ['south'],
+  },
+  {
+    id: 'south-ac-drain-line',
+    title: 'Flush AC Condensate Drain Line',
+    description: 'Humid climates cause algae and mold to clog condensate lines. A clogged line can cause water damage, mold growth, and AC shutdowns.',
+    instructions: [
+      'Locate the condensate drain line (PVC pipe near your indoor AC unit)',
+      'Pour 1 cup of distilled white vinegar into the drain line opening',
+      'Wait 30 minutes, then flush with warm water',
+      'Check the outdoor drain exit to verify water flows freely',
+      'If slow, use a wet/dry vac on the outdoor end to clear the blockage',
+      'Consider installing a drain line safety switch if you don\'t have one',
+    ],
+    category: 'hvac',
+    priority: 'high',
+    frequency: 'quarterly',
+    applicable_months: [3, 6, 9],
+    estimated_minutes: 15,
+    estimated_cost: 0,
+    requires_equipment: 'hvac',
+    applicable_regions: ['south'],
+  },
+  {
+    id: 'south-hurricane-prep',
+    title: 'Hurricane Season Prep — Review Emergency Plan',
+    description: 'Hurricane season runs June-November. Prepare your home and family before storms arrive.',
+    instructions: [
+      'Verify homeowner\'s insurance and flood coverage are current',
+      'Test and stock emergency supplies: water, flashlights, batteries, first aid',
+      'Trim trees and remove dead branches that could become projectiles',
+      'Know where your main water shutoff and gas shutoff are located',
+      'Secure or store outdoor furniture, grills, and patio items',
+      'Take photos/video of your home\'s contents for insurance documentation',
+      'Charge portable battery packs and ensure generator fuel is fresh',
+    ],
+    category: 'seasonal',
+    priority: 'high',
+    frequency: 'annual',
+    applicable_months: [5, 6],
+    estimated_minutes: 60,
+    estimated_cost: 0,
+    applicable_regions: ['south', 'coastal'],
+  },
+  {
+    id: 'south-mold-check',
+    title: 'Check for Mold in Humid Areas',
+    description: 'High humidity promotes mold growth in bathrooms, under sinks, and in crawlspaces. Catching it early prevents health issues and expensive remediation.',
+    instructions: [
+      'Inspect under all bathroom and kitchen sinks for moisture or discoloration',
+      'Check behind toilets and around tub/shower caulking',
+      'Look for dark spots on ceiling tiles and around AC vents',
+      'If you have a crawlspace, check for standing water or moisture on joists',
+      'Ensure bathroom exhaust fans vent outside (not into the attic)',
+      'Run a dehumidifier in damp areas — aim for 30-50% indoor humidity',
+    ],
+    category: 'general',
+    priority: 'medium',
+    frequency: 'biannual',
+    applicable_months: [5, 10],
+    estimated_minutes: 30,
+    estimated_cost: 0,
+    applicable_regions: ['south', 'coastal'],
+  },
+
+  // ── North / Cold Region ──
+  {
+    id: 'north-winterize-pipes',
+    title: 'Winterize Outdoor Plumbing',
+    description: 'Frozen pipes are the most common cause of winter water damage. Properly winterizing prevents burst pipes and thousands in repairs.',
+    instructions: [
+      'Disconnect and drain all garden hoses',
+      'Shut off interior valves that supply outdoor hose bibs',
+      'Open outdoor hose bibs to drain remaining water',
+      'Install insulated covers on all outdoor faucets',
+      'Insulate any exposed pipes in unheated areas (garage, crawlspace, attic)',
+      'Know where your main water shutoff is in case of emergency',
+      'Set thermostat no lower than 55°F when away',
+    ],
+    category: 'plumbing',
+    priority: 'urgent',
+    frequency: 'annual',
+    applicable_months: [10, 11],
+    estimated_minutes: 45,
+    estimated_cost: 20,
+    applicable_regions: ['north', 'mountain', 'midwest'],
+  },
+  {
+    id: 'north-ice-dam-prevention',
+    title: 'Prevent Ice Dams — Check Attic Insulation & Ventilation',
+    description: 'Ice dams form when warm attic air melts roof snow that refreezes at the eaves. They cause water to back up under shingles and into your home.',
+    instructions: [
+      'Check attic insulation depth — aim for R-38 to R-60 (10-14 inches of blown-in)',
+      'Seal air leaks around attic access doors, plumbing stacks, and wiring',
+      'Verify soffit vents are not blocked by insulation',
+      'Ensure ridge vent or gable vents provide adequate airflow',
+      'After heavy snow, use a roof rake to clear the first 3 feet from eaves',
+      'Never chip ice off gutters — you\'ll damage them',
+    ],
+    category: 'roof',
+    priority: 'high',
+    frequency: 'annual',
+    applicable_months: [10, 11],
+    estimated_minutes: 30,
+    estimated_cost: 0,
+    applicable_regions: ['north', 'mountain'],
+  },
+  {
+    id: 'north-furnace-carbon-monoxide',
+    title: 'Test Carbon Monoxide Detectors Before Heating Season',
+    description: 'CO is odorless and deadly. Furnaces, water heaters, and fireplaces are common sources. Test all detectors before you start running heat.',
+    instructions: [
+      'Press the test button on every CO detector in your home',
+      'Replace batteries if the test chirp is weak',
+      'Replace any detector older than 5-7 years (check the manufacture date on back)',
+      'Ensure there\'s a CO detector on every level and near sleeping areas',
+      'If you have a fuel-burning appliance, there must be a detector within 15 feet',
+    ],
+    category: 'safety',
+    priority: 'urgent',
+    frequency: 'annual',
+    applicable_months: [9, 10],
+    estimated_minutes: 10,
+    estimated_cost: 0,
+    applicable_regions: ['north', 'mountain', 'midwest'],
+  },
+  {
+    id: 'north-spring-frost-heave',
+    title: 'Inspect for Winter Frost Heave Damage',
+    description: 'Freeze-thaw cycles shift concrete, crack foundations, and pop fence posts. Spring is the time to catch and repair damage before it worsens.',
+    instructions: [
+      'Walk your property and check driveway, walkways, and patio for new cracks or heaving',
+      'Inspect foundation walls for new cracks (mark them with tape to monitor)',
+      'Check fence posts — push each one to see if it\'s loose',
+      'Look at deck posts and stairs for shifting',
+      'Re-level any settled pavers or stepping stones',
+      'Fill concrete cracks with appropriate sealant before they grow',
+    ],
+    category: 'outdoor',
+    priority: 'medium',
+    frequency: 'annual',
+    applicable_months: [3, 4],
+    estimated_minutes: 30,
+    estimated_cost: 0,
+    applicable_regions: ['north', 'mountain', 'midwest'],
+  },
+
+  // ── Desert / Arid Region ──
+  {
+    id: 'desert-evap-cooler-startup',
+    title: 'Start Up Evaporative Cooler (Swamp Cooler)',
+    description: 'Evaporative coolers need spring startup — reconnect water, replace pads, and oil the motor. Neglecting this shortens the unit\'s life.',
+    instructions: [
+      'Remove the winter cover',
+      'Connect the water supply line and check for leaks',
+      'Replace evaporative pads (do this annually)',
+      'Oil the motor and blower bearings with 3-in-1 oil',
+      'Turn on the water pump and let pads saturate for 15 minutes before starting the fan',
+      'Check the float valve — adjust so water is 1 inch below the overflow',
+      'Clean the water reservoir of mineral deposits',
+    ],
+    category: 'hvac',
+    priority: 'high',
+    frequency: 'annual',
+    applicable_months: [4, 5],
+    estimated_minutes: 45,
+    estimated_cost: 30,
+    applicable_regions: ['desert', 'mountain'],
+  },
+  {
+    id: 'desert-monsoon-prep',
+    title: 'Monsoon Season Prep — Drainage & Roof Check',
+    description: 'Desert monsoons bring intense flash flooding and wind damage. Prepare your property before the season starts.',
+    instructions: [
+      'Clear all drainage channels and yard drains of debris',
+      'Check roof for loose tiles, cracked sealant, or damaged flashing',
+      'Ensure downspouts direct water at least 6 feet from foundation',
+      'Trim desert trees (palo verde, mesquite) of dead or crossing branches',
+      'Secure patio furniture, shade sails, and trash cans',
+      'Check your sump pump if applicable',
+      'Verify homeowner\'s insurance covers flood damage',
+    ],
+    category: 'seasonal',
+    priority: 'high',
+    frequency: 'annual',
+    applicable_months: [6],
+    estimated_minutes: 45,
+    estimated_cost: 0,
+    applicable_regions: ['desert'],
+  },
+
+  // ── Coastal Region ──
+  {
+    id: 'coastal-salt-air-rinse',
+    title: 'Rinse Exterior for Salt Air Corrosion',
+    description: 'Salt air corrodes metal fixtures, hinges, and outdoor equipment. Regular rinsing slows the damage significantly.',
+    instructions: [
+      'Rinse all exterior metal surfaces with fresh water — door hinges, railings, light fixtures',
+      'Pay extra attention to outdoor AC units — salt buildup reduces efficiency',
+      'Lubricate exterior hinges and locks with a silicone-based spray (not WD-40)',
+      'Check for rust forming on outdoor furniture and treat early',
+      'Rinse outdoor grills and smokers',
+      'Consider protective coatings or covers for high-value equipment',
+    ],
+    category: 'outdoor',
+    priority: 'medium',
+    frequency: 'quarterly',
+    applicable_months: [3, 6, 9, 12],
+    estimated_minutes: 30,
+    estimated_cost: 0,
+    applicable_regions: ['coastal'],
+  },
+  {
+    id: 'coastal-window-seal-check',
+    title: 'Inspect Window and Door Seals for Salt Damage',
+    description: 'Coastal homes take a beating from salt spray and wind-driven rain. Deteriorated seals lead to water infiltration and mold.',
+    instructions: [
+      'Check all window caulking for cracks or gaps',
+      'Inspect door weatherstripping — press a dollar bill in the closed door, if it pulls out easily the seal is worn',
+      'Look for water stains or discoloration around window frames inside',
+      'Check sliding door tracks for salt buildup and clean with vinegar solution',
+      'Re-caulk any failed joints with exterior-grade silicone caulk',
+      'Consider storm shutters if you\'re in a hurricane zone',
+    ],
+    category: 'general',
+    priority: 'medium',
+    frequency: 'biannual',
+    applicable_months: [4, 10],
+    estimated_minutes: 45,
+    estimated_cost: 15,
+    applicable_regions: ['coastal'],
+  },
+
+  // ── Midwest Region ──
+  {
+    id: 'midwest-tornado-prep',
+    title: 'Tornado Season Prep — Review Emergency Plan',
+    description: 'Tornado season peaks March-June in the Midwest. Have a plan before severe weather hits.',
+    instructions: [
+      'Identify your interior safe room (basement, interior closet, or bathroom on lowest floor)',
+      'Stock the safe room with flashlights, batteries, first aid kit, and shoes',
+      'Practice the plan with your family — especially kids',
+      'Sign up for local emergency alerts (most counties have text/app alerts)',
+      'Know the difference: WATCH = conditions favorable, WARNING = take shelter NOW',
+      'Take a home inventory video for insurance — store it in the cloud',
+      'Trim dead tree branches that could become projectiles',
+    ],
+    category: 'seasonal',
+    priority: 'high',
+    frequency: 'annual',
+    applicable_months: [3],
+    estimated_minutes: 30,
+    estimated_cost: 0,
+    applicable_regions: ['midwest', 'south'],
+  },
+  {
+    id: 'midwest-sump-pump-test',
+    title: 'Test Sump Pump Before Spring Thaw',
+    description: 'Spring snowmelt and rain saturate the soil. A failed sump pump means a flooded basement. Test it before you need it.',
+    instructions: [
+      'Pour 5 gallons of water into the sump pit slowly',
+      'The pump should kick on, remove the water, and shut off automatically',
+      'If it doesn\'t start, check the power outlet and circuit breaker',
+      'Listen for unusual sounds — grinding or rattling means worn bearings',
+      'Check the discharge pipe outside — ensure it\'s not frozen or clogged',
+      'Test the backup battery system if you have one',
+      'Consider a water alarm in the pit as an extra safeguard',
+    ],
+    category: 'plumbing',
+    priority: 'high',
+    frequency: 'annual',
+    applicable_months: [2, 3],
+    estimated_minutes: 15,
+    estimated_cost: 0,
+    applicable_regions: ['midwest', 'north'],
+  },
 ];
 
-// ─── Get tasks applicable for a given month ───
+// ─── Get tasks applicable for a given month, optionally filtered by region ───
 export const getTasksForMonth = (
   month: number,
-  homeFeatures: Record<string, any>
+  homeFeatures: Record<string, any>,
+  state?: string
 ): TaskTemplate[] => {
+  const region = getClimateRegion(state);
   return TASK_TEMPLATES.filter((task) => {
     if (!task.applicable_months.includes(month)) return false;
     if (task.requires_home_feature && !homeFeatures[task.requires_home_feature]) return false;
+    // Region filter: if task has applicable_regions, check if homeowner's region matches
+    if (task.applicable_regions && !task.applicable_regions.includes('all')) {
+      if (!task.applicable_regions.includes(region)) return false;
+    }
     return true;
   });
 };

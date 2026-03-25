@@ -11,7 +11,7 @@ import type {
   TaskPriority,
   EquipmentCategory,
 } from '@/types';
-import { TASK_TEMPLATES, type TaskTemplate } from '@/constants/maintenance';
+import { TASK_TEMPLATES, type TaskTemplate, getClimateRegion } from '@/constants/maintenance';
 import {
   addMonths,
   getMonth,
@@ -70,6 +70,9 @@ export function generateTasksForHome(
   const currentMonth = getMonth(today) + 1; // getMonth returns 0-11
   const currentYear = getYear(today);
 
+  // Determine the homeowner's climate region
+  const homeRegion = getClimateRegion(home.state);
+
   // Build a set of equipment categories the user has
   const equipmentCategories = new Set<EquipmentCategory>(
     equipment.map((eq) => eq.category)
@@ -97,6 +100,13 @@ export function generateTasksForHome(
     if (template.requires_home_feature) {
       const feature = template.requires_home_feature as keyof Home;
       if (!home[feature]) {
+        return;
+      }
+    }
+
+    // Skip if this template is region-specific and doesn't match the homeowner's region
+    if (template.applicable_regions && !template.applicable_regions.includes('all')) {
+      if (!template.applicable_regions.includes(homeRegion)) {
         return;
       }
     }

@@ -225,8 +225,8 @@ export default function Dashboard() {
                 <Skeleton variant="card" count={3} />
               </div>
             ) : (
-            <div className="flex-col gap-sm">
-              {tasksToShow.slice(0, 5).map(task => (
+            <div className="flex-col gap-sm" style={{ maxHeight: 420, overflowY: 'auto' }}>
+              {tasksToShow.filter(t => { const d = new Date(t.due_date); return d >= monthStart && d <= monthEnd && t.status !== 'completed'; }).map(task => (
                 <div key={task.id} className="card" style={{ padding: '14px 20px' }}>
                   <div className="task-card">
                     <div className="task-priority" style={{ background: PriorityColors[task.priority] || Colors.silver }} />

@@ -46,9 +46,10 @@ export default function Calendar() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  // Reset selectedDate when navigating to a different month to ensure task list updates
+  // Reset selectedDate when navigating to a different month
   useEffect(() => {
     setSelectedDate(null);
+    setFilter('all');
   }, [month, year]);
 
   const calendarDays = useMemo(() => {
@@ -74,11 +75,22 @@ export default function Calendar() {
     return map;
   }, [tasks]);
 
+  // All tasks for the current month, sorted by due date
+  const monthTasks = useMemo(() => {
+    return tasks
+      .filter(t => {
+        const d = new Date(t.due_date);
+        return d.getMonth() === month && d.getFullYear() === year;
+      })
+      .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+  }, [tasks, month, year]);
+
   const today = new Date();
   const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
 
-  const selectedTasks = selectedDate ? (tasksByDate[selectedDate] || []) : [];
-  const filteredTasks = filter === 'all' ? selectedTasks : selectedTasks.filter(t => t.status === filter);
+  // Show selected day's tasks OR all month tasks
+  const displayTasks = selectedDate ? (tasksByDate[selectedDate] || []) : monthTasks;
+  const filteredTasks = filter === 'all' ? displayTasks : displayTasks.filter(t => t.status === filter);
 
   const nav = (dir: number) => setCurrentDate(new Date(year, month + dir, 1));
 
@@ -95,12 +107,54 @@ export default function Calendar() {
     }
   };
 
+  const handleDayClick = (key: string) => {
+    if (selectedDate === key) {
+      // Clicking same day again clears selection (back to month view)
+      setSelectedDate(null);
+    } else {
+      setSelectedDate(key);
+    }
+  };
+
+  // Count tasks by status for the month
+  const monthStats = useMemo(() => {
+    const total = monthTasks.length;
+    const completed = monthTasks.filter(t => t.status === 'completed').length;
+    const overdue = monthTasks.filter(t => t.status === 'overdue').length;
+    const upcoming = monthTasks.filter(t => t.status === 'upcoming' || t.status === 'due').length;
+    return { total, completed, overdue, upcoming };
+  }, [monthTasks]);
+
   return (
     <div className="page">
       <div className="page-header">
         <div>
           <h1>Calendar</h1>
           <p className="subtitle">Track and manage maintenance tasks</p>
+        </div>
+      </div>
+
+      {/* Monthly Summary Stats */}
+      <div className="card mb-md">
+        <div className="flex gap-lg items-center" style={{ flexWrap: 'wrap' }}>
+          <div>
+            <p style={{ fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{monthStats.total}</p>
+            <p className="text-xs text-gray">Tasks This Month</p>
+          </div>
+          <div>
+            <p style={{ fontSize: 28, fontWeight: 700, color: Colors.success, lineHeight: 1 }}>{monthStats.completed}</p>
+            <p className="text-xs text-gray">Completed</p>
+          </div>
+          <div>
+            <p style={{ fontSize: 28, fontWeight: 700, color: Colors.warning, lineHeight: 1 }}>{monthStats.upcoming}</p>
+            <p className="text-xs text-gray">Due / Upcoming</p>
+          </div>
+          {monthStats.overdue > 0 && (
+            <div>
+              <p style={{ fontSize: 28, fontWeight: 700, color: Colors.error, lineHeight: 1 }}>{monthStats.overdue}</p>
+              <p className="text-xs text-gray">Overdue</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -121,16 +175,37 @@ export default function Calendar() {
               const key = `${day.year}-${day.month}-${day.date}`;
               const isToday = key === todayKey;
               const isOther = day.month !== month;
-              const hasTasks = !!tasksByDate[key]?.length;
+              const dayTasks = tasksByDate[key] || [];
+              const hasTasks = dayTasks.length > 0;
               const isSelected = selectedDate === key;
+              const hasOverdue = dayTasks.some(t => t.status === 'overdue');
+              const hasHigh = dayTasks.some(t => t.priority === 'urgent' || t.priority === 'high');
               return (
                 <div
                   key={day.key}
                   className={`calendar-day ${isToday ? 'today' : ''} ${isOther ? 'other-month' : ''} ${hasTasks ? 'has-tasks' : ''}`}
-                  style={isSelected ? { background: Colors.copper + '30', fontWeight: 700 } : undefined}
-                  onClick={() => setSelectedDate(key)}
+                  style={{
+                    ...(isSelected ? { background: Colors.copper + '30', fontWeight: 700 } : undefined),
+                    position: 'relative',
+                  }}
+                  onClick={() => handleDayClick(key)}
                 >
                   {day.date}
+                  {hasTasks && (
+                    <div style={{ display: 'flex', gap: 2, justifyContent: 'center', position: 'absolute', bottom: 2, left: 0, right: 0 }}>
+                      {dayTasks.slice(0, 3).map((t, i) => (
+                        <div key={i} style={{
+                          width: 5, height: 5, borderRadius: '50%',
+                          background: t.status === 'completed' ? Colors.success :
+                                     t.status === 'overdue' ? Colors.error :
+                                     PriorityColors[t.priority] || Colors.copper,
+                        }} />
+                      ))}
+                      {dayTasks.length > 3 && (
+                        <span style={{ fontSize: 8, color: Colors.medGray, lineHeight: '5px' }}>+{dayTasks.length - 3}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -145,68 +220,74 @@ export default function Calendar() {
             </div>
           ) : (
           <div className="card">
-            <p style={{ fontWeight: 600, marginBottom: 12 }}>
-              {selectedDate ? `Tasks for ${new Date(parseInt(selectedDate.split('-')[0]), parseInt(selectedDate.split('-')[1]), parseInt(selectedDate.split('-')[2])).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}` : 'Select a date'}
-            </p>
-            {selectedDate && (
-              <div className="tabs" style={{ marginBottom: 16 }}>
-                {['all', 'due', 'upcoming', 'completed'].map(f => (
-                  <button key={f} className={`tab ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="flex-col gap-sm">
-              {filteredTasks.map(task => (
-                <div key={task.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--light-gray)' }}>
-                  <div className="flex items-center gap-md">
-                    <div style={{ width: 4, height: 40, borderRadius: 2, background: PriorityColors[task.priority] }} />
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 600, fontSize: 14 }}>{task.title}</p>
-                      <p className="text-xs text-gray">{task.category} &middot; ~{task.estimated_minutes || '?'} min</p>
-                    </div>
-                    <span className="badge" style={{ background: (StatusColors[task.status] || '#ccc') + '20', color: StatusColors[task.status] }}>{task.status}</span>
-                  </div>
-                  {task.status !== 'completed' && task.status !== 'skipped' && !isDemo && (
-                    <div className="flex gap-sm mt-sm" style={{ marginLeft: 20 }}>
-                      <button className="btn btn-sage btn-sm" onClick={() => quickCompleteTask(task)}>Complete</button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => quickSkipTask(task)}>Skip</button>
-                    </div>
-                  )}
-                  {task.status === 'completed' && !isDemo && (
-                    <div className="flex gap-sm mt-sm" style={{ marginLeft: 20 }}>
-                      <button className="btn btn-ghost btn-sm" onClick={() => handleQuickReopen(task)} style={{ borderColor: Colors.copper, color: Colors.copper }}>Reopen</button>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {selectedDate && filteredTasks.length === 0 && (
-                <p className="text-sm text-gray text-center" style={{ padding: 24 }}>No tasks for this date</p>
+            <div className="flex items-center justify-between mb-sm">
+              <p style={{ fontWeight: 600 }}>
+                {selectedDate
+                  ? `Tasks for ${new Date(parseInt(selectedDate.split('-')[0]), parseInt(selectedDate.split('-')[1]), parseInt(selectedDate.split('-')[2])).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
+                  : `All ${MONTHS[month]} Tasks`
+                }
+              </p>
+              {selectedDate && (
+                <button className="btn btn-ghost btn-sm" style={{ fontSize: 12 }} onClick={() => setSelectedDate(null)}>
+                  View All Month
+                </button>
               )}
-              {!selectedDate && <p className="text-sm text-gray text-center" style={{ padding: 24 }}>Click a date to see tasks</p>}
+            </div>
+
+            {/* Status Filter Tabs */}
+            <div className="tabs" style={{ marginBottom: 16 }}>
+              {['all', 'due', 'upcoming', 'completed', 'overdue'].map(f => (
+                <button key={f} className={`tab ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
+                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                  {f !== 'all' && (
+                    <span style={{ marginLeft: 4, fontSize: 11, opacity: 0.7 }}>
+                      ({displayTasks.filter(t => t.status === f).length})
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex-col gap-sm" style={{ maxHeight: 500, overflowY: 'auto' }}>
+              {filteredTasks.map(task => {
+                const dueDate = new Date(task.due_date);
+                return (
+                  <div key={task.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--light-gray)' }}>
+                    <div className="flex items-center gap-md">
+                      <div style={{ width: 4, height: 40, borderRadius: 2, background: PriorityColors[task.priority] }} />
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: 600, fontSize: 14 }}>{task.title}</p>
+                        <p className="text-xs text-gray">
+                          {task.category} &middot; ~{task.estimated_minutes || '?'} min
+                          {!selectedDate && (
+                            <span> &middot; {dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          )}
+                        </p>
+                      </div>
+                      <span className="badge" style={{ background: (StatusColors[task.status] || '#ccc') + '20', color: StatusColors[task.status] }}>{task.status}</span>
+                    </div>
+                    {task.status !== 'completed' && task.status !== 'skipped' && !isDemo && (
+                      <div className="flex gap-sm mt-sm" style={{ marginLeft: 20 }}>
+                        <button className="btn btn-sage btn-sm" onClick={() => quickCompleteTask(task)}>Complete</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => quickSkipTask(task)}>Skip</button>
+                      </div>
+                    )}
+                    {task.status === 'completed' && !isDemo && (
+                      <div className="flex gap-sm mt-sm" style={{ marginLeft: 20 }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => handleQuickReopen(task)} style={{ borderColor: Colors.copper, color: Colors.copper }}>Reopen</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {filteredTasks.length === 0 && (
+                <p className="text-sm text-gray text-center" style={{ padding: 24 }}>
+                  {selectedDate ? 'No tasks for this date' : `No ${filter === 'all' ? '' : filter + ' '}tasks this month`}
+                </p>
+              )}
             </div>
           </div>
           )}
-
-          {/* Monthly Summary */}
-          <div className="card">
-            <p style={{ fontWeight: 600, marginBottom: 8 }}>This Month</p>
-            <div className="flex gap-lg">
-              <div>
-                <p style={{ fontSize: 24, fontWeight: 700 }}>{tasks.filter(t => { const d = new Date(t.due_date); return d.getMonth() === month && d.getFullYear() === year; }).length}</p>
-                <p className="text-xs text-gray">Total Tasks</p>
-              </div>
-              <div>
-                <p style={{ fontSize: 24, fontWeight: 700, color: Colors.success }}>{tasks.filter(t => { const d = new Date(t.due_date); return d.getMonth() === month && d.getFullYear() === year && t.status === 'completed'; }).length}</p>
-                <p className="text-xs text-gray">Completed</p>
-              </div>
-              <div>
-                <p style={{ fontSize: 24, fontWeight: 700, color: Colors.error }}>{tasks.filter(t => { const d = new Date(t.due_date); return d.getMonth() === month && d.getFullYear() === year && t.status === 'overdue'; }).length}</p>
-                <p className="text-xs text-gray">Overdue</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

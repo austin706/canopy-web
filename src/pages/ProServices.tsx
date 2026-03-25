@@ -14,7 +14,7 @@ interface ProServiceAppointment {
   id: string;
   title: string;
   date: string;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'requested' | 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
   purpose: string;
 }
 
@@ -57,6 +57,8 @@ const PRO_SERVICE_TEMPLATES: ProServiceTemplate[] = [
 ];
 
 const STATUS_COLORS: Record<string, string> = {
+  pending: Colors.warning,
+  requested: Colors.warning,
   scheduled: Colors.info,
   confirmed: Colors.sage,
   completed: Colors.success,
@@ -72,7 +74,6 @@ export default function ProServices() {
     time: '',
     reminderDays: '3',
     notes: '',
-    itemsToHave: [''],
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -152,11 +153,11 @@ export default function ProServices() {
         title: selectedTemplate.title,
         scheduled_date: formData.date,
         scheduled_time: formData.time || '09:00',
-        status: 'scheduled',
+        status: 'pending',
         service_purpose: selectedTemplate.description,
         reminder_days_before: parseInt(formData.reminderDays, 10),
         notes: formData.notes,
-        items_to_have_on_hand: formData.itemsToHave.filter(s => s.trim()),
+        description: selectedTemplate.description,
         created_at: new Date().toISOString(),
       };
 
@@ -174,7 +175,7 @@ export default function ProServices() {
         purpose: appointment.service_purpose,
       } as ProServiceAppointment]);
       setSelectedTemplate(null);
-      setFormData({ date: '', time: '', reminderDays: '3', notes: '', itemsToHave: [''] });
+      setFormData({ date: '', time: '', reminderDays: '3', notes: '' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to schedule appointment');
     } finally {
@@ -283,16 +284,6 @@ export default function ProServices() {
     textAlign: 'center',
   };
 
-  const removeItemButtonStyle: React.CSSProperties = {
-    padding: '4px 8px',
-    backgroundColor: Colors.error,
-    color: Colors.white,
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '12px',
-    cursor: 'pointer',
-  };
-
   if (!home) {
     return (
       <div className="page" style={{ maxWidth: 900 }}>
@@ -354,7 +345,7 @@ export default function ProServices() {
                 <div>
                   <h3 style={{ fontSize: '15px', fontWeight: '600', color: Colors.charcoal, margin: '0 0 4px 0' }}>
                     {apt.title}
-                    <span style={badgeStyle(apt.status)}>{apt.status}</span>
+                    <span style={badgeStyle(apt.status)}>{apt.status === 'pending' ? 'Requested' : apt.status}</span>
                   </h3>
                   <p style={{ fontSize: '13px', color: Colors.medGray, margin: '0' }}>
                     {new Date(apt.date).toLocaleDateString()} — {apt.purpose}
@@ -454,61 +445,6 @@ export default function ProServices() {
                   placeholder="Any special instructions or notes..."
                   style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' } as React.CSSProperties}
                 />
-              </div>
-
-              {/* Items to Have */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={labelStyle}>Items to Have on Hand</label>
-                {formData.itemsToHave.map((item, index) => (
-                  <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                    <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => {
-                        const updated = [...formData.itemsToHave];
-                        updated[index] = e.target.value;
-                        setFormData({ ...formData, itemsToHave: updated });
-                      }}
-                      placeholder={`Item ${index + 1}`}
-                      style={{ ...inputStyle, flex: 1 } as React.CSSProperties}
-                    />
-                    {formData.itemsToHave.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData({
-                            ...formData,
-                            itemsToHave: formData.itemsToHave.filter((_, i) => i !== index),
-                          });
-                        }}
-                        style={removeItemButtonStyle}
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData({
-                      ...formData,
-                      itemsToHave: [...formData.itemsToHave, ''],
-                    });
-                  }}
-                  style={{
-                    marginTop: '8px',
-                    padding: '8px 12px',
-                    backgroundColor: Colors.sage,
-                    color: Colors.white,
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  + Add Item
-                </button>
               </div>
 
               {error && (

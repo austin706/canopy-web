@@ -37,8 +37,8 @@ const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
   // Try Edge Function route if configured
   if (SUPABASE_URL) {
     try {
-      const action = (payload as Record<string, unknown>).action as string;
-      const response = await supabase.functions.invoke(action, {
+      // Always call scan-equipment function — it routes internally by action field
+      const response = await supabase.functions.invoke('scan-equipment', {
         body: payload,
       });
 
@@ -50,14 +50,18 @@ const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
         throw new Error(`AI scan failed: ${response.error?.message || 'Unknown error'}`);
       }
 
-      // Convert response to Response object for consistency
-      return new Response(JSON.stringify(response), {
+      // supabase.functions.invoke returns { data, error }
+      // Return only the data portion for consistency
+      return new Response(JSON.stringify(response.data), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
     } catch (error) {
-      // Re-throw authentication errors
-      if (error instanceof Error && error.message.includes('Authentication failed')) {
+      // Re-throw authentication errors and explicit scan failures
+      if (error instanceof Error && (
+        error.message.includes('Authentication failed') ||
+        error.message.includes('AI scan failed')
+      )) {
         throw error;
       }
       console.warn('Edge Function call failed:', error);

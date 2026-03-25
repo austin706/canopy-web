@@ -77,6 +77,8 @@ export interface Home {
   countertop_type?: 'granite' | 'marble' | 'quartz' | 'butcher_block' | 'laminate' | 'tile' | 'concrete' | 'stainless_steel';
   hose_bib_locations?: string;
   number_of_hvac_filters?: number;
+  hvac_filter_size?: string;
+  hvac_return_location?: 'ceiling' | 'wall' | 'floor' | 'furnace' | 'multiple';
   photo_url?: string;
   climate_zone?: string;
   usda_zone?: string;
@@ -210,7 +212,7 @@ export interface ProServiceAppointment {
 
 export interface WeatherAlert {
   id: string;
-  type: 'freeze' | 'wind' | 'hail' | 'heat' | 'storm' | 'tornado' | 'flood';
+  type: 'freeze' | 'wind' | 'hail' | 'heat' | 'storm' | 'tornado' | 'flood' | 'fire';
   severity: 'advisory' | 'watch' | 'warning';
   title: string;
   description: string;

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
-import { quickCompleteTask, quickSkipTask } from '@/services/utils';
+import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/utils';
 import { getTasks, reopenTask as reopenTaskApi } from '@/services/supabase';
 import { getDisplayStatus } from '@/services/taskEngine';
 import type { MaintenanceTask } from '@/types';
@@ -23,6 +23,7 @@ export default function Calendar() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
   const [loading, setLoading] = useState(false);
+  const [snoozeMenuId, setSnoozeMenuId] = useState<string | null>(null);
 
   // Fetch tasks on mount if not already loaded
   useEffect(() => {
@@ -273,8 +274,32 @@ export default function Calendar() {
                       <span className="badge" style={{ background: (StatusColors[task.status] || '#ccc') + '20', color: StatusColors[task.status] }}>{task.status}</span>
                     </div>
                     {task.status !== 'completed' && task.status !== 'skipped' && !isDemo && (
-                      <div className="flex gap-sm mt-sm" style={{ marginLeft: 20 }}>
+                      <div className="flex gap-sm mt-sm" style={{ marginLeft: 20, position: 'relative' }}>
                         <button className="btn btn-sage btn-sm" onClick={() => quickCompleteTask(task)}>Complete</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setSnoozeMenuId(snoozeMenuId === task.id ? null : task.id)}>Snooze</button>
+                        {snoozeMenuId === task.id && (
+                          <div style={{
+                            position: 'absolute', top: '100%', left: 60, zIndex: 20,
+                            background: 'white', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                            padding: '4px 0', marginTop: 4, minWidth: 140,
+                          }}>
+                            {[
+                              { label: '3 days', days: 3 },
+                              { label: '1 week', days: 7 },
+                              { label: '2 weeks', days: 14 },
+                              { label: '1 month', days: 30 },
+                            ].map(opt => (
+                              <button key={opt.days} onClick={() => { quickSnoozeTask(task, opt.days); setSnoozeMenuId(null); }}
+                                style={{ display: 'block', width: '100%', padding: '8px 16px', border: 'none', background: 'none',
+                                  textAlign: 'left', fontSize: 13, cursor: 'pointer', color: Colors.charcoal }}
+                                onMouseOver={e => (e.currentTarget.style.background = '#f5f5f5')}
+                                onMouseOut={e => (e.currentTarget.style.background = 'none')}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         <button className="btn btn-ghost btn-sm" onClick={() => quickSkipTask(task)}>Skip</button>
                       </div>
                     )}

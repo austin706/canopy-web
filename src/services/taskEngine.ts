@@ -164,8 +164,9 @@ export function generateTasksForHome(
 }
 
 /**
- * Generate a DYNAMIC task — first occurrence from today + interval_days.
- * On completion, createNextDynamicTask() schedules the next one.
+ * Generate DYNAMIC tasks — creates MULTIPLE future occurrences across the next 18 months.
+ * This ensures the calendar has tasks in every month, not just the next occurrence.
+ * On completion, createNextDynamicTask() will handle rescheduling from the completion date.
  */
 function generateDynamicTask(
   template: TaskTemplate,
@@ -182,13 +183,18 @@ function generateDynamicTask(
 
   const intervalDays = template.interval_days || 90;
 
-  // First occurrence: due today + interval_days from now
-  // Use a small hash offset (0-6 days) so dynamic tasks don't all land on the same date
-  const hashOffset = template.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 7;
-  const dueDate = addDays(today, intervalDays + hashOffset);
+  // Use a small hash offset (0-13 days) so dynamic tasks don't all land on the same date
+  const hashOffset = template.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 14;
 
-  const task = createTaskFromTemplate(template, home, equipment, dueDate);
-  newTasks.push(task);
+  // Generate multiple occurrences to fill the next 18 months
+  const eighteenMonthsOut = addDays(today, 548);
+  let nextDue = addDays(today, intervalDays + hashOffset);
+
+  while (nextDue <= eighteenMonthsOut) {
+    const task = createTaskFromTemplate(template, home, equipment, nextDue);
+    newTasks.push(task);
+    nextDue = addDays(nextDue, intervalDays);
+  }
 }
 
 /**
@@ -205,10 +211,10 @@ function generateSeasonalTasks(
   currentYear: number,
   today: Date
 ) {
-  // For seasonal tasks, generate for each applicable month in the next 12 months
+  // For seasonal tasks, generate for each applicable month in the next 18 months
   const generatedMonths = new Set<string>();
 
-  for (let offset = 0; offset < 12; offset++) {
+  for (let offset = 0; offset < 18; offset++) {
     const targetMonth = ((currentMonth - 1 + offset) % 12) + 1;
     const targetYear = currentYear + Math.floor((currentMonth - 1 + offset) / 12);
 

@@ -38,6 +38,7 @@ export default function Layout() {
     navigate('/login');
   };
 
+  const isPro = tier === 'pro' || tier === 'pro_plus';
   const navItems: { to: string; icon: React.FC<{ size?: number; color?: string }>; label: string }[] = [
     { to: '/', icon: NavDashboard, label: 'Dashboard' },
     { to: '/calendar', icon: NavCalendar, label: 'Calendar' },
@@ -45,6 +46,11 @@ export default function Layout() {
     { to: '/equipment', icon: NavEquipment, label: 'Equipment' },
     { to: '/documents', icon: NavDocuments, label: 'Documents' },
     { to: '/pro-services', icon: NavProServices, label: 'Pro Services' },
+    ...(isPro ? [
+      { to: '/visits', icon: NavCalendar, label: 'Pro Visits' },
+      { to: '/quotes', icon: NavDocuments, label: 'Quotes' },
+      { to: '/invoices', icon: NavDocuments, label: 'Invoices' },
+    ] : []),
     { to: '/logs', icon: NavLogs, label: 'Maintenance Log' },
     { to: '/notifications', icon: NavNotifications, label: 'Notifications' },
     { to: '/agent', icon: NavAgent, label: 'My Agent' },

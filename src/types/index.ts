@@ -456,3 +456,70 @@ export interface InvoicePayment {
   notes?: string;
   created_at: string;
 }
+
+// ─── Notifications ───
+
+export type NotificationCategory = 'task' | 'weather' | 'equipment' | 'pro_visit' | 'pro_quote' | 'pro_invoice' | 'payment' | 'subscription' | 'general';
+
+export type NotificationChannel = 'push' | 'email' | 'in_app';
+
+export type DigestFrequency = 'instant' | 'daily_summary' | 'weekly_summary';
+
+export interface NotificationItem {
+  id: string;
+  user_id: string;
+  category: NotificationCategory;
+  title: string;
+  body?: string;
+  read: boolean;
+  action_url?: string;
+  data?: Record<string, any>;
+  created_at: string;
+}
+
+/** Per-category channel preferences */
+export interface CategoryChannelPrefs {
+  push: boolean;
+  email: boolean;
+  in_app: boolean;
+}
+
+export interface NotificationPreferences {
+  // ── Category channel controls ──
+  home_maintenance: CategoryChannelPrefs;   // task reminders, due dates, completions
+  weather_safety: CategoryChannelPrefs;     // severe weather, seasonal alerts
+  equipment_lifecycle: CategoryChannelPrefs; // equipment aging, replacement reminders
+  pro_services: CategoryChannelPrefs;       // visits, quotes, invoices (pro/pro+ only)
+  account_billing: CategoryChannelPrefs;    // subscription, payments, receipts
+
+  // ── Timing & frequency ──
+  digest_frequency: DigestFrequency;
+  reminder_lead_time: 'day_of' | '1_day_before' | '3_days_before' | '1_week_before';
+  preferred_time: 'morning' | 'afternoon' | 'evening'; // 8 AM, 2 PM, 6 PM
+
+  // ── Quiet hours ──
+  quiet_hours_enabled: boolean;
+  quiet_hours_start: string;  // "22:00"
+  quiet_hours_end: string;    // "07:00"
+
+  // ── Summary ──
+  weekly_summary: boolean;
+}
+
+export const DEFAULT_NOTIFICATION_PREFS: NotificationPreferences = {
+  home_maintenance: { push: true, email: true, in_app: true },
+  weather_safety: { push: true, email: false, in_app: true },
+  equipment_lifecycle: { push: false, email: true, in_app: true },
+  pro_services: { push: true, email: true, in_app: true },
+  account_billing: { push: false, email: true, in_app: true },
+
+  digest_frequency: 'instant',
+  reminder_lead_time: '1_day_before',
+  preferred_time: 'morning',
+
+  quiet_hours_enabled: true,
+  quiet_hours_start: '22:00',
+  quiet_hours_end: '07:00',
+
+  weekly_summary: true,
+};

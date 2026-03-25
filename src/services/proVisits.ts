@@ -1,7 +1,23 @@
-import { supabase } from './supabase';
+import { supabase } from '@/services/supabase';
 import type { ProMonthlyVisit, VisitAllocation } from '@/types';
+import { TASK_TEMPLATES } from '@/constants/maintenance';
 
 const CANCELLATION_WINDOW_HOURS = 48;
+
+// ─── Helper Functions ───
+
+export function getItemsToHaveOnHand(selectedTaskIds: string[]): string[] {
+  const items = new Set<string>();
+
+  selectedTaskIds.forEach(taskId => {
+    const template = TASK_TEMPLATES.find(t => t.id === taskId);
+    if (template?.items_to_have_on_hand) {
+      template.items_to_have_on_hand.forEach(item => items.add(item));
+    }
+  });
+
+  return Array.from(items).sort();
+}
 
 // ─── Homeowner Functions ───
 

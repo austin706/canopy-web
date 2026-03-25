@@ -99,6 +99,14 @@ export const completeTask = async (taskId: string, notes?: string, photoUrl?: st
   return data;
 };
 
+export const reopenTask = async (taskId: string) => {
+  const { data, error } = await supabase.from('maintenance_tasks')
+    .update({ status: 'upcoming', completed_date: null, completion_notes: null, completion_photo_url: null })
+    .eq('id', taskId).select().single();
+  if (error) throw error;
+  return data;
+};
+
 export const createTask = async (task: any) => {
   const { data, error } = await supabase.from('maintenance_tasks').insert(task).select().single();
   if (error) throw error;
@@ -228,6 +236,12 @@ export const getAllAgents = async () => {
 
 export const createAgentRecord = async (agent: any) => {
   const { data, error } = await supabase.from('agents').insert(agent).select().single();
+  if (error) throw error;
+  return data;
+};
+
+export const updateAgent = async (agentId: string, updates: any) => {
+  const { data, error } = await supabase.from('agents').update(updates).eq('id', agentId).select().single();
   if (error) throw error;
   return data;
 };

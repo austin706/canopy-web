@@ -27,6 +27,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
   const [scanError, setError] = useState('');
+  const [showScanFailurePopup, setShowScanFailurePopup] = useState(false);
   const [scanData, setScanData] = useState<ScanResult | null>(null);
   const [equipmentName, setEquipmentName] = useState('');
   const [equipmentCategory, setEquipmentCategory] = useState<EquipmentCategory>('hvac');
@@ -92,6 +93,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
 
     setScanning(true);
     setError('');
+    setShowScanFailurePopup(false);
 
     try {
       // Convert image to base64
@@ -99,6 +101,13 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
 
       // Call AI service
       const result = await scanEquipmentLabel(base64String);
+
+      // Check confidence level for scan quality
+      if (result.confidence < 0.3) {
+        setScanning(false);
+        setShowScanFailurePopup(true);
+        return;
+      }
 
       // Determine equipment name from scan result or use default
       const name =
@@ -110,13 +119,9 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
       setEquipmentName(name);
       setScanned(true);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to scan equipment label. Please try again.'
-      );
-    } finally {
       setScanning(false);
+      setShowScanFailurePopup(true);
+      console.error('Scan error:', err);
     }
   };
 
@@ -141,10 +146,153 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
     setEquipmentName('');
     setEquipmentCategory('hvac');
     setError('');
+    setShowScanFailurePopup(false);
   };
+
+  const handleTryAgain = () => {
+    setShowScanFailurePopup(false);
+    // Reset to the scan state so user can try again
+    setScanned(false);
+    setScanData(null);
+  };
+
+  // Scan failure fallback popup
+  const ScanFailurePopup = () => (
+    showScanFailurePopup ? (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: 16,
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: Colors.cardBackground,
+            borderRadius: 16,
+            padding: 24,
+            maxWidth: 360,
+            width: '100%',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+          }}
+        >
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: `${Colors.warning}20`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 24px',
+            }}
+          >
+            <span style={{ fontSize: 28, color: Colors.warning }}>⚠️</span>
+          </div>
+
+          <h3
+            style={{
+              fontSize: 18,
+              fontWeight: 700,
+              color: Colors.charcoal,
+              margin: '0 0 16px 0',
+              textAlign: 'center',
+            }}
+          >
+            Couldn't read this label
+          </h3>
+
+          <p
+            style={{
+              fontSize: 14,
+              color: Colors.medGray,
+              margin: '0 0 16px 0',
+              lineHeight: '20px',
+            }}
+          >
+            For best results, we need a clear photo of your equipment's nameplate or label showing:
+          </p>
+
+          <div
+            style={{
+              backgroundColor: Colors.cream,
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 16,
+            }}
+          >
+            {['Make/Brand name', 'Model number', 'Serial number', 'Any efficiency ratings'].map((item, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: i < 3 ? 8 : 0,
+                }}
+              >
+                <div
+                  style={{
+                    width: 4,
+                    height: 4,
+                    borderRadius: 2,
+                    backgroundColor: Colors.copper,
+                  }}
+                />
+                <span style={{ fontSize: 14, color: Colors.charcoal }}>{item}</span>
+              </div>
+            ))}
+          </div>
+
+          <p
+            style={{
+              fontSize: 14,
+              color: Colors.medGray,
+              margin: '0 0 24px 0',
+              lineHeight: '20px',
+            }}
+          >
+            Try scanning again with better lighting, or enter details manually.
+          </p>
+
+          <div style={{ display: 'flex', gap: 12, flexDirection: 'column' }}>
+            <button
+              className="btn btn-primary"
+              onClick={handleTryAgain}
+              style={{ width: '100%' }}
+            >
+              Try Again
+            </button>
+            <button
+              className="btn btn-ghost"
+              onClick={() => setShowScanFailurePopup(false)}
+              style={{
+                width: '100%',
+                borderColor: Colors.copper,
+                color: Colors.copper,
+              }}
+            >
+              Enter Manually
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : null
+  );
 
   return (
     <div className="equipment-scanner">
+      <ScanFailurePopup />
+
       {!preview ? (
         // Upload Area
         <div

@@ -19,6 +19,7 @@ interface CanopyState {
   tasks: MaintenanceTask[];
   setTasks: (tasks: MaintenanceTask[]) => void;
   completeTask: (id: string, notes?: string, photoUrl?: string) => void;
+  reopenTask: (id: string) => void;
   skipTask: (id: string) => void;
   snoozeTask: (id: string, days: number) => void;
   maintenanceLogs: MaintenanceLog[];
@@ -52,6 +53,9 @@ export const useStore = create<CanopyState>()(
       setTasks: (tasks) => set({ tasks }),
       completeTask: (id, notes, photoUrl) => set((s) => ({
         tasks: s.tasks.map((t) => t.id === id ? { ...t, status: 'completed' as const, completed_date: new Date().toISOString(), completion_notes: notes, completion_photo_url: photoUrl } : t),
+      })),
+      reopenTask: (id) => set((s) => ({
+        tasks: s.tasks.map((t) => t.id === id ? { ...t, status: 'upcoming' as const, completed_date: undefined, completion_notes: undefined, completion_photo_url: undefined } : t),
       })),
       skipTask: (id) => set((s) => ({ tasks: s.tasks.map((t) => t.id === id ? { ...t, status: 'skipped' as const } : t) })),
       snoozeTask: (id, days) => set((s) => ({

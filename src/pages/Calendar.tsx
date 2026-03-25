@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask } from '@/services/utils';
-import { getTasks } from '@/services/supabase';
+import { getTasks, reopenTask as reopenTaskApi } from '@/services/supabase';
 import type { MaintenanceTask } from '@/types';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -15,7 +15,7 @@ const DEMO_TASKS: MaintenanceTask[] = [
 ];
 
 export default function Calendar() {
-  const { home, tasks: storeTasks, setTasks } = useStore();
+  const { home, tasks: storeTasks, setTasks, reopenTask } = useStore();
   const isDemo = storeTasks.length === 0;
   const tasks = isDemo ? DEMO_TASKS : storeTasks;
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -81,6 +81,19 @@ export default function Calendar() {
   const filteredTasks = filter === 'all' ? selectedTasks : selectedTasks.filter(t => t.status === filter);
 
   const nav = (dir: number) => setCurrentDate(new Date(year, month + dir, 1));
+
+  const handleQuickReopen = async (task: MaintenanceTask) => {
+    try {
+      reopenTask(task.id);
+      try {
+        await reopenTaskApi(task.id);
+      } catch (err) {
+        console.warn('Reopen API call failed:', err);
+      }
+    } catch (error) {
+      console.error('Error reopening task:', error);
+    }
+  };
 
   return (
     <div className="page">
@@ -159,6 +172,11 @@ export default function Calendar() {
                     <div className="flex gap-sm mt-sm" style={{ marginLeft: 20 }}>
                       <button className="btn btn-sage btn-sm" onClick={() => quickCompleteTask(task)}>Complete</button>
                       <button className="btn btn-ghost btn-sm" onClick={() => quickSkipTask(task)}>Skip</button>
+                    </div>
+                  )}
+                  {task.status === 'completed' && !isDemo && (
+                    <div className="flex gap-sm mt-sm" style={{ marginLeft: 20 }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => handleQuickReopen(task)} style={{ borderColor: Colors.copper, color: Colors.copper }}>Reopen</button>
                     </div>
                   )}
                 </div>

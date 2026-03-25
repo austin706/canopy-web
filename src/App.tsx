@@ -23,7 +23,9 @@ import AdminAgents from '@/pages/AdminAgents';
 import AdminUsers from '@/pages/AdminUsers';
 import AdminGiftCodes from '@/pages/AdminGiftCodes';
 import AdminProRequests from '@/pages/AdminProRequests';
+import AdminServiceAreas from '@/pages/AdminServiceAreas';
 import AgentPortal from '@/pages/AgentPortal';
+import AgentProfile from '@/pages/AgentProfile';
 import AgentClientHome from '@/pages/AgentClientHome';
 import TaskDetail from '@/pages/TaskDetail';
 import EquipmentDetail from '@/pages/EquipmentDetail';
@@ -38,6 +40,12 @@ import ProAvailability from '@/pages/ProAvailability';
 import ProProfile from '@/pages/ProProfile';
 import CreateTask from '@/pages/CreateTask';
 import ProServices from '@/pages/ProServices';
+import Visits from '@/pages/Visits';
+import ProPlusManage from '@/pages/ProPlusManage';
+import Quotes from '@/pages/Quotes';
+import Invoices from '@/pages/Invoices';
+import ProVisitSchedule from '@/pages/ProVisitSchedule';
+import ProQuotesInvoices from '@/pages/ProQuotesInvoices';
 import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
 
@@ -98,6 +106,10 @@ export default function App() {
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/pro-request" element={<ProRequest />} />
             <Route path="/pro-services" element={<ProServices />} />
+            <Route path="/visits" element={<Visits />} />
+            <Route path="/pro-plus" element={<ProPlusManage />} />
+            <Route path="/quotes" element={<Quotes />} />
+            <Route path="/invoices" element={<Invoices />} />
             <Route path="/agent" element={<AgentView />} />
             <Route path="/logs" element={<MaintenanceLogs />} />
             <Route path="/home" element={<HomeDetails />} />
@@ -106,12 +118,16 @@ export default function App() {
             <Route path="/admin/users" element={<RoleRoute roles={['admin']}><AdminUsers /></RoleRoute>} />
             <Route path="/admin/gift-codes" element={<RoleRoute roles={['admin']}><AdminGiftCodes /></RoleRoute>} />
             <Route path="/admin/pro-requests" element={<RoleRoute roles={['admin']}><AdminProRequests /></RoleRoute>} />
+            <Route path="/admin/service-areas" element={<RoleRoute roles={['admin']}><AdminServiceAreas /></RoleRoute>} />
             <Route path="/agent-portal" element={<RoleRoute roles={['agent', 'admin']}><AgentPortal /></RoleRoute>} />
+            <Route path="/agent-portal/profile" element={<RoleRoute roles={['agent', 'admin']}><AgentProfile /></RoleRoute>} />
             <Route path="/agent-portal/client/:clientId" element={<RoleRoute roles={['agent', 'admin']}><AgentClientHome /></RoleRoute>} />
             <Route path="/pro-portal" element={<RoleRoute roles={['pro_provider', 'admin']}><ProPortal /></RoleRoute>} />
             <Route path="/pro-portal/jobs" element={<RoleRoute roles={['pro_provider', 'admin']}><ProJobs /></RoleRoute>} />
             <Route path="/pro-portal/availability" element={<RoleRoute roles={['pro_provider', 'admin']}><ProAvailability /></RoleRoute>} />
             <Route path="/pro-portal/profile" element={<RoleRoute roles={['pro_provider', 'admin']}><ProProfile /></RoleRoute>} />
+            <Route path="/pro-portal/visit-schedule" element={<RoleRoute roles={['pro_provider', 'admin']}><ProVisitSchedule /></RoleRoute>} />
+            <Route path="/pro-portal/quotes-invoices" element={<RoleRoute roles={['pro_provider', 'admin']}><ProQuotesInvoices /></RoleRoute>} />
           </Route>
 
           {/* Catch-all */}

@@ -62,7 +62,10 @@ export default function AgentPortal() {
           <h1>Agent Portal</h1>
           <p className="subtitle">Manage your clients and gift codes</p>
         </div>
-        <button className="btn btn-ghost" onClick={() => navigate('/')}>Back to App &rarr;</button>
+        <div className="flex gap-sm">
+          <button className="btn btn-secondary" onClick={() => navigate('/agent-portal/profile')}>Edit Profile</button>
+          <button className="btn btn-ghost" onClick={() => navigate('/')}>Back to App &rarr;</button>
+        </div>
       </div>
 
       <div className="tabs mb-lg">

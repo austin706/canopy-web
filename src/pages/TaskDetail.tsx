@@ -3,14 +3,32 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/utils';
+import { reopenTask as reopenTaskApi } from '@/services/supabase';
 
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { tasks } = useStore();
+  const { tasks, reopenTask } = useStore();
 
   const task = tasks.find(t => t.id === id);
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
+
+  const handleReopen = async () => {
+    if (!task) return;
+    try {
+      reopenTask(task.id);
+      try {
+        await reopenTaskApi(task.id);
+      } catch (err) {
+        console.warn('Reopen API call failed:', err);
+      }
+      alert('Task reopened and moved to upcoming.');
+      navigate(-1);
+    } catch (error) {
+      console.error('Error reopening task:', error);
+      alert('Failed to reopen task. Please try again.');
+    }
+  };
 
   if (!task) {
     return (
@@ -206,6 +224,9 @@ export default function TaskDetail() {
             {task.completed_date && (
               <p className="text-xs text-gray">{new Date(task.completed_date).toLocaleDateString()}</p>
             )}
+            <button className="btn btn-outline" onClick={handleReopen} style={{ marginTop: 12, borderColor: Colors.copper, color: Colors.copper }}>
+              Reopen Task
+            </button>
           </div>
         )}
       </div>

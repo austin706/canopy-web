@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertHome, upsertEquipment, updateProfile, createTasks } from '@/services/supabase';
+import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase } from '@/services/supabase';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
+import { PLANS, isProAvailableInArea } from '@/services/subscriptionGate';
 import EquipmentScanner from '@/components/EquipmentScanner';
 import { Colors } from '@/constants/theme';
-import { CheckCircleIcon } from '@/components/icons/Icons';
-import type { EquipmentCategory, Equipment as EquipmentType } from '@/types';
+import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
+import type { EquipmentCategory, Equipment as EquipmentType, SubscriptionTier } from '@/types';
 
 const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
   { value: 'hvac', label: 'HVAC' },
@@ -72,7 +73,15 @@ export default function Onboarding() {
     fireplace_count: '1',
   });
 
-  // Step 3: Equipment
+  // Step 3: Plan Selection
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionTier>('free');
+  const [agentCode, setAgentCode] = useState('');
+  const [redeeming, setRedeeming] = useState(false);
+  const [planMessage, setPlanMessage] = useState('');
+  const [planMessageType, setPlanMessageType] = useState<'success' | 'error'>('success');
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  // Step 4: Equipment
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [equipmentForm, setEquipmentForm] = useState<Equipment>({
     name: '',
@@ -256,20 +265,94 @@ export default function Onboarding() {
       }
 
       // Show completion screen instead of immediately navigating
-      setStep(3);
+      setStep(4);
     } finally {
       setSaving(false);
     }
   };
 
-  const progressPercent = step >= 3 ? 100 : ((step + 1) / 3) * 100;
+  const handleRedeemCode = async () => {
+    if (!agentCode.trim() || !user) return;
+    setRedeeming(true);
+    try {
+      const result = await redeemGiftCode(agentCode.trim(), user.id);
+      const { setUser, setAgent } = useStore.getState();
+      setUser({
+        ...user,
+        subscription_tier: result.tier as SubscriptionTier,
+        subscription_expires_at: result.expiresAt,
+        agent_id: result.agent?.id,
+      });
+      if (result.agent) setAgent(result.agent);
+      setSelectedPlan(result.tier as SubscriptionTier);
+      setPlanMessage(`Code applied! You now have ${PLANS.find(p => p.value === result.tier)?.name || result.tier} access.`);
+      setPlanMessageType('success');
+      setAgentCode('');
+    } catch (e: any) {
+      setPlanMessage(e.message || 'Invalid or expired code');
+      setPlanMessageType('error');
+    } finally {
+      setRedeeming(false);
+      setTimeout(() => setPlanMessage(''), 5000);
+    }
+  };
+
+  const handlePlanCheckout = async () => {
+    if (selectedPlan === 'free' || user?.subscription_tier !== 'free') {
+      setStep(3);
+      return;
+    }
+
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+
+    if (selectedPlan === 'home' || selectedPlan === 'pro') {
+      try {
+        setCheckoutLoading(true);
+        const session = await supabase.auth.getSession();
+        const token = session.data.session?.access_token;
+        if (token && SUPABASE_URL) {
+          const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              plan: selectedPlan,
+              success_url: `${window.location.origin}/onboarding?step=3&success=true&plan=${selectedPlan}`,
+              cancel_url: `${window.location.origin}/onboarding?step=2&canceled=true`,
+            }),
+          });
+          const data = await res.json();
+          if (res.ok && data.url) {
+            window.location.href = data.url;
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Stripe checkout not available:', e);
+      } finally {
+        setCheckoutLoading(false);
+      }
+    }
+
+    // If checkout not available, continue anyway
+    setStep(3);
+  };
+
+  const proAvailable = isProAvailableInArea(
+    useStore.getState().home?.state,
+    useStore.getState().home?.zip_code,
+  );
+
+  const progressPercent = step >= 4 ? 100 : ((step + 1) / 4) * 100;
 
   return (
     <div className="page" style={{ maxWidth: 600, margin: '0 auto', paddingTop: 40 }}>
       {/* Progress Bar */}
       <div style={{ marginBottom: 40 }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-          {[0, 1, 2].map(i => (
+          {[0, 1, 2, 3].map(i => (
             <div
               key={i}
               style={{
@@ -283,7 +366,7 @@ export default function Onboarding() {
           ))}
         </div>
         <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
-          Step {step + 1} of 3
+          Step {Math.min(step + 1, 4)} of 4
         </p>
       </div>
 
@@ -574,8 +657,167 @@ export default function Onboarding() {
         </div>
       )}
 
-      {/* Step 3: Equipment */}
+      {/* Step 3: Choose Your Plan */}
       {step === 2 && (
+        <div className="card">
+          <h2 style={{ fontSize: 18, marginBottom: 8 }}>Choose your plan</h2>
+          <p style={{ color: Colors.medGray, marginBottom: 24, fontSize: 14, lineHeight: 1.5 }}>
+            Start free or unlock the full Canopy experience. You can change your plan anytime.
+          </p>
+
+          {planMessage && (
+            <div style={{
+              padding: '10px 16px',
+              borderRadius: 8,
+              background: planMessageType === 'success' ? '#4CAF5020' : '#E5393520',
+              color: planMessageType === 'success' ? '#2E7D32' : '#C62828',
+              fontSize: 14,
+              marginBottom: 16,
+            }}>
+              {planMessage}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+            {PLANS.map(plan => {
+              const isSelected = selectedPlan === plan.value;
+              const isInquiry = (plan as any).inquireForPricing === true;
+              const isProTier = plan.value === 'pro' || plan.value === 'pro_plus';
+              const isLocked = isProTier && !proAvailable;
+
+              return (
+                <div
+                  key={plan.id}
+                  onClick={() => {
+                    if (isLocked) return;
+                    setSelectedPlan(plan.value);
+                  }}
+                  style={{
+                    border: `2px solid ${isSelected ? Colors.copper : 'transparent'}`,
+                    borderRadius: 12,
+                    padding: 20,
+                    backgroundColor: isSelected ? Colors.copperMuted : '#fff',
+                    cursor: isLocked ? 'not-allowed' : 'pointer',
+                    opacity: isLocked ? 0.55 : 1,
+                    position: 'relative',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {/* Popular badge */}
+                  {plan.value === 'home' && (
+                    <span style={{
+                      position: 'absolute',
+                      top: -10,
+                      right: 16,
+                      background: Colors.copper,
+                      color: '#fff',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '3px 10px',
+                      borderRadius: 10,
+                    }}>
+                      Most Popular
+                    </span>
+                  )}
+
+                  {/* Locked badge */}
+                  {isLocked && (
+                    <div style={{ fontSize: 12, color: Colors.medGray, marginBottom: 8 }}>
+                      Not available in your area yet
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: isSelected ? Colors.copper : Colors.charcoal }}>
+                        {plan.name}
+                      </div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: isSelected ? Colors.copper : Colors.charcoal, marginTop: 2 }}>
+                        {isInquiry ? 'Custom Pricing' : `$${plan.price}`}
+                        {!isInquiry && plan.period && (
+                          <span style={{ fontSize: 13, color: Colors.medGray, fontWeight: 400 }}>{plan.period}</span>
+                        )}
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <div style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                        background: Colors.copper,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <CheckIcon size={14} color="#fff" />
+                      </div>
+                    )}
+                  </div>
+
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0 0 0' }}>
+                    {plan.features.map((f, i) => (
+                      <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13 }}>
+                        <CheckIcon size={12} color={isSelected ? Colors.copper : Colors.sage} />
+                        <span style={{ color: isLocked ? Colors.silver : Colors.charcoal }}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Agent / Gift Code */}
+          <div style={{
+            background: '#f9f9f7',
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 24,
+          }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Have an agent or gift code?</h3>
+            <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 12 }}>
+              Enter a code from your real estate agent to unlock premium features.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                className="form-input"
+                value={agentCode}
+                onChange={e => setAgentCode(e.target.value.toUpperCase())}
+                placeholder="Enter code"
+                style={{ flex: 1, fontWeight: 600, letterSpacing: 1 }}
+              />
+              <button
+                className="btn btn-primary"
+                onClick={handleRedeemCode}
+                disabled={redeeming || !agentCode.trim()}
+              >
+                {redeeming ? 'Applying...' : 'Apply'}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-sm">
+            <button className="btn btn-ghost" onClick={() => setStep(1)}>Back</button>
+            <button
+              className="btn btn-primary"
+              onClick={handlePlanCheckout}
+              disabled={checkoutLoading}
+            >
+              {checkoutLoading
+                ? 'Setting up checkout...'
+                : selectedPlan === 'free'
+                ? 'Continue with Free'
+                : `Continue with ${PLANS.find(p => p.value === selectedPlan)?.name}`}
+            </button>
+          </div>
+          <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 12 }}>
+            You can always change your plan later from Settings.
+          </p>
+        </div>
+      )}
+
+      {/* Step 4: Equipment */}
+      {step === 3 && (
         <div className="card">
           <h2 style={{ fontSize: 18, marginBottom: 20 }}>Add your equipment (optional)</h2>
           <p style={{ color: Colors.medGray, marginBottom: 20, fontSize: 14 }}>
@@ -685,7 +927,7 @@ export default function Onboarding() {
           )}
 
           <div className="flex gap-sm mt-lg">
-            <button className="btn btn-ghost" onClick={() => setStep(1)} disabled={saving || generatingTasks}>Back</button>
+            <button className="btn btn-ghost" onClick={() => setStep(2)} disabled={saving || generatingTasks}>Back</button>
             <button className="btn btn-ghost" onClick={handleFinish} disabled={saving || generatingTasks}>
               Skip
             </button>
@@ -696,8 +938,8 @@ export default function Onboarding() {
         </div>
       )}
 
-      {/* Step 3: Completion / Welcome Screen */}
-      {step === 3 && (
+      {/* Step 5: Completion / Welcome Screen */}
+      {step === 4 && (
         <div style={{ textAlign: 'center', padding: '40px 0' }}>
           {/* TODO: Replace with final branded illustration when ready */}
           <div style={{

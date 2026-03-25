@@ -183,6 +183,32 @@ export default function ProPortal() {
         </button>
         <button
           className="card btn"
+          onClick={() => navigate('/pro-portal/visit-schedule')}
+          style={{
+            padding: '24px',
+            textAlign: 'center',
+            cursor: 'pointer',
+            fontSize: 16,
+          }}
+        >
+          Visit Schedule
+        </button>
+        <button
+          className="card btn"
+          onClick={() => navigate('/pro-portal/quotes-invoices')}
+          style={{
+            padding: '24px',
+            textAlign: 'center',
+            cursor: 'pointer',
+            fontSize: 16,
+          }}
+        >
+          Quotes & Invoices
+        </button>
+      </div>
+      <div className="grid-3 mb-lg" style={{ gap: 16 }}>
+        <button
+          className="card btn"
           onClick={() => navigate('/pro-portal/availability')}
           style={{
             padding: '24px',

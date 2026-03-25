@@ -1,5 +1,6 @@
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
+import { AgentAvatar } from '@/components/AgentAvatar';
 
 export default function AgentView() {
   const { agent } = useStore();
@@ -22,9 +23,12 @@ export default function AgentView() {
       <div className="page-header"><h1>Your Agent</h1></div>
       <div className="card">
         <div className="flex items-center gap-lg mb-lg">
-          <div style={{ width: 72, height: 72, borderRadius: '50%', background: agent.accent_color || Colors.copper, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 28, fontWeight: 700 }}>
-            {agent.name.charAt(0)}
-          </div>
+          <AgentAvatar
+            name={agent.name}
+            photoUrl={agent.photo_url}
+            size="lg"
+            accentColor={agent.accent_color || Colors.copper}
+          />
           <div>
             <h2 style={{ fontSize: 20 }}>{agent.name}</h2>
             <p className="text-sm text-gray">{agent.brokerage}</p>

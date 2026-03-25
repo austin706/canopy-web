@@ -5,6 +5,7 @@ import { redeemGiftCode, insertProInterest, supabase } from '@/services/supabase
 import { PLANS, isProAvailableInArea } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
+import ServiceAreaMap from '@/components/ServiceAreaMap';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 
@@ -194,6 +195,13 @@ export default function Subscription() {
           </div>
           );
         })}
+      </div>
+
+      {/* Service Area Map */}
+      <div className="card mb-lg">
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Pro Service Areas</h3>
+        <p className="text-sm text-gray mb-md">Home Pro and Pro+ are available in these areas. Check if your zip code is covered.</p>
+        <ServiceAreaMap userZip={home?.zip_code} compact />
       </div>
 
       {/* Gift Code */}

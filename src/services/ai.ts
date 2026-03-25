@@ -42,49 +42,35 @@ const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
         body: payload,
       });
 
+      // Handle authentication errors from Edge Function
+      if (response.error) {
+        if (response.error?.status === 401) {
+          throw new Error('Authentication failed. Please sign in again.');
+        }
+        throw new Error(`AI scan failed: ${response.error?.message || 'Unknown error'}`);
+      }
+
       // Convert response to Response object for consistency
       return new Response(JSON.stringify(response), {
-        status: response.error ? 400 : 200,
+        status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
     } catch (error) {
-      console.warn('Edge Function call failed, falling back to direct API:', error);
+      // Re-throw authentication errors
+      if (error instanceof Error && error.message.includes('Authentication failed')) {
+        throw error;
+      }
+      console.warn('Edge Function call failed:', error);
+      throw new Error(
+        'The AI scanner service is temporarily unavailable. Please try again later.'
+      );
     }
   }
 
-  // Fallback: direct API call (development or Edge Function unavailable)
-  if (!SUPABASE_URL) {
-    console.warn(
-      'VITE_SUPABASE_URL not configured. Calling Anthropic API directly from client. ' +
-      'In production, configure Supabase Edge Function for security.'
-    );
-  }
-
-  if (!CLAUDE_API_KEY) {
-    throw new Error(
-      'Neither Supabase Edge Function nor Anthropic API key is configured'
-    );
-  }
-
-  // Build the direct API request based on payload action
-  const action = (payload as Record<string, unknown>).action as string;
-  const messages = (payload as Record<string, unknown>).messages as unknown;
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': CLAUDE_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: action === 'scan-equipment' ? 1024 : 2048,
-      messages,
-    }),
-  });
-
-  return response;
+  // If we reach here, Edge Function is not configured
+  throw new Error(
+    'The AI scanner requires server-side configuration. Please ensure Supabase Edge Function is set up.'
+  );
 };
 
 /**
@@ -125,11 +111,6 @@ Return ONLY valid JSON, no other text.`,
     ],
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`AI scan failed: ${error}`);
-  }
-
   const data = await response.json();
 
   // Edge Function returns parsed ScanResult directly;
@@ -145,4 +126,76 @@ Return ONLY valid JSON, no other text.`,
 
   // Already parsed by Edge Function
   return data as ScanResult;
+};
+
+/**
+ * Parse a home inspection document/report using Claude
+ * Extracts maintenance recommendations and schedules tasks
+ */
+export interface InspectionTask {
+  title: string;
+  description: string;
+  priority: 'urgent' | 'high' | 'medium' | 'low';
+  category: string;
+  estimated_cost: number;
+  recommended_timeframe: string;
+  inspection_section: string;
+}
+
+export const parseHomeInspection = async (
+  documentText: string,
+  imageBase64?: string,
+): Promise<InspectionTask[]> => {
+  const content: any[] = [];
+
+  if (imageBase64) {
+    content.push({
+      type: 'image',
+      source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 },
+    });
+  }
+
+  content.push({
+    type: 'text',
+    text: `You are a home maintenance expert analyzing a home inspection report for the Canopy app.
+
+${documentText ? `INSPECTION REPORT TEXT:\n${documentText}\n\n` : 'Analyze the attached home inspection document image.\n\n'}Extract ALL actionable maintenance items, repairs, and recommendations from this inspection report.
+
+Return a JSON array of task objects, each with:
+- title: short task name (e.g., "Replace roof shingles in NE section")
+- description: detailed explanation of what needs to be done and why
+- priority: "urgent" (safety hazard / immediate), "high" (within 30 days), "medium" (within 6 months), "low" (within 1 year or maintenance item)
+- category: one of hvac|plumbing|electrical|roof|outdoor|safety|general|appliance|structural|pest
+- estimated_cost: approximate cost in dollars (0 if DIY)
+- recommended_timeframe: "immediately", "within_30_days", "within_3_months", "within_6_months", "within_1_year", "annual_maintenance"
+- inspection_section: the section of the inspection this came from (e.g., "Roof & Attic", "Plumbing", "Electrical", "Foundation", "HVAC")
+
+Be thorough — extract every recommendation, concern, and suggested repair from the report.
+Return ONLY valid JSON array, no other text.`,
+  });
+
+  const response = await callAI({
+    action: 'parse-inspection',
+    messages: [{ role: 'user', content }],
+  });
+
+  const data = await response.json();
+
+  let tasks: InspectionTask[];
+  if (data.content && Array.isArray(data.content)) {
+    const text = data.content[0].text;
+    try {
+      tasks = JSON.parse(text);
+    } catch {
+      throw new Error('Failed to parse inspection analysis');
+    }
+  } else if (Array.isArray(data)) {
+    tasks = data;
+  } else if (data.tasks && Array.isArray(data.tasks)) {
+    tasks = data.tasks;
+  } else {
+    throw new Error('Unexpected response format from inspection analysis');
+  }
+
+  return tasks;
 };

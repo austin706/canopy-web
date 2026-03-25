@@ -1,16 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAllAgents, createAgentRecord } from '@/services/supabase';
+import { getAllAgents, createAgentRecord, updateAgent, uploadPhoto } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
+import { AgentAvatar } from '@/components/AgentAvatar';
 
 export default function AdminAgents() {
   const navigate = useNavigate();
   const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({ name: '', email: '', phone: '', brokerage: '' });
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { getAllAgents().then(setAgents).catch(() => {}).finally(() => setLoading(false)); }, []);
 
@@ -24,6 +29,23 @@ export default function AdminAgents() {
       setForm({ name: '', email: '', phone: '', brokerage: '' });
     } catch (e: any) { alert(e.message); }
     finally { setSaving(false); }
+  };
+
+  const handlePhotoUpload = async (file: File) => {
+    if (!selectedAgent || !file) return;
+    setUploadingPhoto(true);
+    try {
+      const photoUrl = await uploadPhoto('agent-photos', `${selectedAgent.id}/${Date.now()}_${file.name}`, file);
+      const updatedAgent = await updateAgent(selectedAgent.id, { photo_url: photoUrl });
+      setAgents(prev => prev.map(a => a.id === selectedAgent.id ? updatedAgent : a));
+      setSelectedAgent(updatedAgent);
+      alert('Agent photo updated successfully!');
+    } catch (e: any) {
+      alert('Failed to upload photo: ' + e.message);
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const filtered = agents.filter(a => a.name?.toLowerCase().includes(search.toLowerCase()) || a.email?.toLowerCase().includes(search.toLowerCase()) || a.brokerage?.toLowerCase().includes(search.toLowerCase()));
@@ -44,17 +66,28 @@ export default function AdminAgents() {
       {loading ? <div className="text-center"><div className="spinner" /></div> : (
         <div className="card table-container">
           <table>
-            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Brokerage</th></tr></thead>
+            <thead><tr><th>Photo</th><th>Name</th><th>Email</th><th>Phone</th><th>Brokerage</th><th>Action</th></tr></thead>
             <tbody>
               {filtered.map(a => (
                 <tr key={a.id}>
-                  <td><div className="flex items-center gap-sm"><div style={{ width: 32, height: 32, borderRadius: '50%', background: Colors.copper, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600 }}>{a.name?.charAt(0)}</div><span className="fw-600">{a.name}</span></div></td>
+                  <td>
+                    <div className="flex items-center">
+                      <AgentAvatar
+                        name={a.name}
+                        photoUrl={a.photo_url}
+                        size="sm"
+                        accentColor={a.accent_color || Colors.copper}
+                      />
+                    </div>
+                  </td>
+                  <td><span className="fw-600">{a.name}</span></td>
                   <td>{a.email}</td>
                   <td>{a.phone || '—'}</td>
                   <td>{a.brokerage || '—'}</td>
+                  <td><button className="btn btn-secondary btn-sm" onClick={() => { setSelectedAgent(a); setShowPhotoModal(true); }}>Photo</button></td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={4} className="text-center text-gray" style={{ padding: 32 }}>No agents found</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={6} className="text-center text-gray" style={{ padding: 32 }}>No agents found</td></tr>}
             </tbody>
           </table>
         </div>
@@ -71,6 +104,45 @@ export default function AdminAgents() {
             <div className="modal-actions">
               <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={handleAdd} disabled={saving || !form.name || !form.email}>{saving ? 'Saving...' : 'Add Agent'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPhotoModal && selectedAgent && (
+        <div className="modal-overlay" onClick={() => setShowPhotoModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2>Update Agent Photo</h2>
+            <p className="text-gray" style={{ marginBottom: 16 }}>{selectedAgent.name}</p>
+            <div style={{ marginBottom: 20, textAlign: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                <AgentAvatar
+                  name={selectedAgent.name}
+                  photoUrl={selectedAgent.photo_url}
+                  size="lg"
+                  accentColor={selectedAgent.accent_color || Colors.copper}
+                />
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) handlePhotoUpload(file);
+              }}
+              style={{ display: 'none' }}
+            />
+            <div className="modal-actions">
+              <button className="btn btn-ghost" onClick={() => setShowPhotoModal(false)}>Cancel</button>
+              <button
+                className="btn btn-primary"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? 'Uploading...' : 'Choose Photo'}
+              </button>
             </div>
           </div>
         </div>

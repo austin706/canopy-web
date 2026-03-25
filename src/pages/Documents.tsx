@@ -3,6 +3,7 @@ import { useStore } from '@/store/useStore';
 import { uploadPhoto, getDocuments, createDocument, deleteDocument, getSecureNotes, createSecureNote, deleteSecureNote, getVaultPin, upsertVaultPin } from '@/services/supabase';
 import { canAccess } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
+import InspectionUploader from '@/components/InspectionUploader';
 import type { SecureNote } from '@/types';
 
 interface Document {
@@ -261,6 +262,19 @@ export default function Documents() {
       </div>
 
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+        {/* Home Inspection AI Analysis */}
+        <div className="card mb-lg" style={{ borderLeft: `4px solid ${Colors.copper}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Home Inspection Analysis</h3>
+              <p style={{ fontSize: 13, color: Colors.medGray, margin: '4px 0 0 0' }}>
+                Upload your home inspection report and our AI will extract maintenance tasks automatically.
+              </p>
+            </div>
+          </div>
+          <InspectionUploader />
+        </div>
+
         {/* Secure Notes PIN Protection */}
         {hasSecureNotesAccess && vaultPin && !isPinUnlocked && (
           <div className="card" style={{

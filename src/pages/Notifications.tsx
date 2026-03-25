@@ -4,37 +4,55 @@ import { CheckCircleIcon, StormIcon, GearIcon, WrenchIcon, BellIcon } from '@/co
 import { useStore } from '@/store/useStore';
 import { canAccess } from '@/services/subscriptionGate';
 import * as supabaseService from '@/services/supabase';
-
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  body?: string;
-  read: boolean;
-  data?: any;
-  created_at: string;
-}
-
-interface NotificationPreferences {
-  taskReminders: boolean;
-  weatherAlerts: boolean;
-  equipmentLifecycle: boolean;
-  reminderTiming: 'day_of' | '1_day_before' | '3_days_before';
-}
-
-const DEFAULT_PREFS: NotificationPreferences = {
-  taskReminders: true,
-  weatherAlerts: true,
-  equipmentLifecycle: true,
-  reminderTiming: 'day_of',
-};
+import {
+  NotificationItem,
+  NotificationCategory,
+  CategoryChannelPrefs,
+  NotificationPreferences,
+  DEFAULT_NOTIFICATION_PREFS,
+  DigestFrequency,
+} from '@/types';
 
 const NOTIFICATION_ICON_MAP: Record<string, React.FC<{ size?: number; color?: string }>> = {
+  // Preference keys (used in settings)
+  home_maintenance: CheckCircleIcon,
+  weather_safety: StormIcon,
+  equipment_lifecycle: GearIcon,
+  pro_services: WrenchIcon,
+  account_billing: BellIcon,
+  // DB category values (used in feed)
   task: CheckCircleIcon,
   weather: StormIcon,
   equipment: GearIcon,
-  pro_service: WrenchIcon,
+  pro_visit: WrenchIcon,
+  pro_quote: WrenchIcon,
+  pro_invoice: BellIcon,
+  payment: BellIcon,
+  subscription: BellIcon,
   general: BellIcon,
+};
+
+const CATEGORY_INFO: Record<string, { label: string; desc: string }> = {
+  home_maintenance: {
+    label: 'Home Maintenance',
+    desc: 'Task reminders, due dates, and completions',
+  },
+  weather_safety: {
+    label: 'Weather & Safety',
+    desc: 'Severe weather alerts affecting your home',
+  },
+  equipment_lifecycle: {
+    label: 'Equipment Lifecycle',
+    desc: 'Equipment aging and replacement reminders',
+  },
+  pro_services: {
+    label: 'Pro Services',
+    desc: 'Visit scheduling, quotes, and invoices',
+  },
+  account_billing: {
+    label: 'Account & Billing',
+    desc: 'Subscription and payment updates',
+  },
 };
 
 const timeAgo = (dateStr: string): string => {
@@ -51,8 +69,8 @@ const timeAgo = (dateStr: string): string => {
 
 export default function Notifications() {
   const { user } = useStore();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [prefs, setPrefs] = useState<NotificationPreferences>(DEFAULT_PREFS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [prefs, setPrefs] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFS);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,11 +133,23 @@ export default function Notifications() {
     }
   };
 
-  const toggle = (key: keyof Omit<NotificationPreferences, 'reminderTiming'>) => {
-    setPrefs(prev => ({ ...prev, [key]: !prev[key] }));
+  const updateCategoryChannels = (category: string, channel: keyof CategoryChannelPrefs, value: boolean) => {
+    setPrefs(prev => {
+      const key = category as keyof NotificationPreferences;
+      const catPrefs = prev[key] as CategoryChannelPrefs;
+      if (!catPrefs || typeof catPrefs !== 'object' || !('push' in catPrefs)) return prev;
+      return {
+        ...prev,
+        [key]: {
+          ...catPrefs,
+          [channel]: value,
+        },
+      };
+    });
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const userTier = user?.subscription_tier || 'free';
 
   if (loading) {
     return (
@@ -174,38 +204,41 @@ export default function Notifications() {
               <div className="empty-state" style={{ padding: 48 }}>
                 <div style={{ marginBottom: 12 }}><BellIcon size={40} color={Colors.medGray} /></div>
                 <h3 style={{ marginBottom: 6 }}>No Notifications Yet</h3>
-                <p className="text-gray">Notifications about tasks, weather, and services will appear here.</p>
+                <p className="text-gray">Notifications about maintenance, weather, equipment, and billing will appear here.</p>
               </div>
             ) : (
               <div className="flex-col gap-sm">
-                {notifications.map(n => (
-                  <div
-                    key={n.id}
-                    className="card"
-                    onClick={() => !n.read && handleMarkRead(n.id)}
-                    style={{
-                      padding: '14px 16px',
-                      cursor: n.read ? 'default' : 'pointer',
-                      opacity: n.read ? 0.7 : 1,
-                      borderLeft: n.read ? 'none' : `3px solid ${Colors.sage}`,
-                      transition: 'opacity 0.2s',
-                    }}
-                  >
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                      <span style={{ flexShrink: 0, display: 'flex' }}>{React.createElement(NOTIFICATION_ICON_MAP[n.type] || NOTIFICATION_ICON_MAP.general, { size: 20, color: Colors.copper })}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                          <p style={{ fontWeight: n.read ? 500 : 600, fontSize: 14, color: Colors.charcoal }}>{n.title}</p>
-                          <span className="text-xs text-gray">{timeAgo(n.created_at)}</span>
+                {notifications.map(n => {
+                  const IconComponent = NOTIFICATION_ICON_MAP[n.category] || NOTIFICATION_ICON_MAP.general;
+                  return (
+                    <div
+                      key={n.id}
+                      className="card"
+                      onClick={() => !n.read && handleMarkRead(n.id)}
+                      style={{
+                        padding: '14px 16px',
+                        cursor: n.read ? 'default' : 'pointer',
+                        opacity: n.read ? 0.7 : 1,
+                        borderLeft: n.read ? 'none' : `3px solid ${Colors.sage}`,
+                        transition: 'opacity 0.2s',
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                        <span style={{ flexShrink: 0, display: 'flex' }}><IconComponent size={20} color={Colors.copper} /></span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <p style={{ fontWeight: n.read ? 500 : 600, fontSize: 14, color: Colors.charcoal }}>{n.title}</p>
+                            <span className="text-xs text-gray">{timeAgo(n.created_at)}</span>
+                          </div>
+                          {n.body && <p className="text-sm text-gray" style={{ margin: 0 }}>{n.body}</p>}
                         </div>
-                        {n.body && <p className="text-sm text-gray" style={{ margin: 0 }}>{n.body}</p>}
+                        {!n.read && (
+                          <span style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.sage, flexShrink: 0, marginTop: 6 }} />
+                        )}
                       </div>
-                      {!n.read && (
-                        <span style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.sage, flexShrink: 0, marginTop: 6 }} />
-                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>
@@ -213,62 +246,243 @@ export default function Notifications() {
 
         {activeTab === 'settings' && (
           <>
-            {/* Notification Types */}
+            {/* Section 1: Notification Categories */}
             <div className="card mb-lg">
-              <p style={{ fontWeight: 600, marginBottom: 16 }}>Notification Types</p>
-              <div className="flex-col gap-md">
-                {(() => {
-                  const tier = useStore.getState().user?.subscription_tier || 'free';
-                  const hasWeather = canAccess(tier, 'weather_alerts');
-                  return [
-                    { key: 'taskReminders' as const, label: 'Task Reminders', desc: 'Get reminded about upcoming maintenance tasks', locked: false },
-                    { key: 'weatherAlerts' as const, label: 'Weather Alerts', desc: hasWeather ? 'Notifications about severe weather events' : 'Upgrade to Home Plan for weather alerts', locked: !hasWeather },
-                    { key: 'equipmentLifecycle' as const, label: 'Equipment Lifecycle Warnings', desc: 'Alerts when equipment is nearing end of life', locked: false },
-                  ].map((item, i, arr) => (
-                    <div key={item.key} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      paddingBottom: i < arr.length - 1 ? 16 : 0,
-                      borderBottom: i < arr.length - 1 ? `1px solid ${Colors.lightGray}` : 'none',
-                      opacity: item.locked ? 0.5 : 1,
+              <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 6, color: Colors.charcoal }}>Notification Categories</p>
+              <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>Choose how you receive each type of notification</p>
+
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${Colors.lightGray}` }}>
+                    <th style={{ textAlign: 'left', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>Category</th>
+                    <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>Push</th>
+                    <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>Email</th>
+                    <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>In-App</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const categories: Array<{ key: NotificationCategory; locked?: boolean; lockReason?: string }> = [
+                      { key: 'home_maintenance' },
+                      { key: 'weather_safety', locked: !canAccess(userTier, 'weather_alerts'), lockReason: 'Upgrade to access' },
+                      { key: 'equipment_lifecycle' },
+                      { key: 'pro_services', locked: userTier !== 'pro' && userTier !== 'pro_plus', lockReason: 'Pro plan only' },
+                      { key: 'account_billing' },
+                    ];
+
+                    return categories.map((cat, idx) => {
+                      const categoryPrefs = prefs[cat.key as keyof NotificationPreferences] as CategoryChannelPrefs;
+                      return (
+                        <tr key={cat.key} style={{ borderBottom: idx < categories.length - 1 ? `1px solid ${Colors.lightGray}` : 'none', opacity: cat.locked ? 0.5 : 1 }}>
+                          <td style={{ paddingTop: 14, paddingBottom: 14 }}>
+                            <div>
+                              <p style={{ fontWeight: 500, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px 0' }}>{CATEGORY_INFO[cat.key].label}</p>
+                              <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
+                                {cat.locked ? cat.lockReason : CATEGORY_INFO[cat.key].desc}
+                              </p>
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 14 }}>
+                            <input
+                              type="checkbox"
+                              checked={categoryPrefs?.push || false}
+                              onChange={(e) => !cat.locked && updateCategoryChannels(cat.key, 'push', e.target.checked)}
+                              disabled={cat.locked}
+                              style={{ width: 18, height: 18, cursor: cat.locked ? 'not-allowed' : 'pointer' }}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 14 }}>
+                            <input
+                              type="checkbox"
+                              checked={categoryPrefs?.email || false}
+                              onChange={(e) => !cat.locked && updateCategoryChannels(cat.key, 'email', e.target.checked)}
+                              disabled={cat.locked}
+                              style={{ width: 18, height: 18, cursor: cat.locked ? 'not-allowed' : 'pointer' }}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 14 }}>
+                            <input
+                              type="checkbox"
+                              checked={categoryPrefs?.in_app || false}
+                              onChange={(e) => !cat.locked && updateCategoryChannels(cat.key, 'in_app', e.target.checked)}
+                              disabled={cat.locked}
+                              style={{ width: 18, height: 18, cursor: cat.locked ? 'not-allowed' : 'pointer' }}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Section 2: Delivery & Timing */}
+            <div className="card mb-lg">
+              <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 16, color: Colors.charcoal }}>Delivery & Timing</p>
+
+              {/* How often */}
+              <div style={{ marginBottom: 24 }}>
+                <p style={{ fontWeight: 500, fontSize: 13, marginBottom: 12, color: Colors.charcoal }}>How often</p>
+                <div className="flex-col gap-sm">
+                  {[
+                    { value: 'instant' as DigestFrequency, label: 'Instant' },
+                    { value: 'daily_summary' as DigestFrequency, label: 'Daily Summary' },
+                    { value: 'weekly_summary' as DigestFrequency, label: 'Weekly Summary' },
+                  ].map(option => (
+                    <label key={option.value} style={{
+                      padding: '12px 16px', borderRadius: 4,
+                      border: `1.5px solid ${prefs.digest_frequency === option.value ? Colors.copper : Colors.lightGray}`,
+                      background: prefs.digest_frequency === option.value ? Colors.copperMuted : Colors.cream,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
                     }}>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal }}>{item.label}</p>
-                        <p className="text-xs text-gray">{item.desc}</p>
-                      </div>
-                      <input type="checkbox" checked={item.locked ? false : prefs[item.key]} onChange={() => !item.locked && toggle(item.key)} disabled={item.locked} style={{ width: 20, height: 20, cursor: item.locked ? 'not-allowed' : 'pointer' }} />
-                    </div>
-                  ));
-                })()}
+                      <input
+                        type="radio"
+                        name="digestFrequency"
+                        value={option.value}
+                        checked={prefs.digest_frequency === option.value}
+                        onChange={(e) => setPrefs(prev => ({ ...prev, digest_frequency: e.target.value as DigestFrequency }))}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <span style={{ color: Colors.charcoal, fontWeight: 500 }}>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reminder lead time */}
+              <div style={{ marginBottom: 24 }}>
+                <p style={{ fontWeight: 500, fontSize: 13, marginBottom: 12, color: Colors.charcoal }}>Reminder lead time</p>
+                <div className="flex-col gap-sm">
+                  {[
+                    { value: 'day_of', label: 'Day of' },
+                    { value: '1_day_before', label: '1 day before' },
+                    { value: '3_days_before', label: '3 days before' },
+                    { value: '1_week_before', label: '1 week before' },
+                  ].map(option => (
+                    <label key={option.value} style={{
+                      padding: '12px 16px', borderRadius: 4,
+                      border: `1.5px solid ${prefs.reminder_lead_time === option.value ? Colors.copper : Colors.lightGray}`,
+                      background: prefs.reminder_lead_time === option.value ? Colors.copperMuted : Colors.cream,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
+                    }}>
+                      <input
+                        type="radio"
+                        name="reminderLeadTime"
+                        value={option.value}
+                        checked={prefs.reminder_lead_time === option.value}
+                        onChange={(e) => setPrefs(prev => ({ ...prev, reminder_lead_time: e.target.value as any }))}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <span style={{ color: Colors.charcoal, fontWeight: 500 }}>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Preferred time */}
+              <div>
+                <p style={{ fontWeight: 500, fontSize: 13, marginBottom: 12, color: Colors.charcoal }}>Preferred time</p>
+                <div className="flex-col gap-sm">
+                  {[
+                    { value: 'morning', label: 'Morning (8 AM)' },
+                    { value: 'afternoon', label: 'Afternoon (2 PM)' },
+                    { value: 'evening', label: 'Evening (6 PM)' },
+                  ].map(option => (
+                    <label key={option.value} style={{
+                      padding: '12px 16px', borderRadius: 4,
+                      border: `1.5px solid ${prefs.preferred_time === option.value ? Colors.copper : Colors.lightGray}`,
+                      background: prefs.preferred_time === option.value ? Colors.copperMuted : Colors.cream,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
+                    }}>
+                      <input
+                        type="radio"
+                        name="preferredTime"
+                        value={option.value}
+                        checked={prefs.preferred_time === option.value}
+                        onChange={(e) => setPrefs(prev => ({ ...prev, preferred_time: e.target.value as any }))}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <span style={{ color: Colors.charcoal, fontWeight: 500 }}>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Reminder Timing */}
+            {/* Section 3: Quiet Hours */}
             <div className="card mb-lg">
-              <p style={{ fontWeight: 600, marginBottom: 16 }}>Reminder Timing</p>
-              <div className="flex-col gap-sm">
-                {[
-                  { value: 'day_of', label: 'Day of task' },
-                  { value: '1_day_before', label: '1 day before' },
-                  { value: '3_days_before', label: '3 days before' },
-                ].map(timing => (
-                  <label key={timing.value} style={{
-                    padding: '12px 16px', borderRadius: 4,
-                    border: `1.5px solid ${prefs.reminderTiming === timing.value ? Colors.copper : Colors.lightGray}`,
-                    background: prefs.reminderTiming === timing.value ? Colors.copperMuted : Colors.cream,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
-                  }}>
-                    <input type="radio" name="reminderTiming" value={timing.value} checked={prefs.reminderTiming === timing.value}
-                      onChange={(e) => setPrefs(prev => ({ ...prev, reminderTiming: e.target.value as any }))} style={{ cursor: 'pointer' }} />
-                    <span style={{ color: Colors.charcoal, fontWeight: 500 }}>{timing.label}</span>
-                  </label>
-                ))}
+              <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 16, color: Colors.charcoal }}>Quiet Hours</p>
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={prefs.quiet_hours_enabled || false}
+                    onChange={(e) => setPrefs(prev => ({ ...prev, quiet_hours_enabled: e.target.checked }))}
+                    style={{ width: 18, height: 18, cursor: 'pointer' }}
+                  />
+                  <span style={{ fontWeight: 500, color: Colors.charcoal }}>Enable quiet hours</span>
+                </label>
               </div>
+
+              {prefs.quiet_hours_enabled && (
+                <div style={{ marginTop: 16, marginBottom: 12 }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: Colors.medGray }}>Start time</label>
+                      <input
+                        type="time"
+                        value={prefs.quiet_hours_start || '22:00'}
+                        onChange={(e) => setPrefs(prev => ({ ...prev, quiet_hours_start: e.target.value }))}
+                        style={{
+                          width: '100%', padding: '8px 12px', borderRadius: 4,
+                          border: `1px solid ${Colors.lightGray}`, fontSize: 14, fontFamily: 'monospace',
+                        }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: Colors.medGray }}>End time</label>
+                      <input
+                        type="time"
+                        value={prefs.quiet_hours_end || '07:00'}
+                        onChange={(e) => setPrefs(prev => ({ ...prev, quiet_hours_end: e.target.value }))}
+                        style={{
+                          width: '100%', padding: '8px 12px', borderRadius: 4,
+                          border: `1px solid ${Colors.lightGray}`, fontSize: 14, fontFamily: 'monospace',
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 12, margin: '12px 0 0 0' }}>
+                    Push notifications are silenced during quiet hours. Emails and in-app are unaffected.
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Save */}
+            {/* Section 4: Weekly Summary */}
+            <div className="card mb-lg">
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={prefs.weekly_summary || false}
+                  onChange={(e) => setPrefs(prev => ({ ...prev, weekly_summary: e.target.checked }))}
+                  style={{ width: 18, height: 18, cursor: 'pointer', marginTop: 2, flexShrink: 0 }}
+                />
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px 0' }}>Weekly Home Health Summary</p>
+                  <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>Get a weekly email recap of your home's maintenance status</p>
+                </div>
+              </label>
+            </div>
+
+            {/* Save Button */}
             <div>
-              <button className="btn btn-primary" onClick={handleSave} style={{ width: '100%', marginBottom: 12 }}>Save Preferences</button>
-              {saved && <p style={{ textAlign: 'center', fontSize: 12, color: Colors.success, fontWeight: 600 }}>{'\u2713'} Preferences saved</p>}
+              <button className="btn btn-primary" onClick={handleSave} style={{ width: '100%', marginBottom: 12 }}>
+                Save Preferences
+              </button>
+              {saved && <p style={{ textAlign: 'center', fontSize: 12, color: Colors.success, fontWeight: 600 }}><CheckCircleIcon size={14} style={{ display: 'inline-block', marginRight: 4, verticalAlign: 'middle' }} color={Colors.success} /> Preferences saved</p>}
             </div>
           </>
         )}

@@ -262,8 +262,8 @@ export default function Calendar() {
                   <div key={task.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--light-gray)' }}>
                     <div className="flex items-center gap-md">
                       <div style={{ width: 4, height: 40, borderRadius: 2, background: PriorityColors[task.priority] }} />
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontWeight: 600, fontSize: 14 }}>{task.title}</p>
+                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                        <p style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</p>
                         <p className="text-xs text-gray">
                           {task.category} &middot; ~{task.estimated_minutes || '?'} min
                           {!selectedDate && (

@@ -1,16 +1,18 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/utils';
 import { reopenTask as reopenTaskApi } from '@/services/supabase';
+import { getDisplayStatus } from '@/services/taskEngine';
 
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { tasks, reopenTask } = useStore();
 
-  const task = tasks.find(t => t.id === id);
+  const rawTask = tasks.find(t => t.id === id);
+  const task = useMemo(() => rawTask ? { ...rawTask, status: getDisplayStatus(rawTask) } : undefined, [rawTask]);
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
 
   const handleReopen = async () => {

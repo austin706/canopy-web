@@ -8,7 +8,7 @@ import { getTasks, createTasks } from '@/services/supabase';
 import { fetchWeather } from '@/services/weather';
 import { Skeleton } from '@/components/Skeleton';
 import { HealthGauge } from '@/components/HealthGauge';
-import { generateTasksForHome } from '@/services/taskEngine';
+import { generateTasksForHome, getDisplayStatus } from '@/services/taskEngine';
 import { geocodeAddress } from '@/services/geocoding';
 import { upsertHome } from '@/services/supabase';
 import { CanopyLogo, NavWeather, NavHome } from '@/components/icons/CanopyLogo';
@@ -115,7 +115,7 @@ export default function Dashboard() {
   const taskLimit = getTaskLimit(tier);
 
   const isDemo = tasks.length === 0;
-  const displayTasks = isDemo ? DEMO_TASKS : tasks;
+  const displayTasks = isDemo ? DEMO_TASKS : tasks.map(t => ({ ...t, status: getDisplayStatus(t) }));
   const tasksToShow = taskLimit ? displayTasks.slice(0, taskLimit) : displayTasks;
   const displayWeather = weather || DEMO_WEATHER;
 

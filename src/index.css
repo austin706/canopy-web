@@ -300,10 +300,10 @@ tr:hover td { background: var(--warm-white); }
 /* Task card */
 .task-card { display: flex; align-items: center; gap: 16px; }
 .task-priority { width: 4px; height: 48px; border-radius: 2px; flex-shrink: 0; }
-.task-info { flex: 1; }
-.task-title { font-size: 14px; font-weight: 600; color: var(--charcoal); }
+.task-info { flex: 1; min-width: 0; overflow: hidden; }
+.task-title { font-size: 14px; font-weight: 600; color: var(--charcoal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-meta { font-size: 12px; color: var(--med-gray); margin-top: 2px; }
-.task-actions { display: flex; gap: 8px; }
+.task-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
 /* Equipment card */
 .equip-card { display: flex; gap: 16px; align-items: flex-start; }

@@ -2,7 +2,8 @@
 // Canopy Web — Shared Utilities
 // ===============================================================
 import type { MaintenanceTask, MaintenanceLog } from '@/types';
-import { completeTask, addMaintenanceLog, supabase } from '@/services/supabase';
+import { completeTask, addMaintenanceLog, createTask, supabase } from '@/services/supabase';
+import { createNextDynamicTask } from '@/services/taskEngine';
 import { useStore } from '@/store/useStore';
 
 /** Generate a UUID v4 */
@@ -43,6 +44,15 @@ export const quickCompleteTask = async (task: MaintenanceTask): Promise<void> =>
   // 3. Persist to Supabase (non-blocking — UI already updated)
   try { await completeTask(task.id); } catch (err) { console.warn('Task complete API call failed:', err); }
   try { await addMaintenanceLog(logEntry); } catch (err) { console.warn('Maintenance log save failed:', err); }
+
+  // 4. If this is a dynamic task, schedule the next occurrence
+  const nextTask = createNextDynamicTask(task, new Date().toISOString());
+  if (nextTask) {
+    // Add to local store immediately
+    useStore.getState().addTask(nextTask);
+    // Persist to Supabase
+    try { await createTask(nextTask); } catch (err) { console.warn('Next dynamic task creation failed:', err); }
+  }
 };
 
 /**

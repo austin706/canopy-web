@@ -139,7 +139,8 @@ export interface Equipment {
 
 export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low';
 export type TaskStatus = 'upcoming' | 'due' | 'overdue' | 'completed' | 'skipped';
-export type TaskFrequency = 'monthly' | 'quarterly' | 'biannual' | 'annual' | 'as_needed';
+export type TaskFrequency = 'monthly' | 'quarterly' | 'biannual' | 'annual' | 'as_needed' | 'weekly';
+export type TaskSchedulingType = 'dynamic' | 'seasonal';
 
 export interface MaintenanceTask {
   id: string;
@@ -162,6 +163,10 @@ export interface MaintenanceTask {
   is_weather_triggered: boolean;
   applicable_months: number[];
   applicable_climate_zones?: string[];
+
+  // Dynamic scheduling support
+  scheduling_type?: TaskSchedulingType; // 'dynamic' = next due from completion, 'seasonal' = fixed months
+  interval_days?: number; // for dynamic tasks: days until next occurrence after completion
 
   // Custom task support
   is_custom?: boolean;

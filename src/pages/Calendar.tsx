@@ -3,6 +3,7 @@ import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask } from '@/services/utils';
 import { getTasks, reopenTask as reopenTaskApi } from '@/services/supabase';
+import { getDisplayStatus } from '@/services/taskEngine';
 import type { MaintenanceTask } from '@/types';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -64,26 +65,31 @@ export default function Calendar() {
     return days;
   }, [year, month]);
 
+  // Enrich tasks with computed display status (auto-calculates overdue/due/upcoming)
+  const enrichedTasks = useMemo(() => {
+    return tasks.map(t => ({ ...t, status: getDisplayStatus(t) }));
+  }, [tasks]);
+
   const tasksByDate = useMemo(() => {
-    const map: Record<string, typeof tasks> = {};
-    tasks.forEach(t => {
+    const map: Record<string, MaintenanceTask[]> = {};
+    enrichedTasks.forEach(t => {
       const d = new Date(t.due_date);
       const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
       if (!map[key]) map[key] = [];
       map[key].push(t);
     });
     return map;
-  }, [tasks]);
+  }, [enrichedTasks]);
 
   // All tasks for the current month, sorted by due date
   const monthTasks = useMemo(() => {
-    return tasks
+    return enrichedTasks
       .filter(t => {
         const d = new Date(t.due_date);
         return d.getMonth() === month && d.getFullYear() === year;
       })
       .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
-  }, [tasks, month, year]);
+  }, [enrichedTasks, month, year]);
 
   const today = new Date();
   const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;

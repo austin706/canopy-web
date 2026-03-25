@@ -224,6 +224,8 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .badge-copper { background: var(--copper-muted); color: var(--copper-dark); }
 .badge-sage { background: var(--sage-muted); color: var(--sage-dark); }

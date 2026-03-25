@@ -85,9 +85,10 @@ const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
  * Sends the image to Claude API (via Edge Function when available) and extracts structured equipment data
  */
 export const scanEquipmentLabel = async (imageBase64: string): Promise<ScanResult> => {
+  // Note: imageBase64 is only sent inside messages (not duplicated at top level)
+  // to keep payload size within Supabase Edge Function limits
   const response = await callAI({
     action: 'scan-equipment',
-    imageBase64,
     messages: [
       {
         role: 'user',

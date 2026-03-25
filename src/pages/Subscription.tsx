@@ -8,6 +8,7 @@ import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import ServiceAreaMap from '@/components/ServiceAreaMap';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export default function Subscription() {
   const navigate = useNavigate();
@@ -55,6 +56,7 @@ export default function Subscription() {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'apikey': SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
           tier: plan,

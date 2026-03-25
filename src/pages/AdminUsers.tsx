@@ -65,7 +65,7 @@ export default function AdminUsers() {
                   </td>
                   <td>
                     <select className="form-select" value={u.role || 'user'} onChange={e => handleRoleChange(u.id, e.target.value)} style={{ width: 120, padding: '4px 8px', fontSize: 12 }}>
-                      <option value="user">User</option><option value="agent">Agent</option><option value="admin">Admin</option>
+                      <option value="user">User</option><option value="agent">Agent</option><option value="pro_provider">Pro Provider</option><option value="admin">Admin</option>
                     </select>
                   </td>
                   <td className="text-sm text-gray">{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>

@@ -180,7 +180,22 @@ export const redeemGiftCode = async (code: string, userId: string) => {
   const newExpiry = new Date();
   newExpiry.setMonth(newExpiry.getMonth() + (gc.duration_months || 12));
   await supabase.from('gift_codes').update({ redeemed_by: userId, redeemed_at: new Date().toISOString() }).eq('id', gc.id);
-  await supabase.from('profiles').update({ subscription_tier: gc.tier, subscription_expires_at: newExpiry.toISOString(), agent_id: gc.agent_id }).eq('id', userId);
+  const profileUpdate: Record<string, any> = { subscription_tier: gc.tier, subscription_expires_at: newExpiry.toISOString(), agent_id: gc.agent_id };
+  if (gc.client_name) profileUpdate.full_name = gc.client_name;
+  await supabase.from('profiles').update(profileUpdate).eq('id', userId);
+
+  // If the gift code has a pending home (pre-configured by agent), create it for the user
+  if (gc.pending_home && typeof gc.pending_home === 'object') {
+    const homeData = {
+      id: crypto.randomUUID(),
+      user_id: userId,
+      ...gc.pending_home,
+      created_at: new Date().toISOString(),
+    };
+    await supabase.from('homes').upsert(homeData);
+    // Mark onboarding as complete since home is set up
+    await supabase.from('profiles').update({ onboarding_complete: true }).eq('id', userId);
+  }
 
   let agent = null;
   if (gc.agent_id) {

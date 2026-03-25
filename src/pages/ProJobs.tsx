@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
+import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 
 interface Job {
@@ -22,6 +23,8 @@ type FilterTab = 'all' | 'pending' | 'scheduled' | 'completed';
 
 export default function ProJobs() {
   const navigate = useNavigate();
+  const { user } = useStore();
+  const isAdmin = user?.role === 'admin';
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
@@ -39,6 +42,12 @@ export default function ProJobs() {
         return;
       }
 
+      // Admin sees all jobs
+      if (isAdmin) {
+        await loadAllJobs();
+        return;
+      }
+
       const { data: provider } = await supabase
         .from('pro_providers')
         .select('id, service_categories')
@@ -51,6 +60,20 @@ export default function ProJobs() {
       }
     } catch (err) {
       console.error('Error loading provider:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAllJobs = async () => {
+    try {
+      const { data } = await supabase
+        .from('pro_requests')
+        .select('*, user:user_id(full_name, email), home:home_id(address, city, state)')
+        .order('created_at', { ascending: false });
+      setJobs(data || []);
+    } catch (err) {
+      console.error('Error loading all jobs:', err);
     } finally {
       setLoading(false);
     }

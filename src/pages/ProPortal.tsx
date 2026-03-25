@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
+import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 
 interface ProProvider {
@@ -13,6 +14,8 @@ interface ProProvider {
   service_categories: string[];
   service_area_miles: number;
   is_available: boolean;
+  rating?: number;
+  total_reviews: number;
 }
 
 interface JobStats {
@@ -23,19 +26,53 @@ interface JobStats {
 
 export default function ProPortal() {
   const navigate = useNavigate();
+  const { user } = useStore();
+  const isAdmin = user?.role === 'admin';
+
+  // Provider mode (single provider logged in)
   const [provider, setProvider] = useState<ProProvider | null>(null);
-  const [stats, setStats] = useState<JobStats>({
-    activeJobs: 0,
-    completedJobs: 0,
-    pendingJobs: 0,
-  });
+  const [stats, setStats] = useState<JobStats>({ activeJobs: 0, completedJobs: 0, pendingJobs: 0 });
+
+  // Admin mode (overview of all providers)
+  const [allProviders, setAllProviders] = useState<ProProvider[]>([]);
+  const [adminStats, setAdminStats] = useState({ totalProviders: 0, availableProviders: 0, totalRequests: 0, pendingRequests: 0 });
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDashboardData();
+    if (isAdmin) {
+      loadAdminDashboard();
+    } else {
+      loadProviderDashboard();
+    }
   }, []);
 
-  const loadDashboardData = async () => {
+  // ─── Admin: load overview of all providers ───
+  const loadAdminDashboard = async () => {
+    try {
+      const [providersRes, requestsRes, pendingRes] = await Promise.all([
+        supabase.from('pro_providers').select('*'),
+        supabase.from('pro_requests').select('*', { count: 'exact', head: true }),
+        supabase.from('pro_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      ]);
+
+      const providers = providersRes.data || [];
+      setAllProviders(providers);
+      setAdminStats({
+        totalProviders: providers.length,
+        availableProviders: providers.filter(p => p.is_available).length,
+        totalRequests: requestsRes.count || 0,
+        pendingRequests: pendingRes.count || 0,
+      });
+    } catch (error) {
+      console.error('Error loading admin dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── Provider: load own dashboard ───
+  const loadProviderDashboard = async () => {
     try {
       const { data: authUser } = await supabase.auth.getUser();
       if (!authUser?.user) {
@@ -117,6 +154,110 @@ export default function ProPortal() {
     );
   }
 
+  // ═══ Admin View ═══
+  if (isAdmin) {
+    return (
+      <div className="page" style={{ maxWidth: 900 }}>
+        <div className="page-header">
+          <div>
+            <h1>Pro Portal — Admin</h1>
+            <p className="subtitle">Manage all service providers and requests</p>
+          </div>
+        </div>
+
+        {/* Admin Stats */}
+        <div className="grid-3 mb-lg" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+          <div className="card" style={{ textAlign: 'center', padding: '24px 16px' }}>
+            <div style={{ fontSize: 28, fontWeight: 'bold', color: Colors.sage, marginBottom: 6 }}>
+              {adminStats.totalProviders}
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: Colors.medGray }}>Total Providers</p>
+          </div>
+          <div className="card" style={{ textAlign: 'center', padding: '24px 16px' }}>
+            <div style={{ fontSize: 28, fontWeight: 'bold', color: Colors.success, marginBottom: 6 }}>
+              {adminStats.availableProviders}
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: Colors.medGray }}>Available</p>
+          </div>
+          <div className="card" style={{ textAlign: 'center', padding: '24px 16px' }}>
+            <div style={{ fontSize: 28, fontWeight: 'bold', color: Colors.copper, marginBottom: 6 }}>
+              {adminStats.totalRequests}
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: Colors.medGray }}>Total Requests</p>
+          </div>
+          <div className="card" style={{ textAlign: 'center', padding: '24px 16px' }}>
+            <div style={{ fontSize: 28, fontWeight: 'bold', color: Colors.warning, marginBottom: 6 }}>
+              {adminStats.pendingRequests}
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: Colors.medGray }}>Pending</p>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid-3 mb-lg" style={{ gap: 16 }}>
+          <button
+            className="card btn btn-primary"
+            onClick={() => navigate('/pro-portal/jobs')}
+            style={{ backgroundColor: Colors.sage, color: 'white', border: 'none', padding: '24px', textAlign: 'center', cursor: 'pointer', fontSize: 16 }}
+          >
+            All Jobs
+          </button>
+          <button
+            className="card btn"
+            onClick={() => navigate('/pro-portal/visit-schedule')}
+            style={{ padding: '24px', textAlign: 'center', cursor: 'pointer', fontSize: 16 }}
+          >
+            Visit Schedule
+          </button>
+          <button
+            className="card btn"
+            onClick={() => navigate('/pro-portal/quotes-invoices')}
+            style={{ padding: '24px', textAlign: 'center', cursor: 'pointer', fontSize: 16 }}
+          >
+            Quotes & Invoices
+          </button>
+        </div>
+
+        {/* Provider List */}
+        <h2 style={{ fontSize: 18, marginBottom: 16 }}>Registered Providers</h2>
+        {allProviders.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: 40, color: Colors.medGray }}>
+            <p>No providers registered yet.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {allProviders.map(p => (
+              <div key={p.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 16 }}>{p.business_name}</div>
+                  <div style={{ fontSize: 13, color: Colors.medGray, marginTop: 2 }}>
+                    {p.contact_name} · {p.email} · {p.phone}
+                  </div>
+                  <div style={{ fontSize: 12, color: Colors.medGray, marginTop: 4 }}>
+                    Categories: {p.service_categories?.join(', ') || 'None'} · {p.service_area_miles} mi radius
+                  </div>
+                </div>
+                <span
+                  style={{
+                    padding: '4px 12px',
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    backgroundColor: p.is_available ? '#e8f5e9' : '#fce4ec',
+                    color: p.is_available ? Colors.success : Colors.error,
+                  }}
+                >
+                  {p.is_available ? 'Available' : 'Unavailable'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ═══ Provider View ═══
   return (
     <div className="page" style={{ maxWidth: 900 }}>
       <div className="page-header">
@@ -169,39 +310,21 @@ export default function ProPortal() {
         <button
           className="card btn btn-primary"
           onClick={() => navigate('/pro-portal/jobs')}
-          style={{
-            backgroundColor: Colors.sage,
-            color: 'white',
-            border: 'none',
-            padding: '24px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            fontSize: 16,
-          }}
+          style={{ backgroundColor: Colors.sage, color: 'white', border: 'none', padding: '24px', textAlign: 'center', cursor: 'pointer', fontSize: 16 }}
         >
           View All Jobs
         </button>
         <button
           className="card btn"
           onClick={() => navigate('/pro-portal/visit-schedule')}
-          style={{
-            padding: '24px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            fontSize: 16,
-          }}
+          style={{ padding: '24px', textAlign: 'center', cursor: 'pointer', fontSize: 16 }}
         >
           Visit Schedule
         </button>
         <button
           className="card btn"
           onClick={() => navigate('/pro-portal/quotes-invoices')}
-          style={{
-            padding: '24px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            fontSize: 16,
-          }}
+          style={{ padding: '24px', textAlign: 'center', cursor: 'pointer', fontSize: 16 }}
         >
           Quotes & Invoices
         </button>
@@ -210,24 +333,14 @@ export default function ProPortal() {
         <button
           className="card btn"
           onClick={() => navigate('/pro-portal/availability')}
-          style={{
-            padding: '24px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            fontSize: 16,
-          }}
+          style={{ padding: '24px', textAlign: 'center', cursor: 'pointer', fontSize: 16 }}
         >
           Set Availability
         </button>
         <button
           className="card btn"
           onClick={() => navigate('/pro-portal/profile')}
-          style={{
-            padding: '24px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            fontSize: 16,
-          }}
+          style={{ padding: '24px', textAlign: 'center', cursor: 'pointer', fontSize: 16 }}
         >
           Edit Profile
         </button>

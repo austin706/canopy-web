@@ -31,50 +31,53 @@ export interface ScanResult {
 }
 
 /**
- * Call Claude API either through Supabase Edge Function (preferred) or direct (fallback)
+ * Call Claude API through Supabase Edge Function (scan-equipment)
+ * Routes all AI actions through a single Edge Function that keeps the API key server-side.
  */
 const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
-  // Try Edge Function route if configured
-  if (SUPABASE_URL) {
-    try {
-      // Always call scan-equipment function — it routes internally by action field
-      const response = await supabase.functions.invoke('scan-equipment', {
-        body: payload,
-      });
-
-      // Handle authentication errors from Edge Function
-      if (response.error) {
-        if (response.error?.status === 401) {
-          throw new Error('Authentication failed. Please sign in again.');
-        }
-        throw new Error(`AI scan failed: ${response.error?.message || 'Unknown error'}`);
-      }
-
-      // supabase.functions.invoke returns { data, error }
-      // Return only the data portion for consistency
-      return new Response(JSON.stringify(response.data), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } catch (error) {
-      // Re-throw authentication errors and explicit scan failures
-      if (error instanceof Error && (
-        error.message.includes('Authentication failed') ||
-        error.message.includes('AI scan failed')
-      )) {
-        throw error;
-      }
-      console.warn('Edge Function call failed:', error);
-      throw new Error(
-        'The AI scanner service is temporarily unavailable. Please try again later.'
-      );
-    }
+  if (!SUPABASE_URL) {
+    throw new Error(
+      'The AI scanner requires server-side configuration. Please ensure Supabase Edge Function is set up.'
+    );
   }
 
-  // If we reach here, Edge Function is not configured
-  throw new Error(
-    'The AI scanner requires server-side configuration. Please ensure Supabase Edge Function is set up.'
-  );
+  try {
+    // Always call scan-equipment function — it routes internally by action field
+    console.log('[AI] Calling scan-equipment Edge Function, action:', payload.action);
+    const response = await supabase.functions.invoke('scan-equipment', {
+      body: payload,
+    });
+
+    // Handle errors from Edge Function
+    if (response.error) {
+      const status = (response.error as any)?.status;
+      const msg = response.error?.message || 'Unknown error';
+      console.error('[AI] Edge Function error:', status, msg);
+
+      if (status === 401) {
+        throw new Error('Authentication failed. Please sign in again.');
+      }
+      throw new Error(`AI scan failed: ${msg}`);
+    }
+
+    // supabase.functions.invoke returns { data, error }
+    return new Response(JSON.stringify(response.data), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    // Re-throw known errors with their original message
+    if (error instanceof Error && (
+      error.message.includes('Authentication failed') ||
+      error.message.includes('AI scan failed')
+    )) {
+      throw error;
+    }
+    console.error('[AI] Edge Function call failed:', error);
+    throw new Error(
+      `The AI scanner service is temporarily unavailable. ${error instanceof Error ? error.message : 'Please try again later.'}`
+    );
+  }
 };
 
 /**

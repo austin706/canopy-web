@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
+import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 
 interface ProMonthlyVisit {
@@ -28,6 +29,8 @@ interface LineItem {
 
 export default function ProVisitSchedule() {
   const navigate = useNavigate();
+  const { user } = useStore();
+  const isAdmin = user?.role === 'admin';
   const [visits, setVisits] = useState<ProMonthlyVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [providerId, setProviderId] = useState<string | null>(null);
@@ -63,6 +66,12 @@ export default function ProVisitSchedule() {
         return;
       }
 
+      // Admin sees all visits
+      if (isAdmin) {
+        await loadVisits(null);
+        return;
+      }
+
       const { data: provider } = await supabase
         .from('pro_providers')
         .select('id')
@@ -80,22 +89,28 @@ export default function ProVisitSchedule() {
     }
   };
 
-  const loadVisits = async (provId: string) => {
+  const loadVisits = async (provId: string | null) => {
     try {
       const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString().split('T')[0];
       const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).toISOString().split('T')[0];
 
-      const { data: visitsData } = await supabase
+      let query = supabase
         .from('pro_service_appointments')
         .select('*, user:user_id(full_name, email), home:home_id(address, city, state)')
-        .eq('pro_provider_id', provId)
         .gte('scheduled_date', monthStart)
         .lte('scheduled_date', monthEnd)
         .order('scheduled_date', { ascending: true });
 
+      if (provId) {
+        query = query.eq('pro_provider_id', provId);
+      }
+
+      const { data: visitsData } = await query;
       setVisits(visitsData || []);
     } catch (err) {
       console.error('Error loading visits:', err);
+    } finally {
+      setLoading(false);
     }
   };
 

@@ -118,8 +118,10 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
       setScanData(result);
       setEquipmentName(name);
       setScanned(true);
-    } catch (err) {
+    } catch (err: any) {
       setScanning(false);
+      const errorMsg = err?.message || 'Scan failed. Please try again.';
+      setError(errorMsg);
       setShowScanFailurePopup(true);
       console.error('Scan error:', err);
     }
@@ -210,6 +212,22 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
           >
             Couldn't read this label
           </h3>
+
+          {scanError && (
+            <p
+              style={{
+                fontSize: 12,
+                color: Colors.error,
+                margin: '0 0 12px 0',
+                lineHeight: '18px',
+                padding: '8px 12px',
+                backgroundColor: `${Colors.error}10`,
+                borderRadius: 8,
+              }}
+            >
+              {scanError}
+            </p>
+          )}
 
           <p
             style={{

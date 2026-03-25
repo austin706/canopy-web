@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
+import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 
 interface LineItem {
@@ -44,6 +45,8 @@ type TabType = 'quotes' | 'invoices';
 
 export default function ProQuotesInvoices() {
   const navigate = useNavigate();
+  const { user } = useStore();
+  const isAdmin = user?.role === 'admin';
   const [activeTab, setActiveTab] = useState<TabType>('quotes');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -73,6 +76,12 @@ export default function ProQuotesInvoices() {
         return;
       }
 
+      // Admin sees all quotes/invoices
+      if (isAdmin) {
+        await Promise.all([loadQuotes(null), loadInvoices(null)]);
+        return;
+      }
+
       const { data: provider } = await supabase
         .from('pro_providers')
         .select('id')
@@ -90,28 +99,36 @@ export default function ProQuotesInvoices() {
     }
   };
 
-  const loadQuotes = async (provId: string) => {
+  const loadQuotes = async (provId: string | null) => {
     try {
-      const { data } = await supabase
+      let query = supabase
         .from('pro_quotes')
         .select('*, user:user_id(full_name)')
-        .eq('pro_provider_id', provId)
         .order('created_at', { ascending: false });
 
+      if (provId) {
+        query = query.eq('pro_provider_id', provId);
+      }
+
+      const { data } = await query;
       setQuotes(data || []);
     } catch (err) {
       console.error('Error loading quotes:', err);
     }
   };
 
-  const loadInvoices = async (provId: string) => {
+  const loadInvoices = async (provId: string | null) => {
     try {
-      const { data } = await supabase
+      let query = supabase
         .from('pro_invoices')
         .select('*, user:user_id(full_name)')
-        .eq('pro_provider_id', provId)
         .order('created_at', { ascending: false });
 
+      if (provId) {
+        query = query.eq('pro_provider_id', provId);
+      }
+
+      const { data } = await query;
       setInvoices(data || []);
     } catch (err) {
       console.error('Error loading invoices:', err);

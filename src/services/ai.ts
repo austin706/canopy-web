@@ -121,6 +121,15 @@ Return ONLY valid JSON, no other text.`,
 
   const data = await response.json();
 
+  // Check for error response from Edge Function (v10+ returns 200 with _error flag)
+  if (data._error) {
+    const errorDetail = data.anthropic_error
+      ? JSON.stringify(data.anthropic_error)
+      : data.message || 'Unknown AI error';
+    console.error('[AI] Anthropic error details:', data);
+    throw new Error(`AI scan error: ${errorDetail}`);
+  }
+
   // Edge Function returns parsed ScanResult directly;
   // Direct API returns Anthropic format: { content: [{ text: "..." }] }
   if (data.content && Array.isArray(data.content)) {
@@ -188,6 +197,15 @@ Return ONLY valid JSON array, no other text.`,
   });
 
   const data = await response.json();
+
+  // Check for error response from Edge Function (v10+ returns 200 with _error flag)
+  if (data._error) {
+    const errorDetail = data.anthropic_error
+      ? JSON.stringify(data.anthropic_error)
+      : data.message || 'Unknown AI error';
+    console.error('[AI] Anthropic error details:', data);
+    throw new Error(`AI analysis error: ${errorDetail}`);
+  }
 
   let tasks: InspectionTask[];
   if (data.content && Array.isArray(data.content)) {

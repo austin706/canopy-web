@@ -227,7 +227,7 @@ export default function Dashboard() {
             ) : (
             <div className="flex-col gap-sm" style={{ maxHeight: 420, overflowY: 'auto' }}>
               {tasksToShow.filter(t => { const d = new Date(t.due_date); return d >= monthStart && d <= monthEnd && t.status !== 'completed'; }).map(task => (
-                <div key={task.id} className="card" style={{ padding: '14px 20px' }}>
+                <div key={task.id} className="card card-clickable" style={{ padding: '14px 20px', cursor: 'pointer' }} onClick={() => !isDemo && navigate(`/task/${task.id}`)}>
                   <div className="task-card">
                     <div className="task-priority" style={{ background: PriorityColors[task.priority] || Colors.silver }} />
                     <div className="task-info">
@@ -239,7 +239,7 @@ export default function Dashboard() {
                     <div className="task-actions">
                       <span className="badge" style={{ background: (StatusColors[task.status] || Colors.silver) + '20', color: StatusColors[task.status] || Colors.silver }}>{task.status}</span>
                       {task.status !== 'completed' && !isDemo && (
-                        <button className="btn btn-sage btn-sm" onClick={() => quickCompleteTask(task)}>Done</button>
+                        <button className="btn btn-sage btn-sm" onClick={(e) => { e.stopPropagation(); quickCompleteTask(task); }}>Done</button>
                       )}
                     </div>
                   </div>

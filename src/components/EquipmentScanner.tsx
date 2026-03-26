@@ -21,6 +21,43 @@ const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
   { value: 'garage', label: 'Garage' },
 ];
 
+/**
+ * Compress and resize an image to stay within Anthropic's processing limits.
+ * Returns a base64 string (without data URL prefix) of the compressed JPEG.
+ */
+function compressImage(dataUrl: string, maxWidth = 1024, maxHeight = 1024, quality = 0.7): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+
+      // Scale down if needed while maintaining aspect ratio
+      if (width > maxWidth || height > maxHeight) {
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Export as JPEG with compression
+      const compressed = canvas.toDataURL('image/jpeg', quality);
+      const base64 = compressed.split(',')[1];
+      resolve(base64);
+    };
+    img.onerror = () => reject(new Error('Failed to load image for compression'));
+    img.src = dataUrl;
+  });
+}
+
 export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentScannerProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>('');
@@ -96,8 +133,9 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
     setShowScanFailurePopup(false);
 
     try {
-      // Convert image to base64
-      const base64String = preview.split(',')[1];
+      // Compress and resize image to stay within API limits
+      // Raw camera photos can be 4-8MB base64; compress to ~200-400KB
+      const base64String = await compressImage(preview, 1024, 1024, 0.7);
 
       // Call AI service
       const result = await scanEquipmentLabel(base64String);

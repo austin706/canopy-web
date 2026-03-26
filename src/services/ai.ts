@@ -47,30 +47,41 @@ const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
     );
   }
 
+  // Get auth token for Edge Function call
+  const session = await supabase.auth.getSession();
+  const token = session.data.session?.access_token;
+
+  if (!token) {
+    throw new Error('Please sign in again to use the scanner.');
+  }
+
   try {
-    // Always call scan-equipment function — it routes internally by action field
+    // Use raw fetch instead of supabase.functions.invoke for better error handling
+    // and to avoid SDK payload size/timeout issues with large base64 images
     console.log('[AI] Calling scan-equipment Edge Function, action:', payload.action);
-    const response = await supabase.functions.invoke('scan-equipment', {
-      body: payload,
-    });
-
-    // Handle errors from Edge Function
-    if (response.error) {
-      const status = (response.error as any)?.status;
-      const msg = response.error?.message || 'Unknown error';
-      console.error('[AI] Edge Function error:', status, msg);
-
-      if (status === 401) {
-        throw new Error('Authentication failed. Please sign in again.');
+    const response = await fetch(
+      `${SUPABASE_URL}/functions/v1/scan-equipment`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
       }
-      throw new Error(`AI scan failed: ${msg}`);
+    );
+
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please sign in again.');
     }
 
-    // supabase.functions.invoke returns { data, error }
-    return new Response(JSON.stringify(response.data), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[AI] Edge Function error:', response.status, errorText);
+      throw new Error(`AI scan failed: ${errorText || response.statusText}`);
+    }
+
+    return response;
   } catch (error) {
     // Re-throw known errors with their original message
     if (error instanceof Error && (
@@ -81,7 +92,7 @@ const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
     }
     console.error('[AI] Edge Function call failed:', error);
     throw new Error(
-      `The AI scanner service is temporarily unavailable. ${error instanceof Error ? error.message : 'Please try again later.'}`
+      `AI scan failed: Failed to send a request to the Edge Function. ${error instanceof Error ? error.message : 'Please try again later.'}`
     );
   }
 };

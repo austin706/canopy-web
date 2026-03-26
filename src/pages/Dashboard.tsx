@@ -148,7 +148,11 @@ export default function Dashboard() {
         <div className="flex-col gap-lg">
           {/* Weather */}
           {hasWeather ? (
-            <div className="card" style={{ background: `linear-gradient(135deg, ${Colors.sage}20, ${Colors.cream})` }}>
+            <div
+              className="card"
+              style={{ background: `linear-gradient(135deg, ${Colors.sage}20, ${Colors.cream})`, cursor: 'pointer' }}
+              onClick={() => navigate('/weather')}
+            >
               {weatherLoading ? (
                 <div style={{ padding: '12px 0' }}>
                   <Skeleton variant="title" width="40%" />

@@ -4,7 +4,9 @@ import { useStore } from '@/store/useStore';
 import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase } from '@/services/supabase';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
 import { PLANS, isProAvailableInArea } from '@/services/subscriptionGate';
+import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
 import EquipmentScanner from '@/components/EquipmentScanner';
+import InspectionUploader from '@/components/InspectionUploader';
 import { Colors } from '@/constants/theme';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import type { EquipmentCategory, Equipment as EquipmentType, SubscriptionTier } from '@/types';
@@ -22,11 +24,26 @@ const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
   { value: 'garage', label: 'Garage' },
 ];
 
+/** Common equipment items to guide users on what to scan */
+const SCAN_SUGGESTIONS = [
+  { label: 'Furnace / Air Handler', hint: 'Label on front panel or inside door', icon: '🔥' },
+  { label: 'AC Condenser (outdoor unit)', hint: 'Nameplate on the side of the unit', icon: '❄️' },
+  { label: 'Water Heater', hint: 'Sticker on the front or side of the tank', icon: '🚿' },
+  { label: 'Evaporator Coil (indoor AC)', hint: 'Sticker on the coil housing near your furnace', icon: '🌀' },
+  { label: 'Thermostat', hint: 'Model info on the back or in settings', icon: '🌡️' },
+  { label: 'Dishwasher', hint: 'Label inside the door edge', icon: '🍽️' },
+  { label: 'Washer & Dryer', hint: 'Label inside the lid or door frame', icon: '👕' },
+  { label: 'Garage Door Opener', hint: 'Sticker on the motor housing', icon: '🚗' },
+];
+
 interface Equipment {
   name: string;
   category: EquipmentCategory;
   make: string;
   model: string;
+  equipment_subtype?: string;
+  refrigerant_type?: string;
+  estimated_lifespan_years?: number;
 }
 
 export default function Onboarding() {
@@ -169,14 +186,17 @@ export default function Onboarding() {
   };
 
   const handleScannerComplete = (scannedData: any) => {
-    const { name, category, ...rest } = scannedData;
+    const { name, category, make, model, equipment_subtype, refrigerant_type, estimated_lifespan_years } = scannedData;
     setEquipmentList([
       ...equipmentList,
       {
         name,
         category,
-        make: rest.make || '',
-        model: rest.model || '',
+        make: make || '',
+        model: model || '',
+        equipment_subtype,
+        refrigerant_type,
+        estimated_lifespan_years,
       },
     ]);
     setShowScanner(false);
@@ -200,6 +220,12 @@ export default function Onboarding() {
           name: item.name,
           make: item.make || undefined,
           model: item.model || undefined,
+          equipment_subtype: item.equipment_subtype || undefined,
+          refrigerant_type: item.refrigerant_type || undefined,
+          expected_lifespan_years: item.estimated_lifespan_years
+            || (item.equipment_subtype && EQUIPMENT_LIFESPAN_DEFAULTS[item.equipment_subtype.toLowerCase()])
+            || EQUIPMENT_LIFESPAN_DEFAULTS[item.category]
+            || undefined,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -816,19 +842,19 @@ export default function Onboarding() {
         </div>
       )}
 
-      {/* Step 4: Equipment */}
+      {/* Step 4: Scan Equipment */}
       {step === 3 && (
         <div className="card">
-          <h2 style={{ fontSize: 18, marginBottom: 20 }}>Add your equipment (optional)</h2>
-          <p style={{ color: Colors.medGray, marginBottom: 20, fontSize: 14 }}>
-            Add any home systems or appliances you'd like to track.
+          <h2 style={{ fontSize: 18, marginBottom: 8 }}>Scan your equipment</h2>
+          <p style={{ color: Colors.medGray, marginBottom: 24, fontSize: 14, lineHeight: 1.6 }}>
+            Scanning your equipment labels lets Canopy build a personalized maintenance schedule, track warranty info, and alert you to issues like phased-out refrigerants.
           </p>
 
           {showScanner ? (
             <div style={{ marginBottom: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <h3 style={{ fontSize: 16, margin: 0 }}>Scan Equipment Label</h3>
-                <button className="btn btn-ghost btn-sm" onClick={() => setShowScanner(false)}>Close</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowScanner(false)}>Back to list</button>
               </div>
               <EquipmentScanner
                 onScanComplete={handleScannerComplete}
@@ -837,104 +863,167 @@ export default function Onboarding() {
             </div>
           ) : (
             <>
-              <div className="form-group">
-                <label>Equipment Name</label>
-                <input
-                  className="form-input"
-                  placeholder="e.g., Central AC Unit"
-                  value={equipmentForm.name}
-                  onChange={e => setEquipmentForm({ ...equipmentForm, name: e.target.value })}
-                />
-              </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>Category</label>
-                  <select
-                    className="form-select"
-                    value={equipmentForm.category}
-                    onChange={e => setEquipmentForm({ ...equipmentForm, category: e.target.value as EquipmentCategory })}
-                  >
-                    {EQUIPMENT_CATEGORIES.map(c => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
-                    ))}
-                  </select>
+              {/* Scanned items list */}
+              {equipmentList.length > 0 && (
+                <div style={{ marginBottom: 24 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal, marginBottom: 12 }}>
+                    {equipmentList.length} item{equipmentList.length !== 1 ? 's' : ''} scanned
+                  </p>
+                  {equipmentList.map((item, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '12px 16px',
+                        backgroundColor: '#f8f8f6',
+                        borderRadius: 10,
+                        marginBottom: 8,
+                        borderLeft: `3px solid ${Colors.sage}`,
+                      }}
+                    >
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: Colors.charcoal }}>{item.name}</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: 12, color: Colors.medGray }}>
+                          {item.equipment_subtype || item.category}{item.make ? ` · ${item.make}` : ''}
+                        </p>
+                      </div>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => handleRemoveEquipment(i)}
+                        style={{ fontSize: 12 }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
                 </div>
-                <div className="form-group">
-                  <label>Make</label>
-                  <input
-                    className="form-input"
-                    placeholder="Carrier"
-                    value={equipmentForm.make}
-                    onChange={e => setEquipmentForm({ ...equipmentForm, make: e.target.value })}
-                  />
+              )}
+
+              {/* Scan another button */}
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowScanner(true)}
+                style={{ width: '100%', marginBottom: 24, padding: '14px 0', fontSize: 15 }}
+              >
+                {equipmentList.length > 0 ? '+ Scan Another Label' : 'Scan Equipment Label'}
+              </button>
+
+              {/* Equipment suggestion checklist */}
+              <div style={{
+                backgroundColor: '#faf9f7',
+                borderRadius: 12,
+                padding: 20,
+                marginBottom: 24,
+              }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
+                  {equipmentList.length > 0 ? 'What else can you scan?' : 'What should I scan?'}
+                </p>
+                <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 16, lineHeight: 1.5 }}>
+                  Look for stickers or nameplates on these common items. Each scan gives Canopy more data to work with.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {SCAN_SUGGESTIONS.map((item, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 12,
+                      }}
+                    >
+                      <span style={{ fontSize: 18, lineHeight: '24px', flexShrink: 0 }}>{item.icon}</span>
+                      <div>
+                        <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: Colors.charcoal }}>{item.label}</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: 12, color: Colors.medGray }}>{item.hint}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>Model</label>
-                <input
-                  className="form-input"
-                  placeholder="24ACC636"
-                  value={equipmentForm.model}
-                  onChange={e => setEquipmentForm({ ...equipmentForm, model: e.target.value })}
-                />
-              </div>
-
-              <div className="grid-2 mb-lg">
-                <button className="btn btn-secondary" onClick={handleAddEquipment}>
-                  + Add Equipment
-                </button>
-                <button className="btn btn-secondary" onClick={() => setShowScanner(true)}>
-                  Scan Label
-                </button>
-              </div>
-            </>
-          )}
-
-          {equipmentList.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 10 }}>
-                {equipmentList.length} item{equipmentList.length !== 1 ? 's' : ''} added
-              </p>
-              {equipmentList.map((item, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '10px 0',
-                    borderBottom: `1px solid ${Colors.lightGray}`,
-                  }}
-                >
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 500 }}>{item.name}</p>
-                    <p style={{ margin: '4px 0 0 0', fontSize: 12, color: Colors.medGray }}>
-                      {item.make} {item.model}
-                    </p>
+              {/* Manual entry toggle */}
+              <details style={{ marginBottom: 24 }}>
+                <summary style={{ fontSize: 13, color: Colors.copper, cursor: 'pointer', fontWeight: 500, marginBottom: 12 }}>
+                  Or add equipment manually
+                </summary>
+                <div style={{ paddingTop: 12 }}>
+                  <div className="form-group">
+                    <label>Equipment Name</label>
+                    <input
+                      className="form-input"
+                      placeholder="e.g., Central AC Unit"
+                      value={equipmentForm.name}
+                      onChange={e => setEquipmentForm({ ...equipmentForm, name: e.target.value })}
+                    />
                   </div>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => handleRemoveEquipment(i)}
-                    title="Delete"
-                  >
-                    Remove
+                  <div className="grid-2">
+                    <div className="form-group">
+                      <label>Category</label>
+                      <select
+                        className="form-select"
+                        value={equipmentForm.category}
+                        onChange={e => setEquipmentForm({ ...equipmentForm, category: e.target.value as EquipmentCategory })}
+                      >
+                        {EQUIPMENT_CATEGORIES.map(c => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Make</label>
+                      <input
+                        className="form-input"
+                        placeholder="Carrier"
+                        value={equipmentForm.make}
+                        onChange={e => setEquipmentForm({ ...equipmentForm, make: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Model</label>
+                    <input
+                      className="form-input"
+                      placeholder="24ACC636"
+                      value={equipmentForm.model}
+                      onChange={e => setEquipmentForm({ ...equipmentForm, model: e.target.value })}
+                    />
+                  </div>
+                  <button className="btn btn-secondary" onClick={handleAddEquipment} style={{ width: '100%' }}>
+                    + Add Manually
                   </button>
                 </div>
-              ))}
-            </div>
+              </details>
+
+              {/* Inspection report upload (optional) */}
+              <details style={{ marginBottom: 24 }}>
+                <summary style={{ fontSize: 13, color: Colors.copper, cursor: 'pointer', fontWeight: 500, marginBottom: 12 }}>
+                  Have a home inspection report?
+                </summary>
+                <div style={{ paddingTop: 12 }}>
+                  <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 16, lineHeight: 1.5 }}>
+                    Upload your inspection report and Canopy will extract maintenance items and add them to your plan automatically.
+                  </p>
+                  <InspectionUploader
+                    onTasksCreated={(count) => {
+                      // Just show confirmation — tasks are saved by the component
+                    }}
+                  />
+                </div>
+              </details>
+            </>
           )}
 
           <div className="flex gap-sm mt-lg">
             <button className="btn btn-ghost" onClick={() => setStep(2)} disabled={saving || generatingTasks}>Back</button>
-            <button className="btn btn-ghost" onClick={handleFinish} disabled={saving || generatingTasks}>
-              Skip
-            </button>
-            <button className="btn btn-primary" onClick={handleFinish} disabled={saving || generatingTasks}>
-              {generatingTasks ? 'Generating plan...' : saving ? 'Finishing...' : 'Done'}
+            <button className="btn btn-primary" onClick={handleFinish} disabled={saving || generatingTasks} style={{ flex: 1 }}>
+              {generatingTasks ? 'Generating your plan...' : saving ? 'Finishing...' : equipmentList.length > 0 ? "Done — Build My Plan" : "Skip — I'll Add Later"}
             </button>
           </div>
+          <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 12, textAlign: 'center' }}>
+            You can always scan more equipment later from the Equipment tab.
+          </p>
         </div>
       )}
 

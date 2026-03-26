@@ -4,6 +4,31 @@ import { parseHomeInspection, type InspectionTask } from '@/services/ai';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 
+/** Compress an image to stay within API limits */
+function compressInspectionImage(dataUrl: string, maxWidth = 1600, maxHeight = 1600, quality = 0.7): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxWidth || height > maxHeight) {
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('Canvas context failed')); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressed = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressed.split(',')[1]);
+    };
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = dataUrl;
+  });
+}
+
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: '#C62828',
   high: '#E65100',
@@ -74,30 +99,40 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
       let imageBase64: string | undefined;
 
       if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-        // For PDFs, we'll convert to text using FileReader
-        // The edge function handles PDF parsing server-side
-        const arrayBuffer = await file.arrayBuffer();
-        const base64 = btoa(
-          new Uint8Array(arrayBuffer).reduce(
-            (data, byte) => data + String.fromCharCode(byte),
-            ''
-          )
-        );
-        // Send as base64 image (the edge function can handle PDF base64)
-        imageBase64 = base64;
-        documentText = `[PDF document: ${file.name}]`;
+        // PDFs: extract as text for the AI to analyze
+        // We read the raw text content from the PDF
+        // For actual PDF text extraction, we use the text() method which works
+        // for text-based PDFs. For scanned PDFs, user should upload images instead.
+        try {
+          const text = await file.text();
+          // Check if we got meaningful text (not just binary PDF data)
+          const printableRatio = (text.match(/[a-zA-Z0-9\s]/g) || []).length / text.length;
+          if (printableRatio > 0.3 && text.length > 100) {
+            // Extract readable text portions from PDF stream
+            const readable = text.match(/\(([^)]+)\)/g)?.map(s => s.slice(1, -1)).join(' ') || '';
+            documentText = readable.length > 50
+              ? `Home Inspection Report (${file.name}):\n\n${readable}`
+              : `Home Inspection Report (${file.name}):\n\n${text.substring(0, 50000)}`;
+          } else {
+            throw new Error('scanned');
+          }
+        } catch {
+          // Scanned PDF or binary — convert first page to image would require a library
+          // For now, ask user to upload images of the pages instead
+          throw new Error(
+            'This PDF appears to be scanned/image-based. Please take screenshots or photos of the inspection report pages and upload those instead.'
+          );
+        }
       } else if (file.type.startsWith('image/')) {
-        // Image file
-        const reader = new FileReader();
-        const base64 = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => {
-            const result = reader.result as string;
-            resolve(result.split(',')[1] || result);
-          };
+        // Image file — compress before sending
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
           reader.onerror = reject;
           reader.readAsDataURL(file);
         });
-        imageBase64 = base64;
+        // Use higher resolution for inspection reports (more text to read)
+        imageBase64 = await compressInspectionImage(dataUrl, 1600, 1600, 0.8);
       } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
         documentText = await file.text();
       } else {

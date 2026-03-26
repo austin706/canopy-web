@@ -163,37 +163,12 @@ export const parseHomeInspection = async (
   documentText: string,
   imageBase64?: string,
 ): Promise<InspectionTask[]> => {
-  const content: any[] = [];
-
-  if (imageBase64) {
-    content.push({
-      type: 'image',
-      source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 },
-    });
-  }
-
-  content.push({
-    type: 'text',
-    text: `You are a home maintenance expert analyzing a home inspection report for the Canopy app.
-
-${documentText ? `INSPECTION REPORT TEXT:\n${documentText}\n\n` : 'Analyze the attached home inspection document image.\n\n'}Extract ALL actionable maintenance items, repairs, and recommendations from this inspection report.
-
-Return a JSON array of task objects, each with:
-- title: short task name (e.g., "Replace roof shingles in NE section")
-- description: detailed explanation of what needs to be done and why
-- priority: "urgent" (safety hazard / immediate), "high" (within 30 days), "medium" (within 6 months), "low" (within 1 year or maintenance item)
-- category: one of hvac|plumbing|electrical|roof|outdoor|safety|general|appliance|structural|pest
-- estimated_cost: approximate cost in dollars (0 if DIY)
-- recommended_timeframe: "immediately", "within_30_days", "within_3_months", "within_6_months", "within_1_year", "annual_maintenance"
-- inspection_section: the section of the inspection this came from (e.g., "Roof & Attic", "Plumbing", "Electrical", "Foundation", "HVAC")
-
-Be thorough — extract every recommendation, concern, and suggested repair from the report.
-Return ONLY valid JSON array, no other text.`,
-  });
-
+  // Send documentText and imageBase64 as top-level fields for the edge function
+  // The edge function constructs its own Anthropic messages from these
   const response = await callAI({
     action: 'parse-inspection',
-    messages: [{ role: 'user', content }],
+    documentText: documentText || undefined,
+    imageBase64: imageBase64 || undefined,
   });
 
   const data = await response.json();

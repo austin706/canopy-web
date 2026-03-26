@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import { upsertEquipment, deleteEquipment as deleteEquipApi, getEquipment } from '@/services/supabase';
+import { upsertEquipment, deleteEquipment as deleteEquipApi, getEquipment, createTasks } from '@/services/supabase';
 import { getEquipmentLimit } from '@/services/subscriptionGate';
+import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
 import EquipmentScanner from '@/components/EquipmentScanner';
 import { Colors } from '@/constants/theme';
+import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
 import type { Equipment as EquipmentType, EquipmentCategory } from '@/types';
 
 const CATEGORIES: { value: EquipmentCategory; label: string; abbr: string }[] = [
@@ -20,11 +22,12 @@ const CATEGORIES: { value: EquipmentCategory; label: string; abbr: string }[] = 
 ];
 
 export default function Equipment() {
-  const { user, home, equipment, setEquipment, addEquipment, removeEquipment } = useStore();
+  const { user, home, equipment, tasks, setEquipment, addEquipment, removeEquipment, setTasks } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [filter, setFilter] = useState<string>('all');
   const [form, setForm] = useState({ name: '', category: 'hvac' as EquipmentCategory, make: '', model: '', serial_number: '', install_date: '', expected_lifespan_years: '', location_in_home: '', notes: '' });
+  const [scanExtras, setScanExtras] = useState<{ equipment_subtype?: string; refrigerant_type?: string }>({});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -77,13 +80,31 @@ export default function Equipment() {
         home_id: home.id,
         ...form,
         expected_lifespan_years: form.expected_lifespan_years ? parseInt(form.expected_lifespan_years) : undefined,
+        equipment_subtype: scanExtras.equipment_subtype || undefined,
+        refrigerant_type: scanExtras.refrigerant_type || undefined,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
       await upsertEquipment(newItem);
       addEquipment(newItem);
+
+      // Auto-generate tasks for the new equipment
+      try {
+        const updatedEquipment = [...equipment, newItem];
+        const newTasks = generateTasksForHome(home, updatedEquipment, tasks);
+        const lifecycleAlerts = generateEquipmentLifecycleAlerts([newItem], home);
+        const allNewTasks = [...newTasks, ...lifecycleAlerts];
+        if (allNewTasks.length > 0) {
+          const saved = await createTasks(allNewTasks);
+          setTasks([...tasks, ...saved]);
+        }
+      } catch (taskErr) {
+        console.warn('Task generation after equipment add failed:', taskErr);
+      }
+
       setShowModal(false);
       setForm({ name: '', category: 'hvac', make: '', model: '', serial_number: '', install_date: '', expected_lifespan_years: '', location_in_home: '', notes: '' });
+      setScanExtras({});
     } catch (err: any) {
       alert('Failed to save equipment: ' + (err.message || 'Unknown error'));
     } finally { setSaving(false); }
@@ -100,30 +121,50 @@ export default function Equipment() {
   };
 
   const handleScannerComplete = (scannedData: any) => {
-    const { name, category, make, model, serial_number, install_date, capacity, fuel_type, efficiency_rating, filter_size, additional_info } = scannedData;
+    const { name, category, make, model, serial_number, install_date, capacity, fuel_type, efficiency_rating, filter_size, additional_info, equipment_subtype, estimated_lifespan_years, refrigerant_type, alerts } = scannedData;
 
     // Build notes from extra scan data
     const notesParts: string[] = [];
+    if (equipment_subtype) notesParts.push(`Type: ${equipment_subtype}`);
     if (capacity) notesParts.push(`Capacity: ${capacity}`);
     if (fuel_type) notesParts.push(`Fuel Type: ${fuel_type}`);
     if (efficiency_rating) notesParts.push(`Efficiency: ${efficiency_rating}`);
     if (filter_size) notesParts.push(`Filter Size: ${filter_size}`);
+    if (refrigerant_type) notesParts.push(`Refrigerant: ${refrigerant_type}`);
+    if (alerts && Array.isArray(alerts) && alerts.length > 0) {
+      notesParts.push('');
+      notesParts.push('--- Alerts ---');
+      alerts.forEach((a: string) => notesParts.push(`⚠ ${a}`));
+    }
     if (additional_info && typeof additional_info === 'object') {
       for (const [key, value] of Object.entries(additional_info)) {
         notesParts.push(`${key.replace(/_/g, ' ')}: ${value}`);
       }
     }
 
+    // Validate category maps to our known categories
+    const validCategories = CATEGORIES.map(c => c.value);
+    const mappedCategory = category && validCategories.includes(category) ? category : form.category;
+
     setForm({
       ...form,
       name: name || form.name,
-      category: category || form.category,
+      category: mappedCategory,
       make: make || form.make,
       model: model || form.model,
       serial_number: serial_number || form.serial_number,
       install_date: install_date || form.install_date,
+      expected_lifespan_years: estimated_lifespan_years
+        ? String(estimated_lifespan_years)
+        : (equipment_subtype && EQUIPMENT_LIFESPAN_DEFAULTS[equipment_subtype.toLowerCase()])
+          ? String(EQUIPMENT_LIFESPAN_DEFAULTS[equipment_subtype.toLowerCase()])
+          : (mappedCategory && EQUIPMENT_LIFESPAN_DEFAULTS[mappedCategory])
+            ? String(EQUIPMENT_LIFESPAN_DEFAULTS[mappedCategory])
+            : form.expected_lifespan_years,
       notes: notesParts.length > 0 ? notesParts.join('\n') : form.notes,
     });
+    // Store subtype and refrigerant for saving to DB
+    setScanExtras({ equipment_subtype, refrigerant_type });
     setShowScanner(false);
     setShowModal(true);
   };

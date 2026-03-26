@@ -113,6 +113,12 @@ export interface Equipment {
   notes?: string;
   photo_url?: string;
   label_photo_url?: string;
+
+  // AI-detected subtype (e.g., "Evaporator Coil", "Gas Furnace", "Tankless Water Heater")
+  equipment_subtype?: string;
+  // Refrigerant type for HVAC (e.g., "R22", "R410A") — critical for phase-out tracking
+  refrigerant_type?: string;
+
   filter_count?: number;
   filter_size?: string;
   tonnage?: number;

@@ -1637,3 +1637,68 @@ export const EQUIPMENT_CATEGORIES = [
   { id: 'pool', label: 'Pool & Hot Tub', icon: 'water', color: '#03A9F4' },
   { id: 'garage', label: 'Garage', icon: 'car', color: '#9E9E9E' },
 ] as const;
+
+/**
+ * Default equipment lifespan lookup by subtype (in years).
+ * Used as fallback when the AI scan doesn't return estimated_lifespan_years.
+ * Key: lowercase equipment_subtype or category. Value: typical lifespan in years.
+ */
+export const EQUIPMENT_LIFESPAN_DEFAULTS: Record<string, number> = {
+  // HVAC
+  'gas furnace': 20,
+  'electric furnace': 20,
+  'oil furnace': 20,
+  'evaporator coil': 15,
+  'condenser unit': 15,
+  'ac condenser': 15,
+  'central air conditioner': 15,
+  'heat pump': 15,
+  'mini split': 20,
+  'ductless mini split': 20,
+  'air handler': 15,
+  'thermostat': 10,
+  'boiler': 20,
+  'humidifier': 10,
+  'dehumidifier': 8,
+  // Water Heaters
+  'tank water heater': 12,
+  'tankless water heater': 20,
+  'gas water heater': 12,
+  'electric water heater': 12,
+  'heat pump water heater': 15,
+  // Appliances
+  'refrigerator': 14,
+  'dishwasher': 10,
+  'washing machine': 11,
+  'dryer': 13,
+  'oven': 15,
+  'range': 15,
+  'microwave': 10,
+  'garbage disposal': 12,
+  // Outdoor
+  'garage door opener': 12,
+  'sprinkler system': 20,
+  'sump pump': 10,
+  // Safety
+  'smoke detector': 10,
+  'carbon monoxide detector': 7,
+  'fire extinguisher': 12,
+  // Pool
+  'pool pump': 10,
+  'pool heater': 8,
+  'pool filter': 7,
+  // Plumbing
+  'water softener': 15,
+  'well pump': 15,
+  // Fallback by category
+  'hvac': 15,
+  'water_heater': 12,
+  'appliance': 12,
+  'outdoor': 15,
+  'safety': 10,
+  'pool': 8,
+  'plumbing': 15,
+  'electrical': 25,
+  'roof': 25,
+  'garage': 12,
+};

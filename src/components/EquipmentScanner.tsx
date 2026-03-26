@@ -155,6 +155,13 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
 
       setScanData(result);
       setEquipmentName(name);
+      // Auto-set category from AI if detected
+      if (result.category) {
+        const validCategories = EQUIPMENT_CATEGORIES.map(c => c.value);
+        if (validCategories.includes(result.category as EquipmentCategory)) {
+          setEquipmentCategory(result.category as EquipmentCategory);
+        }
+      }
       setScanned(true);
     } catch (err: any) {
       setScanning(false);
@@ -450,9 +457,37 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
               Confidence: {Math.round(scanData.confidence * 100)}%
             </p>
             <p style={{ fontSize: 14, color: Colors.charcoal, fontWeight: 500 }}>
-              Equipment detected
+              {scanData.equipment_subtype || 'Equipment'} detected
             </p>
+            {scanData.estimated_lifespan_years && (
+              <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 4 }}>
+                Typical lifespan: ~{scanData.estimated_lifespan_years} years
+              </p>
+            )}
           </div>
+
+          {/* AI Alerts */}
+          {scanData.alerts && scanData.alerts.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              {scanData.alerts.map((alert, i) => (
+                <div
+                  key={i}
+                  style={{
+                    padding: 12,
+                    backgroundColor: '#FFF3E0',
+                    borderLeft: `4px solid ${Colors.warning}`,
+                    borderRadius: 8,
+                    marginBottom: 8,
+                    fontSize: 13,
+                    color: Colors.charcoal,
+                    lineHeight: '18px',
+                  }}
+                >
+                  {alert}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="form-group">
             <label>Equipment Name *</label>

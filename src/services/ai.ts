@@ -28,6 +28,12 @@ export interface ScanResult {
   filter_size?: string;
   additional_info: Record<string, string>;
   confidence: number;
+  // Enhanced scan fields (v2)
+  category?: string;           // Mapped to our categories: hvac, water_heater, appliance, etc.
+  equipment_subtype?: string;  // e.g., "Evaporator Coil", "Gas Furnace", "Tankless Water Heater"
+  estimated_lifespan_years?: number;
+  refrigerant_type?: string;   // e.g., "R22", "R410A", "R32"
+  alerts?: string[];           // Actionable alerts like "Uses R22 refrigerant (phased out since 2020)"
 }
 
 /**
@@ -105,12 +111,22 @@ Extract all identifiable information and return a JSON object with these fields:
 - model: model number
 - serial_number: serial number if visible
 - capacity: capacity (tonnage, gallons, BTU, etc.)
-- install_date: manufacture or install date if visible
+- install_date: manufacture or install date if visible (YYYY-MM-DD format)
 - fuel_type: gas, electric, propane, etc.
 - efficiency_rating: SEER, EF, AFUE, etc.
 - filter_size: if this is an HVAC system and filter size is visible
+- category: map to ONE of these exact values based on what the equipment is: hvac, water_heater, appliance, roof, plumbing, electrical, outdoor, safety, pool, garage
+- equipment_subtype: specific type like "Evaporator Coil", "Gas Furnace", "Condenser Unit", "Heat Pump", "Tankless Water Heater", "Tank Water Heater", "Dishwasher", "Refrigerator", "Garage Door Opener", etc.
+- estimated_lifespan_years: typical lifespan for this equipment type in years (e.g., gas furnace=20, evaporator coil=15, water heater=12, AC condenser=15)
+- refrigerant_type: if this is a cooling/HVAC system, the refrigerant type (e.g., "R22", "R410A", "R32", "R454B")
+- alerts: array of actionable alerts for the homeowner, such as:
+  - "Uses R22 refrigerant, which was phased out in 2020. Repairs may be costly — plan for replacement."
+  - "This unit is over 15 years old and approaching end of life."
+  - Any safety recalls or known issues for this model if you recognize it
 - additional_info: object with any other useful details from the label
 - confidence: 0-1 score of how confident you are in the extracted data
+
+IMPORTANT: Identify the SPECIFIC piece of equipment on the label. For example, a Goodman CAPF model is an evaporator coil (part of the AC system), NOT a furnace — even if the coil is mounted on a furnace. Be precise about what the label describes.
 
 Return ONLY valid JSON, no other text.`,
           },

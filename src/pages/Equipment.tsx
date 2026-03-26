@@ -100,13 +100,29 @@ export default function Equipment() {
   };
 
   const handleScannerComplete = (scannedData: any) => {
-    const { name, category, make, model, ...rest } = scannedData;
+    const { name, category, make, model, serial_number, install_date, capacity, fuel_type, efficiency_rating, filter_size, additional_info } = scannedData;
+
+    // Build notes from extra scan data
+    const notesParts: string[] = [];
+    if (capacity) notesParts.push(`Capacity: ${capacity}`);
+    if (fuel_type) notesParts.push(`Fuel Type: ${fuel_type}`);
+    if (efficiency_rating) notesParts.push(`Efficiency: ${efficiency_rating}`);
+    if (filter_size) notesParts.push(`Filter Size: ${filter_size}`);
+    if (additional_info && typeof additional_info === 'object') {
+      for (const [key, value] of Object.entries(additional_info)) {
+        notesParts.push(`${key.replace(/_/g, ' ')}: ${value}`);
+      }
+    }
+
     setForm({
       ...form,
-      name,
-      category,
-      make,
-      model,
+      name: name || form.name,
+      category: category || form.category,
+      make: make || form.make,
+      model: model || form.model,
+      serial_number: serial_number || form.serial_number,
+      install_date: install_date || form.install_date,
+      notes: notesParts.length > 0 ? notesParts.join('\n') : form.notes,
     });
     setShowScanner(false);
     setShowModal(true);

@@ -8,6 +8,18 @@ import { Colors } from '@/constants/theme';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
 import type { Equipment as EquipmentType, EquipmentCategory } from '@/types';
 
+/** Common equipment items to guide users on what to scan */
+const SCAN_SUGGESTIONS = [
+  { label: 'Furnace / Air Handler', hint: 'Label on front panel or inside door', icon: '🔥' },
+  { label: 'AC Condenser (outdoor unit)', hint: 'Nameplate on the side of the unit', icon: '❄️' },
+  { label: 'Water Heater', hint: 'Sticker on the front or side of the tank', icon: '🚿' },
+  { label: 'Evaporator Coil (indoor AC)', hint: 'Sticker on the coil housing near your furnace', icon: '🌀' },
+  { label: 'Thermostat', hint: 'Model info on the back or in settings', icon: '🌡️' },
+  { label: 'Dishwasher', hint: 'Label inside the door edge', icon: '🍽️' },
+  { label: 'Washer & Dryer', hint: 'Label inside the lid or door frame', icon: '👕' },
+  { label: 'Garage Door Opener', hint: 'Sticker on the motor housing', icon: '🚗' },
+];
+
 const CATEGORIES: { value: EquipmentCategory; label: string; abbr: string }[] = [
   { value: 'hvac', label: 'HVAC', abbr: 'HC' },
   { value: 'water_heater', label: 'Water Heater', abbr: 'WH' },
@@ -198,11 +210,58 @@ export default function Equipment() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="empty-state">
-          <div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>EQ</div>
-          <h3>No equipment yet</h3>
-          <p>Add your home systems and appliances to get personalized maintenance schedules.</p>
-          <button className="btn btn-primary mt-lg" onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowModal(true)}>Add Your First Item</button>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '32px 0' }}>
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: Colors.copper, marginBottom: 8 }}>EQ</div>
+            <h3 style={{ marginBottom: 8 }}>No equipment yet</h3>
+            <p style={{ color: Colors.medGray, fontSize: 14, lineHeight: 1.6 }}>
+              Scanning your equipment labels lets Canopy build a personalized maintenance schedule, track warranty info, and alert you to issues.
+            </p>
+          </div>
+
+          {/* Scan button */}
+          <button
+            className="btn btn-primary"
+            onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowScanner(true)}
+            style={{ width: '100%', padding: '14px 0', fontSize: 15, marginBottom: 24 }}
+          >
+            Scan Equipment Label
+          </button>
+
+          {/* Equipment suggestion checklist */}
+          <div style={{
+            backgroundColor: '#faf9f7',
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 24,
+          }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
+              What should I scan?
+            </p>
+            <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 16, lineHeight: 1.5 }}>
+              Look for stickers or nameplates on these common items. Each scan gives Canopy more data to work with.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {SCAN_SUGGESTIONS.map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <span style={{ fontSize: 18, lineHeight: '24px', flexShrink: 0 }}>{item.icon}</span>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: Colors.charcoal }}>{item.label}</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: 12, color: Colors.medGray }}>{item.hint}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Manual add option */}
+          <button
+            className="btn btn-ghost"
+            onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowModal(true)}
+            style={{ width: '100%', fontSize: 13 }}
+          >
+            Or add equipment manually
+          </button>
         </div>
       ) : (
         <div className="grid-2">

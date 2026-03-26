@@ -22,95 +22,84 @@ const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
 ];
 
 /**
- * Compress, resize, and convert an image to JPEG for the AI scanner.
- * Tries multiple strategies in order for maximum browser/format compatibility.
+ * Compress and resize an image to stay within Anthropic's processing limits.
  * Returns a base64 string (without data URL prefix) of the compressed JPEG.
+ * Falls back to raw base64 extraction if canvas compression fails.
  */
-async function compressImageFromFile(file: File, previewDataUrl: string, maxWidth = 1024, maxHeight = 1024, quality = 0.7): Promise<string> {
-  // Helper: draw to canvas and export as JPEG base64
-  const canvasToJpegBase64 = (source: ImageBitmap | HTMLImageElement, srcW: number, srcH: number): string => {
-    let w = srcW, h = srcH;
-    if (w > maxWidth || h > maxHeight) {
-      const ratio = Math.min(maxWidth / w, maxHeight / h);
-      w = Math.round(w * ratio);
-      h = Math.round(h * ratio);
-    }
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d')!;
-    ctx.drawImage(source, 0, 0, w, h);
-    return canvas.toDataURL('image/jpeg', quality).split(',')[1];
-  };
+function compressImage(dataUrl: string, maxWidth = 1024, maxHeight = 1024, quality = 0.7): Promise<string> {
+  return new Promise((resolve) => {
+    // Fallback: extract raw base64 from data URL without compression
+    const extractRawBase64 = () => {
+      console.warn('[Scanner] Image compression failed, using raw base64 fallback');
+      const base64Part = dataUrl.split(',')[1];
+      if (base64Part) {
+        resolve(base64Part);
+      } else {
+        // Last resort: convert blob URL or other format
+        resolve(dataUrl);
+      }
+    };
 
-  // Strategy 1: createImageBitmap from File (best — handles most formats natively)
-  try {
-    const bitmap = await createImageBitmap(file);
-    const result = canvasToJpegBase64(bitmap, bitmap.width, bitmap.height);
-    bitmap.close();
-    if (result) return result;
-  } catch (e) {
-    console.warn('[Scanner] createImageBitmap(file) failed:', e);
-  }
-
-  // Strategy 2: createImageBitmap from blob URL
-  try {
-    const blobUrl = URL.createObjectURL(file);
-    const resp = await fetch(blobUrl);
-    const blob = await resp.blob();
-    URL.revokeObjectURL(blobUrl);
-    const bitmap = await createImageBitmap(blob);
-    const result = canvasToJpegBase64(bitmap, bitmap.width, bitmap.height);
-    bitmap.close();
-    if (result) return result;
-  } catch (e) {
-    console.warn('[Scanner] createImageBitmap(blob) failed:', e);
-  }
-
-  // Strategy 3: Image() with blob URL (no crossOrigin issues)
-  try {
-    const result = await new Promise<string>((resolve, reject) => {
-      const blobUrl = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(blobUrl);
-        try { resolve(canvasToJpegBase64(img, img.width, img.height)); }
-        catch (e) { reject(e); }
-      };
-      img.onerror = () => { URL.revokeObjectURL(blobUrl); reject(new Error('blob URL load failed')); };
-      img.src = blobUrl;
-    });
-    if (result) return result;
-  } catch (e) {
-    console.warn('[Scanner] Image(blobUrl) failed:', e);
-  }
-
-  // Strategy 4: Image() with the preview data URL (already rendered in DOM, so should work)
-  if (previewDataUrl) {
     try {
-      const result = await new Promise<string>((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          try { resolve(canvasToJpegBase64(img, img.width, img.height)); }
-          catch (e) { reject(e); }
-        };
-        img.onerror = () => reject(new Error('preview data URL load failed'));
-        img.src = previewDataUrl;
-      });
-      if (result) return result;
-    } catch (e) {
-      console.warn('[Scanner] Image(previewDataUrl) failed:', e);
+      const img = new Image();
+      // Allow cross-origin images (needed for some blob/data URL edge cases)
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          let { width, height } = img;
+
+          // Scale down if needed while maintaining aspect ratio
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            extractRawBase64();
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Export as JPEG with compression
+          const compressed = canvas.toDataURL('image/jpeg', quality);
+          const base64 = compressed.split(',')[1];
+          resolve(base64);
+        } catch {
+          // Canvas tainted or other draw error — use raw fallback
+          extractRawBase64();
+        }
+      };
+      img.onerror = () => {
+        // Image failed to load from data URL — try createImageBitmap as alternative
+        if (typeof createImageBitmap !== 'undefined' && dataUrl.startsWith('data:')) {
+          fetch(dataUrl)
+            .then(r => r.blob())
+            .then(blob => createImageBitmap(blob, { resizeWidth: maxWidth, resizeHeight: maxHeight, resizeQuality: 'medium' }))
+            .then(bitmap => {
+              const canvas = document.createElement('canvas');
+              canvas.width = bitmap.width;
+              canvas.height = bitmap.height;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) { extractRawBase64(); return; }
+              ctx.drawImage(bitmap, 0, 0);
+              const compressed = canvas.toDataURL('image/jpeg', quality);
+              resolve(compressed.split(',')[1]);
+            })
+            .catch(() => extractRawBase64());
+        } else {
+          extractRawBase64();
+        }
+      };
+      img.src = dataUrl;
+    } catch {
+      extractRawBase64();
     }
-  }
-
-  // Strategy 5: Last resort — extract base64 from preview data URL with correct media type
-  // The API might still handle PNG/WebP even if we say JPEG
-  if (previewDataUrl && previewDataUrl.includes(',')) {
-    console.warn('[Scanner] All conversion failed, sending raw preview base64');
-    return previewDataUrl.split(',')[1];
-  }
-
-  throw new Error('Unable to process this image. Please try a JPEG or PNG photo.');
+  });
 }
 
 export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentScannerProps) {
@@ -188,9 +177,9 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
     setShowScanFailurePopup(false);
 
     try {
-      // Compress, resize, and convert to JPEG for the API
-      // Tries multiple strategies: createImageBitmap, blob URL, preview data URL
-      const base64String = await compressImageFromFile(selectedFile, preview, 1024, 1024, 0.7);
+      // Compress and resize image to stay within API limits
+      // Raw camera photos can be 4-8MB base64; compress to ~200-400KB
+      const base64String = await compressImage(preview, 1024, 1024, 0.7);
 
       // Call AI service
       const result = await scanEquipmentLabel(base64String);

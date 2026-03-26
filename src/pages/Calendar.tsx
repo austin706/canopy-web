@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/utils';
@@ -16,6 +17,7 @@ const DEMO_TASKS: MaintenanceTask[] = [
 ];
 
 export default function Calendar() {
+  const navigate = useNavigate();
   const { home, tasks: storeTasks, setTasks, reopenTask } = useStore();
   const isDemo = storeTasks.length === 0;
   const tasks = isDemo ? DEMO_TASKS : storeTasks;
@@ -262,7 +264,7 @@ export default function Calendar() {
                   <div key={task.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--light-gray)' }}>
                     <div className="flex items-center gap-md">
                       <div style={{ width: 4, height: 40, borderRadius: 2, background: PriorityColors[task.priority] }} />
-                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', cursor: 'pointer' }} onClick={() => !isDemo && navigate(`/task/${task.id}`)}>
                         <p style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</p>
                         <p className="text-xs text-gray">
                           {task.category} &middot; ~{task.estimated_minutes || '?'} min

@@ -226,7 +226,7 @@ export default function Calendar() {
               <p className="text-sm text-gray">Loading tasks...</p>
             </div>
           ) : (
-          <div className="card">
+          <div className="card" style={{ overflow: 'hidden' }}>
             <div className="flex items-center justify-between mb-sm">
               <p style={{ fontWeight: 600 }}>
                 {selectedDate
@@ -242,9 +242,9 @@ export default function Calendar() {
             </div>
 
             {/* Status Filter Tabs */}
-            <div className="tabs" style={{ marginBottom: 16 }}>
+            <div className="tabs" style={{ marginBottom: 16, overflowX: 'auto', flexWrap: 'nowrap' }}>
               {['all', 'due', 'upcoming', 'completed', 'overdue'].map(f => (
-                <button key={f} className={`tab ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
+                <button key={f} className={`tab ${filter === f ? 'active' : ''}`} style={{ whiteSpace: 'nowrap', flexShrink: 0 }} onClick={() => setFilter(f)}>
                   {f.charAt(0).toUpperCase() + f.slice(1)}
                   {f !== 'all' && (
                     <span style={{ marginLeft: 4, fontSize: 11, opacity: 0.7 }}>

@@ -4,28 +4,62 @@ import { parseHomeInspection, type InspectionTask } from '@/services/ai';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 
-/** Compress an image to stay within API limits */
+/** Compress an image to stay within API limits. Falls back to raw base64 if compression fails. */
 function compressInspectionImage(dataUrl: string, maxWidth = 1600, maxHeight = 1600, quality = 0.7): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      let { width, height } = img;
-      if (width > maxWidth || height > maxHeight) {
-        const ratio = Math.min(maxWidth / width, maxHeight / height);
-        width = Math.round(width * ratio);
-        height = Math.round(height * ratio);
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { reject(new Error('Canvas context failed')); return; }
-      ctx.drawImage(img, 0, 0, width, height);
-      const compressed = canvas.toDataURL('image/jpeg', quality);
-      resolve(compressed.split(',')[1]);
+  return new Promise((resolve) => {
+    const extractRawBase64 = () => {
+      console.warn('[Inspection] Image compression failed, using raw base64 fallback');
+      const base64Part = dataUrl.split(',')[1];
+      resolve(base64Part || dataUrl);
     };
-    img.onerror = () => reject(new Error('Failed to load image'));
-    img.src = dataUrl;
+
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          let { width, height } = img;
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { extractRawBase64(); return; }
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressed.split(',')[1]);
+        } catch {
+          extractRawBase64();
+        }
+      };
+      img.onerror = () => {
+        if (typeof createImageBitmap !== 'undefined' && dataUrl.startsWith('data:')) {
+          fetch(dataUrl)
+            .then(r => r.blob())
+            .then(blob => createImageBitmap(blob, { resizeWidth: maxWidth, resizeHeight: maxHeight, resizeQuality: 'medium' }))
+            .then(bitmap => {
+              const canvas = document.createElement('canvas');
+              canvas.width = bitmap.width;
+              canvas.height = bitmap.height;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) { extractRawBase64(); return; }
+              ctx.drawImage(bitmap, 0, 0);
+              const compressed = canvas.toDataURL('image/jpeg', quality);
+              resolve(compressed.split(',')[1]);
+            })
+            .catch(() => extractRawBase64());
+        } else {
+          extractRawBase64();
+        }
+      };
+      img.src = dataUrl;
+    } catch {
+      extractRawBase64();
+    }
   });
 }
 

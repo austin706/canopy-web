@@ -24,37 +24,81 @@ const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
 /**
  * Compress and resize an image to stay within Anthropic's processing limits.
  * Returns a base64 string (without data URL prefix) of the compressed JPEG.
+ * Falls back to raw base64 extraction if canvas compression fails.
  */
 function compressImage(dataUrl: string, maxWidth = 1024, maxHeight = 1024, quality = 0.7): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      let { width, height } = img;
-
-      // Scale down if needed while maintaining aspect ratio
-      if (width > maxWidth || height > maxHeight) {
-        const ratio = Math.min(maxWidth / width, maxHeight / height);
-        width = Math.round(width * ratio);
-        height = Math.round(height * ratio);
+  return new Promise((resolve) => {
+    // Fallback: extract raw base64 from data URL without compression
+    const extractRawBase64 = () => {
+      console.warn('[Scanner] Image compression failed, using raw base64 fallback');
+      const base64Part = dataUrl.split(',')[1];
+      if (base64Part) {
+        resolve(base64Part);
+      } else {
+        // Last resort: convert blob URL or other format
+        resolve(dataUrl);
       }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Failed to get canvas context'));
-        return;
-      }
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Export as JPEG with compression
-      const compressed = canvas.toDataURL('image/jpeg', quality);
-      const base64 = compressed.split(',')[1];
-      resolve(base64);
     };
-    img.onerror = () => reject(new Error('Failed to load image for compression'));
-    img.src = dataUrl;
+
+    try {
+      const img = new Image();
+      // Allow cross-origin images (needed for some blob/data URL edge cases)
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          let { width, height } = img;
+
+          // Scale down if needed while maintaining aspect ratio
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            extractRawBase64();
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Export as JPEG with compression
+          const compressed = canvas.toDataURL('image/jpeg', quality);
+          const base64 = compressed.split(',')[1];
+          resolve(base64);
+        } catch {
+          // Canvas tainted or other draw error — use raw fallback
+          extractRawBase64();
+        }
+      };
+      img.onerror = () => {
+        // Image failed to load from data URL — try createImageBitmap as alternative
+        if (typeof createImageBitmap !== 'undefined' && dataUrl.startsWith('data:')) {
+          fetch(dataUrl)
+            .then(r => r.blob())
+            .then(blob => createImageBitmap(blob, { resizeWidth: maxWidth, resizeHeight: maxHeight, resizeQuality: 'medium' }))
+            .then(bitmap => {
+              const canvas = document.createElement('canvas');
+              canvas.width = bitmap.width;
+              canvas.height = bitmap.height;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) { extractRawBase64(); return; }
+              ctx.drawImage(bitmap, 0, 0);
+              const compressed = canvas.toDataURL('image/jpeg', quality);
+              resolve(compressed.split(',')[1]);
+            })
+            .catch(() => extractRawBase64());
+        } else {
+          extractRawBase64();
+        }
+      };
+      img.src = dataUrl;
+    } catch {
+      extractRawBase64();
+    }
   });
 }
 

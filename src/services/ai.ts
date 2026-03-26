@@ -102,8 +102,13 @@ const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
  * Sends the image to Claude API (via Edge Function when available) and extracts structured equipment data
  */
 export const scanEquipmentLabel = async (imageBase64: string): Promise<ScanResult> => {
-  // Note: imageBase64 is only sent inside messages (not duplicated at top level)
-  // to keep payload size within Supabase Edge Function limits
+  // Detect media type from base64 header bytes (handles cases where compression
+  // fallback sends non-JPEG data). Default to JPEG since our compression outputs JPEG.
+  let mediaType = 'image/jpeg';
+  if (imageBase64.startsWith('iVBOR')) mediaType = 'image/png';
+  else if (imageBase64.startsWith('UklGR')) mediaType = 'image/webp';
+  else if (imageBase64.startsWith('R0lGO')) mediaType = 'image/gif';
+
   const response = await callAI({
     action: 'scan-equipment',
     messages: [
@@ -112,7 +117,7 @@ export const scanEquipmentLabel = async (imageBase64: string): Promise<ScanResul
         content: [
           {
             type: 'image',
-            source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 },
+            source: { type: 'base64', media_type: mediaType, data: imageBase64 },
           },
           {
             type: 'text',

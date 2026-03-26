@@ -4,27 +4,63 @@ import { parseHomeInspection, type InspectionTask } from '@/services/ai';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 
-/** Compress, resize, and convert an image file to JPEG for the AI inspection parser. */
-async function compressInspectionImageFromFile(file: File, maxWidth = 1600, maxHeight = 1600, quality = 0.7): Promise<string> {
-  const bitmap = await createImageBitmap(file);
-  let width = bitmap.width;
-  let height = bitmap.height;
-  if (width > maxWidth || height > maxHeight) {
-    const ratio = Math.min(maxWidth / width, maxHeight / height);
-    width = Math.round(width * ratio);
-    height = Math.round(height * ratio);
-  }
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas context failed');
-  ctx.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
-  const compressed = canvas.toDataURL('image/jpeg', quality);
-  const base64 = compressed.split(',')[1];
-  if (!base64) throw new Error('Empty base64 output');
-  return base64;
+/** Compress an image to stay within API limits. Falls back to raw base64 if compression fails. */
+function compressInspectionImage(dataUrl: string, maxWidth = 1600, maxHeight = 1600, quality = 0.7): Promise<string> {
+  return new Promise((resolve) => {
+    const extractRawBase64 = () => {
+      console.warn('[Inspection] Image compression failed, using raw base64 fallback');
+      const base64Part = dataUrl.split(',')[1];
+      resolve(base64Part || dataUrl);
+    };
+
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          let { width, height } = img;
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { extractRawBase64(); return; }
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressed.split(',')[1]);
+        } catch {
+          extractRawBase64();
+        }
+      };
+      img.onerror = () => {
+        if (typeof createImageBitmap !== 'undefined' && dataUrl.startsWith('data:')) {
+          fetch(dataUrl)
+            .then(r => r.blob())
+            .then(blob => createImageBitmap(blob, { resizeWidth: maxWidth, resizeHeight: maxHeight, resizeQuality: 'medium' }))
+            .then(bitmap => {
+              const canvas = document.createElement('canvas');
+              canvas.width = bitmap.width;
+              canvas.height = bitmap.height;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) { extractRawBase64(); return; }
+              ctx.drawImage(bitmap, 0, 0);
+              const compressed = canvas.toDataURL('image/jpeg', quality);
+              resolve(compressed.split(',')[1]);
+            })
+            .catch(() => extractRawBase64());
+        } else {
+          extractRawBase64();
+        }
+      };
+      img.src = dataUrl;
+    } catch {
+      extractRawBase64();
+    }
+  });
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -122,9 +158,15 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           );
         }
       } else if (file.type.startsWith('image/')) {
-        // Image file — compress and convert to JPEG directly from File object
-        // Uses createImageBitmap for maximum format compatibility (HEIC, WebP, etc.)
-        imageBase64 = await compressInspectionImageFromFile(file, 1600, 1600, 0.8);
+        // Image file — compress before sending
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        // Use higher resolution for inspection reports (more text to read)
+        imageBase64 = await compressInspectionImage(dataUrl, 1600, 1600, 0.8);
       } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
         documentText = await file.text();
       } else {

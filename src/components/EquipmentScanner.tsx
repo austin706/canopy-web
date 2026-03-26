@@ -23,77 +23,94 @@ const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
 
 /**
  * Compress, resize, and convert an image to JPEG for the AI scanner.
- * Uses File object directly via createImageBitmap for maximum format compatibility
- * (handles HEIC, WebP, PNG, etc. without relying on Image() constructor).
+ * Tries multiple strategies in order for maximum browser/format compatibility.
  * Returns a base64 string (without data URL prefix) of the compressed JPEG.
  */
-async function compressImageFromFile(file: File, maxWidth = 1024, maxHeight = 1024, quality = 0.7): Promise<string> {
-  try {
-    // createImageBitmap handles all browser-supported formats including HEIC on Safari/iOS
-    const bitmap = await createImageBitmap(file);
-
-    let width = bitmap.width;
-    let height = bitmap.height;
-
-    // Scale down if needed while maintaining aspect ratio
-    if (width > maxWidth || height > maxHeight) {
-      const ratio = Math.min(maxWidth / width, maxHeight / height);
-      width = Math.round(width * ratio);
-      height = Math.round(height * ratio);
+async function compressImageFromFile(file: File, previewDataUrl: string, maxWidth = 1024, maxHeight = 1024, quality = 0.7): Promise<string> {
+  // Helper: draw to canvas and export as JPEG base64
+  const canvasToJpegBase64 = (source: ImageBitmap | HTMLImageElement, srcW: number, srcH: number): string => {
+    let w = srcW, h = srcH;
+    if (w > maxWidth || h > maxHeight) {
+      const ratio = Math.min(maxWidth / w, maxHeight / h);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
     }
-
     const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas context failed');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(source, 0, 0, w, h);
+    return canvas.toDataURL('image/jpeg', quality).split(',')[1];
+  };
 
-    ctx.drawImage(bitmap, 0, 0, width, height);
+  // Strategy 1: createImageBitmap from File (best — handles most formats natively)
+  try {
+    const bitmap = await createImageBitmap(file);
+    const result = canvasToJpegBase64(bitmap, bitmap.width, bitmap.height);
     bitmap.close();
-
-    // Always export as JPEG — guarantees consistent format for the API
-    const compressed = canvas.toDataURL('image/jpeg', quality);
-    const base64 = compressed.split(',')[1];
-    if (!base64) throw new Error('Empty base64 output');
-    return base64;
-  } catch (err) {
-    console.warn('[Scanner] createImageBitmap path failed, trying Image() fallback:', err);
-
-    // Fallback: try via data URL + Image() constructor
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          try {
-            let w = img.width;
-            let h = img.height;
-            if (w > maxWidth || h > maxHeight) {
-              const ratio = Math.min(maxWidth / w, maxHeight / h);
-              w = Math.round(w * ratio);
-              h = Math.round(h * ratio);
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) { reject(new Error('Canvas failed')); return; }
-            ctx.drawImage(img, 0, 0, w, h);
-            const compressed = canvas.toDataURL('image/jpeg', quality);
-            resolve(compressed.split(',')[1]);
-          } catch (e) {
-            reject(e);
-          }
-        };
-        img.onerror = () => reject(new Error('Image load failed'));
-        img.src = dataUrl;
-      };
-      reader.onerror = () => reject(new Error('FileReader failed'));
-      reader.readAsDataURL(file);
-    });
+    if (result) return result;
+  } catch (e) {
+    console.warn('[Scanner] createImageBitmap(file) failed:', e);
   }
+
+  // Strategy 2: createImageBitmap from blob URL
+  try {
+    const blobUrl = URL.createObjectURL(file);
+    const resp = await fetch(blobUrl);
+    const blob = await resp.blob();
+    URL.revokeObjectURL(blobUrl);
+    const bitmap = await createImageBitmap(blob);
+    const result = canvasToJpegBase64(bitmap, bitmap.width, bitmap.height);
+    bitmap.close();
+    if (result) return result;
+  } catch (e) {
+    console.warn('[Scanner] createImageBitmap(blob) failed:', e);
+  }
+
+  // Strategy 3: Image() with blob URL (no crossOrigin issues)
+  try {
+    const result = await new Promise<string>((resolve, reject) => {
+      const blobUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(blobUrl);
+        try { resolve(canvasToJpegBase64(img, img.width, img.height)); }
+        catch (e) { reject(e); }
+      };
+      img.onerror = () => { URL.revokeObjectURL(blobUrl); reject(new Error('blob URL load failed')); };
+      img.src = blobUrl;
+    });
+    if (result) return result;
+  } catch (e) {
+    console.warn('[Scanner] Image(blobUrl) failed:', e);
+  }
+
+  // Strategy 4: Image() with the preview data URL (already rendered in DOM, so should work)
+  if (previewDataUrl) {
+    try {
+      const result = await new Promise<string>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          try { resolve(canvasToJpegBase64(img, img.width, img.height)); }
+          catch (e) { reject(e); }
+        };
+        img.onerror = () => reject(new Error('preview data URL load failed'));
+        img.src = previewDataUrl;
+      });
+      if (result) return result;
+    } catch (e) {
+      console.warn('[Scanner] Image(previewDataUrl) failed:', e);
+    }
+  }
+
+  // Strategy 5: Last resort — extract base64 from preview data URL with correct media type
+  // The API might still handle PNG/WebP even if we say JPEG
+  if (previewDataUrl && previewDataUrl.includes(',')) {
+    console.warn('[Scanner] All conversion failed, sending raw preview base64');
+    return previewDataUrl.split(',')[1];
+  }
+
+  throw new Error('Unable to process this image. Please try a JPEG or PNG photo.');
 }
 
 export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentScannerProps) {
@@ -172,8 +189,8 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
 
     try {
       // Compress, resize, and convert to JPEG for the API
-      // Uses File object directly for maximum format compatibility (HEIC, WebP, etc.)
-      const base64String = await compressImageFromFile(selectedFile, 1024, 1024, 0.7);
+      // Tries multiple strategies: createImageBitmap, blob URL, preview data URL
+      const base64String = await compressImageFromFile(selectedFile, preview, 1024, 1024, 0.7);
 
       // Call AI service
       const result = await scanEquipmentLabel(base64String);

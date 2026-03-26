@@ -165,7 +165,11 @@ export default function Equipment() {
       make: make || form.make,
       model: model || form.model,
       serial_number: serial_number || form.serial_number,
-      install_date: install_date || form.install_date,
+      install_date: install_date
+        || additional_info?.manufacture_date
+        || additional_info?.manufactured_date
+        || additional_info?.production_date
+        || form.install_date,
       expected_lifespan_years: estimated_lifespan_years
         ? String(estimated_lifespan_years)
         : (equipment_subtype && EQUIPMENT_LIFESPAN_DEFAULTS[equipment_subtype.toLowerCase()])

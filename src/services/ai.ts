@@ -102,8 +102,13 @@ const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
  * Sends the image to Claude API (via Edge Function when available) and extracts structured equipment data
  */
 export const scanEquipmentLabel = async (imageBase64: string): Promise<ScanResult> => {
-  // Note: imageBase64 is only sent inside messages (not duplicated at top level)
-  // to keep payload size within Supabase Edge Function limits
+  // Detect media type from base64 header bytes (handles cases where compression
+  // fallback sends non-JPEG data). Default to JPEG since our compression outputs JPEG.
+  let mediaType = 'image/jpeg';
+  if (imageBase64.startsWith('iVBOR')) mediaType = 'image/png';
+  else if (imageBase64.startsWith('UklGR')) mediaType = 'image/webp';
+  else if (imageBase64.startsWith('R0lGO')) mediaType = 'image/gif';
+
   const response = await callAI({
     action: 'scan-equipment',
     messages: [
@@ -112,7 +117,7 @@ export const scanEquipmentLabel = async (imageBase64: string): Promise<ScanResul
         content: [
           {
             type: 'image',
-            source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 },
+            source: { type: 'base64', media_type: mediaType, data: imageBase64 },
           },
           {
             type: 'text',
@@ -122,7 +127,7 @@ Extract all identifiable information and return a JSON object with these fields:
 - model: model number
 - serial_number: serial number if visible
 - capacity: capacity (tonnage, gallons, BTU, etc.)
-- install_date: manufacture or install date if visible (YYYY-MM-DD format)
+- install_date: install date OR manufacture date if visible (YYYY-MM-DD format). IMPORTANT: If no install date is shown, use the manufacture/production date as a fallback. Most labels show a manufacture date — always populate this field if ANY date is visible on the label.
 - fuel_type: gas, electric, propane, etc.
 - efficiency_rating: SEER, EF, AFUE, etc.
 - filter_size: if this is an HVAC system and filter size is visible

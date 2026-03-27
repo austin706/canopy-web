@@ -89,7 +89,7 @@ export default function Login() {
       // Route by role — but check onboarding first for regular users
       if (userData.role === 'admin') navigate('/admin');
       else if (userData.role === 'agent') navigate('/agent-portal');
-      else if (!userData.onboarding_complete && !homeData) navigate('/home');
+      else if (!userData.onboarding_complete && !homeData) navigate('/onboarding');
       else navigate('/');
     } catch (err: any) {
       setError(err.message || 'Login failed');

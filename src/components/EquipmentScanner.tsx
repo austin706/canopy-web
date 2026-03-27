@@ -22,7 +22,17 @@ const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
 ];
 
 /**
+ * Check if a file is HEIC/HEIF format (common on iPhones).
+ */
+function isHeicFile(file: File): boolean {
+  const type = file.type.toLowerCase();
+  const name = file.name.toLowerCase();
+  return type === 'image/heic' || type === 'image/heif' || name.endsWith('.heic') || name.endsWith('.heif');
+}
+
+/**
  * Compress, resize, and convert an image to JPEG for the AI scanner.
+ * Handles HEIC files from iPhones by converting first.
  * Tries multiple strategies in order for maximum browser/format compatibility.
  * Returns a base64 string (without data URL prefix) of the compressed JPEG.
  */
@@ -43,9 +53,22 @@ async function compressImageFromFile(file: File, previewDataUrl: string, maxWidt
     return canvas.toDataURL('image/jpeg', quality).split(',')[1];
   };
 
-  // Strategy 1: createImageBitmap from File (best — handles most formats natively)
+  // Pre-step: If HEIC, reject early with a helpful message.
+  // Chrome/Firefox cannot decode HEIC natively and JS decoders are unreliable.
+  // Safari and iOS handle HEIC fine, so this only blocks desktop Chrome/Firefox users.
+  if (isHeicFile(file)) {
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if (!isSafari) {
+      throw new Error('This photo is in HEIC format, which Chrome cannot open. Quick fixes:\n\n• On your iPhone: Use the camera directly from this page (tap "Take Photo")\n• On Mac: Open the photo in Preview → File → Export as JPEG\n• On iPhone: Go to Settings → Camera → Formats → Most Compatible');
+    }
+    // Safari can decode HEIC natively, so continue with normal flow
+  }
+
+  const processFile: File | Blob = file;
+
+  // Strategy 1: createImageBitmap from File/Blob (best — handles most formats natively)
   try {
-    const bitmap = await createImageBitmap(file);
+    const bitmap = await createImageBitmap(processFile);
     const result = canvasToJpegBase64(bitmap, bitmap.width, bitmap.height);
     bitmap.close();
     if (result) return result;
@@ -53,9 +76,9 @@ async function compressImageFromFile(file: File, previewDataUrl: string, maxWidt
     console.warn('[Scanner] createImageBitmap(file) failed:', e);
   }
 
-  // Strategy 2: createImageBitmap from blob URL
+  // Strategy 2: createImageBitmap from re-fetched blob
   try {
-    const blobUrl = URL.createObjectURL(file);
+    const blobUrl = URL.createObjectURL(processFile);
     const resp = await fetch(blobUrl);
     const blob = await resp.blob();
     URL.revokeObjectURL(blobUrl);
@@ -67,10 +90,10 @@ async function compressImageFromFile(file: File, previewDataUrl: string, maxWidt
     console.warn('[Scanner] createImageBitmap(blob) failed:', e);
   }
 
-  // Strategy 3: Image() with blob URL (no crossOrigin issues)
+  // Strategy 3: Image() with blob URL
   try {
     const result = await new Promise<string>((resolve, reject) => {
-      const blobUrl = URL.createObjectURL(file);
+      const blobUrl = URL.createObjectURL(processFile);
       const img = new Image();
       img.onload = () => {
         URL.revokeObjectURL(blobUrl);
@@ -85,7 +108,7 @@ async function compressImageFromFile(file: File, previewDataUrl: string, maxWidt
     console.warn('[Scanner] Image(blobUrl) failed:', e);
   }
 
-  // Strategy 4: Image() with the preview data URL (already rendered in DOM, so should work)
+  // Strategy 4: Image() with the preview data URL
   if (previewDataUrl) {
     try {
       const result = await new Promise<string>((resolve, reject) => {
@@ -103,8 +126,12 @@ async function compressImageFromFile(file: File, previewDataUrl: string, maxWidt
     }
   }
 
-  // Strategy 5: Last resort — extract base64 from preview data URL with correct media type
-  // The API might still handle PNG/WebP even if we say JPEG
+  // If we get here with a HEIC file, don't send raw HEIC — Anthropic can't process it
+  if (isHeicFile(file)) {
+    throw new Error('Could not convert this HEIC image. Please take a screenshot of the label and upload that instead.');
+  }
+
+  // Strategy 5: Last resort — extract base64 from preview data URL
   if (previewDataUrl && previewDataUrl.includes(',')) {
     console.warn('[Scanner] All conversion failed, sending raw preview base64');
     return previewDataUrl.split(',')[1];
@@ -124,15 +151,23 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
   const [equipmentName, setEquipmentName] = useState('');
   const [equipmentCategory, setEquipmentCategory] = useState<EquipmentCategory>('hvac');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (file: File) => {
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith('image/') && !isHeicFile(file)) {
       setError('Please select an image file');
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
       setError('Image must be less than 10MB');
+      return;
+    }
+
+    // Warn about HEIC on non-Safari browsers before user waits for a scan
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if (isHeicFile(file) && !isSafari) {
+      setError('This photo is in HEIC format, which Chrome cannot process. Please use your camera to take a new photo from this page, or export the image as JPEG first.');
       return;
     }
 
@@ -434,7 +469,15 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
           <input
             ref={fileInputRef}
             type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+            onChange={handleInputChange}
+            style={{ display: 'none' }}
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
             accept="image/*"
+            capture="environment"
             onChange={handleInputChange}
             style={{ display: 'none' }}
           />
@@ -443,17 +486,28 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
             Upload equipment label photo
           </p>
           <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 16 }}>
-            Drag and drop an image or click to browse
+            Take a photo or select an image (JPEG/PNG)
           </p>
-          <button
-            className="btn btn-secondary"
-            onClick={e => {
-              e.stopPropagation();
-              handleBrowse();
-            }}
-          >
-            Select Image
-          </button>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-primary"
+              onClick={e => {
+                e.stopPropagation();
+                cameraInputRef.current?.click();
+              }}
+            >
+              Take Photo
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={e => {
+                e.stopPropagation();
+                handleBrowse();
+              }}
+            >
+              Select Image
+            </button>
+          </div>
         </div>
       ) : !scanned ? (
         // Image Preview & Scan Button

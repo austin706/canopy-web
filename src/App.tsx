@@ -24,6 +24,7 @@ import AdminUsers from '@/pages/AdminUsers';
 import AdminGiftCodes from '@/pages/AdminGiftCodes';
 import AdminProRequests from '@/pages/AdminProRequests';
 import AdminServiceAreas from '@/pages/AdminServiceAreas';
+import AdminNotifications from '@/pages/AdminNotifications';
 import AgentPortal from '@/pages/AgentPortal';
 import AgentProfile from '@/pages/AgentProfile';
 import AgentClientHome from '@/pages/AgentClientHome';
@@ -119,6 +120,7 @@ export default function App() {
             <Route path="/admin/gift-codes" element={<RoleRoute roles={['admin']}><AdminGiftCodes /></RoleRoute>} />
             <Route path="/admin/pro-requests" element={<RoleRoute roles={['admin']}><AdminProRequests /></RoleRoute>} />
             <Route path="/admin/service-areas" element={<RoleRoute roles={['admin']}><AdminServiceAreas /></RoleRoute>} />
+            <Route path="/admin/notifications" element={<RoleRoute roles={['admin']}><AdminNotifications /></RoleRoute>} />
             <Route path="/agent-portal" element={<RoleRoute roles={['agent', 'admin']}><AgentPortal /></RoleRoute>} />
             <Route path="/agent-portal/profile" element={<RoleRoute roles={['agent', 'admin']}><AgentProfile /></RoleRoute>} />
             <Route path="/agent-portal/client/:clientId" element={<RoleRoute roles={['agent', 'admin']}><AgentClientHome /></RoleRoute>} />

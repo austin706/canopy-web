@@ -93,6 +93,7 @@ export default function AdminDashboard() {
           { label: 'User Accounts', route: '/admin/users', badge: stats?.totalUsers },
           { label: 'Gift Codes', route: '/admin/gift-codes', badge: stats?.activeGiftCodes },
           { label: 'Service Areas', route: '/admin/service-areas', badge: undefined },
+          { label: 'Notifications', route: '/admin/notifications', badge: undefined },
           { label: 'Agent Portal (View as Agent)', route: '/agent-portal', badge: undefined },
           { label: 'Pro Provider Portal (View as Pro)', route: '/pro-portal', badge: undefined },
         ].map(n => (

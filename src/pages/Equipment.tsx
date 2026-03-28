@@ -192,10 +192,7 @@ export default function Equipment() {
           <h1>Equipment</h1>
           <p className="subtitle">{equipment.length} items registered {limit ? `(max ${limit})` : ''}</p>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button className="btn btn-secondary" onClick={() => setShowScanner(true)}>Scan Label</button>
-          <button className="btn btn-primary" onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowModal(true)}>+ Add Equipment</button>
-        </div>
+        <button className="btn btn-primary" onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowScanner(true)}>+ Add Equipment</button>
       </div>
 
       {loading ? (
@@ -306,7 +303,7 @@ export default function Equipment() {
         <div className="modal-overlay" onClick={() => setShowScanner(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 600 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ margin: 0 }}>Scan Equipment Label</h2>
+              <h2 style={{ margin: 0 }}>Add Equipment</h2>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowScanner(false)}>✕</button>
             </div>
             <EquipmentScanner

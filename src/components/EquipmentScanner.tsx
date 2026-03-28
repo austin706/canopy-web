@@ -151,7 +151,6 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
   const [equipmentName, setEquipmentName] = useState('');
   const [equipmentCategory, setEquipmentCategory] = useState<EquipmentCategory>('hvac');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Manual entry mode state
   const [manualMode, setManualMode] = useState(false);
@@ -260,6 +259,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
           setEquipmentCategory(result.category as EquipmentCategory);
         }
       }
+      setScanning(false);
       setScanned(true);
     } catch (err: any) {
       setScanning(false);
@@ -286,6 +286,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
   const handleReset = () => {
     setSelectedFile(null);
     setPreview('');
+    setScanning(false);
     setScanned(false);
     setScanData(null);
     setEquipmentName('');
@@ -623,15 +624,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
-            onChange={handleInputChange}
-            style={{ display: 'none' }}
-          />
-          <input
-            ref={cameraInputRef}
-            type="file"
             accept="image/*"
-            capture="environment"
             onChange={handleInputChange}
             style={{ display: 'none' }}
           />
@@ -640,28 +633,17 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
             Upload equipment label photo
           </p>
           <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 16 }}>
-            Take a photo or select an image (JPEG/PNG)
+            Take a photo or select from your device
           </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              className="btn btn-primary"
-              onClick={e => {
-                e.stopPropagation();
-                cameraInputRef.current?.click();
-              }}
-            >
-              Take Photo
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={e => {
-                e.stopPropagation();
-                handleBrowse();
-              }}
-            >
-              Select Image
-            </button>
-          </div>
+          <button
+            className="btn btn-primary"
+            onClick={e => {
+              e.stopPropagation();
+              handleBrowse();
+            }}
+          >
+            Choose Photo
+          </button>
         </div>
         <div style={{ textAlign: 'center', marginTop: 12 }}>
           <button

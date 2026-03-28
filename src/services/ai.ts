@@ -164,17 +164,27 @@ Return ONLY valid JSON, no other text.`,
 
   // Edge Function returns parsed ScanResult directly;
   // Direct API returns Anthropic format: { content: [{ text: "..." }] }
+  let result: ScanResult;
   if (data.content && Array.isArray(data.content)) {
-    const text = data.content[0].text;
+    let text = data.content[0]?.text || '';
+    // Strip markdown code fences if Claude wrapped the JSON
+    text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
     try {
-      return JSON.parse(text);
+      result = JSON.parse(text);
     } catch {
+      console.error('[AI] Failed to parse response text:', text.slice(0, 200));
       throw new Error('Failed to parse AI response');
     }
+  } else {
+    // Already parsed by Edge Function
+    result = data as ScanResult;
   }
 
-  // Already parsed by Edge Function
-  return data as ScanResult;
+  // Defensive normalization — ensure fields are the expected types so renderers don't crash
+  if (!result.additional_info || typeof result.additional_info !== 'object') result.additional_info = {};
+  if (result.alerts && !Array.isArray(result.alerts)) result.alerts = [];
+  if (typeof result.confidence !== 'number') result.confidence = 0.5;
+  return result;
 };
 
 /**
@@ -230,16 +240,24 @@ Return ONLY valid JSON, no other text.`,
     throw new Error(`AI lookup error: ${errorDetail}`);
   }
 
+  let result: ScanResult;
   if (data.content && Array.isArray(data.content)) {
-    const text = data.content[0].text;
+    let text = data.content[0]?.text || '';
+    text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
     try {
-      return JSON.parse(text);
+      result = JSON.parse(text);
     } catch {
       throw new Error('Failed to parse AI response');
     }
+  } else {
+    result = data as ScanResult;
   }
 
-  return data as ScanResult;
+  // Defensive normalization
+  if (!result.additional_info || typeof result.additional_info !== 'object') result.additional_info = {};
+  if (result.alerts && !Array.isArray(result.alerts)) result.alerts = [];
+  if (typeof result.confidence !== 'number') result.confidence = 0.5;
+  return result;
 };
 
 /**

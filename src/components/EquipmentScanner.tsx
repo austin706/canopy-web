@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { scanEquipmentLabel, lookupByModelNumber, type ScanResult } from '@/services/ai';
+import { scanEquipmentLabel, lookupByModelNumber, AiUsageLimitError, type ScanResult } from '@/services/ai';
 import { Colors } from '@/constants/theme';
 import type { EquipmentCategory } from '@/types';
 
@@ -165,6 +165,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
   const [scanned, setScanned] = useState(false);
   const [scanError, setError] = useState('');
   const [showScanFailurePopup, setShowScanFailurePopup] = useState(false);
+  const [usageLimitHit, setUsageLimitHit] = useState(false);
   const [scanData, setScanData] = useState<ScanResult | null>(null);
   const [equipmentName, setEquipmentName] = useState('');
   const [equipmentCategory, setEquipmentCategory] = useState<EquipmentCategory>('hvac');
@@ -282,9 +283,14 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
       setScanned(true);
     } catch (err: any) {
       setScanning(false);
-      const errorMsg = err?.message || 'Scan failed. Please try again.';
-      setError(errorMsg);
-      setShowScanFailurePopup(true);
+      if (err instanceof AiUsageLimitError) {
+        setUsageLimitHit(true);
+        setError(err.message);
+      } else {
+        const errorMsg = err?.message || 'Scan failed. Please try again.';
+        setError(errorMsg);
+        setShowScanFailurePopup(true);
+      }
       console.error('Scan error:', err);
     }
   };
@@ -364,6 +370,12 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
       setManualMode(false);
     } catch (err: any) {
       console.error('Manual lookup error:', err);
+      if (err instanceof AiUsageLimitError) {
+        setUsageLimitHit(true);
+        setError(err.message);
+        setLookingUp(false);
+        return;
+      }
       // Even if AI lookup fails, let user proceed with what they typed
       const fallbackResult: ScanResult = {
         make: '',
@@ -1011,7 +1023,41 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
         </div>
       ) : null}
 
-      {scanError && (
+      {usageLimitHit && (
+        <div
+          style={{
+            marginTop: 16,
+            padding: 16,
+            background: `linear-gradient(135deg, ${Colors.copper}10, ${Colors.copper}05)`,
+            borderLeft: `4px solid ${Colors.copper}`,
+            borderRadius: 8,
+          }}
+        >
+          <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>
+            AI scan limit reached
+          </p>
+          <p style={{ margin: '0 0 12px', fontSize: 13, color: Colors.medGray, lineHeight: '20px' }}>
+            {scanError || 'Upgrade your plan to unlock unlimited AI-powered equipment scanning.'}
+          </p>
+          <a
+            href="/subscription"
+            style={{
+              display: 'inline-block',
+              padding: '8px 20px',
+              background: Colors.copper,
+              color: '#fff',
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+          >
+            View Plans
+          </a>
+        </div>
+      )}
+
+      {scanError && !usageLimitHit && (
         <div
           style={{
             marginTop: 16,

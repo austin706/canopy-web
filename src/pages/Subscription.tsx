@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { redeemGiftCode, insertProInterest, supabase } from '@/services/supabase';
-import { PLANS, isProAvailableInArea } from '@/services/subscriptionGate';
+import { PLANS, loadServiceAreas, isProAvailableInArea } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import ServiceAreaMap from '@/components/ServiceAreaMap';
@@ -80,7 +80,13 @@ export default function Subscription() {
     }
   };
 
-  const proAvailable = isProAvailableInArea(home?.state, home?.zip_code);
+  const [proAvailable, setProAvailable] = useState(true);
+
+  useEffect(() => {
+    loadServiceAreas().then(() => {
+      setProAvailable(isProAvailableInArea(home?.state, home?.zip_code));
+    });
+  }, [home?.state, home?.zip_code]);
 
   const handleRedeem = async () => {
     if (!giftCode.trim() || !user) return;

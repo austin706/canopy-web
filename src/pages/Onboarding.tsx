@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase } from '@/services/supabase';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
-import { PLANS, isProAvailableInArea } from '@/services/subscriptionGate';
+import { PLANS, isProAvailableInArea, loadServiceAreas } from '@/services/subscriptionGate';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
 import EquipmentScanner from '@/components/EquipmentScanner';
 import InspectionUploader from '@/components/InspectionUploader';
@@ -436,10 +436,14 @@ export default function Onboarding() {
     setStep(4);
   };
 
-  const proAvailable = isProAvailableInArea(
-    useStore.getState().home?.state,
-    useStore.getState().home?.zip_code,
-  );
+  const [proAvailable, setProAvailable] = useState(true);
+
+  useEffect(() => {
+    loadServiceAreas().then(() => {
+      const h = useStore.getState().home;
+      setProAvailable(isProAvailableInArea(h?.state, h?.zip_code));
+    });
+  }, [home?.state, home?.zip_code]);
 
   // Progress bar: steps 1-4 (Address through Equipment), welcome and done don't count
   const progressStep = Math.max(0, Math.min(step - 1, PROGRESS_STEPS));

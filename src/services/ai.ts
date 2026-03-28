@@ -17,6 +17,23 @@ import { supabase } from './supabase';
 const CLAUDE_API_KEY = import.meta.env.VITE_AI_API_KEY || '';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 
+/** Thrown when the user has exceeded their AI usage limit for their tier. */
+export class AiUsageLimitError extends Error {
+  public readonly currentUsage: number;
+  public readonly limit: number;
+  public readonly tier: string;
+  public readonly upgradeRequired: boolean;
+
+  constructor(data: { message: string; current_usage: number; limit: number; tier: string }) {
+    super(data.message);
+    this.name = 'AiUsageLimitError';
+    this.currentUsage = data.current_usage;
+    this.limit = data.limit;
+    this.tier = data.tier;
+    this.upgradeRequired = true;
+  }
+}
+
 export interface ScanResult {
   make: string;
   model: string;
@@ -73,6 +90,19 @@ const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
 
     if (response.status === 401) {
       throw new Error('Authentication failed. Please sign in again.');
+    }
+
+    // Handle usage limit exceeded (429 from edge function rate limiting)
+    if (response.status === 429) {
+      try {
+        const limitData = await response.json();
+        if (limitData.error === 'usage_limit_exceeded') {
+          throw new AiUsageLimitError(limitData);
+        }
+      } catch (e) {
+        if (e instanceof AiUsageLimitError) throw e;
+      }
+      throw new Error('Too many requests. Please try again later.');
     }
 
     if (!response.ok) {

@@ -68,7 +68,7 @@ const PROGRESS_STEPS = 4; // Steps shown in progress bar (Address, Systems, Plan
 export default function Onboarding() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, setHome, addEquipment, setTasks } = useStore();
+  const { user, home, setHome, addEquipment, setTasks } = useStore();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [generatingTasks, setGeneratingTasks] = useState(false);

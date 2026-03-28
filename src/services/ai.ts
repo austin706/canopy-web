@@ -182,7 +182,18 @@ Return ONLY valid JSON, no other text.`,
 
   // Defensive normalization — ensure fields are the expected types so renderers don't crash
   if (!result.additional_info || typeof result.additional_info !== 'object') result.additional_info = {};
+  // Flatten any nested objects in additional_info to strings (React error #31 prevention)
+  for (const [k, v] of Object.entries(result.additional_info)) {
+    if (v !== null && typeof v === 'object') {
+      result.additional_info[k] = JSON.stringify(v);
+    } else if (typeof v !== 'string') {
+      result.additional_info[k] = String(v ?? '');
+    }
+  }
   if (result.alerts && !Array.isArray(result.alerts)) result.alerts = [];
+  if (Array.isArray(result.alerts)) {
+    result.alerts = result.alerts.map(a => typeof a === 'string' ? a : JSON.stringify(a));
+  }
   if (typeof result.confidence !== 'number') result.confidence = 0.5;
   return result;
 };
@@ -255,7 +266,17 @@ Return ONLY valid JSON, no other text.`,
 
   // Defensive normalization
   if (!result.additional_info || typeof result.additional_info !== 'object') result.additional_info = {};
+  for (const [k, v] of Object.entries(result.additional_info)) {
+    if (v !== null && typeof v === 'object') {
+      result.additional_info[k] = JSON.stringify(v);
+    } else if (typeof v !== 'string') {
+      result.additional_info[k] = String(v ?? '');
+    }
+  }
   if (result.alerts && !Array.isArray(result.alerts)) result.alerts = [];
+  if (Array.isArray(result.alerts)) {
+    result.alerts = result.alerts.map(a => typeof a === 'string' ? a : JSON.stringify(a));
+  }
   if (typeof result.confidence !== 'number') result.confidence = 0.5;
   return result;
 };

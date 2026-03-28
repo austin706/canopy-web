@@ -724,7 +724,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
           </div>
 
           {/* AI Alerts */}
-          {scanData.alerts && scanData.alerts.length > 0 && (
+          {scanData.alerts && Array.isArray(scanData.alerts) && scanData.alerts.length > 0 && (
             <div style={{ marginBottom: 20 }}>
               {scanData.alerts.map((alert, i) => (
                 <div
@@ -740,7 +740,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
                     lineHeight: '18px',
                   }}
                 >
-                  {alert}
+                  {typeof alert === 'string' ? alert : JSON.stringify(alert)}
                 </div>
               ))}
             </div>
@@ -850,7 +850,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
               >
                 {Object.entries(scanData.additional_info).map(([key, value]) => (
                   <div key={key} style={{ marginBottom: 8 }}>
-                    <strong>{key}:</strong> {value}
+                    <strong>{key}:</strong> {typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value ?? '')}
                   </div>
                 ))}
               </div>

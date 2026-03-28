@@ -211,36 +211,75 @@ export default function Equipment() {
       </div>
 
       {filtered.length === 0 ? (
-        <div style={{ maxWidth: 560, margin: '0 auto', padding: '32px 0' }}>
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div style={{ fontSize: 32, fontWeight: 700, color: Colors.copper, marginBottom: 8 }}>EQ</div>
-            <h3 style={{ marginBottom: 8 }}>No equipment yet</h3>
-            <p style={{ color: Colors.medGray, fontSize: 14, lineHeight: 1.6 }}>
-              Scanning your equipment labels lets Canopy build a personalized maintenance schedule, track warranty info, and alert you to issues.
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '24px 0' }}>
+          {/* Hero */}
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: Colors.copperMuted,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 16px', fontSize: 32,
+            }}>📋</div>
+            <h3 style={{ marginBottom: 8, fontSize: 20 }}>Your Equipment Registry</h3>
+            <p style={{ color: Colors.medGray, fontSize: 14, lineHeight: 1.6, maxWidth: 420, margin: '0 auto' }}>
+              Scan your equipment labels and Canopy handles the rest — maintenance reminders, warranty tracking, and lifecycle alerts all personalized to your home.
             </p>
           </div>
 
-          {/* Scan button */}
+          {/* What happens when you scan — 1-2-3 flow */}
+          <div style={{
+            background: Colors.cardBackground,
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 20,
+            border: `1px solid ${Colors.lightGray}`,
+          }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: Colors.charcoal, margin: '0 0 14px 0' }}>
+              What happens when you scan
+            </p>
+            {[
+              { step: '1', title: 'Snap a photo', desc: 'of the equipment nameplate or label' },
+              { step: '2', title: 'AI reads the label', desc: 'and extracts make, model, specs, and age' },
+              { step: '3', title: 'Canopy builds your plan', desc: '— maintenance schedule, warranty tracking, replacement alerts' },
+            ].map((item, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: i < 2 ? 14 : 0 }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: Colors.copper, color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13, fontWeight: 700, flexShrink: 0,
+                }}>
+                  {item.step}
+                </div>
+                <div style={{ paddingTop: 4 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{item.title} </span>
+                  <span style={{ fontSize: 14, color: Colors.medGray }}>{item.desc}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
           <button
             className="btn btn-primary"
             onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowScanner(true)}
-            style={{ width: '100%', padding: '14px 0', fontSize: 15, marginBottom: 24 }}
+            style={{ width: '100%', padding: '14px 0', fontSize: 15, marginBottom: 20 }}
           >
-            Scan Equipment Label
+            + Add Equipment
           </button>
 
-          {/* Equipment suggestion checklist */}
+          {/* Where to look checklist */}
           <div style={{
-            backgroundColor: '#faf9f7',
+            backgroundColor: Colors.cream,
             borderRadius: 12,
             padding: 20,
-            marginBottom: 24,
+            marginBottom: 20,
           }}>
             <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
-              What should I scan?
+              Not sure what to scan?
             </p>
-            <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 16, lineHeight: 1.5 }}>
-              Look for stickers or nameplates on these common items. Each scan gives Canopy more data to work with.
+            <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 14, lineHeight: 1.5 }}>
+              Start with these — each scan gives Canopy more data to protect your home.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {SCAN_SUGGESTIONS.map((item, i) => (
@@ -254,15 +293,6 @@ export default function Equipment() {
               ))}
             </div>
           </div>
-
-          {/* Manual add option */}
-          <button
-            className="btn btn-ghost"
-            onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowModal(true)}
-            style={{ width: '100%', fontSize: 13 }}
-          >
-            Or add equipment manually
-          </button>
         </div>
       ) : (
         <div className="grid-2">

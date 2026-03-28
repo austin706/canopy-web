@@ -8,6 +8,24 @@ interface EquipmentScannerProps {
   onClose?: () => void;
 }
 
+/** Photo tips for the expandable guide */
+const PHOTO_TIPS = [
+  { icon: '✓', label: 'Get close to the label', detail: 'Fill the frame with the nameplate — avoid full-equipment shots', good: true },
+  { icon: '✓', label: 'Good lighting, no flash', detail: 'Natural or overhead light works best. Flash causes glare on metal labels', good: true },
+  { icon: '✓', label: 'Straight-on angle', detail: 'Hold your phone flat and parallel to the label to avoid distortion', good: true },
+  { icon: '✗', label: 'Avoid blurry or far-away shots', detail: "If you can't read the text yourself, the AI won't be able to either", good: false },
+];
+
+/** Where to find equipment labels */
+const LABEL_LOCATIONS = [
+  { equipment: 'Furnace / Air Handler', location: 'Inside the front panel door', icon: '🔥' },
+  { equipment: 'AC Condenser (outdoor)', location: 'Metal plate on the side panel', icon: '❄️' },
+  { equipment: 'Water Heater', location: 'Sticker on the front or side of tank', icon: '🚿' },
+  { equipment: 'Evaporator Coil', location: 'Sticker on the coil housing near furnace', icon: '🌀' },
+  { equipment: 'Dishwasher / Washer', location: 'Inside the door edge or lid frame', icon: '🍽️' },
+  { equipment: 'Garage Door Opener', location: 'Sticker on the motor housing', icon: '🚗' },
+];
+
 const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
   { value: 'hvac', label: 'HVAC' },
   { value: 'water_heater', label: 'Water Heater' },
@@ -157,6 +175,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
   const [manualModel, setManualModel] = useState('');
   const [manualSerial, setManualSerial] = useState('');
   const [lookingUp, setLookingUp] = useState(false);
+  const [showTips, setShowTips] = useState(false);
 
   const handleFileSelect = (file: File) => {
     if (!file.type.startsWith('image/') && !isHeicFile(file)) {
@@ -603,8 +622,32 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
           )}
         </div>
       ) : !preview ? (
-        // Upload Area
+        // Upload Area with AI value prop + photo tips
         <>
+        {/* AI Value Prop Banner */}
+        <div
+          style={{
+            background: `linear-gradient(135deg, ${Colors.copperMuted}, ${Colors.sageMuted})`,
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 16,
+            borderLeft: `3px solid ${Colors.copper}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <span style={{ fontSize: 22, lineHeight: '28px', flexShrink: 0 }}>🤖</span>
+            <div>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
+                AI-Powered Label Scanner
+              </p>
+              <p style={{ margin: 0, fontSize: 13, color: Colors.medGray, lineHeight: '19px' }}>
+                Snap a photo of your equipment's nameplate. Canopy reads the label and auto-fills make, model, specs, and sets up your maintenance schedule.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Upload Area */}
         <div
           className="scanner-upload-area"
           onDragOver={handleDragOver}
@@ -614,7 +657,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
           style={{
             border: `2px dashed ${Colors.copper}`,
             borderRadius: 12,
-            padding: 40,
+            padding: 32,
             textAlign: 'center',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
@@ -628,11 +671,11 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
             onChange={handleInputChange}
             style={{ display: 'none' }}
           />
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 16, color: Colors.copper }}>IMG</div>
-          <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 8, color: Colors.charcoal }}>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: Colors.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', fontSize: 24 }}>📷</div>
+          <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: Colors.charcoal }}>
             Upload equipment label photo
           </p>
-          <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 16 }}>
+          <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>
             Take a photo or select from your device
           </p>
           <button
@@ -645,7 +688,103 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
             Choose Photo
           </button>
         </div>
-        <div style={{ textAlign: 'center', marginTop: 12 }}>
+
+        {/* Expandable Photo Tips */}
+        <div style={{ textAlign: 'center', marginTop: 8 }}>
+          <button
+            onClick={() => setShowTips(!showTips)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 13, color: Colors.copper, fontWeight: 500,
+              padding: '8px 0',
+            }}
+          >
+            {showTips ? 'Hide photo tips \u25B4' : '\uD83D\uDCF8 Photo tips for best results \u25BE'}
+          </button>
+        </div>
+
+        {showTips && (
+          <div
+            style={{
+              backgroundColor: Colors.cream,
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 4,
+            }}
+          >
+            <p style={{ fontSize: 13, fontWeight: 700, color: Colors.charcoal, margin: '0 0 12px 0' }}>
+              Tips for a good scan
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+              {PHOTO_TIPS.map((tip, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                    backgroundColor: tip.good ? '#4CAF5020' : '#E5393520',
+                    color: tip.good ? Colors.success : Colors.error,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 12, fontWeight: 700, marginTop: 1,
+                  }}>
+                    {tip.icon}
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: Colors.charcoal }}>{tip.label}</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: 12, color: Colors.medGray, lineHeight: '17px' }}>{tip.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Where to find labels */}
+            <div style={{ paddingTop: 12, borderTop: `1px solid ${Colors.lightGray}` }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: Colors.charcoal, margin: '0 0 10px 0' }}>
+                Where to find the label
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {LABEL_LOCATIONS.map((item, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
+                    <div>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: Colors.charcoal }}>{item.equipment}</span>
+                      <span style={{ fontSize: 12, color: Colors.medGray }}> — {item.location}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Good vs Bad example */}
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${Colors.lightGray}` }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: Colors.charcoal, margin: '0 0 10px 0' }}>
+                Good vs. bad photos
+              </p>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ flex: 1, borderRadius: 8, overflow: 'hidden', border: `2px solid ${Colors.success}` }}>
+                  <div style={{ background: Colors.lightGray, height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                    <span style={{ fontSize: 24 }}>🏷️</span>
+                    <span style={{ fontSize: 10, color: Colors.medGray, marginTop: 2 }}>Close-up of label</span>
+                  </div>
+                  <div style={{ background: '#4CAF5015', padding: '5px 8px', textAlign: 'center' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: Colors.success }}>Good</span>
+                  </div>
+                </div>
+                <div style={{ flex: 1, borderRadius: 8, overflow: 'hidden', border: `2px solid ${Colors.error}` }}>
+                  <div style={{ background: Colors.lightGray, height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                    <span style={{ fontSize: 24 }}>🏠</span>
+                    <span style={{ fontSize: 10, color: Colors.medGray, marginTop: 2 }}>Full unit, far away</span>
+                  </div>
+                  <div style={{ background: '#E5393515', padding: '5px 8px', textAlign: 'center' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: Colors.error }}>Too far</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Manual fallback */}
+        <div style={{ textAlign: 'center', marginTop: 4 }}>
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => setManualMode(true)}

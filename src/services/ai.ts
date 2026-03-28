@@ -178,6 +178,71 @@ Return ONLY valid JSON, no other text.`,
 };
 
 /**
+ * Look up equipment details by model number and/or serial number using Claude AI.
+ * Fallback for when the image scanner fails — user types in the numbers manually.
+ */
+export const lookupByModelNumber = async (modelNumber: string, serialNumber?: string): Promise<ScanResult> => {
+  const parts: string[] = [];
+  if (modelNumber) parts.push(`Model number: ${modelNumber}`);
+  if (serialNumber) parts.push(`Serial number: ${serialNumber}`);
+  const inputText = parts.join('\n');
+
+  const response = await callAI({
+    action: 'scan-equipment',
+    messages: [
+      {
+        role: 'user',
+        content: `You are an equipment identification expert for a home maintenance app called Canopy.
+A homeowner has manually entered the following information from their equipment label:
+
+${inputText}
+
+Based on the model number (and serial number if provided), identify the equipment and return a JSON object with these fields:
+- make: manufacturer/brand name (decode from model number prefix if possible — e.g., "CAPF" = Goodman, "TUH1" = Trane, "58TP" = Carrier)
+- model: the full model number as provided
+- serial_number: the serial number if provided, otherwise null
+- capacity: capacity if deducible from model number (tonnage, gallons, BTU, etc.)
+- install_date: null (cannot determine from model number alone)
+- fuel_type: gas, electric, propane, etc. if deducible
+- efficiency_rating: SEER, EF, AFUE, etc. if deducible
+- filter_size: null unless deducible
+- category: map to ONE of these exact values: hvac, water_heater, appliance, roof, plumbing, electrical, outdoor, safety, pool, garage
+- equipment_subtype: specific type like "Evaporator Coil", "Gas Furnace", "Condenser Unit", "Heat Pump", "Tankless Water Heater", "Tank Water Heater", "Dishwasher", "Refrigerator", "Garage Door Opener", etc.
+- estimated_lifespan_years: typical lifespan for this equipment type in years
+- refrigerant_type: if this is a cooling/HVAC system, the refrigerant type
+- alerts: array of actionable alerts (e.g., R22 phase-out, known recalls)
+- additional_info: object with any other useful details you can determine from the model number
+- confidence: 0-1 score — use lower confidence (0.3-0.6) if you're guessing based on partial info, higher (0.7-1.0) if you recognize the model number
+
+Even if you cannot identify the exact model, make your best guess based on the model number patterns. Many HVAC manufacturers encode equipment type, capacity, and efficiency in their model numbers.
+
+Return ONLY valid JSON, no other text.`,
+      },
+    ],
+  });
+
+  const data = await response.json();
+
+  if (data._error) {
+    const errorDetail = data.anthropic_error
+      ? JSON.stringify(data.anthropic_error)
+      : data.message || 'Unknown AI error';
+    throw new Error(`AI lookup error: ${errorDetail}`);
+  }
+
+  if (data.content && Array.isArray(data.content)) {
+    const text = data.content[0].text;
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error('Failed to parse AI response');
+    }
+  }
+
+  return data as ScanResult;
+};
+
+/**
  * Parse a home inspection document/report using Claude
  * Extracts maintenance recommendations and schedules tasks
  */

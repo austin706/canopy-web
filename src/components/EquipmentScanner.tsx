@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { scanEquipmentLabel, type ScanResult } from '@/services/ai';
+import { scanEquipmentLabel, lookupByModelNumber, type ScanResult } from '@/services/ai';
 import { Colors } from '@/constants/theme';
 import type { EquipmentCategory } from '@/types';
 
@@ -153,6 +153,12 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  // Manual entry mode state
+  const [manualMode, setManualMode] = useState(false);
+  const [manualModel, setManualModel] = useState('');
+  const [manualSerial, setManualSerial] = useState('');
+  const [lookingUp, setLookingUp] = useState(false);
+
   const handleFileSelect = (file: File) => {
     if (!file.type.startsWith('image/') && !isHeicFile(file)) {
       setError('Please select an image file');
@@ -286,6 +292,9 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
     setEquipmentCategory('hvac');
     setError('');
     setShowScanFailurePopup(false);
+    setManualMode(false);
+    setManualModel('');
+    setManualSerial('');
   };
 
   const handleTryAgain = () => {
@@ -293,6 +302,78 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
     // Reset to the scan state so user can try again
     setScanned(false);
     setScanData(null);
+  };
+
+  const handleEnterManually = () => {
+    setShowScanFailurePopup(false);
+    setManualMode(true);
+    setError('');
+  };
+
+  const handleManualLookup = async () => {
+    if (!manualModel.trim() && !manualSerial.trim()) {
+      setError('Please enter a model number or serial number');
+      return;
+    }
+
+    setLookingUp(true);
+    setError('');
+
+    try {
+      const result = await lookupByModelNumber(manualModel.trim(), manualSerial.trim() || undefined);
+      console.log('[Scanner] Manual lookup result:', JSON.stringify(result).slice(0, 500));
+
+      const name =
+        result.make && result.model
+          ? `${result.make} ${result.model}`
+          : result.make || manualModel.trim() || 'Equipment';
+
+      // Ensure model and serial from user input are preserved
+      if (manualModel.trim()) result.model = manualModel.trim();
+      if (manualSerial.trim()) result.serial_number = manualSerial.trim();
+
+      setScanData(result);
+      setEquipmentName(name);
+      if (result.category) {
+        const validCategories = EQUIPMENT_CATEGORIES.map(c => c.value);
+        if (validCategories.includes(result.category as EquipmentCategory)) {
+          setEquipmentCategory(result.category as EquipmentCategory);
+        }
+      }
+      setScanned(true);
+      setManualMode(false);
+    } catch (err: any) {
+      console.error('Manual lookup error:', err);
+      // Even if AI lookup fails, let user proceed with what they typed
+      const fallbackResult: ScanResult = {
+        make: '',
+        model: manualModel.trim(),
+        serial_number: manualSerial.trim() || undefined,
+        additional_info: {},
+        confidence: 0.1,
+      };
+      setScanData(fallbackResult);
+      setEquipmentName(manualModel.trim() || 'Equipment');
+      setScanned(true);
+      setManualMode(false);
+    } finally {
+      setLookingUp(false);
+    }
+  };
+
+  const handleManualSkipLookup = () => {
+    // Skip AI lookup — just create equipment with what user entered
+    const fallbackResult: ScanResult = {
+      make: '',
+      model: manualModel.trim(),
+      serial_number: manualSerial.trim() || undefined,
+      additional_info: {},
+      confidence: 0.1,
+    };
+    setScanData(fallbackResult);
+    setEquipmentName(manualModel.trim() || 'Equipment');
+    setScanned(true);
+    setManualMode(false);
   };
 
   // Scan failure fallback popup
@@ -429,14 +510,14 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
             </button>
             <button
               className="btn btn-ghost"
-              onClick={() => setShowScanFailurePopup(false)}
+              onClick={handleEnterManually}
               style={{
                 width: '100%',
                 borderColor: Colors.copper,
                 color: Colors.copper,
               }}
             >
-              Enter Manually
+              Enter Model/Serial Number
             </button>
           </div>
         </div>
@@ -448,8 +529,81 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
     <div className="equipment-scanner">
       <ScanFailurePopup />
 
-      {!preview ? (
+      {manualMode ? (
+        // Manual Entry Mode — model/serial number lookup
+        <div>
+          <div
+            style={{
+              marginBottom: 20,
+              padding: 20,
+              backgroundColor: Colors.copperMuted,
+              borderRadius: 12,
+              borderLeft: `4px solid ${Colors.copper}`,
+            }}
+          >
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: Colors.charcoal, margin: '0 0 8px 0' }}>
+              Enter Model / Serial Number
+            </h3>
+            <p style={{ fontSize: 13, color: Colors.medGray, margin: 0, lineHeight: '19px' }}>
+              Type the model number from your equipment label. Canopy's AI will identify the make, type, and specs automatically.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label>Model Number</label>
+            <input
+              className="form-input"
+              value={manualModel}
+              onChange={e => setManualModel(e.target.value)}
+              placeholder="e.g., CAPF3743C6, TUH1B080A9H31A, GSS25GSHSS"
+              autoFocus
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Serial Number <span style={{ color: Colors.medGray, fontWeight: 400 }}>(optional)</span></label>
+            <input
+              className="form-input"
+              value={manualSerial}
+              onChange={e => setManualSerial(e.target.value)}
+              placeholder="e.g., 1911123456"
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <button
+              className="btn btn-ghost"
+              onClick={() => { setManualMode(false); setManualModel(''); setManualSerial(''); setError(''); }}
+              disabled={lookingUp}
+            >
+              Back to Scanner
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleManualLookup}
+              disabled={lookingUp || (!manualModel.trim() && !manualSerial.trim())}
+              style={{ flex: 1 }}
+            >
+              {lookingUp ? 'Looking up...' : 'Look Up Equipment'}
+            </button>
+          </div>
+
+          {(manualModel.trim() || manualSerial.trim()) && (
+            <div style={{ textAlign: 'center', marginTop: 12 }}>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={handleManualSkipLookup}
+                disabled={lookingUp}
+                style={{ fontSize: 12, color: Colors.medGray }}
+              >
+                Skip lookup — just enter details myself
+              </button>
+            </div>
+          )}
+        </div>
+      ) : !preview ? (
         // Upload Area
+        <>
         <div
           className="scanner-upload-area"
           onDragOver={handleDragOver}
@@ -509,6 +663,16 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
             </button>
           </div>
         </div>
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => setManualMode(true)}
+            style={{ fontSize: 13, color: Colors.copper }}
+          >
+            Can't scan? Enter model number instead
+          </button>
+        </div>
+        </>
       ) : !scanned ? (
         // Image Preview & Scan Button
         <div>

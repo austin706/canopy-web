@@ -7,6 +7,7 @@ import { PLANS, isProAvailableInArea } from '@/services/subscriptionGate';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
 import EquipmentScanner from '@/components/EquipmentScanner';
 import InspectionUploader from '@/components/InspectionUploader';
+import { lookupByModelNumber } from '@/services/ai';
 import { Colors } from '@/constants/theme';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import type { EquipmentCategory, Equipment as EquipmentType, SubscriptionTier } from '@/types';
@@ -54,6 +55,7 @@ interface Equipment {
   category: EquipmentCategory;
   make: string;
   model: string;
+  serial_number?: string;
   equipment_subtype?: string;
   refrigerant_type?: string;
   estimated_lifespan_years?: number;
@@ -142,9 +144,10 @@ export default function Onboarding() {
   // Step 4: Equipment
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [equipmentForm, setEquipmentForm] = useState<Equipment>({
-    name: '', category: 'hvac', make: '', model: '',
+    name: '', category: 'hvac', make: '', model: '', serial_number: '',
   });
   const [showScanner, setShowScanner] = useState(false);
+  const [lookingUpModel, setLookingUpModel] = useState(false);
 
   // Helpers for fireplace/filter arrays
   const updateFireplaceCount = (count: string) => {
@@ -248,7 +251,43 @@ export default function Onboarding() {
   const handleAddEquipment = () => {
     if (!equipmentForm.name) { alert('Please enter equipment name'); return; }
     setEquipmentList([...equipmentList, { ...equipmentForm }]);
-    setEquipmentForm({ name: '', category: 'hvac', make: '', model: '' });
+    setEquipmentForm({ name: '', category: 'hvac', make: '', model: '', serial_number: '' });
+  };
+
+  const handleModelLookup = async () => {
+    if (!equipmentForm.model?.trim() && !equipmentForm.serial_number?.trim()) {
+      alert('Please enter a model number or serial number to look up.');
+      return;
+    }
+    setLookingUpModel(true);
+    try {
+      const result = await lookupByModelNumber(equipmentForm.model?.trim() || '', equipmentForm.serial_number?.trim() || undefined);
+      const name = result.equipment_subtype
+        ? `${result.make || ''} ${result.equipment_subtype}`.trim()
+        : `${result.make || ''} ${result.model || equipmentForm.model}`.trim();
+
+      const validCats: EquipmentCategory[] = ['hvac', 'water_heater', 'appliance', 'roof', 'plumbing', 'electrical', 'outdoor', 'safety', 'pool', 'garage'];
+      const cat = result.category && validCats.includes(result.category as EquipmentCategory)
+        ? result.category as EquipmentCategory
+        : equipmentForm.category;
+
+      setEquipmentForm(prev => ({
+        ...prev,
+        name: name || prev.name,
+        make: result.make || prev.make,
+        model: equipmentForm.model?.trim() || result.model || prev.model,
+        serial_number: equipmentForm.serial_number?.trim() || result.serial_number || prev.serial_number,
+        category: cat,
+        equipment_subtype: result.equipment_subtype || prev.equipment_subtype,
+        refrigerant_type: result.refrigerant_type || prev.refrigerant_type,
+        estimated_lifespan_years: result.estimated_lifespan_years || prev.estimated_lifespan_years,
+      }));
+    } catch (err) {
+      console.warn('Model lookup failed:', err);
+      alert('Could not identify this model automatically. You can still enter details manually.');
+    } finally {
+      setLookingUpModel(false);
+    }
   };
 
   const handleRemoveEquipment = (index: number) => {
@@ -256,10 +295,10 @@ export default function Onboarding() {
   };
 
   const handleScannerComplete = (scannedData: any) => {
-    const { name, category, make, model, equipment_subtype, refrigerant_type, estimated_lifespan_years } = scannedData;
+    const { name, category, make, model, serial_number, equipment_subtype, refrigerant_type, estimated_lifespan_years } = scannedData;
     setEquipmentList([
       ...equipmentList,
-      { name, category, make: make || '', model: model || '', equipment_subtype, refrigerant_type, estimated_lifespan_years },
+      { name, category, make: make || '', model: model || '', serial_number: serial_number || '', equipment_subtype, refrigerant_type, estimated_lifespan_years },
     ]);
     setShowScanner(false);
   };
@@ -280,6 +319,7 @@ export default function Onboarding() {
           name: item.name,
           make: item.make || undefined,
           model: item.model || undefined,
+          serial_number: item.serial_number || undefined,
           equipment_subtype: item.equipment_subtype || undefined,
           refrigerant_type: item.refrigerant_type || undefined,
           expected_lifespan_years: item.estimated_lifespan_years
@@ -946,11 +986,44 @@ export default function Onboarding() {
               {/* Manual entry */}
               <details style={{ marginBottom: 24 }}>
                 <summary style={{ fontSize: 13, color: Colors.copper, cursor: 'pointer', fontWeight: 500, marginBottom: 12 }}>
-                  Or add equipment manually
+                  Or enter model/serial number manually
                 </summary>
                 <div style={{ paddingTop: 12 }}>
+                  <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 16, lineHeight: 1.5 }}>
+                    Enter the model number from the label and we'll try to identify the equipment automatically.
+                  </p>
+                  <div className="grid-2">
+                    <div className="form-group">
+                      <label>Model Number</label>
+                      <input className="form-input" placeholder="e.g., CAPF3743C6" value={equipmentForm.model}
+                        onChange={e => setEquipmentForm({ ...equipmentForm, model: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label>Serial Number <span style={{ color: Colors.medGray, fontWeight: 400 }}>(optional)</span></label>
+                      <input className="form-input" placeholder="e.g., 1911123456" value={equipmentForm.serial_number || ''}
+                        onChange={e => setEquipmentForm({ ...equipmentForm, serial_number: e.target.value })} />
+                    </div>
+                  </div>
+
+                  {(equipmentForm.model?.trim() || equipmentForm.serial_number?.trim()) && (
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleModelLookup}
+                      disabled={lookingUpModel}
+                      style={{ width: '100%', marginBottom: 16, backgroundColor: Colors.charcoal }}
+                    >
+                      {lookingUpModel ? 'Looking up...' : 'Auto-identify from model #'}
+                    </button>
+                  )}
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '12px 0' }}>
+                    <div style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
+                    <span style={{ fontSize: 11, color: Colors.medGray }}>or fill in manually</span>
+                    <div style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
+                  </div>
+
                   <div className="form-group">
-                    <label>Equipment Name</label>
+                    <label>Equipment Name *</label>
                     <input className="form-input" placeholder="e.g., Central AC Unit" value={equipmentForm.name}
                       onChange={e => setEquipmentForm({ ...equipmentForm, name: e.target.value })} />
                   </div>
@@ -965,18 +1038,13 @@ export default function Onboarding() {
                       </select>
                     </div>
                     <div className="form-group">
-                      <label>Make</label>
-                      <input className="form-input" placeholder="Carrier" value={equipmentForm.make}
+                      <label>Make / Brand</label>
+                      <input className="form-input" placeholder="Carrier, Trane, Goodman" value={equipmentForm.make}
                         onChange={e => setEquipmentForm({ ...equipmentForm, make: e.target.value })} />
                     </div>
                   </div>
-                  <div className="form-group">
-                    <label>Model</label>
-                    <input className="form-input" placeholder="24ACC636" value={equipmentForm.model}
-                      onChange={e => setEquipmentForm({ ...equipmentForm, model: e.target.value })} />
-                  </div>
                   <button className="btn btn-secondary" onClick={handleAddEquipment} style={{ width: '100%' }}>
-                    + Add Manually
+                    + Add Equipment
                   </button>
                 </div>
               </details>

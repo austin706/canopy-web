@@ -113,21 +113,31 @@ export default function AdminNotifications() {
       }
 
       // Send via edge function so push + email fire alongside in-app
+      // Use raw fetch instead of supabase.functions.invoke to avoid SDK payload issues
+      const session = (await supabase.auth.getSession()).data.session;
+      const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notifications`;
+
+      let payload: Record<string, any> = { title, body, category, action_url: actionUrl || undefined };
       if (audience === 'single') {
-        const { error } = await supabase.functions.invoke('send-notifications', {
-          body: { user_id: userIds[0], title, body, category, action_url: actionUrl || undefined },
-        });
-        if (error) throw error;
+        payload.user_id = userIds[0];
       } else if (audience === 'all') {
-        const { error } = await supabase.functions.invoke('send-notifications', {
-          body: { broadcast_all: true, title, body, category, action_url: actionUrl || undefined },
-        });
-        if (error) throw error;
+        payload.broadcast_all = true;
       } else if (audience === 'tier') {
-        const { error } = await supabase.functions.invoke('send-notifications', {
-          body: { broadcast_tier: selectedTier, title, body, category, action_url: actionUrl || undefined },
-        });
-        if (error) throw error;
+        payload.broadcast_tier = selectedTier;
+      }
+
+      const res = await fetch(fnUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Edge function returned ${res.status}`);
       }
 
       setMessage({

@@ -214,7 +214,6 @@ export default function ProInspection() {
               ...newInspection,
               items: items.map((item, idx) => ({
                 id: `temp-${idx}`,
-                inspection_id: newInspection.id,
                 ...item,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -229,7 +228,7 @@ export default function ProInspection() {
       const validInspections = newInspections.filter((i): i is EnrichedInspection => i !== null);
       setInspections(validInspections);
       if (validInspections.length > 0) {
-        setActiveTabId(validIns[0].id);
+        setActiveTabId(validInspections[0].id);
       }
 
       // Reload to get actual IDs from database

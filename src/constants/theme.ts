@@ -45,3 +45,55 @@ export const StatusColors: Record<string, string> = {
   upcoming: Colors.medGray,
   skipped: Colors.silver,
 };
+
+// ===============================================================
+// Email Branding — Resend transactional emails
+// (send-notifications edge function)
+// ===============================================================
+
+export const EmailBrand = {
+  // Sender identity
+  from: 'Canopy Home <info@canopyhome.app>',
+  replyTo: 'support@canopyhome.app',
+
+  // Addresses
+  addresses: {
+    transactional: 'info@canopyhome.app',
+    support: 'support@canopyhome.app',
+    sales: 'sales@canopyhome.app',
+    admin: 'austin@canopyhome.app',
+  },
+
+  // Email color palette (references Colors above)
+  colors: {
+    headerBg: Colors.sage,
+    headerText: Colors.white,
+    bodyBg: Colors.cream,
+    cardBg: Colors.white,
+    titleText: Colors.charcoal,
+    bodyText: Colors.medGray,
+    buttonBg: Colors.copper,
+    buttonText: Colors.white,
+    footerBg: Colors.cream,
+    footerText: '#999999',
+    footerLink: Colors.sage,
+    border: Colors.lightGray,
+  },
+
+  // Typography
+  fontStack: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+
+  // Layout
+  maxWidth: 600,
+  borderRadius: 8,
+  buttonRadius: 6,
+  buttonPadding: '12px 32px',
+
+  // Footer
+  footer: {
+    company: 'Canopy Home by Oak & Sage',
+    url: 'https://canopyhome.app',
+    unsubscribeText: 'Manage notification preferences',
+    unsubscribeUrl: 'https://canopyhome.app/profile#notifications',
+  },
+};

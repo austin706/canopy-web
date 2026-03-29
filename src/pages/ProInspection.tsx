@@ -17,6 +17,8 @@ import {
   completeInspection as completeInspectionService,
   uploadVisitPhoto,
 } from '@/services/inspections';
+import { createNextDynamicTask } from '@/services/taskEngine';
+import { createTask } from '@/services/supabase';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 
@@ -273,6 +275,61 @@ export default function ProInspection() {
         .eq('id', visitId);
 
       if (error) throw error;
+
+      // ─── Mark homeowner's selected tasks as completed by pro ───
+      if (visit.selected_task_ids && visit.selected_task_ids.length > 0 && visit.home_id) {
+        try {
+          // Find matching maintenance_tasks for this home that are still pending
+          const { data: matchingTasks } = await supabase
+            .from('maintenance_tasks')
+            .select('*')
+            .eq('home_id', visit.home_id)
+            .in('template_id', visit.selected_task_ids)
+            .in('status', ['upcoming', 'due', 'overdue']);
+
+          if (matchingTasks && matchingTasks.length > 0) {
+            const now = new Date().toISOString();
+            const taskIds = matchingTasks.map((t: any) => t.id);
+
+            // Batch update tasks to completed
+            await supabase
+              .from('maintenance_tasks')
+              .update({
+                status: 'completed',
+                completed_date: now,
+                completed_by: 'pro',
+                completion_notes: `Completed during pro visit on ${new Date().toLocaleDateString()}`,
+              })
+              .in('id', taskIds);
+
+            // Create maintenance log entries for each completed task
+            const logEntries = matchingTasks.map((task: any) => ({
+              home_id: visit.home_id,
+              task_id: task.id,
+              title: task.title,
+              description: task.description,
+              category: task.category,
+              completed_date: now,
+              completed_by: 'pro',
+              notes: `Completed by pro provider during bimonthly visit`,
+              photos: [],
+              created_at: now,
+            }));
+            await supabase.from('maintenance_logs').insert(logEntries);
+
+            // Generate next occurrences for dynamic tasks
+            for (const task of matchingTasks) {
+              const nextTask = createNextDynamicTask(task, now);
+              if (nextTask) {
+                try { await createTask(nextTask); } catch (e) { /* non-blocking */ }
+              }
+            }
+          }
+        } catch (taskError) {
+          console.warn('Pro task completion failed (non-blocking):', taskError);
+          // Don't fail the visit completion if task marking fails
+        }
+      }
 
       // Call AI summary edge function if checkbox is checked
       if (generateAISummary && SUPABASE_URL) {

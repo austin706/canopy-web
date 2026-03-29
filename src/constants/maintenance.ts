@@ -24,6 +24,7 @@ export interface TaskTemplate {
   service_purpose?: string;
   items_to_have_on_hand?: string[];
   applicable_regions?: ClimateRegion[]; // undefined = all regions
+  pro_responsible?: boolean; // true = pro provider handles this during visits; false/undefined = homeowner DIY
 }
 
 /**
@@ -64,6 +65,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ HVAC ═══
   {
     id: 'hvac-filter-change',
+    pro_responsible: true,
     title: 'Replace HVAC Air Filters',
     description: 'Dirty filters restrict airflow, increase energy bills, and reduce air quality. Replace every 90 days for standard pleated filters, or every 30 days for fiberglass.',
     instructions: [
@@ -83,9 +85,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 10,
     estimated_cost: 15,
     requires_equipment: 'hvac',
+    items_to_have_on_hand: ['Replacement air filter (check size on current filter frame)', 'Vacuum or damp cloth for vent covers'],
   },
   {
     id: 'hvac-spring-tuneup',
+    pro_responsible: true,
     title: 'Schedule Spring AC Tune-Up',
     description: 'Annual professional AC maintenance before summer. Catches issues early and improves efficiency by up to 15%.',
     instructions: [
@@ -105,6 +109,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'hvac-fall-furnace',
+    pro_responsible: true,
     title: 'Schedule Fall Furnace Tune-Up',
     description: 'Annual furnace inspection before heating season. Ensures safe operation and catches carbon monoxide risks.',
     instructions: [
@@ -127,6 +132,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ WATER HEATER ═══
   {
     id: 'water-heater-flush',
+    pro_responsible: true,
     title: 'Flush Water Heater',
     description: 'Sediment buildup reduces efficiency and shortens tank life. Annual flushing removes buildup and keeps your water heater running efficiently.',
     instructions: [
@@ -145,9 +151,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 30,
     estimated_cost: 0,
     requires_equipment: 'water_heater',
+    items_to_have_on_hand: ['Garden hose long enough to reach a drain or outside', 'Flathead screwdriver (for drain valve)'],
   },
   {
     id: 'water-heater-anode-rod',
+    pro_responsible: true,
     title: 'Check Anode Rod',
     description: 'Check every 3-5 years. The sacrificial anode rod prevents tank corrosion.',
     instructions: [
@@ -164,11 +172,13 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 20,
     estimated_cost: 30,
     requires_equipment: 'water_heater',
+    items_to_have_on_hand: ['1-1/16" socket wrench', 'Replacement anode rod (if needed, ~$20-50)'],
   },
 
   // ═══ ROOF & GUTTERS ═══
   {
     id: 'gutter-clean-spring',
+    pro_responsible: true,
     title: 'Clean Gutters (Spring)',
     description: 'Remove debris from winter and spring pollen. Clogged gutters cause water damage to fascia, foundation, and landscaping.',
     instructions: [
@@ -187,9 +197,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 60,
     estimated_cost: 0,
     requires_home_feature: 'has_gutters',
+    items_to_have_on_hand: ['Work gloves', 'Ladder with stabilizer bar', 'Gutter scoop or trowel', 'Garden hose with spray nozzle', 'Bucket or tarp for debris'],
   },
   {
     id: 'gutter-clean-fall',
+    pro_responsible: true,
     title: 'Clean Gutters (Fall)',
     description: 'Clear leaves before winter. Ice dams form when clogged gutters prevent drainage.',
     instructions: [
@@ -207,9 +219,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 60,
     estimated_cost: 0,
     requires_home_feature: 'has_gutters',
+    items_to_have_on_hand: ['Work gloves', 'Ladder with stabilizer bar', 'Garden hose', 'Bucket or tarp for debris'],
   },
   {
     id: 'roof-inspection',
+    pro_responsible: true,
     title: 'Visual Roof Inspection',
     description: 'Look for damaged, missing, or curling shingles. Catching issues early prevents leaks and expensive repairs.',
     instructions: [
@@ -227,11 +241,13 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [4, 10],
     estimated_minutes: 15,
     estimated_cost: 0,
+    items_to_have_on_hand: ['Binoculars', 'Notebook for documenting issues'],
   },
 
   // ═══ SAFETY ═══
   {
     id: 'smoke-co-test',
+    pro_responsible: true,
     title: 'Test Smoke & CO Detectors',
     description: 'Test every 6 months. Replace batteries annually.',
     instructions: [
@@ -249,9 +265,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [4, 10],
     estimated_minutes: 10,
     estimated_cost: 0,
+    items_to_have_on_hand: ['Replacement 9V or AA batteries', 'Step stool or ladder'],
   },
   {
     id: 'fire-extinguisher-check',
+    pro_responsible: true,
     title: 'Check Fire Extinguishers',
     description: 'Verify the pressure gauge is in the green zone and the unit is accessible. Replace if expired.',
     instructions: [
@@ -274,6 +292,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ PLUMBING ═══
   {
     id: 'winterize-hose-bibs',
+    pro_responsible: true,
     title: 'Winterize Hose Bibs',
     description: 'Disconnect hoses and shut off exterior water supply before the first freeze to prevent burst pipes.',
     instructions: [
@@ -291,9 +310,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [10, 11],
     estimated_minutes: 20,
     estimated_cost: 10,
+    items_to_have_on_hand: ['Insulated hose bib covers (one per outdoor faucet)', 'Pipe insulation foam'],
   },
   {
     id: 'check-for-leaks',
+    pro_responsible: true,
     title: 'Check for Water Leaks',
     description: 'Inspect under sinks, around toilets, and near the water heater for drips or moisture. Small leaks become big problems fast.',
     instructions: [
@@ -312,11 +333,13 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [1, 4, 7, 10],
     estimated_minutes: 15,
     estimated_cost: 0,
+    items_to_have_on_hand: ['Flashlight', 'Paper towels (to detect slow drips)'],
   },
 
   // ═══ EXTERIOR ═══
   {
     id: 'dryer-vent-clean',
+    pro_responsible: true,
     title: 'Clean Dryer Vent',
     description: 'Lint buildup in dryer vents is a leading cause of house fires. Clean annually or more often if you notice longer drying times.',
     instructions: [
@@ -334,9 +357,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [3],
     estimated_minutes: 30,
     estimated_cost: 0,
+    items_to_have_on_hand: ['Dryer vent brush kit', 'Vacuum with hose attachment', 'Screwdriver'],
   },
   {
     id: 'garage-door-maintenance',
+    pro_responsible: true,
     title: 'Garage Door Maintenance',
     description: 'Lubricate moving parts and test safety features. A well-maintained garage door lasts 15-30 years.',
     instructions: [
@@ -354,6 +379,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [4, 10],
     estimated_minutes: 20,
     estimated_cost: 5,
+    items_to_have_on_hand: ['Silicone spray lubricant (NOT WD-40)', '2x4 board for safety test'],
   },
 
   // ═══ LAWN & LANDSCAPE ═══
@@ -376,6 +402,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [3, 4],
     estimated_minutes: 120,
     estimated_cost: 40,
+    items_to_have_on_hand: ['Pre-emergent herbicide', 'Grass seed for bare spots', 'Slow-release fertilizer', 'Rake'],
   },
   {
     id: 'fall-lawn-care',
@@ -396,9 +423,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [9, 10],
     estimated_minutes: 180,
     estimated_cost: 60,
+    items_to_have_on_hand: ['Fall fertilizer', 'Grass seed for overseeding', 'Leaf rake or blower'],
   },
   {
     id: 'tree-inspection',
+    pro_responsible: true,
     title: 'Inspect Trees & Prune',
     description: 'Look for dead branches, disease, and structural issues. Prune deciduous trees in late winter while dormant.',
     instructions: [
@@ -440,6 +469,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 180,
     estimated_cost: 100,
     requires_home_feature: 'has_pool',
+    items_to_have_on_hand: ['Pool shock treatment', 'pH test kit or strips', 'Algaecide', 'Pool cover pump'],
   },
   {
     id: 'pool-weekly',
@@ -463,6 +493,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 30,
     estimated_cost: 20,
     requires_home_feature: 'has_pool',
+    items_to_have_on_hand: ['pH test strips or kit', 'Chlorine tablets or liquid', 'Skimmer net', 'Pool brush'],
   },
 
   // ═══ DECK ═══
@@ -486,9 +517,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 120,
     estimated_cost: 0,
     requires_home_feature: 'has_deck',
+    items_to_have_on_hand: ['Deck cleaner or oxygen bleach', 'Stiff bristle brush', 'Garden hose with spray nozzle'],
   },
   {
     id: 'deck-seal-stain',
+    pro_responsible: true,
     title: 'Seal or Stain Deck',
     description: 'Apply deck sealer or stain every 2-3 years to protect against moisture, UV, and wear.',
     instructions: [
@@ -508,11 +541,13 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 240,
     estimated_cost: 100,
     requires_home_feature: 'has_deck',
+    items_to_have_on_hand: ['Deck stain or sealant', 'Paint roller and tray', 'Paintbrush for edges', "Painter's tape", 'Drop cloth'],
   },
 
   // ═══ FIREPLACE ═══
   {
     id: 'fireplace-chimney-inspection',
+    pro_responsible: true,
     title: 'Annual Chimney Inspection & Sweep',
     description: 'Have a certified chimney sweep inspect and clean your chimney annually before heating season. Creosote buildup is a leading cause of chimney fires.',
     instructions: [
@@ -534,6 +569,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'fireplace-wood-burning-clean',
+    pro_responsible: true,
     title: 'Clean Firebox & Ash Removal (Wood Burning)',
     description: 'Remove ash buildup from wood-burning fireplaces. A thin layer of ash (1 inch) helps insulate and improve combustion, but excess ash restricts airflow.',
     instructions: [
@@ -553,9 +589,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 20,
     estimated_cost: 0,
     requires_home_feature: 'has_fireplace',
+    items_to_have_on_hand: ['Fireplace ash bucket (metal)', 'Fireplace shovel and brush', 'Drop cloth', 'Flashlight'],
   },
   {
     id: 'fireplace-gas-inspection',
+    pro_responsible: true,
     title: 'Gas Fireplace Annual Service',
     description: 'Have a qualified technician inspect your gas fireplace annually. Check for gas leaks, clean the burner assembly, and verify the pilot light and thermocouple.',
     instructions: [
@@ -578,6 +616,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'fireplace-check-damper',
+    pro_responsible: true,
     title: 'Check Fireplace Damper & Seal',
     description: 'Ensure your fireplace damper opens and closes properly. A stuck or leaky damper wastes energy and can let moisture, pests, and cold air into your home.',
     instructions: [
@@ -595,11 +634,13 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 10,
     estimated_cost: 0,
     requires_home_feature: 'has_fireplace',
+    items_to_have_on_hand: ['Flashlight', 'Work gloves'],
   },
 
   // ═══ SPRINKLER SYSTEM ═══
   {
     id: 'sprinkler-spring-startup',
+    pro_responsible: true,
     title: 'Spring Sprinkler System Startup',
     description: 'Activate your irrigation system for the season. Gradually pressurize the lines and check each zone for leaks, broken heads, and coverage gaps.',
     instructions: [
@@ -619,9 +660,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 45,
     estimated_cost: 10,
     requires_home_feature: 'has_sprinkler_system',
+    items_to_have_on_hand: ['Replacement sprinkler heads (2-3 spares)', 'Teflon tape for threaded fittings'],
   },
   {
     id: 'sprinkler-winterize',
+    pro_responsible: true,
     title: 'Winterize Sprinkler System (Blowout)',
     description: 'Hire a professional to blow out your sprinkler lines with compressed air before the first freeze. Trapped water in lines will freeze and crack pipes.',
     instructions: [
@@ -640,9 +683,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 30,
     estimated_cost: 75,
     requires_home_feature: 'has_sprinkler_system',
+    items_to_have_on_hand: ['Air compressor with blowout adapter (or schedule a pro)'],
   },
   {
     id: 'sprinkler-head-check',
+    pro_responsible: true,
     title: 'Mid-Season Sprinkler Head Check',
     description: 'Walk your property and check each sprinkler zone for tilted heads, clogged nozzles, and dry spots. Mowing and foot traffic knock heads out of alignment.',
     instructions: [
@@ -661,11 +706,13 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 30,
     estimated_cost: 5,
     requires_home_feature: 'has_sprinkler_system',
+    items_to_have_on_hand: ['Replacement sprinkler heads (2-3 spares)', 'Small flathead screwdriver for adjustments'],
   },
 
   // ═══ SEASONAL GENERAL ═══
   {
     id: 'spring-exterior-walkthrough',
+    pro_responsible: true,
     title: 'Spring Exterior Walkthrough',
     description: 'Walk the perimeter of your home checking for winter damage — cracks in foundation, caulk gaps, damaged siding.',
     instructions: [
@@ -684,6 +731,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [3, 4],
     estimated_minutes: 30,
     estimated_cost: 0,
+    items_to_have_on_hand: ['Caulk gun and exterior caulk', 'Touch-up paint', 'Notebook for documenting issues'],
   },
   {
     id: 'fall-winterize',
@@ -706,6 +754,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [10],
     estimated_minutes: 120,
     estimated_cost: 30,
+    items_to_have_on_hand: ['Pipe insulation foam', 'Insulated hose bib covers', 'Weather stripping', 'Door draft stoppers'],
   },
 
   // ═══ KITCHEN (from Proventive) ═══
@@ -730,6 +779,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [3, 9],
     estimated_minutes: 20,
     estimated_cost: 0,
+    items_to_have_on_hand: ['Coil brush or vacuum with crevice attachment', 'Flashlight'],
   },
   {
     id: 'garbage-disposal-clean',
@@ -752,6 +802,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [1, 4, 7, 10],
     estimated_minutes: 10,
     estimated_cost: 0,
+    items_to_have_on_hand: ['Ice cubes', 'Rock salt or coarse salt', 'Lemon or citrus peels', 'Baking soda', 'White vinegar'],
   },
   {
     id: 'vent-hood-degrease',
@@ -774,6 +825,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [1, 4, 7, 10],
     estimated_minutes: 20,
     estimated_cost: 0,
+    items_to_have_on_hand: ['Degreaser spray', 'Hot soapy water', 'Scrub brush or sponge'],
   },
   {
     id: 'dishwasher-clean',
@@ -797,9 +849,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [1, 4, 7, 10],
     estimated_minutes: 15,
     estimated_cost: 0,
+    items_to_have_on_hand: ['White vinegar', 'Baking soda', 'Toothpick or soft brush for spray arm holes'],
   },
   {
     id: 'stone-countertop-seal',
+    pro_responsible: true,
     title: 'Seal Stone Countertops (Annual Test)',
     description: 'Natural stone countertops like granite, marble, and soapstone may need periodic resealing. Do the water bead test annually — if water soaks in within 5 minutes, reseal.',
     instructions: [
@@ -819,6 +873,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 30,
     estimated_cost: 20,
     requires_countertop_type: ['granite', 'marble', 'soapstone'],
+    items_to_have_on_hand: ['Stone countertop sealer (appropriate for your stone type)', 'Clean microfiber cloths', 'Mild dish soap'],
   },
 
   // ═══ BATHROOM & LAUNDRY (from Proventive) ═══
@@ -843,9 +898,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [1, 4, 7, 10],
     estimated_minutes: 15,
     estimated_cost: 0,
+    items_to_have_on_hand: ['Washing machine cleaner tablets or white vinegar', 'Microfiber cloth', 'Baking soda'],
   },
   {
     id: 'drain-clearing',
+    pro_responsible: true,
     title: 'Clear & Maintain Household Drains',
     description: 'Hair, soap scum, and grease accumulate in drains over time. Proactive cleaning prevents slow drains and costly clogs.',
     instructions: [
@@ -865,9 +922,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [1, 4, 7, 10],
     estimated_minutes: 20,
     estimated_cost: 0,
+    items_to_have_on_hand: ['Baking soda', 'White vinegar', 'Drain snake or zip-it tool', 'Boiling water'],
   },
   {
     id: 'bathroom-exhaust-fan-clean',
+    pro_responsible: true,
     title: 'Clean Bathroom Exhaust Fans',
     description: 'Dust-clogged exhaust fans cannot properly remove moisture, leading to mold growth, peeling paint, and poor air quality.',
     instructions: [
@@ -888,11 +947,13 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [4, 10],
     estimated_minutes: 15,
     estimated_cost: 0,
+    items_to_have_on_hand: ['Vacuum with brush attachment', 'Damp cloth', 'Screwdriver'],
   },
 
   // ═══ THROUGHOUT THE HOME (from Proventive) ═══
   {
     id: 'ceiling-fan-clean-reverse',
+    pro_responsible: true,
     title: 'Clean & Reverse Ceiling Fans',
     description: 'Dusty fan blades spread allergens. Reversing direction seasonally improves comfort — counterclockwise in summer (downdraft), clockwise in winter (updraft to circulate warm air).',
     instructions: [
@@ -912,9 +973,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [4, 10],
     estimated_minutes: 20,
     estimated_cost: 0,
+    items_to_have_on_hand: ['Microfiber duster or pillowcase', 'Step stool or ladder'],
   },
   {
     id: 'lightbulb-check',
+    pro_responsible: true,
     title: 'Check & Replace Burned-Out Lightbulbs',
     description: 'Walk through your home and replace any burned-out or flickering bulbs. Upgrade to LED where possible — they last 25x longer and use 75% less energy.',
     instructions: [
@@ -939,6 +1002,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ HOME UTILITIES (from Proventive) ═══
   {
     id: 'winterize-ac-condenser',
+    pro_responsible: true,
     title: 'Winterize A/C Condenser Unit',
     description: 'Protect your outdoor AC unit from winter debris and ice damage. Covering and clearing around the unit extends its life.',
     instructions: [
@@ -963,6 +1027,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'air-exchanger-clean',
+    pro_responsible: true,
     title: 'Clean & Maintain Air Exchanger (HRV/ERV)',
     description: 'Heat Recovery Ventilators and Energy Recovery Ventilators need regular filter cleaning to maintain indoor air quality and efficiency.',
     instructions: [
@@ -987,6 +1052,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'water-softener-salt',
+    pro_responsible: true,
     title: 'Refill Water Softener Salt',
     description: 'Check salt level monthly and refill as needed. Low salt means hard water passes through, causing scale buildup on pipes, fixtures, and appliances.',
     instructions: [
@@ -1040,6 +1106,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ── South / Hot-Humid Region ──
   {
     id: 'south-termite-inspection',
+    pro_responsible: true,
     title: 'Schedule Annual Termite Inspection',
     description: 'Southern climates have year-round termite activity. An annual professional inspection catches infestations before structural damage occurs.',
     instructions: [
@@ -1061,6 +1128,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'south-ac-drain-line',
+    pro_responsible: true,
     title: 'Flush AC Condensate Drain Line',
     description: 'Humid climates cause algae and mold to clog condensate lines. A clogged line can cause water damage, mold growth, and AC shutdowns.',
     instructions: [
@@ -1105,6 +1173,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'south-mold-check',
+    pro_responsible: true,
     title: 'Check for Mold in Humid Areas',
     description: 'High humidity promotes mold growth in bathrooms, under sinks, and in crawlspaces. Catching it early prevents health issues and expensive remediation.',
     instructions: [
@@ -1128,6 +1197,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ── North / Cold Region ──
   {
     id: 'north-winterize-pipes',
+    pro_responsible: true,
     title: 'Winterize Outdoor Plumbing',
     description: 'Frozen pipes are the most common cause of winter water damage. Properly winterizing prevents burst pipes and thousands in repairs.',
     instructions: [
@@ -1150,6 +1220,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'north-ice-dam-prevention',
+    pro_responsible: true,
     title: 'Prevent Ice Dams — Check Attic Insulation & Ventilation',
     description: 'Ice dams form when warm attic air melts roof snow that refreezes at the eaves. They cause water to back up under shingles and into your home.',
     instructions: [
@@ -1171,6 +1242,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'north-furnace-carbon-monoxide',
+    pro_responsible: true,
     title: 'Test Carbon Monoxide Detectors Before Heating Season',
     description: 'CO is odorless and deadly. Furnaces, water heaters, and fireplaces are common sources. Test all detectors before you start running heat.',
     instructions: [
@@ -1191,6 +1263,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'north-spring-frost-heave',
+    pro_responsible: true,
     title: 'Inspect for Winter Frost Heave Damage',
     description: 'Freeze-thaw cycles shift concrete, crack foundations, and pop fence posts. Spring is the time to catch and repair damage before it worsens.',
     instructions: [
@@ -1214,6 +1287,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ── Desert / Arid Region ──
   {
     id: 'desert-evap-cooler-startup',
+    pro_responsible: true,
     title: 'Start Up Evaporative Cooler (Swamp Cooler)',
     description: 'Evaporative coolers need spring startup — reconnect water, replace pads, and oil the motor. Neglecting this shortens the unit\'s life.',
     instructions: [
@@ -1260,6 +1334,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ── Coastal Region ──
   {
     id: 'coastal-salt-air-rinse',
+    pro_responsible: true,
     title: 'Rinse Exterior for Salt Air Corrosion',
     description: 'Salt air corrodes metal fixtures, hinges, and outdoor equipment. Regular rinsing slows the damage significantly.',
     instructions: [
@@ -1281,6 +1356,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'coastal-window-seal-check',
+    pro_responsible: true,
     title: 'Inspect Window and Door Seals for Salt Damage',
     description: 'Coastal homes take a beating from salt spray and wind-driven rain. Deteriorated seals lead to water infiltration and mold.',
     instructions: [
@@ -1326,6 +1402,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'midwest-sump-pump-test',
+    pro_responsible: true,
     title: 'Test Sump Pump Before Spring Thaw',
     description: 'Spring snowmelt and rain saturate the soil. A failed sump pump means a flooded basement. Test it before you need it.',
     instructions: [
@@ -1350,6 +1427,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ NEW TASKS ═══
   {
     id: 'gfci-outlet-test',
+    pro_responsible: true,
     title: 'Test GFCI Outlets',
     description: 'GFCI outlets protect against electrical shock in wet areas. Press the Test button, verify power cuts off, then press Reset. Replace any that fail.',
     instructions: [
@@ -1371,6 +1449,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'water-pressure-check',
+    pro_responsible: true,
     title: 'Check Water Pressure',
     description: 'Water pressure above 80 PSI damages pipes, fixtures, and appliances over time. Use a gauge on an outdoor spigot to test. Install a pressure regulator if consistently high.',
     instructions: [
@@ -1415,6 +1494,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'caulk-windows-doors',
+    pro_responsible: true,
     title: 'Inspect & Recaulk Windows and Doors',
     description: 'Cracked or missing caulk around windows and doors lets in drafts, moisture, and insects. Check annually in fall before heating season.',
     instructions: [
@@ -1433,10 +1513,12 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [9, 10],
     estimated_minutes: 60,
     estimated_cost: 15,
+    items_to_have_on_hand: ['Exterior caulk (silicone or polyurethane)', 'Caulk gun', 'Utility knife', "Painter's tape"],
   },
   // ═══ SUMMER TASKS (filling June/July/August gaps) ═══
   {
     id: 'inspect-irrigation-sprinkler',
+    pro_responsible: true,
     title: 'Inspect & Adjust Sprinkler Heads',
     description: 'Walk each zone while it runs. Straighten or replace tilted/broken heads, clear clogs, and adjust spray patterns to avoid watering sidewalks or the house.',
     instructions: [
@@ -1476,9 +1558,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 45,
     estimated_cost: 5,
     requires_home_feature: 'has_deck',
+    items_to_have_on_hand: ['Mild dish soap', 'Soft bristle brush', 'Garden hose', 'Furniture covers for storage'],
   },
   {
     id: 'inspect-exterior-paint-siding',
+    pro_responsible: true,
     title: 'Inspect Exterior Paint & Siding',
     description: 'Walk the perimeter of your home looking for peeling paint, cracked siding, or gaps. Catching damage early prevents water intrusion and costly repairs.',
     instructions: [
@@ -1500,6 +1584,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'clean-dryer-vent-duct',
+    pro_responsible: true,
     title: 'Clean Dryer Vent & Exhaust Duct',
     description: 'Lint buildup in the dryer vent is a top cause of house fires. Disconnect the duct and clean it thoroughly at least once a year.',
     instructions: [
@@ -1521,6 +1606,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'check-attic-ventilation',
+    pro_responsible: true,
     title: 'Check Attic Ventilation & Insulation',
     description: 'Hot summer days reveal attic ventilation problems. Check that vents are clear, insulation is intact, and there are no signs of moisture or pests.',
     instructions: [
@@ -1542,6 +1628,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'inspect-driveway-walkways',
+    pro_responsible: true,
     title: 'Inspect & Repair Driveway and Walkways',
     description: 'Summer is ideal for concrete and asphalt repairs. Fill cracks before they grow and seal-coat asphalt driveways to extend their life.',
     instructions: [
@@ -1560,6 +1647,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [8],
     estimated_minutes: 60,
     estimated_cost: 25,
+    items_to_have_on_hand: ['Concrete crack filler or asphalt patch', 'Caulk gun', 'Pressure washer (optional)'],
   },
   {
     id: 'mid-summer-lawn-care',
@@ -1581,9 +1669,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     applicable_months: [7, 8],
     estimated_minutes: 20,
     estimated_cost: 0,
+    items_to_have_on_hand: ['Sharp mower blade or blade sharpener', 'Slow-release summer fertilizer'],
   },
   {
     id: 'inspect-deck-stain-seal',
+    pro_responsible: true,
     title: 'Inspect Deck & Reseal if Needed',
     description: 'Sprinkle water on your deck boards. If it soaks in instead of beading up, the seal has worn off and it\'s time to reseal.',
     instructions: [

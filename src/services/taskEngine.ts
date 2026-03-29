@@ -292,6 +292,9 @@ function createTaskFromTemplate(
     applicable_months: template.applicable_months,
     scheduling_type: template.scheduling_type,
     interval_days: template.interval_days,
+    template_id: template.id,
+    items_to_have_on_hand: template.items_to_have_on_hand,
+    service_purpose: template.service_purpose,
     created_at: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
   };
 }

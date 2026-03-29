@@ -86,9 +86,10 @@ export default function Login() {
         try { const a = await getAgent(userData.agent_id); setAgent(a); } catch {}
       }
 
-      // Route by role — but check onboarding first for regular users
+      // Route by role — agents and pros go straight to their standalone portals
       if (userData.role === 'admin') navigate('/admin');
       else if (userData.role === 'agent') navigate('/agent-portal');
+      else if (userData.role === 'pro_provider') navigate('/pro-portal');
       else if (!userData.onboarding_complete && !homeData) navigate('/onboarding');
       else navigate('/');
     } catch (err: any) {

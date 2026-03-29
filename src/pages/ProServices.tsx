@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Colors } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
 import { canAccess } from '@/services/subscriptionGate';
+
+const Visits = lazy(() => import('@/pages/Visits'));
+const Quotes = lazy(() => import('@/pages/Quotes'));
+const Invoices = lazy(() => import('@/pages/Invoices'));
 
 interface ProServiceTemplate {
   id: string;
@@ -65,8 +69,11 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: Colors.medGray,
 };
 
+type SubTab = 'services' | 'visits' | 'quotes' | 'invoices';
+
 export default function ProServices() {
   const { user, home } = useStore();
+  const [activeTab, setActiveTab] = useState<SubTab>('services');
   const [appointments, setAppointments] = useState<ProServiceAppointment[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<ProServiceTemplate | null>(null);
   const [formData, setFormData] = useState({
@@ -325,11 +332,83 @@ export default function ProServices() {
     );
   }
 
+  const isPro = tier === 'pro' || tier === 'pro_plus';
+  const tabs: { key: SubTab; label: string; proOnly?: boolean }[] = [
+    { key: 'services', label: 'Schedule Services' },
+    { key: 'visits', label: 'Pro Visits', proOnly: true },
+    { key: 'quotes', label: 'Quotes', proOnly: true },
+    { key: 'invoices', label: 'Invoices', proOnly: true },
+  ];
+  const visibleTabs = tabs.filter(t => !t.proOnly || isPro);
+
+  // Sub-tab rendering for Visits, Quotes, Invoices
+  if (activeTab !== 'services') {
+    return (
+      <div className="page" style={{ maxWidth: 900 }}>
+        <h1 style={{ fontSize: '24px', fontWeight: '600', color: Colors.charcoal, marginBottom: '16px' }}>
+          Pro Services
+        </h1>
+        <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${Colors.cream}`, marginBottom: 24 }}>
+          {visibleTabs.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              style={{
+                padding: '10px 20px',
+                fontSize: 14,
+                fontWeight: activeTab === t.key ? 700 : 500,
+                color: activeTab === t.key ? Colors.sage : Colors.medGray,
+                borderBottom: activeTab === t.key ? `3px solid ${Colors.sage}` : '3px solid transparent',
+                background: 'none',
+                border: 'none',
+                borderBottomWidth: 3,
+                borderBottomStyle: 'solid',
+                borderBottomColor: activeTab === t.key ? Colors.sage : 'transparent',
+                cursor: 'pointer',
+                marginBottom: -2,
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <Suspense fallback={<p style={{ color: Colors.medGray }}>Loading...</p>}>
+          {activeTab === 'visits' && <Visits />}
+          {activeTab === 'quotes' && <Quotes />}
+          {activeTab === 'invoices' && <Invoices />}
+        </Suspense>
+      </div>
+    );
+  }
+
   return (
     <div className="page" style={{ maxWidth: 900 }}>
-      <h1 style={{ fontSize: '24px', fontWeight: '600', color: Colors.charcoal, marginBottom: '24px' }}>
-        Pro Service Scheduler
+      <h1 style={{ fontSize: '24px', fontWeight: '600', color: Colors.charcoal, marginBottom: '16px' }}>
+        Pro Services
       </h1>
+      <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${Colors.cream}`, marginBottom: 24 }}>
+        {visibleTabs.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            style={{
+              padding: '10px 20px',
+              fontSize: 14,
+              fontWeight: activeTab === t.key ? 700 : 500,
+              color: activeTab === t.key ? Colors.sage : Colors.medGray,
+              background: 'none',
+              border: 'none',
+              borderBottomWidth: 3,
+              borderBottomStyle: 'solid',
+              borderBottomColor: activeTab === t.key ? Colors.sage : 'transparent',
+              cursor: 'pointer',
+              marginBottom: -2,
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
       {/* Upcoming Appointments */}
       <div style={sectionStyle}>

@@ -169,7 +169,15 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm fw-600 text-gray">Current Weather</p>
-                      <p style={{ fontSize: 36, fontWeight: 700 }}>{displayWeather.temperature}&#176;F</p>
+                      <p style={{ fontSize: 36, fontWeight: 700 }}>
+                        <span style={{ marginRight: 6 }}>{
+                          { '01d': '☀️', '01n': '🌙', '02d': '⛅', '02n': '☁️', '03d': '☁️', '03n': '☁️',
+                            '04d': '☁️', '04n': '☁️', '09d': '🌧️', '09n': '🌧️', '10d': '🌦️', '10n': '🌧️',
+                            '11d': '⛈️', '11n': '⛈️', '13d': '❄️', '13n': '❄️', '50d': '🌫️', '50n': '🌫️'
+                          }[displayWeather.icon] || '🌤️'
+                        }</span>
+                        {displayWeather.temperature}&#176;F
+                      </p>
                       <p className="text-sm text-gray" style={{ textTransform: 'capitalize' }}>{displayWeather.description}</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>

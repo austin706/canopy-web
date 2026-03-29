@@ -178,7 +178,12 @@ export default function Weather() {
                 <p className="text-xs text-gray fw-600">
                   {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                 </p>
-                <p style={{ fontSize: 14, fontWeight: 700, color: Colors.sage, margin: '8px 0' }}>--</p>
+                <p style={{ fontSize: 28, margin: '4px 0' }} title={day.description}>{
+                  { '01d': '☀️', '01n': '🌙', '02d': '⛅', '02n': '☁️', '03d': '☁️', '03n': '☁️',
+                    '04d': '☁️', '04n': '☁️', '09d': '🌧️', '09n': '🌧️', '10d': '🌦️', '10n': '🌧️',
+                    '11d': '⛈️', '11n': '⛈️', '13d': '❄️', '13n': '❄️', '50d': '🌫️', '50n': '🌫️'
+                  }[day.icon] || '🌤️'
+                }</p>
                 <p style={{ fontSize: 14, fontWeight: 600 }}>{day.high}&#176;</p>
                 <p className="text-xs text-gray">{day.low}&#176;</p>
                 {day.precipitation_chance > 0 && (

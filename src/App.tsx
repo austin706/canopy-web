@@ -4,6 +4,8 @@ import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Layout from '@/components/Layout';
+import AgentLayout from '@/components/AgentLayout';
+import ProLayout from '@/components/ProLayout';
 import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -23,11 +25,14 @@ import AdminAgents from '@/pages/AdminAgents';
 import AdminUsers from '@/pages/AdminUsers';
 import AdminGiftCodes from '@/pages/AdminGiftCodes';
 import AdminProRequests from '@/pages/AdminProRequests';
+import AdminProProviders from '@/pages/AdminProProviders';
 import AdminServiceAreas from '@/pages/AdminServiceAreas';
 import AdminNotifications from '@/pages/AdminNotifications';
 import AgentPortal from '@/pages/AgentPortal';
 import AgentProfile from '@/pages/AgentProfile';
 import AgentClientHome from '@/pages/AgentClientHome';
+import AgentPurchaseCodes from '@/pages/AgentPurchaseCodes';
+import AgentLinkClient from '@/pages/AgentLinkClient';
 import TaskDetail from '@/pages/TaskDetail';
 import EquipmentDetail from '@/pages/EquipmentDetail';
 import Notifications from '@/pages/Notifications';
@@ -49,6 +54,7 @@ import ProVisitSchedule from '@/pages/ProVisitSchedule';
 import ProQuotesInvoices from '@/pages/ProQuotesInvoices';
 import ProJobQueue from '@/pages/ProJobQueue';
 import ProInspection from '@/pages/ProInspection';
+import HomeAssistant from '@/pages/HomeAssistant';
 import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
 
@@ -93,7 +99,37 @@ export default function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
-          {/* Protected routes with sidebar */}
+          {/* ═══════════════════════════════════════════════════════
+              AGENT PORTAL — Standalone layout, NO homeowner nav
+              Agent users land here directly on login
+          ═══════════════════════════════════════════════════════ */}
+          <Route element={<RoleRoute roles={['agent', 'admin']}><AgentLayout /></RoleRoute>}>
+            <Route path="/agent-portal" element={<AgentPortal />} />
+            <Route path="/agent-portal/profile" element={<AgentProfile />} />
+            <Route path="/agent-portal/client/:clientId" element={<AgentClientHome />} />
+            <Route path="/agent-portal/purchase-codes" element={<AgentPurchaseCodes />} />
+            <Route path="/agent-portal/link-client" element={<AgentLinkClient />} />
+          </Route>
+
+          {/* ═══════════════════════════════════════════════════════
+              PRO PROVIDER PORTAL — Standalone layout, NO homeowner nav
+              Pro provider users land here directly on login
+          ═══════════════════════════════════════════════════════ */}
+          <Route element={<RoleRoute roles={['pro_provider', 'admin']}><ProLayout /></RoleRoute>}>
+            <Route path="/pro-portal" element={<ProPortal />} />
+            <Route path="/pro-portal/jobs" element={<ProJobs />} />
+            <Route path="/pro-portal/availability" element={<ProAvailability />} />
+            <Route path="/pro-portal/profile" element={<ProProfile />} />
+            <Route path="/pro-portal/visit-schedule" element={<ProVisitSchedule />} />
+            <Route path="/pro-portal/quotes-invoices" element={<ProQuotesInvoices />} />
+            <Route path="/pro-portal/job-queue" element={<ProJobQueue />} />
+            <Route path="/pro-portal/inspection/:visitId" element={<ProInspection />} />
+          </Route>
+
+          {/* ═══════════════════════════════════════════════════════
+              HOMEOWNER + ADMIN — Full Layout with sidebar
+              Admin can access everything; regular users see homeowner nav
+          ═══════════════════════════════════════════════════════ */}
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/calendar" element={<Calendar />} />
@@ -104,6 +140,7 @@ export default function App() {
             <Route path="/equipment/:id" element={<EquipmentDetail />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/documents" element={<Documents />} />
+            <Route path="/assistant" element={<HomeAssistant />} />
             <Route path="/help" element={<Help />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/subscription" element={<Subscription />} />
@@ -116,24 +153,16 @@ export default function App() {
             <Route path="/agent" element={<AgentView />} />
             <Route path="/logs" element={<MaintenanceLogs />} />
             <Route path="/home" element={<HomeDetails />} />
+
+            {/* Admin pages — inside homeowner Layout since admin sees everything */}
             <Route path="/admin" element={<RoleRoute roles={['admin']}><AdminDashboard /></RoleRoute>} />
             <Route path="/admin/agents" element={<RoleRoute roles={['admin']}><AdminAgents /></RoleRoute>} />
             <Route path="/admin/users" element={<RoleRoute roles={['admin']}><AdminUsers /></RoleRoute>} />
             <Route path="/admin/gift-codes" element={<RoleRoute roles={['admin']}><AdminGiftCodes /></RoleRoute>} />
+            <Route path="/admin/pro-providers" element={<RoleRoute roles={['admin']}><AdminProProviders /></RoleRoute>} />
             <Route path="/admin/pro-requests" element={<RoleRoute roles={['admin']}><AdminProRequests /></RoleRoute>} />
             <Route path="/admin/service-areas" element={<RoleRoute roles={['admin']}><AdminServiceAreas /></RoleRoute>} />
             <Route path="/admin/notifications" element={<RoleRoute roles={['admin']}><AdminNotifications /></RoleRoute>} />
-            <Route path="/agent-portal" element={<RoleRoute roles={['agent', 'admin']}><AgentPortal /></RoleRoute>} />
-            <Route path="/agent-portal/profile" element={<RoleRoute roles={['agent', 'admin']}><AgentProfile /></RoleRoute>} />
-            <Route path="/agent-portal/client/:clientId" element={<RoleRoute roles={['agent', 'admin']}><AgentClientHome /></RoleRoute>} />
-            <Route path="/pro-portal" element={<RoleRoute roles={['pro_provider', 'admin']}><ProPortal /></RoleRoute>} />
-            <Route path="/pro-portal/jobs" element={<RoleRoute roles={['pro_provider', 'admin']}><ProJobs /></RoleRoute>} />
-            <Route path="/pro-portal/availability" element={<RoleRoute roles={['pro_provider', 'admin']}><ProAvailability /></RoleRoute>} />
-            <Route path="/pro-portal/profile" element={<RoleRoute roles={['pro_provider', 'admin']}><ProProfile /></RoleRoute>} />
-            <Route path="/pro-portal/visit-schedule" element={<RoleRoute roles={['pro_provider', 'admin']}><ProVisitSchedule /></RoleRoute>} />
-            <Route path="/pro-portal/quotes-invoices" element={<RoleRoute roles={['pro_provider', 'admin']}><ProQuotesInvoices /></RoleRoute>} />
-            <Route path="/pro-portal/job-queue" element={<RoleRoute roles={['pro_provider', 'admin']}><ProJobQueue /></RoleRoute>} />
-            <Route path="/pro-portal/inspection/:visitId" element={<RoleRoute roles={['pro_provider', 'admin']}><ProInspection /></RoleRoute>} />
           </Route>
 
           {/* Catch-all */}

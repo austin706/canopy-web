@@ -205,7 +205,7 @@ export default function AdminServiceAreas() {
     <div className="page" style={{ maxWidth: 1000 }}>
       <div className="page-header">
         <div>
-          <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/admin-portal')}>
+          <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/admin')}>
             &larr; Admin Portal
           </button>
           <h1>Service Areas</h1>

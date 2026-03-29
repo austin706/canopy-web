@@ -237,9 +237,26 @@ export const updateProRequest = async (id: string, updates: any) => {
 };
 
 export const getAllProProviders = async () => {
-  const { data, error } = await supabase.from('pro_providers').select('id, business_name, contact_name, service_categories, is_available').order('business_name');
+  const { data, error } = await supabase.from('pro_providers').select('*').order('business_name');
   if (error) throw error;
   return data || [];
+};
+
+export const createProProvider = async (provider: any) => {
+  const { data, error } = await supabase.from('pro_providers').insert(provider).select().single();
+  if (error) throw error;
+  return data;
+};
+
+export const updateProProvider = async (id: string, updates: any) => {
+  const { data, error } = await supabase.from('pro_providers').update(updates).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteProProvider = async (id: string) => {
+  const { error } = await supabase.from('pro_providers').delete().eq('id', id);
+  if (error) throw error;
 };
 
 // --- Admin Functions ---

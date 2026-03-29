@@ -46,12 +46,8 @@ export default function Layout() {
     { to: '/equipment', icon: NavEquipment, label: 'Equipment' },
     { to: '/documents', icon: NavDocuments, label: 'Documents' },
     { to: '/pro-services', icon: NavProServices, label: 'Pro Services' },
-    ...(isPro ? [
-      { to: '/visits', icon: NavCalendar, label: 'Pro Visits' },
-      { to: '/quotes', icon: NavDocuments, label: 'Quotes' },
-      { to: '/invoices', icon: NavDocuments, label: 'Invoices' },
-    ] : []),
     { to: '/logs', icon: NavLogs, label: 'Maintenance Log' },
+    { to: '/assistant', icon: NavAgent, label: 'AI Assistant' },
     { to: '/notifications', icon: NavNotifications, label: 'Notifications' },
     { to: '/agent', icon: NavAgent, label: 'My Agent' },
     { to: '/home', icon: NavHome, label: 'Home Details' },
@@ -101,7 +97,7 @@ export default function Layout() {
               {item.label}
             </NavLink>
           ))}
-          {/* Admin users see all three portals */}
+          {/* Admin users see admin portal link + standalone portal links */}
           {user?.role === 'admin' && (
             <>
               <NavLink to="/admin" className={({ isActive }) => isActive ? 'active' : ''}>
@@ -114,18 +110,6 @@ export default function Layout() {
                 <NavProPortal size={18} /> Pro Portal
               </NavLink>
             </>
-          )}
-          {/* Agent users see only Agent Portal */}
-          {user?.role === 'agent' && (
-            <NavLink to="/agent-portal" className={({ isActive }) => isActive ? 'active' : ''}>
-              <NavAgentPortal size={18} /> Agent Portal
-            </NavLink>
-          )}
-          {/* Pro Provider users see only Pro Portal */}
-          {user?.role === 'pro_provider' && (
-            <NavLink to="/pro-portal" className={({ isActive }) => isActive ? 'active' : ''}>
-              <NavProPortal size={18} /> Pro Portal
-            </NavLink>
           )}
         </div>
         <div className="sidebar-footer">

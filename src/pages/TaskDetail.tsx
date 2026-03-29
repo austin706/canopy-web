@@ -108,6 +108,21 @@ export default function TaskDetail() {
           </div>
         )}
 
+        {/* Items to Have on Hand */}
+        {task.items_to_have_on_hand && task.items_to_have_on_hand.length > 0 && (
+          <div className="card mb-lg" style={{ background: Colors.copperMuted, border: `1px solid ${Colors.copper}30` }}>
+            <p style={{ fontWeight: 600, marginBottom: 10, color: Colors.copperDark }}>Items to Have on Hand</p>
+            <div className="flex-col gap-xs">
+              {task.items_to_have_on_hand.map((item, i) => (
+                <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ color: Colors.copper, fontSize: 14 }}>•</span>
+                  <p style={{ fontSize: 14, color: Colors.charcoal }}>{item}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Instructions */}
         {task.instructions && task.instructions.length > 0 && (
           <div className="card mb-lg">

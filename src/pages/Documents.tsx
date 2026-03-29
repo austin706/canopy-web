@@ -50,11 +50,19 @@ export default function Documents() {
   const [notesLoading, setNotesLoading] = useState(false);
 
   // PIN Protection state
-  const [vaultPin, setVaultPin] = useState<string | null>(null);
+  const [vaultPinHash, setVaultPinHash] = useState<string | null>(null);
   const [pinInput, setPinInput] = useState('');
   const [isPinUnlocked, setIsPinUnlocked] = useState(true); // Default unlocked; lock screen shows only when PIN exists
   const [showPinSetup, setShowPinSetup] = useState(false);
   const [pinError, setPinError] = useState('');
+
+  // Hash PIN with user ID as salt using Web Crypto API (SHA-256)
+  const hashPin = async (pin: string, userId: string): Promise<string> => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(`${userId}:vault:${pin}`);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  };
 
   const tier = user?.subscription_tier || 'free';
   const hasAccess = canAccess(tier, 'document_vault');
@@ -81,7 +89,7 @@ export default function Documents() {
         })));
         setSecureNotes(notes);
         if (pinData?.pin_hash) {
-          setVaultPin(pinData.pin_hash);
+          setVaultPinHash(pinData.pin_hash);
           setIsPinUnlocked(false); // Lock vault when PIN exists
         }
       } catch (err) {
@@ -101,9 +109,10 @@ export default function Documents() {
     }
     try {
       if (user?.id) {
-        await upsertVaultPin(user.id, pinInput);
+        const hashed = await hashPin(pinInput, user.id);
+        await upsertVaultPin(user.id, hashed);
+        setVaultPinHash(hashed);
       }
-      setVaultPin(pinInput);
       setIsPinUnlocked(true);
       setShowPinSetup(false);
       setPinInput('');
@@ -113,9 +122,11 @@ export default function Documents() {
     }
   };
 
-  const handleUnlockPin = () => {
+  const handleUnlockPin = async () => {
     setPinError('');
-    if (pinInput === vaultPin) {
+    if (!user?.id) return;
+    const hashed = await hashPin(pinInput, user.id);
+    if (hashed === vaultPinHash) {
       setIsPinUnlocked(true);
       setPinInput('');
     } else {
@@ -276,7 +287,7 @@ export default function Documents() {
         </div>
 
         {/* Secure Notes PIN Protection */}
-        {hasSecureNotesAccess && vaultPin && !isPinUnlocked && (
+        {hasSecureNotesAccess && vaultPinHash && !isPinUnlocked && (
           <div className="card" style={{
             background: Colors.copperMuted,
             border: `2px solid ${Colors.copper}`,
@@ -328,7 +339,7 @@ export default function Documents() {
         {hasSecureNotesAccess && isPinUnlocked && (
           <button
             onClick={() => {
-              if (vaultPin) {
+              if (vaultPinHash) {
                 if (confirm('Change your vault PIN?')) {
                   setPinInput('');
                   setShowPinSetup(true);
@@ -351,7 +362,7 @@ export default function Documents() {
               padding: 0
             }}
           >
-            {vaultPin ? 'Change Vault PIN' : 'Set Vault PIN'}
+            {vaultPinHash ? 'Change Vault PIN' : 'Set Vault PIN'}
           </button>
         )}
 
@@ -359,7 +370,7 @@ export default function Documents() {
         {hasSecureNotesAccess && showPinSetup && isPinUnlocked && (
           <div className="card" style={{ marginBottom: 24 }}>
             <h3 style={{ color: Colors.charcoal, marginBottom: 12, fontSize: 16, fontWeight: 600 }}>
-              {vaultPin ? 'Change' : 'Set'} Vault PIN
+              {vaultPinHash ? 'Change' : 'Set'} Vault PIN
             </h3>
             <input
               type="password"

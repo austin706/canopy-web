@@ -5,7 +5,8 @@ import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/utils';
 import { getTasks, reopenTask as reopenTaskApi } from '@/services/supabase';
 import { getDisplayStatus } from '@/services/taskEngine';
-import type { MaintenanceTask } from '@/types';
+import { supabase } from '@/services/supabase';
+import type { MaintenanceTask, ProMonthlyVisit } from '@/types';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -26,6 +27,7 @@ export default function Calendar() {
   const [filter, setFilter] = useState<string>('all');
   const [loading, setLoading] = useState(false);
   const [snoozeMenuId, setSnoozeMenuId] = useState<string | null>(null);
+  const [visits, setVisits] = useState<ProMonthlyVisit[]>([]);
 
   // Fetch tasks on mount if not already loaded
   useEffect(() => {
@@ -46,6 +48,26 @@ export default function Calendar() {
     };
     loadTasks();
   }, [home?.id]);
+
+  // Fetch pro visits for the homeowner
+  useEffect(() => {
+    const loadVisits = async () => {
+      try {
+        const { data: authUser } = await supabase.auth.getUser();
+        if (!authUser?.user) return;
+        const { data, error } = await supabase
+          .from('pro_monthly_visits')
+          .select('*, provider:pro_providers(business_name, contact_name)')
+          .eq('homeowner_id', authUser.user.id)
+          .in('status', ['proposed', 'confirmed', 'in_progress', 'completed'])
+          .order('confirmed_date', { ascending: true });
+        if (!error && data) setVisits(data);
+      } catch (err) {
+        console.warn('Failed to fetch visits:', err);
+      }
+    };
+    loadVisits();
+  }, []);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -73,6 +95,29 @@ export default function Calendar() {
     return tasks.map(t => ({ ...t, status: getDisplayStatus(t) }));
   }, [tasks]);
 
+  // Map visits into a calendar-friendly shape
+  type CalendarEvent = { type: 'task'; data: MaintenanceTask } | { type: 'visit'; data: ProMonthlyVisit };
+
+  const eventsByDate = useMemo(() => {
+    const map: Record<string, CalendarEvent[]> = {};
+    enrichedTasks.forEach(t => {
+      const d = new Date(t.due_date);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      if (!map[key]) map[key] = [];
+      map[key].push({ type: 'task', data: t });
+    });
+    visits.forEach(v => {
+      const dateStr = v.confirmed_date || v.proposed_date;
+      if (!dateStr) return;
+      const d = new Date(dateStr);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      if (!map[key]) map[key] = [];
+      map[key].push({ type: 'visit', data: v });
+    });
+    return map;
+  }, [enrichedTasks, visits]);
+
+  // Keep tasksByDate for backwards compat
   const tasksByDate = useMemo(() => {
     const map: Record<string, MaintenanceTask[]> = {};
     enrichedTasks.forEach(t => {
@@ -94,12 +139,35 @@ export default function Calendar() {
       .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
   }, [enrichedTasks, month, year]);
 
+  // Visits for the current month
+  const monthVisits = useMemo(() => {
+    return visits.filter(v => {
+      const dateStr = v.confirmed_date || v.proposed_date;
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      return d.getMonth() === month && d.getFullYear() === year;
+    }).sort((a, b) => {
+      const da = new Date(a.confirmed_date || a.proposed_date || '');
+      const db = new Date(b.confirmed_date || b.proposed_date || '');
+      return da.getTime() - db.getTime();
+    });
+  }, [visits, month, year]);
+
   const today = new Date();
   const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
 
   // Show selected day's tasks OR all month tasks
   const displayTasks = selectedDate ? (tasksByDate[selectedDate] || []) : monthTasks;
-  const filteredTasks = filter === 'all' ? displayTasks : displayTasks.filter(t => t.status === filter);
+  const displayVisits = selectedDate
+    ? visits.filter(v => {
+        const dateStr = v.confirmed_date || v.proposed_date;
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` === selectedDate;
+      })
+    : monthVisits;
+  const filteredTasks = filter === 'all' || filter === 'visits' ? displayTasks : displayTasks.filter(t => t.status === filter);
+  const showVisits = filter === 'all' || filter === 'visits';
 
   const nav = (dir: number) => setCurrentDate(new Date(year, month + dir, 1));
 
@@ -131,8 +199,9 @@ export default function Calendar() {
     const completed = monthTasks.filter(t => t.status === 'completed').length;
     const overdue = monthTasks.filter(t => t.status === 'overdue').length;
     const upcoming = monthTasks.filter(t => t.status === 'upcoming' || t.status === 'due').length;
-    return { total, completed, overdue, upcoming };
-  }, [monthTasks]);
+    const visitCount = monthVisits.length;
+    return { total, completed, overdue, upcoming, visitCount };
+  }, [monthTasks, monthVisits]);
 
   return (
     <div className="page">
@@ -164,6 +233,12 @@ export default function Calendar() {
               <p className="text-xs text-gray">Overdue</p>
             </div>
           )}
+          {monthStats.visitCount > 0 && (
+            <div>
+              <p style={{ fontSize: 28, fontWeight: 700, color: Colors.sage, lineHeight: 1 }}>{monthStats.visitCount}</p>
+              <p className="text-xs text-gray">Pro Visits</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -184,15 +259,15 @@ export default function Calendar() {
               const key = `${day.year}-${day.month}-${day.date}`;
               const isToday = key === todayKey;
               const isOther = day.month !== month;
-              const dayTasks = tasksByDate[key] || [];
-              const hasTasks = dayTasks.length > 0;
+              const dayEvents = eventsByDate[key] || [];
+              const dayTasks = dayEvents.filter(e => e.type === 'task').map(e => e.data as MaintenanceTask);
+              const dayVisits = dayEvents.filter(e => e.type === 'visit').map(e => e.data as ProMonthlyVisit);
+              const hasEvents = dayEvents.length > 0;
               const isSelected = selectedDate === key;
-              const hasOverdue = dayTasks.some(t => t.status === 'overdue');
-              const hasHigh = dayTasks.some(t => t.priority === 'urgent' || t.priority === 'high');
               return (
                 <div
                   key={day.key}
-                  className={`calendar-day ${isToday ? 'today' : ''} ${isOther ? 'other-month' : ''} ${hasTasks ? 'has-tasks' : ''}`}
+                  className={`calendar-day ${isToday ? 'today' : ''} ${isOther ? 'other-month' : ''} ${hasEvents ? 'has-tasks' : ''}`}
                   style={{
                     ...(isSelected ? { background: Colors.copper + '30', fontWeight: 700 } : undefined),
                     position: 'relative',
@@ -200,9 +275,18 @@ export default function Calendar() {
                   onClick={() => handleDayClick(key)}
                 >
                   {day.date}
-                  {hasTasks && (
+                  {hasEvents && (
                     <div style={{ display: 'flex', gap: 2, justifyContent: 'center', position: 'absolute', bottom: 2, left: 0, right: 0 }}>
-                      {dayTasks.slice(0, 3).map((t, i) => (
+                      {/* Show visit indicator first (sage diamond) */}
+                      {dayVisits.length > 0 && (
+                        <div style={{
+                          width: 7, height: 7, borderRadius: 1,
+                          background: Colors.sage,
+                          transform: 'rotate(45deg)',
+                        }} />
+                      )}
+                      {/* Then task dots */}
+                      {dayTasks.slice(0, dayVisits.length > 0 ? 2 : 3).map((t, i) => (
                         <div key={i} style={{
                           width: 5, height: 5, borderRadius: '50%',
                           background: t.status === 'completed' ? Colors.success :
@@ -210,8 +294,8 @@ export default function Calendar() {
                                      PriorityColors[t.priority] || Colors.copper,
                         }} />
                       ))}
-                      {dayTasks.length > 3 && (
-                        <span style={{ fontSize: 8, color: Colors.medGray, lineHeight: '5px' }}>+{dayTasks.length - 3}</span>
+                      {dayEvents.length > 3 && (
+                        <span style={{ fontSize: 8, color: Colors.medGray, lineHeight: '5px' }}>+{dayEvents.length - 3}</span>
                       )}
                     </div>
                   )}
@@ -245,7 +329,7 @@ export default function Calendar() {
 
             {/* Status Filter Tabs */}
             <div className="tabs" style={{ marginBottom: 16, overflowX: 'auto', flexWrap: 'nowrap' }}>
-              {['all', 'due', 'upcoming', 'completed', 'overdue'].map(f => (
+              {['all', 'due', 'upcoming', 'completed', 'overdue', ...(visits.length > 0 ? ['visits'] : [])].map(f => (
                 <button key={f} className={`tab ${filter === f ? 'active' : ''}`} style={{ whiteSpace: 'nowrap', flexShrink: 0 }} onClick={() => setFilter(f)}>
                   {f.charAt(0).toUpperCase() + f.slice(1)}
                   {f !== 'all' && (
@@ -258,7 +342,61 @@ export default function Calendar() {
             </div>
 
             <div className="flex-col gap-sm" style={{ maxHeight: 500, overflowY: 'auto' }}>
-              {filteredTasks.map(task => {
+              {/* Pro Visit Cards */}
+              {showVisits && displayVisits.map(visit => {
+                const visitDate = new Date(visit.confirmed_date || visit.proposed_date || '');
+                const provider = (visit as any).provider;
+                const visitStatusColor = visit.status === 'completed' ? Colors.success
+                  : visit.status === 'in_progress' ? Colors.copper
+                  : visit.status === 'confirmed' ? Colors.sage
+                  : Colors.medGray;
+                return (
+                  <div key={visit.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--light-gray)' }}>
+                    <div className="flex items-center gap-md">
+                      <div style={{ width: 4, height: 40, borderRadius: 2, background: Colors.sage }} />
+                      <div style={{
+                        width: 28, height: 28, borderRadius: 6,
+                        background: Colors.sage + '20', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 14, flexShrink: 0,
+                      }}>
+                        &#128736;
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', cursor: 'pointer' }} onClick={() => navigate('/visits')}>
+                        <p style={{ fontWeight: 600, fontSize: 14 }}>Pro Home Visit</p>
+                        <p className="text-xs text-gray">
+                          {provider?.business_name || 'Canopy Tech'}
+                          {!selectedDate && (
+                            <span> &middot; {visitDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          )}
+                          {visit.proposed_time_slot && <span> &middot; {visit.proposed_time_slot}</span>}
+                        </p>
+                      </div>
+                      <span className="badge" style={{ background: visitStatusColor + '20', color: visitStatusColor }}>
+                        {visit.status === 'proposed' ? 'proposed' : visit.status}
+                      </span>
+                    </div>
+                    {visit.status === 'proposed' && (
+                      <div className="flex gap-sm mt-sm" style={{ marginLeft: 48 }}>
+                        <button className="btn btn-sage btn-sm" onClick={async () => {
+                          try {
+                            await supabase.from('pro_monthly_visits').update({ status: 'confirmed', homeowner_confirmed_at: new Date().toISOString() }).eq('id', visit.id);
+                            setVisits(prev => prev.map(v => v.id === visit.id ? { ...v, status: 'confirmed' as const } : v));
+                          } catch (err) { console.error(err); }
+                        }}>Confirm</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/visits')}>Reschedule</button>
+                      </div>
+                    )}
+                    {visit.status === 'completed' && visit.pro_notes && (
+                      <p className="text-xs text-gray" style={{ marginLeft: 48, marginTop: 4 }}>
+                        {visit.pro_notes.slice(0, 100)}{visit.pro_notes.length > 100 ? '...' : ''}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Task Cards */}
+              {(filter !== 'visits') && filteredTasks.map(task => {
                 const dueDate = new Date(task.due_date);
                 return (
                   <div key={task.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--light-gray)' }}>
@@ -313,9 +451,9 @@ export default function Calendar() {
                   </div>
                 );
               })}
-              {filteredTasks.length === 0 && (
+              {filteredTasks.length === 0 && displayVisits.length === 0 && (
                 <p className="text-sm text-gray text-center" style={{ padding: 24 }}>
-                  {selectedDate ? 'No tasks for this date' : `No ${filter === 'all' ? '' : filter + ' '}tasks this month`}
+                  {selectedDate ? 'No tasks or visits for this date' : `No ${filter === 'all' ? '' : filter + ' '}tasks this month`}
                 </p>
               )}
             </div>

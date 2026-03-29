@@ -2,6 +2,22 @@
 // Canopy Web — Type Definitions (shared with mobile)
 // ===============================================================
 
+// Re-export inspection types
+export type {
+  InspectionStatus,
+  ChecklistItemStatus,
+  OverallCondition,
+  PhotoType,
+  ChecklistItemTemplate,
+  InspectionChecklistTemplate,
+  InspectionPhoto,
+  VisitInspection,
+  VisitInspectionItem,
+  VisitPhoto,
+  VisitWithInspections,
+  VisitSummaryData,
+} from './inspection';
+
 export type SubscriptionTier = 'free' | 'home' | 'pro' | 'pro_plus';
 
 export interface User {

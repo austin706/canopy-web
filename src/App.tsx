@@ -47,6 +47,8 @@ import Quotes from '@/pages/Quotes';
 import Invoices from '@/pages/Invoices';
 import ProVisitSchedule from '@/pages/ProVisitSchedule';
 import ProQuotesInvoices from '@/pages/ProQuotesInvoices';
+import ProJobQueue from '@/pages/ProJobQueue';
+import ProInspection from '@/pages/ProInspection';
 import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
 
@@ -130,6 +132,8 @@ export default function App() {
             <Route path="/pro-portal/profile" element={<RoleRoute roles={['pro_provider', 'admin']}><ProProfile /></RoleRoute>} />
             <Route path="/pro-portal/visit-schedule" element={<RoleRoute roles={['pro_provider', 'admin']}><ProVisitSchedule /></RoleRoute>} />
             <Route path="/pro-portal/quotes-invoices" element={<RoleRoute roles={['pro_provider', 'admin']}><ProQuotesInvoices /></RoleRoute>} />
+            <Route path="/pro-portal/job-queue" element={<RoleRoute roles={['pro_provider', 'admin']}><ProJobQueue /></RoleRoute>} />
+            <Route path="/pro-portal/inspection/:visitId" element={<RoleRoute roles={['pro_provider', 'admin']}><ProInspection /></RoleRoute>} />
           </Route>
 
           {/* Catch-all */}

@@ -333,6 +333,7 @@ export interface ProMonthlyVisit {
   homeowner_id: string;
   pro_provider_id: string;
   visit_month: string;
+  visit_date?: string;
   proposed_date?: string;
   proposed_time_slot?: string;
   homeowner_confirmed_at?: string;
@@ -352,6 +353,9 @@ export interface ProMonthlyVisit {
   max_minutes: number;
   pro_notes?: string;
   photos: { url: string; caption?: string }[];
+  ai_summary?: string;
+  ai_summary_generated_at?: string;
+  overall_condition?: string;
   summary_sent_at?: string;
   created_at: string;
   updated_at: string;

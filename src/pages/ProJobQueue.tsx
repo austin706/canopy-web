@@ -482,7 +482,7 @@ export default function ProJobQueue() {
                         <ul style={{ margin: `0 0 0 ${Spacing.md}px`, paddingLeft: 0 }}>
                           {visit.equipment.map((eq) => (
                             <li key={eq.id}>
-                              {eq.name} ({calculateAge(eq.installation_date)})
+                              {eq.name} ({calculateAge(eq.install_date)})
                             </li>
                           ))}
                         </ul>

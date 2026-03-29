@@ -197,7 +197,7 @@ export default function ProPortal() {
         <div className="grid-3 mb-lg" style={{ gap: 16 }}>
           <button
             className="card btn btn-primary"
-            onClick={() => navigate('/pro-portal/jobs')}
+            onClick={() => navigate('/pro-portal/job-queue')}
             style={{ backgroundColor: Colors.sage, color: 'white', border: 'none', padding: '24px', textAlign: 'center', cursor: 'pointer', fontSize: 16 }}
           >
             All Jobs
@@ -309,7 +309,7 @@ export default function ProPortal() {
       <div className="grid-3 mb-lg" style={{ gap: 16 }}>
         <button
           className="card btn btn-primary"
-          onClick={() => navigate('/pro-portal/jobs')}
+          onClick={() => navigate('/pro-portal/job-queue')}
           style={{ backgroundColor: Colors.sage, color: 'white', border: 'none', padding: '24px', textAlign: 'center', cursor: 'pointer', fontSize: 16 }}
         >
           View All Jobs

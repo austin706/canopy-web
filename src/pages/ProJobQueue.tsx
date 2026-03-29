@@ -8,7 +8,7 @@ import type { ProMonthlyVisit, Home, Equipment, ProProvider } from '@/types';
 
 interface Visit extends ProMonthlyVisit {
   home?: Home;
-  homeowner?: { full_name: string };
+  homeowner?: { first_name: string; last_name: string };
   equipment?: Equipment[];
 }
 
@@ -57,23 +57,19 @@ export default function ProJobQueue() {
         setProvider(providerData);
       }
 
-      // Load visits for selected date
-      const dateStart = `${selectedDate}T00:00:00`;
-      const dateEnd = `${selectedDate}T23:59:59`;
-
+      // Load visits for selected date — visit_date is a DATE column, use .eq()
       const { data: visitsData, error: visitsError } = await supabase
         .from('pro_monthly_visits')
         .select(
           `
           *,
           home:homes(*),
-          homeowner:profiles(full_name)
+          homeowner:profiles(first_name, last_name)
         `
         )
         .eq('pro_provider_id', providerData?.id || '')
-        .gte('confirmed_date', dateStart)
-        .lte('confirmed_date', dateEnd)
-        .order('confirmed_start_time', { ascending: true });
+        .eq('visit_date', selectedDate)
+        .order('created_at', { ascending: true });
 
       if (visitsError) throw visitsError;
 
@@ -97,13 +93,12 @@ export default function ProJobQueue() {
       // Calculate stats
       const todaysVisits = enrichedVisits.length;
       const completedCount = enrichedVisits.filter((v) => v.status === 'completed').length;
-      const nextInProgressOrConfirmed = enrichedVisits.find((v) => v.status === 'confirmed' || v.status === 'in_progress');
-      const nextTime = nextInProgressOrConfirmed?.confirmed_start_time || null;
+      const remaining = todaysVisits - completedCount;
 
       setStats({
         todaysVisits,
         completed: completedCount,
-        nextVisitTime: nextTime,
+        nextVisitTime: remaining > 0 ? `${remaining} left` : null,
       });
     } catch (error) {
       console.error('Error loading job queue:', error);
@@ -331,7 +326,7 @@ export default function ProJobQueue() {
               >
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: FontSize.lg, fontWeight: FontWeight.semibold, color: Colors.charcoal }}>
-                    {formatTime(visit.confirmed_start_time)} — {visit.homeowner?.full_name}
+                    {visit.homeowner ? `${visit.homeowner.first_name || ''} ${visit.homeowner.last_name || ''}`.trim() || 'Homeowner' : 'Homeowner'}
                   </div>
                   <div style={{ fontSize: FontSize.sm, color: Colors.medGray, marginTop: Spacing.xs }}>
                     {visit.home?.address}
@@ -487,7 +482,7 @@ export default function ProJobQueue() {
                         <ul style={{ margin: `0 0 0 ${Spacing.md}px`, paddingLeft: 0 }}>
                           {visit.equipment.map((eq) => (
                             <li key={eq.id}>
-                              {eq.name} ({calculateAge(eq.install_date)})
+                              {eq.name} ({calculateAge(eq.installation_date)})
                             </li>
                           ))}
                         </ul>

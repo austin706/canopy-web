@@ -3,34 +3,24 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
-import { TASK_TEMPLATES } from '@/constants/maintenance';
 import type { ProMonthlyVisit, Home, Equipment } from '@/types';
+import type {
+  VisitInspection,
+  VisitInspectionItem,
+  ChecklistItemStatus,
+  OverallCondition,
+} from '@/types/inspection';
+import {
+  generateInspectionsForVisit,
+  getVisitInspections,
+  updateInspectionItemStatus as updateItemStatus,
+  completeInspection as completeInspectionService,
+  uploadVisitPhoto,
+} from '@/services/inspections';
 
-interface VisitInspection {
-  id: string;
-  visit_id: string;
-  equipment_id?: string;
-  equipment_name: string;
-  equipment_category: string;
-  overall_condition?: 'good' | 'fair' | 'needs_attention' | 'critical';
-  status: 'not_started' | 'in_progress' | 'completed' | 'skipped';
-  inspector_notes?: string;
-  created_at: string;
-  updated_at: string;
-}
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 
-interface VisitInspectionItem {
-  id: string;
-  inspection_id: string;
-  item_label: string;
-  item_description?: string;
-  status: 'pass' | 'attention' | 'fail' | 'na';
-  notes?: string;
-  photos: { url: string; caption?: string }[];
-  created_at: string;
-  updated_at: string;
-}
-
+// ─── Enriched inspection with items loaded ───
 interface EnrichedInspection extends VisitInspection {
   items: VisitInspectionItem[];
 }
@@ -53,10 +43,11 @@ export default function ProInspection() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Photo upload references
+  // Photo upload
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPhotoFor, setUploadingPhotoFor] = useState<string | null>(null);
 
+  // Debounce for notes auto-save
   const debounceRef = useRef<Record<string, NodeJS.Timeout>>({});
 
   useEffect(() => {
@@ -113,36 +104,22 @@ export default function ProInspection() {
 
       setEquipment(equipmentData || []);
 
-      // Load inspections
-      const { data: inspectionsData, error: inspectionsError } = await supabase
-        .from('visit_inspections')
-        .select('*')
-        .eq('visit_id', visitId);
+      // Load inspections via service layer
+      const existingInspections = await getVisitInspections(visitId!);
 
-      if (inspectionsError) throw inspectionsError;
-
-      // If no inspections exist, generate them
-      if (!inspectionsData || inspectionsData.length === 0) {
-        await generateInspections(visitData, equipmentData || []);
+      if (existingInspections.length === 0) {
+        // Generate inspections from DB templates
+        await generateInspectionsForVisit(visitId!, visitData.home_id);
+        // Re-fetch with items populated
+        const freshInspections = await getVisitInspections(visitId!);
+        setInspections(freshInspections as EnrichedInspection[]);
+        if (freshInspections.length > 0) {
+          setActiveTabId(freshInspections[0].id);
+        }
       } else {
-        // Load items for each inspection
-        const enriched = await Promise.all(
-          (inspectionsData || []).map(async (inspection) => {
-            const { data: itemsData } = await supabase
-              .from('visit_inspection_items')
-              .select('*')
-              .eq('inspection_id', inspection.id);
-
-            return {
-              ...inspection,
-              items: itemsData || [],
-            };
-          })
-        );
-
-        setInspections(enriched);
-        if (enriched.length > 0) {
-          setActiveTabId(enriched[0].id);
+        setInspections(existingInspections as EnrichedInspection[]);
+        if (existingInspections.length > 0) {
+          setActiveTabId(existingInspections[0].id);
         }
       }
     } catch (error) {
@@ -154,100 +131,11 @@ export default function ProInspection() {
     }
   };
 
-  const generateInspections = async (visitData: ProMonthlyVisit, equipmentList: Equipment[]) => {
-    try {
-      // Create inspection for each equipment category + general home
-      const categories = new Set(equipmentList.map((e) => e.category));
-      const inspectionCategories = ['general_home', ...Array.from(categories)];
-
-      const newInspections = await Promise.all(
-        inspectionCategories.map(async (category) => {
-          const equipmentForCategory = equipmentList.filter((e) => e.category === category);
-          const displayName =
-            category === 'general_home'
-              ? 'General Home'
-              : category
-                  .split('_')
-                  .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                  .join(' ');
-
-          // Insert inspection
-          const { data: inspectionData, error: inspectionError } = await supabase
-            .from('visit_inspections')
-            .insert({
-              visit_id: visitId,
-              equipment_id: equipmentForCategory[0]?.id || null,
-              equipment_name: displayName,
-              equipment_category: category,
-              status: 'not_started',
-            })
-            .select();
-
-          if (inspectionError) throw inspectionError;
-          const newInspection = inspectionData?.[0];
-
-          // Generate checklist items from templates
-          if (newInspection) {
-            const templates =
-              category === 'general_home'
-                ? TASK_TEMPLATES.filter((t) => t.category === 'general' || t.category === 'seasonal')
-                : TASK_TEMPLATES.filter((t) => t.category === category);
-
-            const items = templates.map((template) => ({
-              inspection_id: newInspection.id,
-              item_label: template.title,
-              item_description: template.description,
-              status: 'na',
-              notes: '',
-              photos: [],
-            }));
-
-            if (items.length > 0) {
-              const { error: itemsError } = await supabase
-                .from('visit_inspection_items')
-                .insert(items);
-
-              if (itemsError) throw itemsError;
-            }
-
-            return {
-              ...newInspection,
-              items: items.map((item, idx) => ({
-                id: `temp-${idx}`,
-                ...item,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              })),
-            };
-          }
-
-          return null;
-        })
-      );
-
-      const validInspections = newInspections.filter((i): i is EnrichedInspection => i !== null);
-      setInspections(validInspections);
-      if (validInspections.length > 0) {
-        setActiveTabId(validInspections[0].id);
-      }
-
-      // Reload to get actual IDs from database
-      setTimeout(() => loadData(), 500);
-    } catch (error) {
-      console.error('Error generating inspections:', error);
-    }
-  };
-
-  const handleItemStatusChange = async (inspectionId: string, itemId: string, newStatus: 'pass' | 'attention' | 'fail' | 'na') => {
+  // ─── Status Change (immediate save) ───
+  const handleItemStatusChange = async (inspectionId: string, itemId: string, newStatus: ChecklistItemStatus) => {
     try {
       setSaving(true);
-
-      const { error } = await supabase
-        .from('visit_inspection_items')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', itemId);
-
-      if (error) throw error;
+      await updateItemStatus(itemId, newStatus);
 
       // Update local state
       setInspections((prev) =>
@@ -255,10 +143,8 @@ export default function ProInspection() {
           insp.id === inspectionId
             ? {
                 ...insp,
-                items: insp.items.map((item) =>
-                  item.id === itemId
-                    ? { ...item, status: newStatus }
-                    : item
+                items: (insp.items || []).map((item) =>
+                  item.id === itemId ? { ...item, status: newStatus } : item
                 ),
               }
             : insp
@@ -271,8 +157,8 @@ export default function ProInspection() {
     }
   };
 
+  // ─── Notes Change (debounced save) ───
   const handleItemNotesChange = (inspectionId: string, itemId: string, notes: string) => {
-    // Debounce the save
     const debounceKey = `${inspectionId}-${itemId}`;
     if (debounceRef.current[debounceKey]) {
       clearTimeout(debounceRef.current[debounceKey]);
@@ -284,10 +170,8 @@ export default function ProInspection() {
         insp.id === inspectionId
           ? {
               ...insp,
-              items: insp.items.map((item) =>
-                item.id === itemId
-                  ? { ...item, notes }
-                  : item
+              items: (insp.items || []).map((item) =>
+                item.id === itemId ? { ...item, notes } : item
               ),
             }
           : insp
@@ -297,63 +181,39 @@ export default function ProInspection() {
     // Debounce the database save
     debounceRef.current[debounceKey] = setTimeout(async () => {
       try {
-        await supabase
-          .from('visit_inspection_items')
-          .update({ notes, updated_at: new Date().toISOString() })
-          .eq('id', itemId);
+        await updateItemStatus(itemId, undefined as any, notes);
       } catch (error) {
         console.error('Error saving notes:', error);
       }
     }, 500);
   };
 
+  // ─── Photo Upload (uses service layer → visit-photos bucket + visit_photos table) ───
   const handlePhotoUpload = async (inspectionId: string, itemId: string, file: File) => {
     if (!file) return;
 
     try {
       setUploadingPhotoFor(itemId);
+      const publicUrl = await uploadVisitPhoto(visitId!, inspectionId, file);
 
-      // Upload to Supabase Storage
-      const fileName = `${visitId}/${itemId}/${Date.now()}-${file.name}`;
-      const { error: uploadError, data } = await supabase.storage
-        .from('visit-inspections')
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: publicUrl } = supabase.storage
-        .from('visit-inspections')
-        .getPublicUrl(fileName);
-
-      // Get current item
-      const currentInspection = inspections.find((i) => i.id === inspectionId);
-      const currentItem = currentInspection?.items.find((it) => it.id === itemId);
-
-      if (currentItem) {
-        const updatedPhotos = [...(currentItem.photos || []), { url: publicUrl.publicUrl, caption: '' }];
-
-        await supabase
-          .from('visit_inspection_items')
-          .update({ photos: updatedPhotos, updated_at: new Date().toISOString() })
-          .eq('id', itemId);
-
-        // Update local state
-        setInspections((prev) =>
-          prev.map((insp) =>
-            insp.id === inspectionId
-              ? {
-                  ...insp,
-                  items: insp.items.map((item) =>
-                    item.id === itemId
-                      ? { ...item, photos: updatedPhotos }
-                      : item
-                  ),
-                }
-              : insp
-          )
-        );
-      }
+      // Update local state to show the photo
+      setInspections((prev) =>
+        prev.map((insp) =>
+          insp.id === inspectionId
+            ? {
+                ...insp,
+                items: (insp.items || []).map((item) =>
+                  item.id === itemId
+                    ? {
+                        ...item,
+                        photos: [...(item.photos || []), { url: publicUrl, caption: '' }],
+                      }
+                    : item
+                ),
+              }
+            : insp
+        )
+      );
     } catch (error) {
       console.error('Error uploading photo:', error);
       alert('Failed to upload photo');
@@ -365,22 +225,20 @@ export default function ProInspection() {
     }
   };
 
+  // ─── Complete Individual Inspection ───
   const handleCompleteInspection = async (inspectionId: string) => {
     try {
       setSaving(true);
-
-      const { error } = await supabase
-        .from('visit_inspections')
-        .update({ status: 'completed', updated_at: new Date().toISOString() })
-        .eq('id', inspectionId);
-
-      if (error) throw error;
+      const inspection = inspections.find((i) => i.id === inspectionId);
+      await completeInspectionService(
+        inspectionId,
+        inspection?.overall_condition || 'good',
+        inspection?.pro_notes || ''
+      );
 
       setInspections((prev) =>
         prev.map((insp) =>
-          insp.id === inspectionId
-            ? { ...insp, status: 'completed' }
-            : insp
+          insp.id === inspectionId ? { ...insp, status: 'completed' } : insp
         )
       );
     } catch (error) {
@@ -390,6 +248,7 @@ export default function ProInspection() {
     }
   };
 
+  // ─── Complete Entire Visit + Trigger AI Summary ───
   const handleCompleteVisit = async () => {
     if (!visit) return;
 
@@ -401,7 +260,7 @@ export default function ProInspection() {
       const endTime = new Date().getTime();
       const timeSpentMinutes = Math.round((endTime - startTime) / (1000 * 60));
 
-      // Update visit
+      // Update visit status
       const { error } = await supabase
         .from('pro_monthly_visits')
         .update({
@@ -415,7 +274,28 @@ export default function ProInspection() {
 
       if (error) throw error;
 
-      // TODO: Call generate-visit-summary edge function if generateAISummary is true
+      // Call AI summary edge function if checkbox is checked
+      if (generateAISummary && SUPABASE_URL) {
+        try {
+          const { data: session } = await supabase.auth.getSession();
+          const token = session?.session?.access_token;
+
+          await fetch(`${SUPABASE_URL}/functions/v1/generate-visit-summary`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({
+              visit_id: visitId,
+              mode: 'generate',
+            }),
+          });
+        } catch (aiError) {
+          console.warn('AI summary generation failed (non-blocking):', aiError);
+          // Don't fail the visit completion if AI summary fails
+        }
+      }
 
       setShowCompleteModal(false);
       navigate('/pro-portal/job-queue', { state: { success: 'Visit completed successfully' } });
@@ -427,15 +307,69 @@ export default function ProInspection() {
     }
   };
 
-  const allInspectionsComplete = inspections.length > 0 && inspections.every((i) => i.status === 'completed' || i.status === 'skipped');
+  // ─── Overall Condition Change ───
+  const handleOverallConditionChange = async (inspectionId: string, condition: OverallCondition) => {
+    try {
+      await supabase
+        .from('visit_inspections')
+        .update({ overall_condition: condition, updated_at: new Date().toISOString() })
+        .eq('id', inspectionId);
+
+      setInspections((prev) =>
+        prev.map((insp) =>
+          insp.id === inspectionId ? { ...insp, overall_condition: condition } : insp
+        )
+      );
+    } catch (error) {
+      console.error('Error updating overall condition:', error);
+    }
+  };
+
+  // ─── Inspector Notes Change (debounced) ───
+  const handleInspectorNotesChange = (inspectionId: string, notes: string) => {
+    const debounceKey = `notes-${inspectionId}`;
+    if (debounceRef.current[debounceKey]) {
+      clearTimeout(debounceRef.current[debounceKey]);
+    }
+
+    setInspections((prev) =>
+      prev.map((insp) =>
+        insp.id === inspectionId ? { ...insp, pro_notes: notes } : insp
+      )
+    );
+
+    debounceRef.current[debounceKey] = setTimeout(async () => {
+      await supabase
+        .from('visit_inspections')
+        .update({ pro_notes: notes, updated_at: new Date().toISOString() })
+        .eq('id', inspectionId);
+    }, 500);
+  };
+
+  const allInspectionsComplete =
+    inspections.length > 0 && inspections.every((i) => i.status === 'completed' || i.status === 'skipped');
 
   const formatElapsedTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
+    if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
+  };
+
+  // ─── Status button helpers ───
+  const STATUS_CONFIG: Record<ChecklistItemStatus, { label: string; activeColor: string }> = {
+    pass: { label: '\u2713 Pass', activeColor: Colors.success },
+    needs_attention: { label: '\u26A0 Attention', activeColor: '#FF9800' },
+    fail: { label: '\u2717 Fail', activeColor: Colors.error },
+    na: { label: '\u2014 N/A', activeColor: Colors.medGray },
+    pending: { label: 'Pending', activeColor: Colors.lightGray },
+  };
+
+  const CONDITION_COLORS: Record<OverallCondition, string> = {
+    good: Colors.success,
+    fair: '#FF9800',
+    needs_attention: Colors.warning,
+    critical: Colors.error,
   };
 
   if (loading) {
@@ -459,14 +393,23 @@ export default function ProInspection() {
   return (
     <div className="page" style={{ maxWidth: 1200, paddingBottom: Spacing.xxl }}>
       {/* Visit Header */}
-      <div style={{ position: 'sticky', top: 0, backgroundColor: Colors.white, zIndex: 10, paddingBottom: Spacing.md, marginBottom: Spacing.lg, borderBottom: `1px solid ${Colors.lightGray}` }}>
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          backgroundColor: Colors.white,
+          zIndex: 10,
+          paddingBottom: Spacing.md,
+          marginBottom: Spacing.lg,
+          borderBottom: `1px solid ${Colors.lightGray}`,
+        }}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
           <div>
-            <h1 style={{ margin: 0, marginBottom: Spacing.xs }}>
-              {home.address}
-            </h1>
+            <h1 style={{ margin: 0, marginBottom: Spacing.xs }}>{home.address}</h1>
             <p style={{ margin: 0, fontSize: FontSize.sm, color: Colors.medGray }}>
-              {visit.confirmed_date} • Started {visit.started_at ? new Date(visit.started_at).toLocaleTimeString() : '—'}
+              {visit.confirmed_date} &bull; Started{' '}
+              {visit.started_at ? new Date(visit.started_at).toLocaleTimeString() : '\u2014'}
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -478,17 +421,11 @@ export default function ProInspection() {
         </div>
 
         {/* Tab Bar */}
-        <div
-          style={{
-            display: 'flex',
-            gap: Spacing.sm,
-            overflowX: 'auto',
-            paddingBottom: Spacing.sm,
-          }}
-        >
+        <div style={{ display: 'flex', gap: Spacing.sm, overflowX: 'auto', paddingBottom: Spacing.sm }}>
           {inspections.map((insp) => {
-            const itemCount = insp.items.length;
-            const completedCount = insp.items.filter((item) => item.status !== 'na').length;
+            const items = insp.items || [];
+            const itemCount = items.length;
+            const completedCount = items.filter((item) => item.status !== 'pending').length;
             const isActive = insp.id === activeTabId;
 
             return (
@@ -510,8 +447,15 @@ export default function ProInspection() {
                   gap: Spacing.xs,
                 }}
               >
-                {insp.equipment_name}
-                <span style={{ backgroundColor: 'rgba(255,255,255,0.3)', padding: '2px 6px', borderRadius: BorderRadius.sm, fontSize: FontSize.xs }}>
+                {insp.equipment_name || insp.checklist_name}
+                <span
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.3)',
+                    padding: '2px 6px',
+                    borderRadius: BorderRadius.sm,
+                    fontSize: FontSize.xs,
+                  }}
+                >
                   {completedCount}/{itemCount}
                 </span>
               </button>
@@ -525,192 +469,198 @@ export default function ProInspection() {
         <div style={{ marginBottom: Spacing.lg }}>
           {/* Checklist Items */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: Spacing.md, marginBottom: Spacing.lg }}>
-            {activeInspection.items.map((item) => (
-              <div
-                key={item.id}
-                className="card"
-                style={{
-                  borderLeft: `4px solid ${
-                    item.status === 'pass' ? Colors.success : item.status === 'attention' ? '#FF9800' : item.status === 'fail' ? Colors.error : Colors.lightGray
-                  }`,
-                }}
-              >
-                {/* Item Header */}
-                <div style={{ marginBottom: Spacing.md }}>
-                  <h4 style={{ margin: `0 0 ${Spacing.xs}px 0`, fontSize: FontSize.md, color: Colors.charcoal }}>
-                    {item.item_label}
-                  </h4>
-                  {item.item_description && (
-                    <p style={{ margin: 0, fontSize: FontSize.sm, color: Colors.medGray }}>
-                      {item.item_description}
-                    </p>
-                  )}
-                </div>
+            {(activeInspection.items || []).map((item) => {
+              const borderColor =
+                item.status === 'pass'
+                  ? Colors.success
+                  : item.status === 'needs_attention'
+                  ? '#FF9800'
+                  : item.status === 'fail'
+                  ? Colors.error
+                  : Colors.lightGray;
 
-                {/* Status Buttons */}
-                <div style={{ display: 'flex', gap: Spacing.sm, marginBottom: Spacing.md }}>
-                  {(['pass', 'attention', 'fail', 'na'] as const).map((status) => {
-                    const isActive = item.status === status;
-                    let bgColor = Colors.lightGray;
-                    let textColor = Colors.medGray;
-                    let label = status === 'na' ? '— N/A' : status === 'attention' ? '⚠ Attention' : status === 'pass' ? '✓ Pass' : '✗ Fail';
+              return (
+                <div
+                  key={item.id}
+                  className="card"
+                  style={{ borderLeft: `4px solid ${borderColor}` }}
+                >
+                  {/* Item Header */}
+                  <div style={{ marginBottom: Spacing.md }}>
+                    <h4 style={{ margin: `0 0 ${Spacing.xs}px 0`, fontSize: FontSize.md, color: Colors.charcoal }}>
+                      {item.label}
+                    </h4>
+                    {item.description && (
+                      <p style={{ margin: 0, fontSize: FontSize.sm, color: Colors.medGray }}>{item.description}</p>
+                    )}
+                  </div>
 
-                    if (isActive) {
-                      if (status === 'pass') {
-                        bgColor = Colors.success;
-                        textColor = 'white';
-                      } else if (status === 'attention') {
-                        bgColor = '#FF9800';
-                        textColor = 'white';
-                      } else if (status === 'fail') {
-                        bgColor = Colors.error;
-                        textColor = 'white';
-                      } else {
-                        bgColor = Colors.medGray;
-                        textColor = 'white';
-                      }
-                    }
+                  {/* Status Buttons */}
+                  <div style={{ display: 'flex', gap: Spacing.sm, marginBottom: Spacing.md }}>
+                    {(['pass', 'needs_attention', 'fail', 'na'] as ChecklistItemStatus[]).map((status) => {
+                      const isActive = item.status === status;
+                      const config = STATUS_CONFIG[status];
 
-                    return (
-                      <button
-                        key={status}
-                        onClick={() => handleItemStatusChange(activeInspection.id, item.id, status)}
-                        disabled={saving}
+                      return (
+                        <button
+                          key={status}
+                          onClick={() => handleItemStatusChange(activeInspection.id, item.id, status)}
+                          disabled={saving}
+                          style={{
+                            flex: 1,
+                            padding: `${Spacing.md}px ${Spacing.sm}px`,
+                            borderRadius: BorderRadius.md,
+                            border: 'none',
+                            backgroundColor: isActive ? config.activeColor : Colors.lightGray,
+                            color: isActive ? 'white' : Colors.medGray,
+                            cursor: 'pointer',
+                            fontSize: FontSize.sm,
+                            fontWeight: FontWeight.semibold,
+                            minHeight: 44,
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {config.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Notes (shown for attention/fail items) */}
+                  {(item.status === 'needs_attention' || item.status === 'fail') && (
+                    <div style={{ marginBottom: Spacing.md }}>
+                      <label
                         style={{
-                          flex: 1,
-                          padding: `${Spacing.md}px ${Spacing.sm}px`,
-                          borderRadius: BorderRadius.md,
-                          border: 'none',
-                          backgroundColor: bgColor,
-                          color: textColor,
-                          cursor: 'pointer',
+                          display: 'block',
                           fontSize: FontSize.sm,
-                          fontWeight: FontWeight.semibold,
-                          minHeight: 44,
-                          transition: 'all 0.2s',
+                          fontWeight: FontWeight.medium,
+                          marginBottom: Spacing.xs,
+                          color: Colors.charcoal,
                         }}
                       >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Notes */}
-                {(item.status === 'attention' || item.status === 'fail') && (
-                  <div style={{ marginBottom: Spacing.md }}>
-                    <label style={{ display: 'block', fontSize: FontSize.sm, fontWeight: FontWeight.medium, marginBottom: Spacing.xs, color: Colors.charcoal }}>
-                      Notes
-                    </label>
-                    <textarea
-                      value={item.notes || ''}
-                      onChange={(e) => handleItemNotesChange(activeInspection.id, item.id, e.target.value)}
-                      placeholder="Add details about this issue..."
-                      style={{
-                        width: '100%',
-                        padding: Spacing.md,
-                        borderRadius: BorderRadius.md,
-                        border: `1px solid ${Colors.lightGray}`,
-                        fontSize: FontSize.sm,
-                        fontFamily: 'inherit',
-                        minHeight: 80,
-                        resize: 'vertical',
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* Photos */}
-                <div>
-                  <label style={{ display: 'block', fontSize: FontSize.sm, fontWeight: FontWeight.medium, marginBottom: Spacing.sm, color: Colors.charcoal }}>
-                    Photos
-                  </label>
-                  <button
-                    onClick={() => {
-                      setUploadingPhotoFor(item.id);
-                      fileInputRef.current?.click();
-                    }}
-                    disabled={uploadingPhotoFor === item.id}
-                    style={{
-                      padding: `${Spacing.sm}px ${Spacing.md}px`,
-                      borderRadius: BorderRadius.md,
-                      border: `1px solid ${Colors.lightGray}`,
-                      backgroundColor: Colors.cream,
-                      cursor: 'pointer',
-                      fontSize: FontSize.sm,
-                      fontWeight: FontWeight.medium,
-                      marginBottom: Spacing.sm,
-                    }}
-                  >
-                    {uploadingPhotoFor === item.id ? 'Uploading...' : 'Add Photo'}
-                  </button>
-
-                  {item.photos && item.photos.length > 0 && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: Spacing.sm }}>
-                      {item.photos.map((photo, idx) => (
-                        <div key={idx} style={{ position: 'relative' }}>
-                          <img
-                            src={photo.url}
-                            alt={`Photo ${idx + 1}`}
-                            style={{
-                              width: '100%',
-                              height: 100,
-                              objectFit: 'cover',
-                              borderRadius: BorderRadius.md,
-                            }}
-                          />
-                          {photo.caption && (
-                            <p style={{ margin: `${Spacing.xs}px 0 0 0`, fontSize: FontSize.xs, color: Colors.medGray, textAlign: 'center' }}>
-                              {photo.caption}
-                            </p>
-                          )}
-                        </div>
-                      ))}
+                        Notes
+                      </label>
+                      <textarea
+                        value={item.notes || ''}
+                        onChange={(e) => handleItemNotesChange(activeInspection.id, item.id, e.target.value)}
+                        placeholder="Add details about this issue..."
+                        style={{
+                          width: '100%',
+                          padding: Spacing.md,
+                          borderRadius: BorderRadius.md,
+                          border: `1px solid ${Colors.lightGray}`,
+                          fontSize: FontSize.sm,
+                          fontFamily: 'inherit',
+                          minHeight: 80,
+                          resize: 'vertical',
+                        }}
+                      />
                     </div>
                   )}
+
+                  {/* Photos */}
+                  <div>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: FontSize.sm,
+                        fontWeight: FontWeight.medium,
+                        marginBottom: Spacing.sm,
+                        color: Colors.charcoal,
+                      }}
+                    >
+                      Photos
+                    </label>
+                    <button
+                      onClick={() => {
+                        setUploadingPhotoFor(item.id);
+                        fileInputRef.current?.click();
+                      }}
+                      disabled={uploadingPhotoFor === item.id}
+                      style={{
+                        padding: `${Spacing.sm}px ${Spacing.md}px`,
+                        borderRadius: BorderRadius.md,
+                        border: `1px solid ${Colors.lightGray}`,
+                        backgroundColor: Colors.cream,
+                        cursor: 'pointer',
+                        fontSize: FontSize.sm,
+                        fontWeight: FontWeight.medium,
+                        marginBottom: Spacing.sm,
+                      }}
+                    >
+                      {uploadingPhotoFor === item.id ? 'Uploading...' : 'Add Photo'}
+                    </button>
+
+                    {item.photos && item.photos.length > 0 && (
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                          gap: Spacing.sm,
+                        }}
+                      >
+                        {item.photos.map((photo, idx) => (
+                          <div key={idx} style={{ position: 'relative' }}>
+                            <img
+                              src={photo.url}
+                              alt={`Photo ${idx + 1}`}
+                              style={{
+                                width: '100%',
+                                height: 100,
+                                objectFit: 'cover',
+                                borderRadius: BorderRadius.md,
+                              }}
+                            />
+                            {photo.caption && (
+                              <p
+                                style={{
+                                  margin: `${Spacing.xs}px 0 0 0`,
+                                  fontSize: FontSize.xs,
+                                  color: Colors.medGray,
+                                  textAlign: 'center',
+                                }}
+                              >
+                                {photo.caption}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Overall Condition */}
           <div className="card" style={{ marginBottom: Spacing.lg }}>
-            <label style={{ display: 'block', fontSize: FontSize.md, fontWeight: FontWeight.semibold, marginBottom: Spacing.md, color: Colors.charcoal }}>
-              Overall Condition — {activeInspection.equipment_name}
+            <label
+              style={{
+                display: 'block',
+                fontSize: FontSize.md,
+                fontWeight: FontWeight.semibold,
+                marginBottom: Spacing.md,
+                color: Colors.charcoal,
+              }}
+            >
+              Overall Condition &mdash; {activeInspection.equipment_name}
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: Spacing.sm }}>
-              {(['good', 'fair', 'needs_attention', 'critical'] as const).map((condition) => {
+              {(['good', 'fair', 'needs_attention', 'critical'] as OverallCondition[]).map((condition) => {
                 const isActive = activeInspection.overall_condition === condition;
-                const colors: Record<string, { bg: string; text: string }> = {
-                  good: { bg: Colors.success, text: 'white' },
-                  fair: { bg: '#FF9800', text: 'white' },
-                  needs_attention: { bg: Colors.warning, text: 'white' },
-                  critical: { bg: Colors.error, text: 'white' },
-                };
+                const color = CONDITION_COLORS[condition];
 
                 return (
                   <button
                     key={condition}
-                    onClick={async () => {
-                      await supabase
-                        .from('visit_inspections')
-                        .update({ overall_condition: condition, updated_at: new Date().toISOString() })
-                        .eq('id', activeInspection.id);
-
-                      setInspections((prev) =>
-                        prev.map((insp) =>
-                          insp.id === activeInspection.id
-                            ? { ...insp, overall_condition: condition }
-                            : insp
-                        )
-                      );
-                    }}
+                    onClick={() => handleOverallConditionChange(activeInspection.id, condition)}
                     style={{
                       padding: `${Spacing.md}px ${Spacing.sm}px`,
                       borderRadius: BorderRadius.md,
                       border: 'none',
-                      backgroundColor: isActive ? colors[condition].bg : Colors.lightGray,
-                      color: isActive ? colors[condition].text : Colors.medGray,
+                      backgroundColor: isActive ? color : Colors.lightGray,
+                      color: isActive ? 'white' : Colors.medGray,
                       cursor: 'pointer',
                       fontSize: FontSize.sm,
                       fontWeight: FontWeight.semibold,
@@ -727,33 +677,20 @@ export default function ProInspection() {
 
           {/* Inspector Notes */}
           <div className="card" style={{ marginBottom: Spacing.lg }}>
-            <label style={{ display: 'block', fontSize: FontSize.md, fontWeight: FontWeight.semibold, marginBottom: Spacing.md, color: Colors.charcoal }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: FontSize.md,
+                fontWeight: FontWeight.semibold,
+                marginBottom: Spacing.md,
+                color: Colors.charcoal,
+              }}
+            >
               Inspection Notes
             </label>
             <textarea
-              value={activeInspection.inspector_notes || ''}
-              onChange={(e) => {
-                const notes = e.target.value;
-                const debounceKey = `notes-${activeInspection.id}`;
-                if (debounceRef.current[debounceKey]) {
-                  clearTimeout(debounceRef.current[debounceKey]);
-                }
-
-                setInspections((prev) =>
-                  prev.map((insp) =>
-                    insp.id === activeInspection.id
-                      ? { ...insp, inspector_notes: notes }
-                      : insp
-                  )
-                );
-
-                debounceRef.current[debounceKey] = setTimeout(async () => {
-                  await supabase
-                    .from('visit_inspections')
-                    .update({ inspector_notes: notes, updated_at: new Date().toISOString() })
-                    .eq('id', activeInspection.id);
-                }, 500);
-              }}
+              value={activeInspection.pro_notes || ''}
+              onChange={(e) => handleInspectorNotesChange(activeInspection.id, e.target.value)}
               placeholder="Add notes for this inspection..."
               style={{
                 width: '100%',
@@ -785,7 +722,7 @@ export default function ProInspection() {
               marginBottom: Spacing.lg,
             }}
           >
-            {activeInspection.status === 'completed' ? '✓ Inspection Complete' : 'Mark Inspection Complete'}
+            {activeInspection.status === 'completed' ? '\u2713 Inspection Complete' : 'Mark Inspection Complete'}
           </button>
         </div>
       )}
@@ -803,7 +740,7 @@ export default function ProInspection() {
         }}
       />
 
-      {/* Bottom Bar — Sticky */}
+      {/* Bottom Bar (Sticky) */}
       <div
         style={{
           position: 'fixed',
@@ -831,7 +768,7 @@ export default function ProInspection() {
             fontWeight: FontWeight.semibold,
           }}
         >
-          Save & Exit
+          Save &amp; Exit
         </button>
         <button
           onClick={() => setShowCompleteModal(true)}
@@ -871,17 +808,20 @@ export default function ProInspection() {
         >
           <div
             className="card"
-            style={{
-              width: '90%',
-              maxWidth: 500,
-              padding: Spacing.lg,
-              backgroundColor: Colors.white,
-            }}
+            style={{ width: '90%', maxWidth: 500, padding: Spacing.lg, backgroundColor: Colors.white }}
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{ margin: `0 0 ${Spacing.md}px 0`, color: Colors.charcoal }}>Complete Visit</h2>
 
-            <label style={{ display: 'block', fontSize: FontSize.sm, fontWeight: FontWeight.medium, marginBottom: Spacing.sm, color: Colors.charcoal }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: FontSize.sm,
+                fontWeight: FontWeight.medium,
+                marginBottom: Spacing.sm,
+                color: Colors.charcoal,
+              }}
+            >
               Final Notes
             </label>
             <textarea
@@ -901,14 +841,22 @@ export default function ProInspection() {
               }}
             />
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: Spacing.sm, cursor: 'pointer', marginBottom: Spacing.lg }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: Spacing.sm,
+                cursor: 'pointer',
+                marginBottom: Spacing.lg,
+              }}
+            >
               <input
                 type="checkbox"
                 checked={generateAISummary}
                 onChange={(e) => setGenerateAISummary(e.target.checked)}
                 style={{ cursor: 'pointer' }}
               />
-              <span style={{ fontSize: FontSize.sm, color: Colors.charcoal }}>Generate AI Summary</span>
+              <span style={{ fontSize: FontSize.sm, color: Colors.charcoal }}>Generate AI Summary for Homeowner</span>
             </label>
 
             <div style={{ display: 'flex', gap: Spacing.md }}>

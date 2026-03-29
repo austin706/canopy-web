@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { isProOrHigher } from '@/services/subscriptionGate';
 import { Colors, StatusColors } from '@/constants/theme';
-import { getItemsToHaveOnHand, getUpcomingVisits, getPastVisits } from '@/services/proVisits';
+import { getItemsToHaveOnHand, getUpcomingVisits, getPastVisits, confirmVisit, cancelVisit, rescheduleVisit } from '@/services/proVisits';
 import type { ProMonthlyVisit, VisitAllocation } from '@/types';
 
 export default function Visits() {
@@ -18,6 +18,7 @@ export default function Visits() {
   const [canceling, setCanceling] = useState(false);
   const [rescheduling, setRescheduling] = useState(false);
   const [preparedItems, setPreparedItems] = useState<Set<string>>(new Set());
+  const [expandedSummary, setExpandedSummary] = useState<string | null>(null);
 
   const tier = user?.subscription_tier || 'free';
   const hasPro = isProOrHigher(tier);
@@ -61,12 +62,10 @@ export default function Visits() {
   const handleConfirm = async () => {
     if (!upcomingVisit) return;
     try {
-      // const result = await confirmVisit(upcomingVisit.id);
-      // setUpcomingVisit(result);
-      alert('Visit confirmed!');
+      await confirmVisit(upcomingVisit.id);
       await loadVisits();
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to confirm visit');
     }
   };
 
@@ -74,13 +73,16 @@ export default function Visits() {
     if (!upcomingVisit) return;
     setCanceling(true);
     try {
-      // const result = await cancelVisit(upcomingVisit.id);
-      // setUpcomingVisit(null);
-      alert('Visit cancelled');
+      const { rebookable } = await cancelVisit(upcomingVisit.id, 'Cancelled by homeowner');
       setShowCancelModal(false);
+      if (rebookable) {
+        alert('Visit cancelled. Since you cancelled 48+ hours in advance, you can rebook for this month.');
+      } else {
+        alert('Visit cancelled. Since this was within 48 hours of your visit, this month\'s visit has been forfeited.');
+      }
       await loadVisits();
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to cancel visit');
     } finally {
       setCanceling(false);
     }
@@ -90,14 +92,12 @@ export default function Visits() {
     if (!upcomingVisit || !newDate) return;
     setRescheduling(true);
     try {
-      // const result = await rescheduleVisit(upcomingVisit.id, newDate);
-      // setUpcomingVisit(result);
-      alert('Visit rescheduled!');
+      await rescheduleVisit(upcomingVisit.id, newDate, '');
       setShowRescheduleModal(false);
       setNewDate('');
       await loadVisits();
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to reschedule visit');
     } finally {
       setRescheduling(false);
     }
@@ -315,6 +315,58 @@ export default function Visits() {
                 )}
                 {visit.pro_notes && (
                   <p className="text-sm text-gray">Notes: {visit.pro_notes}</p>
+                )}
+                {/* AI Summary Section */}
+                {visit.ai_summary && (
+                  <div style={{ marginTop: 12 }}>
+                    <button
+                      onClick={() => setExpandedSummary(expandedSummary === visit.id ? null : visit.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '8px 16px',
+                        borderRadius: 8,
+                        border: `1px solid ${Colors.sage}`,
+                        backgroundColor: expandedSummary === visit.id ? Colors.sage : 'transparent',
+                        color: expandedSummary === visit.id ? 'white' : Colors.sage,
+                        cursor: 'pointer',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        width: '100%',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <span>{expandedSummary === visit.id ? '▼' : '▶'}</span>
+                      <span>{expandedSummary === visit.id ? 'Hide' : 'View'} AI Visit Summary</span>
+                    </button>
+                    {expandedSummary === visit.id && (
+                      <div
+                        style={{
+                          marginTop: 12,
+                          padding: 16,
+                          backgroundColor: '#f8faf8',
+                          borderRadius: 8,
+                          border: `1px solid ${Colors.sage}30`,
+                          fontSize: 14,
+                          lineHeight: 1.7,
+                          color: Colors.charcoal,
+                          whiteSpace: 'pre-wrap',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${Colors.sage}20` }}>
+                          <span style={{ fontSize: 18 }}>🌿</span>
+                          <span style={{ fontWeight: 600, color: Colors.sage }}>Canopy Home Health Report</span>
+                          {visit.ai_summary_generated_at && (
+                            <span style={{ fontSize: 11, color: Colors.medGray, marginLeft: 'auto' }}>
+                              Generated {new Date(visit.ai_summary_generated_at).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                        {visit.ai_summary}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

@@ -334,7 +334,7 @@ export default function Calendar() {
                   {f.charAt(0).toUpperCase() + f.slice(1)}
                   {f !== 'all' && (
                     <span style={{ marginLeft: 4, fontSize: 11, opacity: 0.7 }}>
-                      ({displayTasks.filter(t => t.status === f).length})
+                      ({f === 'visits' ? displayVisits.length : displayTasks.filter(t => t.status === f).length})
                     </span>
                   )}
                 </button>

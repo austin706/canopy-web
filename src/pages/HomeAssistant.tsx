@@ -21,7 +21,7 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 export default function HomeAssistant() {
-  const { user, home, equipment } = useStore();
+  const { user, home, equipment, tasks, maintenanceLogs } = useStore();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -42,6 +42,12 @@ export default function HomeAssistant() {
   // Build home context string for the AI
   const buildHomeContext = (): string => {
     const parts: string[] = [];
+
+    // Current date so AI knows the season and can give timely advice
+    const now = new Date();
+    parts.push(`Today's date: ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`);
+    parts.push(`Current season: ${getSeason(now)}`);
+
     if (home) {
       if (home.address) parts.push(`Address: ${home.address}, ${home.city || ''} ${home.state || ''}`);
       if (home.year_built) parts.push(`Year built: ${home.year_built}`);
@@ -61,7 +67,53 @@ export default function HomeAssistant() {
       ).join('; ');
       parts.push(`Equipment: ${eqList}`);
     }
+
+    // Active/upcoming tasks so AI knows what's on the homeowner's plate
+    if (tasks && tasks.length > 0) {
+      const activeTasks = tasks
+        .filter(t => t.status === 'upcoming' || t.status === 'overdue' || t.status === 'due')
+        .slice(0, 15);
+      if (activeTasks.length > 0) {
+        const taskList = activeTasks.map(t =>
+          `- ${t.title} (${t.status}${t.due_date ? ', due ' + new Date(t.due_date).toLocaleDateString() : ''}${t.priority ? ', ' + t.priority + ' priority' : ''})`
+        ).join('\n');
+        parts.push(`\nActive maintenance tasks:\n${taskList}`);
+      }
+
+      const recentCompleted = tasks
+        .filter(t => t.status === 'completed' && t.completed_date)
+        .sort((a, b) => new Date(b.completed_date!).getTime() - new Date(a.completed_date!).getTime())
+        .slice(0, 5);
+      if (recentCompleted.length > 0) {
+        const completedList = recentCompleted.map(t =>
+          `- ${t.title} (completed ${new Date(t.completed_date!).toLocaleDateString()})`
+        ).join('\n');
+        parts.push(`\nRecently completed tasks:\n${completedList}`);
+      }
+    }
+
+    // Recent maintenance logs for context on what's been done
+    if (maintenanceLogs && maintenanceLogs.length > 0) {
+      const recentLogs = [...maintenanceLogs]
+        .sort((a, b) => new Date(b.completed_date).getTime() - new Date(a.completed_date).getTime())
+        .slice(0, 8);
+      if (recentLogs.length > 0) {
+        const logList = recentLogs.map(l =>
+          `- ${l.title || l.description || 'Maintenance'} (${new Date(l.completed_date).toLocaleDateString()}${l.category ? ', ' + l.category : ''})`
+        ).join('\n');
+        parts.push(`\nRecent maintenance history:\n${logList}`);
+      }
+    }
+
     return parts.join('\n');
+  };
+
+  const getSeason = (date: Date): string => {
+    const month = date.getMonth();
+    if (month >= 2 && month <= 4) return 'Spring';
+    if (month >= 5 && month <= 7) return 'Summer';
+    if (month >= 8 && month <= 10) return 'Fall';
+    return 'Winter';
   };
 
   const sendMessage = async (text?: string) => {

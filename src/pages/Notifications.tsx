@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Colors } from '@/constants/theme';
 import { CheckCircleIcon, StormIcon, GearIcon, WrenchIcon, BellIcon } from '@/components/icons/Icons';
 import { useStore } from '@/store/useStore';
-import { canAccess } from '@/services/subscriptionGate';
 import * as supabaseService from '@/services/supabase';
 import {
   NotificationItem,
@@ -149,7 +148,6 @@ export default function Notifications() {
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
-  const userTier = user?.subscription_tier || 'free';
 
   if (loading) {
     return (
@@ -264,9 +262,9 @@ export default function Notifications() {
                   {(() => {
                     const categories: Array<{ key: keyof NotificationPreferences; locked?: boolean; lockReason?: string }> = [
                       { key: 'home_maintenance' },
-                      { key: 'weather_safety', locked: !canAccess(userTier, 'weather_alerts'), lockReason: 'Upgrade to access' },
+                      { key: 'weather_safety' },
                       { key: 'equipment_lifecycle' },
-                      { key: 'pro_services', locked: userTier !== 'pro' && userTier !== 'pro_plus', lockReason: 'Pro plan only' },
+                      { key: 'pro_services' },
                       { key: 'account_billing' },
                     ];
 

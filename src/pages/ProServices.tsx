@@ -2,17 +2,11 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { Colors } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
-import { canAccess } from '@/services/subscriptionGate';
+import { useNavigate } from 'react-router-dom';
 
 const Visits = lazy(() => import('@/pages/Visits'));
 const Quotes = lazy(() => import('@/pages/Quotes'));
 const Invoices = lazy(() => import('@/pages/Invoices'));
-
-interface ProServiceTemplate {
-  id: string;
-  title: string;
-  description: string;
-}
 
 interface ProServiceAppointment {
   id: string;
@@ -22,89 +16,85 @@ interface ProServiceAppointment {
   purpose: string;
 }
 
-interface AddOnService {
+interface ServiceItem {
   id: string;
   title: string;
   description: string;
-  priceRange: string;
-  priceMin: number;
-  priceMax: number;
   icon: string;
-  turnaround: string;
-  includes: string[];
+  priceRange?: string;
+  priceMin?: number;
+  turnaround?: string;
+  includes?: string[];
 }
 
-const PRO_SERVICE_TEMPLATES: ProServiceTemplate[] = [
+// ── Ad-hoc services available to ALL tiers ──
+const AD_HOC_SERVICES: ServiceItem[] = [
+  {
+    id: 'adhoc-visit',
+    title: 'Ad-Hoc Pro Visit',
+    description: 'Schedule a one-time visit from a Canopy pro for specific maintenance tasks or concerns.',
+    icon: '🔧',
+    priceRange: '$149',
+    priceMin: 149,
+    turnaround: 'Scheduled within 1 week',
+    includes: ['60-minute focused visit', 'Up to 3 task items', 'Inspection notes & photos', 'Visit logged to your home record'],
+  },
   {
     id: 'hvac-tune-up',
     title: 'HVAC Tune-Up',
-    description: 'Professional AC/furnace maintenance and inspection',
+    description: 'Professional AC/furnace maintenance and inspection.',
+    icon: '❄️',
+    priceRange: '$89–$149',
+    priceMin: 89,
+    turnaround: 'Scheduled within 2 weeks',
+    includes: ['System inspection & cleaning', 'Filter replacement', 'Performance check', 'Written report'],
   },
   {
     id: 'gutter-cleaning',
     title: 'Gutter Cleaning',
-    description: 'Complete gutter cleaning and debris removal',
+    description: 'Complete gutter cleaning, flush, and debris removal.',
+    icon: '🏠',
+    priceRange: '$99–$149',
+    priceMin: 99,
+    turnaround: 'Scheduled within 2 weeks',
+    includes: ['Full gutter cleanout', 'Downspout flush', 'Damage inspection', 'Photo documentation'],
   },
   {
     id: 'pest-treatment',
     title: 'Pest Treatment',
-    description: 'Professional pest control and prevention',
+    description: 'Professional pest control inspection and prevention treatment.',
+    icon: '🐛',
+    priceRange: '$99–$179',
+    priceMin: 99,
+    turnaround: 'Scheduled within 1 week',
+    includes: ['Interior/exterior inspection', 'Targeted treatment', 'Prevention recommendations', 'Follow-up plan'],
   },
-  {
-    id: 'lawn-treatment',
-    title: 'Lawn Treatment',
-    description: 'Fertilization and lawn care service',
-  },
-  {
-    id: 'pool-maintenance',
-    title: 'Pool Maintenance',
-    description: 'Pool cleaning, balancing, and equipment check',
-  },
-  {
-    id: 'chimney-sweep',
-    title: 'Chimney Sweep',
-    description: 'Professional chimney cleaning and inspection',
-  },
-  {
-    id: 'custom-other',
-    title: 'Custom/Other',
-    description: 'Any other professional service or custom request',
-  },
-];
-
-const ADD_ON_SERVICES: AddOnService[] = [
   {
     id: 'annual-inspection',
     title: 'Annual Home Inspection',
     description: 'Comprehensive inspection of your entire home — roof to foundation, all systems, all equipment.',
+    icon: '🔍',
     priceRange: '$199–$249',
     priceMin: 199,
-    priceMax: 249,
-    icon: '🔍',
     turnaround: 'Scheduled within 2 weeks',
     includes: ['Full home walkthrough', 'Equipment condition assessment', 'Photo documentation', 'Written report with recommendations', 'Record added to your Home Token'],
-  },
-  {
-    id: 'adhoc-visit',
-    title: 'Ad-Hoc Pro Visit',
-    description: 'An extra maintenance visit outside your monthly allocation for specific tasks or concerns.',
-    priceRange: '$149',
-    priceMin: 149,
-    priceMax: 149,
-    icon: '🔧',
-    turnaround: 'Scheduled within 1 week',
-    includes: ['60-minute focused visit', 'Up to 3 task items', 'Inspection notes & photos', 'Visit logged to your record'],
   },
   {
     id: 'emergency-callout',
     title: 'Emergency Callout',
     description: 'Urgent same-day or next-day service for unexpected issues — leaks, electrical problems, HVAC failure.',
+    icon: '🚨',
     priceRange: '$199',
     priceMin: 199,
-    priceMax: 199,
-    icon: '🚨',
     turnaround: 'Same-day or next-day',
-    includes: ['Priority scheduling', 'Diagnostic assessment', 'Temporary fix if possible', 'Quote for full repair', 'Emergency documented in record'],
+    includes: ['Priority scheduling', 'Diagnostic assessment', 'Temporary fix if possible', 'Quote for full repair'],
+  },
+  {
+    id: 'custom-other',
+    title: 'Custom Request',
+    description: 'Need something else? Describe what you need and we\'ll get you a quote.',
+    icon: '📋',
+    turnaround: 'Quote within 48 hours',
   },
 ];
 
@@ -121,43 +111,31 @@ type SubTab = 'services' | 'visits' | 'quotes' | 'invoices';
 
 export default function ProServices() {
   const { user, home } = useStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<SubTab>('services');
   const [appointments, setAppointments] = useState<ProServiceAppointment[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<ProServiceTemplate | null>(null);
-  const [formData, setFormData] = useState({
-    date: '',
-    time: '',
-    reminderDays: '3',
-    notes: '',
-  });
+  const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
+  const [formData, setFormData] = useState({ date: '', time: '', notes: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedAddOn, setSelectedAddOn] = useState<AddOnService | null>(null);
-  const [addOnNotes, setAddOnNotes] = useState('');
-  const [addOnDate, setAddOnDate] = useState('');
-  const [requestingAddOn, setRequestingAddOn] = useState(false);
-  const [addOnSuccess, setAddOnSuccess] = useState('');
+  const [success, setSuccess] = useState('');
 
   const tier = user?.subscription_tier || 'free';
-  const hasAccess = canAccess(tier, 'pro_service_scheduler');
+  const isPro = tier === 'pro' || tier === 'pro_plus';
+  const isProPlus = tier === 'pro_plus';
 
   useEffect(() => {
-    if (home && hasAccess) {
-      fetchAppointments();
-    }
-  }, [home, hasAccess]);
+    if (home) fetchAppointments();
+  }, [home]);
 
   const fetchAppointments = async () => {
     try {
       if (!home) return;
-      // Fetch direct appointments
-      const { data: apptData, error: apptErr } = await supabase
+      const { data: apptData } = await supabase
         .from('pro_service_appointments')
         .select('*')
         .eq('home_id', home.id)
         .order('scheduled_date', { ascending: true });
-
-      if (apptErr) throw apptErr;
 
       const directAppts: ProServiceAppointment[] = (apptData || []).map((row: any) => ({
         id: row.id,
@@ -167,7 +145,6 @@ export default function ProServices() {
         purpose: row.service_purpose || row.description || '',
       }));
 
-      // Also fetch pro_requests that are matched/scheduled (pipeline-generated services)
       const { data: reqData } = await supabase
         .from('pro_requests')
         .select('*, provider:provider_id(business_name)')
@@ -175,7 +152,6 @@ export default function ProServices() {
         .in('status', ['matched', 'scheduled'])
         .order('created_at', { ascending: false });
 
-      // Filter out requests that already have a linked appointment
       const linkedRequestIds = new Set(
         (apptData || []).filter((a: any) => a.request_id).map((a: any) => a.request_id)
       );
@@ -196,180 +172,52 @@ export default function ProServices() {
     }
   };
 
-  const handleSubmitScheduling = async (e: React.FormEvent) => {
+  const handleRequestService = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTemplate || !formData.date || !home) {
-      setError('Please fill in all required fields');
-      return;
-    }
-
+    if (!selectedService || !home || !user?.id) return;
     setIsLoading(true);
     setError('');
+    setSuccess('');
 
     try {
-      const appointment = {
-        id: crypto.randomUUID(),
-        home_id: home.id,
-        title: selectedTemplate.title,
-        scheduled_date: formData.date,
-        scheduled_time: formData.time || '09:00',
-        status: 'pending',
-        service_purpose: selectedTemplate.description,
-        reminder_days_before: parseInt(formData.reminderDays, 10),
-        notes: formData.notes,
-        description: selectedTemplate.description,
-        created_at: new Date().toISOString(),
-      };
+      if (selectedService.priceMin) {
+        // Create a quote request for priced services
+        const { createQuote } = await import('@/services/quotesInvoices');
+        await createQuote(
+          home.id,
+          user.id,
+          '',
+          selectedService.title,
+          `${selectedService.description}${formData.notes ? '\n\nCustomer notes: ' + formData.notes : ''}${formData.date ? '\nPreferred date: ' + formData.date : ''}`,
+          [{ description: selectedService.title, amount: selectedService.priceMin, quantity: 1, unit_price: selectedService.priceMin }],
+          'one_off',
+          0
+        );
+      } else {
+        // Custom request — just create an appointment entry
+        await supabase.from('pro_service_appointments').insert({
+          id: crypto.randomUUID(),
+          home_id: home.id,
+          title: selectedService.title,
+          scheduled_date: formData.date || null,
+          scheduled_time: formData.time || null,
+          status: 'pending',
+          service_purpose: formData.notes || selectedService.description,
+          description: selectedService.description,
+          notes: formData.notes,
+          created_at: new Date().toISOString(),
+        });
+      }
 
-      const { error: err } = await supabase
-        .from('pro_service_appointments')
-        .insert(appointment);
-
-      if (err) throw err;
-
-      setAppointments([...appointments, {
-        id: appointment.id,
-        title: appointment.title,
-        date: appointment.scheduled_date,
-        status: appointment.status,
-        purpose: appointment.service_purpose,
-      } as ProServiceAppointment]);
-      setSelectedTemplate(null);
-      setFormData({ date: '', time: '', reminderDays: '3', notes: '' });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to schedule appointment');
+      setSuccess(`Your ${selectedService.title} request has been submitted! We'll follow up shortly.`);
+      setSelectedService(null);
+      setFormData({ date: '', time: '', notes: '' });
+      fetchAppointments();
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit request');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleRequestAddOn = async () => {
-    if (!selectedAddOn || !home || !user?.id) return;
-    setRequestingAddOn(true);
-    setError('');
-    setAddOnSuccess('');
-    try {
-      const { createQuote } = await import('@/services/quotesInvoices');
-      await createQuote(
-        home.id,
-        user.id,
-        '',
-        selectedAddOn.title,
-        `${selectedAddOn.description}${addOnNotes ? '\n\nCustomer notes: ' + addOnNotes : ''}${addOnDate ? '\nPreferred date: ' + addOnDate : ''}`,
-        [{ description: selectedAddOn.title, amount: selectedAddOn.priceMin, quantity: 1, unit_price: selectedAddOn.priceMin }],
-        'add_on',
-        0
-      );
-      setAddOnSuccess(`Your ${selectedAddOn.title} request has been submitted! We'll send you a quote shortly.`);
-      setSelectedAddOn(null);
-      setAddOnNotes('');
-      setAddOnDate('');
-    } catch (err: any) {
-      setError(err.message || 'Failed to request add-on service');
-    } finally {
-      setRequestingAddOn(false);
-    }
-  };
-
-  const sectionStyle: React.CSSProperties = {
-    marginBottom: '32px',
-  };
-
-  const sectionTitleStyle: React.CSSProperties = {
-    fontSize: '18px',
-    fontWeight: '600',
-    color: Colors.charcoal,
-    marginBottom: '16px',
-  };
-
-  const cardStyle: React.CSSProperties = {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: '12px',
-    padding: '20px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-    marginBottom: '12px',
-  };
-
-  const gridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-    gap: '16px',
-    marginBottom: '16px',
-  };
-
-  const templateCardStyle: React.CSSProperties = {
-    backgroundColor: Colors.cardBackground,
-    border: `2px solid ${Colors.copper}`,
-    borderRadius: '12px',
-    padding: '16px',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    textAlign: 'center',
-  };
-
-  const templateCardHoverStyle: React.CSSProperties = {
-    ...templateCardStyle,
-    boxShadow: `0 4px 12px ${Colors.copperMuted}`,
-  };
-
-  const badgeStyle = (status: string): React.CSSProperties => ({
-    display: 'inline-block',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    fontSize: '12px',
-    fontWeight: '600',
-    backgroundColor: STATUS_COLORS[status] + '20',
-    color: STATUS_COLORS[status],
-    marginLeft: '8px',
-  });
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    marginBottom: '8px',
-    fontSize: '14px',
-    fontWeight: '500',
-    color: Colors.charcoal,
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 12px',
-    borderRadius: '8px',
-    border: `1px solid ${Colors.lightGray}`,
-    fontSize: '14px',
-    fontFamily: 'inherit',
-    boxSizing: 'border-box',
-    backgroundColor: Colors.inputBackground,
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    padding: '12px 16px',
-    borderRadius: '8px',
-    border: 'none',
-    backgroundColor: Colors.sage,
-    color: Colors.white,
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: isLoading ? 'not-allowed' : 'pointer',
-    opacity: isLoading ? 0.7 : 1,
-  };
-
-  const closeButtonStyle: React.CSSProperties = {
-    padding: '8px 12px',
-    borderRadius: '6px',
-    border: 'none',
-    backgroundColor: Colors.medGray,
-    color: Colors.white,
-    fontSize: '13px',
-    cursor: 'pointer',
-  };
-
-  const upgradePromptStyle: React.CSSProperties = {
-    backgroundColor: Colors.copperMuted,
-    border: `1px solid ${Colors.copper}`,
-    borderRadius: '12px',
-    padding: '20px',
-    textAlign: 'center',
   };
 
   if (!home) {
@@ -380,77 +228,26 @@ export default function ProServices() {
     );
   }
 
-  if (!hasAccess) {
-    return (
-      <div className="page" style={{ maxWidth: 900 }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '600', color: Colors.charcoal, marginBottom: '16px' }}>
-          Pro Service Scheduler
-        </h1>
-        <div style={upgradePromptStyle}>
-          <h2 style={{ fontSize: '16px', fontWeight: '600', color: Colors.copper, marginBottom: '8px' }}>
-            Upgrade to Access Pro Services
-          </h2>
-          <p style={{ fontSize: '14px', color: Colors.medGray, margin: '0 0 16px 0' }}>
-            Schedule professional services directly from Canopy
-          </p>
-          <a
-            href="/subscription"
-            style={{
-              display: 'inline-block',
-              padding: '10px 20px',
-              backgroundColor: Colors.copper,
-              color: Colors.white,
-              textDecoration: 'none',
-              borderRadius: '6px',
-              fontWeight: '600',
-              fontSize: '14px',
-            }}
-          >
-            View Plans
-          </a>
-        </div>
-      </div>
-    );
-  }
-
-  const isPro = tier === 'pro' || tier === 'pro_plus';
-  const tabs: { key: SubTab; label: string; proOnly?: boolean }[] = [
-    { key: 'services', label: 'Schedule Services' },
-    { key: 'visits', label: 'Pro Visits', proOnly: true },
-    { key: 'quotes', label: 'Quotes', proOnly: true },
-    { key: 'invoices', label: 'Invoices', proOnly: true },
+  const tabs: { key: SubTab; label: string }[] = [
+    { key: 'services', label: 'Services' },
+    { key: 'visits', label: 'Visits' },
+    { key: 'quotes', label: 'Quotes' },
+    { key: 'invoices', label: 'Invoices' },
   ];
-  const visibleTabs = tabs.filter(t => !t.proOnly || isPro);
 
   // Sub-tab rendering for Visits, Quotes, Invoices
   if (activeTab !== 'services') {
     return (
       <div className="page" style={{ maxWidth: 900 }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '600', color: Colors.charcoal, marginBottom: '16px' }}>
-          Pro Services
-        </h1>
+        <h1 style={{ fontSize: 24, fontWeight: 600, color: Colors.charcoal, marginBottom: 16 }}>Pro Services</h1>
         <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${Colors.cream}`, marginBottom: 24 }}>
-          {visibleTabs.map(t => (
-            <button
-              key={t.key}
-              onClick={() => setActiveTab(t.key)}
-              style={{
-                padding: '10px 20px',
-                fontSize: 14,
-                fontWeight: activeTab === t.key ? 700 : 500,
-                color: activeTab === t.key ? Colors.sage : Colors.medGray,
-                borderBottom: activeTab === t.key ? `3px solid ${Colors.sage}` : '3px solid transparent',
-                background: 'none',
-                border: 'none',
-                borderBottomWidth: 3,
-                borderBottomStyle: 'solid',
-                borderBottomColor: activeTab === t.key ? Colors.sage : 'transparent',
-                cursor: 'pointer',
-                marginBottom: -2,
-              }}
-            >
-              {t.label}
-            </button>
+          {tabs.map(t => (
+            <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
+              padding: '10px 20px', fontSize: 14, fontWeight: activeTab === t.key ? 700 : 500,
+              color: activeTab === t.key ? Colors.sage : Colors.medGray, background: 'none', border: 'none',
+              borderBottomWidth: 3, borderBottomStyle: 'solid',
+              borderBottomColor: activeTab === t.key ? Colors.sage : 'transparent', cursor: 'pointer', marginBottom: -2,
+            }}>{t.label}</button>
           ))}
         </div>
         <Suspense fallback={<p style={{ color: Colors.medGray }}>Loading...</p>}>
@@ -464,322 +261,197 @@ export default function ProServices() {
 
   return (
     <div className="page" style={{ maxWidth: 900 }}>
-      <h1 style={{ fontSize: '24px', fontWeight: '600', color: Colors.charcoal, marginBottom: '16px' }}>
-        Pro Services
-      </h1>
+      <h1 style={{ fontSize: 24, fontWeight: 600, color: Colors.charcoal, marginBottom: 16 }}>Pro Services</h1>
       <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${Colors.cream}`, marginBottom: 24 }}>
-        {visibleTabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setActiveTab(t.key)}
-            style={{
-              padding: '10px 20px',
-              fontSize: 14,
-              fontWeight: activeTab === t.key ? 700 : 500,
-              color: activeTab === t.key ? Colors.sage : Colors.medGray,
-              background: 'none',
-              border: 'none',
-              borderBottomWidth: 3,
-              borderBottomStyle: 'solid',
-              borderBottomColor: activeTab === t.key ? Colors.sage : 'transparent',
-              cursor: 'pointer',
-              marginBottom: -2,
-            }}
-          >
-            {t.label}
-          </button>
+        {tabs.map(t => (
+          <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
+            padding: '10px 20px', fontSize: 14, fontWeight: activeTab === t.key ? 700 : 500,
+            color: activeTab === t.key ? Colors.sage : Colors.medGray, background: 'none', border: 'none',
+            borderBottomWidth: 3, borderBottomStyle: 'solid',
+            borderBottomColor: activeTab === t.key ? Colors.sage : 'transparent', cursor: 'pointer', marginBottom: -2,
+          }}>{t.label}</button>
         ))}
       </div>
 
-      {/* Upcoming Appointments */}
-      <div style={sectionStyle}>
-        <h2 style={sectionTitleStyle}>Upcoming Appointments</h2>
-        {appointments.length === 0 ? (
-          <p style={{ fontSize: '14px', color: Colors.medGray }}>
-            No appointments scheduled yet. Choose a service below to get started.
-          </p>
-        ) : (
-          appointments.map((apt) => (
-            <div key={apt.id} style={cardStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h3 style={{ fontSize: '15px', fontWeight: '600', color: Colors.charcoal, margin: '0 0 4px 0' }}>
-                    {apt.title}
-                    <span style={badgeStyle(apt.status)}>{apt.status === 'pending' ? 'Requested' : apt.status}</span>
-                  </h3>
-                  <p style={{ fontSize: '13px', color: Colors.medGray, margin: '0' }}>
-                    {new Date(apt.date).toLocaleDateString()} — {apt.purpose}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Service Templates Grid */}
-      <div style={sectionStyle}>
-        <h2 style={sectionTitleStyle}>Available Services</h2>
-        <div style={gridStyle}>
-          {PRO_SERVICE_TEMPLATES.map((template) => (
-            <div
-              key={template.id}
-              onClick={() => setSelectedTemplate(template)}
-              style={selectedTemplate?.id === template.id ? templateCardHoverStyle : templateCardStyle}
-              onMouseEnter={(e) => {
-                if (selectedTemplate?.id !== template.id) {
-                  Object.assign(e.currentTarget.style, {
-                    boxShadow: `0 2px 8px ${Colors.copperMuted}`,
-                  });
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (selectedTemplate?.id !== template.id) {
-                  Object.assign(e.currentTarget.style, {
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                  });
-                }
-              }}
-            >
-              <h3 style={{ fontSize: '15px', fontWeight: '600', color: Colors.copper, marginBottom: '4px' }}>
-                {template.title}
-              </h3>
-              <p style={{ fontSize: '12px', color: Colors.medGray, margin: '0' }}>
-                {template.description}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Add-On Services Section */}
-      <div style={sectionStyle}>
-        <h2 style={sectionTitleStyle}>Add-On Services</h2>
-        <p style={{ fontSize: '14px', color: Colors.medGray, marginBottom: '16px' }}>
-          One-time services outside your subscription
-        </p>
-        <div style={gridStyle}>
-          {ADD_ON_SERVICES.map((service) => (
-            <div
-              key={service.id}
-              onClick={() => setSelectedAddOn(service)}
-              style={selectedAddOn?.id === service.id ? templateCardHoverStyle : templateCardStyle}
-              onMouseEnter={(e) => {
-                if (selectedAddOn?.id !== service.id) {
-                  Object.assign(e.currentTarget.style, {
-                    boxShadow: `0 2px 8px ${Colors.copperMuted}`,
-                  });
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (selectedAddOn?.id !== service.id) {
-                  Object.assign(e.currentTarget.style, {
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                  });
-                }
-              }}
-            >
-              <div style={{ fontSize: '28px', marginBottom: '8px', textAlign: 'center' }}>
-                {service.icon}
-              </div>
-              <h3 style={{ fontSize: '15px', fontWeight: '600', color: Colors.copper, marginBottom: '4px', textAlign: 'center' }}>
-                {service.title}
-              </h3>
-              <p style={{ fontSize: '13px', color: Colors.medGray, margin: '0 0 8px 0', textAlign: 'center', fontWeight: '600' }}>
-                {service.priceRange}
-              </p>
-              <p style={{ fontSize: '12px', color: Colors.medGray, margin: '0', textAlign: 'center' }}>
-                {service.turnaround}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Add-On Request Form */}
-      {selectedAddOn && (
-        <div style={sectionStyle}>
-          <div style={cardStyle}>
-            <h2 style={{ ...sectionTitleStyle, marginBottom: '20px' }}>
-              Request {selectedAddOn.title}
-            </h2>
-
-            <div style={{ marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', color: Colors.charcoal, marginBottom: '12px' }}>
-                What's Included:
-              </h3>
-              <ul style={{ marginLeft: '20px', marginTop: '8px', marginBottom: '16px' }}>
-                {selectedAddOn.includes.map((item, idx) => (
-                  <li key={idx} style={{ fontSize: '13px', color: Colors.charcoal, marginBottom: '6px' }}>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleRequestAddOn();
-              }}
-            >
-              {/* Preferred Date */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={labelStyle}>Preferred Date</label>
-                <input
-                  type="date"
-                  value={addOnDate}
-                  onChange={(e) => setAddOnDate(e.target.value)}
-                  style={inputStyle}
-                />
-              </div>
-
-              {/* Notes */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={labelStyle}>Additional Notes</label>
-                <textarea
-                  value={addOnNotes}
-                  onChange={(e) => setAddOnNotes(e.target.value)}
-                  placeholder="Tell us more about your needs (optional)..."
-                  style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' } as React.CSSProperties}
-                />
-              </div>
-
-              {error && (
-                <div
-                  style={{
-                    color: Colors.error,
-                    fontSize: '14px',
-                    marginBottom: '16px',
-                    padding: '10px',
-                    backgroundColor: Colors.error + '10',
-                    borderRadius: '6px',
-                  }}
-                >
-                  {error}
-                </div>
-              )}
-
-              {addOnSuccess && (
-                <div
-                  style={{
-                    color: Colors.success,
-                    fontSize: '14px',
-                    marginBottom: '16px',
-                    padding: '10px',
-                    backgroundColor: Colors.success + '10',
-                    borderRadius: '6px',
-                  }}
-                >
-                  {addOnSuccess}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="submit" style={buttonStyle} disabled={requestingAddOn}>
-                  {requestingAddOn ? 'Submitting...' : 'Request Quote'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedAddOn(null);
-                    setAddOnNotes('');
-                    setAddOnDate('');
-                    setAddOnSuccess('');
-                  }}
-                  style={closeButtonStyle}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+      {/* ── Your Plan ── */}
+      <div className="card mb-lg" style={{ padding: '20px 24px', background: isPro ? Colors.sageMuted : Colors.cream }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <p style={{ fontWeight: 700, fontSize: 16, color: Colors.charcoal, margin: '0 0 4px' }}>
+              {isProPlus ? 'Pro+ Concierge' : isPro ? 'Pro Plan' : tier === 'home' ? 'Home Plan' : 'Free Plan'}
+            </p>
+            <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>
+              {isProPlus
+                ? 'Full concierge service — all maintenance handled for you. Contact your Canopy team for anything.'
+                : isPro
+                ? 'Includes bimonthly maintenance visits from your assigned Canopy pro.'
+                : 'Request any service below on-demand. Upgrade to Pro for scheduled maintenance visits.'}
+            </p>
           </div>
+          {!isPro && (
+            <button className="btn btn-primary btn-sm" onClick={() => navigate('/subscription')} style={{ flexShrink: 0 }}>
+              Upgrade
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Pro/Pro+ Included Visits ── */}
+      {isPro && (
+        <div style={{ marginBottom: 32 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: Colors.charcoal, marginBottom: 8 }}>
+            {isProPlus ? 'Your Concierge Service' : 'Your Bimonthly Visits'}
+          </h2>
+          <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>
+            {isProPlus
+              ? 'Your Pro+ plan includes complete home care management. Your Canopy team handles scheduling, maintenance, and coordination — just let us know what you need.'
+              : 'Your Pro plan includes a maintenance visit from your assigned Canopy pro every other month. These visits cover routine inspections, filter changes, and minor tasks.'}
+          </p>
+
+          {/* Upcoming visit appointments */}
+          {appointments.filter(a => a.status !== 'completed' && a.status !== 'cancelled').length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {appointments
+                .filter(a => a.status !== 'completed' && a.status !== 'cancelled')
+                .map(apt => (
+                  <div key={apt.id} className="card" style={{ padding: '14px 18px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px' }}>
+                          {apt.title}
+                          <span style={{
+                            display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, marginLeft: 8,
+                            backgroundColor: (STATUS_COLORS[apt.status] || Colors.medGray) + '20',
+                            color: STATUS_COLORS[apt.status] || Colors.medGray,
+                          }}>{apt.status === 'pending' ? 'Requested' : apt.status}</span>
+                        </p>
+                        <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
+                          {new Date(apt.date).toLocaleDateString()} — {apt.purpose}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <div className="card" style={{ padding: '24px', textAlign: 'center', color: Colors.medGray }}>
+              <p style={{ margin: 0, fontSize: 14 }}>No upcoming visits scheduled. Your next visit will be coordinated by your Canopy team.</p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Schedule Form */}
-      {selectedTemplate && (
-        <div style={sectionStyle}>
-          <div style={cardStyle}>
-            <h2 style={{ ...sectionTitleStyle, marginBottom: '20px' }}>
-              Schedule {selectedTemplate.title}
-            </h2>
+      {/* ── On-Demand Services (all tiers) ── */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 600, color: Colors.charcoal, marginBottom: 8 }}>On-Demand Services</h2>
+        <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>
+          Available to all Canopy members. Request any service and we'll get you scheduled.
+        </p>
 
-            <form onSubmit={handleSubmitScheduling}>
-              {/* Date */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={labelStyle}>Service Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  style={inputStyle}
-                />
-              </div>
-
-              {/* Time */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={labelStyle}>Preferred Time</label>
-                <input
-                  type="time"
-                  value={formData.time}
-                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                  style={inputStyle}
-                />
-              </div>
-
-              {/* Reminder Days */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={labelStyle}>Reminder (days before)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.reminderDays}
-                  onChange={(e) => setFormData({ ...formData, reminderDays: e.target.value })}
-                  style={inputStyle}
-                />
-              </div>
-
-              {/* Notes */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={labelStyle}>Notes</label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Any special instructions or notes..."
-                  style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' } as React.CSSProperties}
-                />
-              </div>
-
-              {error && (
-                <div
-                  style={{
-                    color: Colors.error,
-                    fontSize: '14px',
-                    marginBottom: '16px',
-                    padding: '10px',
-                    backgroundColor: Colors.error + '10',
-                    borderRadius: '6px',
-                  }}
-                >
-                  {error}
-                </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
+          {AD_HOC_SERVICES.map(service => (
+            <div
+              key={service.id}
+              onClick={() => { setSelectedService(service); setError(''); setSuccess(''); }}
+              className="card"
+              style={{
+                padding: '18px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s',
+                border: selectedService?.id === service.id ? `2px solid ${Colors.sage}` : `2px solid transparent`,
+              }}
+            >
+              <div style={{ fontSize: 28, marginBottom: 8 }}>{service.icon}</div>
+              <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px' }}>{service.title}</p>
+              {service.priceRange && (
+                <p style={{ fontSize: 13, fontWeight: 600, color: Colors.sage, margin: '0 0 4px' }}>{service.priceRange}</p>
               )}
+              <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>{service.turnaround || ''}</p>
+            </div>
+          ))}
+        </div>
+      </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="submit" style={buttonStyle} disabled={isLoading}>
-                  {isLoading ? 'Scheduling...' : 'Schedule Service'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedTemplate(null)}
-                  style={closeButtonStyle}
-                >
-                  Cancel
-                </button>
+      {/* ── Service Request Form ── */}
+      {selectedService && (
+        <div className="card" style={{ padding: '24px', marginBottom: 32 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
+            Request: {selectedService.title}
+          </h2>
+          <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>{selectedService.description}</p>
+
+          {selectedService.includes && selectedService.includes.length > 0 && (
+            <div style={{ marginBottom: 16, padding: '12px 16px', backgroundColor: Colors.sageMuted, borderRadius: 8 }}>
+              <p style={{ fontWeight: 600, fontSize: 13, color: Colors.charcoal, margin: '0 0 8px' }}>What's included:</p>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {selectedService.includes.map((item, i) => (
+                  <li key={i} style={{ fontSize: 13, color: Colors.charcoal, marginBottom: 4 }}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <form onSubmit={handleRequestService}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: Colors.charcoal }}>Preferred Date</label>
+                <input type="date" className="form-input" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
               </div>
-            </form>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: Colors.charcoal }}>Preferred Time</label>
+                <input type="time" className="form-input" value={formData.time} onChange={e => setFormData({ ...formData, time: e.target.value })} />
+              </div>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: Colors.charcoal }}>Notes</label>
+              <textarea
+                className="form-input"
+                value={formData.notes}
+                onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Describe what you need or any special instructions..."
+                style={{ minHeight: 80, resize: 'vertical' }}
+              />
+            </div>
+
+            {error && (
+              <div style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: '#FFF3F3', border: '1px solid #FFCDD2', color: '#C62828', fontSize: 13, marginBottom: 12 }}>
+                {error}
+              </div>
+            )}
+            {success && (
+              <div style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: '#E8F5E9', border: '1px solid #C8E6C9', color: '#2E7D32', fontSize: 13, marginBottom: 12 }}>
+                {success}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="submit" className="btn btn-primary" disabled={isLoading}>
+                {isLoading ? 'Submitting...' : 'Request Service'}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => { setSelectedService(null); setError(''); setSuccess(''); }}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ── Past Appointments ── */}
+      {appointments.filter(a => a.status === 'completed').length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: Colors.charcoal, marginBottom: 12 }}>Past Services</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {appointments
+              .filter(a => a.status === 'completed')
+              .map(apt => (
+                <div key={apt.id} className="card" style={{ padding: '12px 18px', opacity: 0.8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ fontWeight: 500, fontSize: 14, color: Colors.charcoal, margin: '0 0 2px' }}>{apt.title}</p>
+                      <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>{new Date(apt.date).toLocaleDateString()} — {apt.purpose}</p>
+                    </div>
+                    <span style={{ fontSize: 11, color: Colors.success, fontWeight: 600 }}>Completed</span>
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
       )}

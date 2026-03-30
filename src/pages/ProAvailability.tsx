@@ -26,9 +26,8 @@ export default function ProAvailability() {
   const [saving, setSaving] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
   const [schedule, setSchedule] = useState<AvailabilityDay[]>(DEFAULT_SCHEDULE);
-  const [serviceAreaMiles, setServiceAreaMiles] = useState(25);
-  const [maxJobsPerDay, setMaxJobsPerDay] = useState(4);
   const [providerId, setProviderId] = useState<string | null>(null);
+  const [zipCodes, setZipCodes] = useState<string[]>([]);
 
   useEffect(() => {
     loadAvailability();
@@ -51,8 +50,7 @@ export default function ProAvailability() {
       if (provider) {
         setProviderId(provider.id);
         setIsAvailable(provider.is_available ?? true);
-        setServiceAreaMiles(provider.service_area_miles ?? 25);
-        setMaxJobsPerDay(provider.max_jobs_per_day ?? 4);
+        setZipCodes(provider.zip_codes || []);
         if (provider.schedule && Array.isArray(provider.schedule)) {
           setSchedule(provider.schedule);
         }
@@ -72,8 +70,6 @@ export default function ProAvailability() {
         .from('pro_providers')
         .update({
           is_available: isAvailable,
-          service_area_miles: serviceAreaMiles,
-          max_jobs_per_day: maxJobsPerDay,
           schedule,
         })
         .eq('id', providerId);
@@ -94,15 +90,10 @@ export default function ProAvailability() {
     setSchedule(updated);
   };
 
-  const adjustValue = (current: number, delta: number, min: number, max: number) => {
-    const newVal = current + delta;
-    return newVal >= min && newVal <= max ? newVal : current;
-  };
-
   if (loading) {
     return (
       <div className="page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <p>Loading...</p>
+        <div className="spinner" />
       </div>
     );
   }
@@ -112,130 +103,90 @@ export default function ProAvailability() {
       <div className="page-header">
         <div>
           <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/pro-portal')}>
-            ← Back
+            &larr; Back
           </button>
           <h1>Availability</h1>
+          <p className="subtitle">Manage your working status and schedule</p>
         </div>
       </div>
 
-      {/* Overall Availability Toggle */}
-      <div className="card">
+      {/* Active/Inactive Toggle */}
+      <div className="card mb-lg">
         <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
           <div>
-            <p style={{ margin: '0 0 4px 0', fontWeight: 500 }}>Accepting New Jobs</p>
+            <p style={{ margin: '0 0 4px 0', fontWeight: 600, fontSize: 15 }}>Active Status</p>
             <p style={{ margin: 0, fontSize: 13, color: Colors.medGray }}>
-              Turn off to stop receiving new service requests
+              {isAvailable ? 'You are active and receiving visit assignments.' : 'You are inactive. No new visits will be assigned.'}
             </p>
           </div>
-          <input
-            type="checkbox"
-            checked={isAvailable}
-            onChange={e => setIsAvailable(e.target.checked)}
-            style={{ width: 20, height: 20, cursor: 'pointer' }}
-          />
+          <div style={{
+            width: 48, height: 26, borderRadius: 13, cursor: 'pointer', position: 'relative',
+            backgroundColor: isAvailable ? Colors.success : Colors.medGray, transition: 'background 0.2s',
+          }} onClick={() => setIsAvailable(!isAvailable)}>
+            <div style={{
+              width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff',
+              position: 'absolute', top: 2, left: isAvailable ? 24 : 2, transition: 'left 0.2s',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            }} />
+          </div>
         </label>
       </div>
 
-      {/* Service Area */}
-      <div className="card">
-        <p style={{ margin: '0 0 16px 0', fontWeight: 500 }}>Service Area</p>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-          <button
-            className="btn btn-ghost"
-            onClick={() => setServiceAreaMiles(adjustValue(serviceAreaMiles, -5, 5, 100))}
-            style={{ fontSize: 20, width: 40, height: 40, padding: 0 }}
-          >
-            −
-          </button>
-          <div style={{ textAlign: 'center', minWidth: 100 }}>
-            <div style={{ fontSize: 32, fontWeight: 'bold', color: Colors.sage }}>
-              {serviceAreaMiles}
-            </div>
-            <p style={{ margin: 0, fontSize: 12, color: Colors.medGray }}>miles</p>
-          </div>
-          <button
-            className="btn btn-ghost"
-            onClick={() => setServiceAreaMiles(adjustValue(serviceAreaMiles, 5, 5, 100))}
-            style={{ fontSize: 20, width: 40, height: 40, padding: 0 }}
-          >
-            +
-          </button>
+      {/* Service Area (read-only) */}
+      <div className="card mb-lg" style={{ backgroundColor: Colors.cream }}>
+        <p style={{ margin: '0 0 8px 0', fontWeight: 600, fontSize: 15 }}>Service Area</p>
+        <p style={{ margin: '0 0 12px 0', fontSize: 13, color: Colors.medGray }}>
+          Your zip codes are managed by your Canopy admin.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {zipCodes.length > 0 ? zipCodes.map(z => (
+            <span key={z} style={{
+              padding: '4px 10px', borderRadius: 4, fontSize: 13, fontWeight: 500,
+              backgroundColor: Colors.sageMuted, color: Colors.sage,
+            }}>{z}</span>
+          )) : (
+            <span style={{ fontSize: 13, color: Colors.medGray, fontStyle: 'italic' }}>No zip codes assigned</span>
+          )}
         </div>
       </div>
 
-      {/* Max Jobs Per Day */}
-      <div className="card">
-        <p style={{ margin: '0 0 16px 0', fontWeight: 500 }}>Max Jobs Per Day</p>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-          <button
-            className="btn btn-ghost"
-            onClick={() => setMaxJobsPerDay(adjustValue(maxJobsPerDay, -1, 1, 10))}
-            style={{ fontSize: 20, width: 40, height: 40, padding: 0 }}
-          >
-            −
-          </button>
-          <div style={{ textAlign: 'center', minWidth: 100 }}>
-            <div style={{ fontSize: 32, fontWeight: 'bold', color: Colors.sage }}>
-              {maxJobsPerDay}
-            </div>
-            <p style={{ margin: 0, fontSize: 12, color: Colors.medGray }}>jobs</p>
-          </div>
-          <button
-            className="btn btn-ghost"
-            onClick={() => setMaxJobsPerDay(adjustValue(maxJobsPerDay, 1, 1, 10))}
-            style={{ fontSize: 20, width: 40, height: 40, padding: 0 }}
-          >
-            +
-          </button>
-        </div>
-      </div>
-
-      {/* Weekly Schedule */}
-      <div className="card">
-        <p style={{ margin: '0 0 8px 0', fontWeight: 500 }}>Weekly Schedule</p>
+      {/* Working Days */}
+      <div className="card mb-lg">
+        <p style={{ margin: '0 0 8px 0', fontWeight: 600, fontSize: 15 }}>Working Days</p>
         <p style={{ margin: '0 0 16px 0', fontSize: 13, color: Colors.medGray }}>
-          Toggle days you're available for service calls
+          Toggle the days you're available for visits
         </p>
 
         {schedule.map((day, index) => (
           <div
             key={day.day}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              paddingBottom: 12,
-              marginBottom: 12,
+              display: 'flex', alignItems: 'center', gap: 12,
+              paddingBottom: 12, marginBottom: 12,
               borderBottom: index < schedule.length - 1 ? `1px solid ${Colors.lightGray}` : 'none',
             }}
           >
             <button
-              className={`btn ${day.enabled ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => toggleDay(index)}
               style={{
-                width: 44,
-                height: 44,
-                padding: 0,
-                minWidth: 44,
+                width: 44, height: 44, padding: 0, minWidth: 44, borderRadius: 8,
                 backgroundColor: day.enabled ? Colors.sage : Colors.lightGray,
                 color: day.enabled ? 'white' : Colors.medGray,
-                border: 'none',
+                border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
               }}
             >
               {day.day.slice(0, 3)}
             </button>
-            <p style={{ margin: 0, flex: 1, color: day.enabled ? Colors.charcoal : Colors.silver }}>
-              {day.enabled ? `${day.start || '—'} – ${day.end || '—'}` : 'Off'}
+            <p style={{ margin: 0, flex: 1, color: day.enabled ? Colors.charcoal : Colors.medGray }}>
+              {day.enabled ? `${day.start || '—'} — ${day.end || '—'}` : 'Off'}
             </p>
           </div>
         ))}
       </div>
 
-      {/* Save Button */}
-      <div className="flex gap-sm">
-        <button className="btn btn-ghost" onClick={() => navigate('/pro-portal')}>
-          Cancel
-        </button>
+      {/* Save */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn btn-ghost" onClick={() => navigate('/pro-portal')}>Cancel</button>
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
           {saving ? 'Saving...' : 'Save Availability'}
         </button>

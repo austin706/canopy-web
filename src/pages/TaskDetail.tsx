@@ -1,19 +1,25 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/utils';
 import { reopenTask as reopenTaskApi } from '@/services/supabase';
 import { getDisplayStatus } from '@/services/taskEngine';
+import { supabase } from '@/services/supabase';
 
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { tasks, reopenTask } = useStore();
+  const { tasks, reopenTask, user, home } = useStore();
 
   const rawTask = tasks.find(t => t.id === id);
   const task = useMemo(() => rawTask ? { ...rawTask, status: getDisplayStatus(rawTask) } : undefined, [rawTask]);
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
+  const [showCategoryBundleModal, setShowCategoryBundleModal] = useState(false);
+  const [bundleTasksList, setBundleTasksList] = useState<any[]>([]);
+  const [selectedBundleTasks, setSelectedBundleTasks] = useState<Set<string>>(new Set());
+  const [hasProRequest, setHasProRequest] = useState(false);
+  const [isLoadingProRequest, setIsLoadingProRequest] = useState(false);
 
   const handleReopen = async () => {
     if (!task) return;
@@ -30,6 +36,117 @@ export default function TaskDetail() {
       console.error('Error reopening task:', error);
       alert('Failed to reopen task. Please try again.');
     }
+  };
+
+  // Check if task has an existing pro request
+  useEffect(() => {
+    if (!task) return;
+
+    const checkProRequest = async () => {
+      try {
+        const { data } = await supabase
+          .from('pro_request_tasks')
+          .select('id')
+          .eq('task_id', task.id)
+          .limit(1);
+
+        setHasProRequest((data && data.length > 0) || false);
+      } catch (err) {
+        console.warn('Failed to check pro request:', err);
+      }
+    };
+
+    checkProRequest();
+  }, [task]);
+
+  const handleRequestProClick = async () => {
+    if (!task) return;
+
+    try {
+      setIsLoadingProRequest(true);
+
+      // Query for other tasks with the same category and matching statuses
+      const { data: otherTasks } = await supabase
+        .from('maintenance_tasks')
+        .select('id, title, due_date, priority, description')
+        .eq('category', task.category)
+        .eq('home_id', home?.id)
+        .neq('id', task.id)
+        .in('status', ['upcoming', 'due', 'overdue']);
+
+      setBundleTasksList(otherTasks || []);
+      setSelectedBundleTasks(new Set());
+      setShowCategoryBundleModal(true);
+    } catch (error) {
+      console.error('Error loading bundle tasks:', error);
+      alert('Failed to load category tasks. Continuing with just this task.');
+      await createProRequest([task.id]);
+    } finally {
+      setIsLoadingProRequest(false);
+    }
+  };
+
+  const createProRequest = async (taskIds: string[]) => {
+    if (!user || !home || !task) return;
+
+    try {
+      setIsLoadingProRequest(true);
+
+      // Get all selected tasks for description and urgency
+      const selectedTasks = [task, ...bundleTasksList.filter(t => taskIds.includes(t.id))];
+      const description = selectedTasks.map(t => `${t.title}${t.description ? ': ' + t.description : ''}`).join('; ');
+
+      // Determine urgency based on highest priority
+      const priorityOrder = { urgent: 3, high: 2, medium: 1, low: 0 };
+      const maxPriority = Math.max(
+        ...selectedTasks.map(t => priorityOrder[t.priority as keyof typeof priorityOrder] || 0)
+      );
+      const urgency = maxPriority >= 2 ? 'urgent' : 'routine';
+
+      // Create pro_request
+      const { data: proRequestData, error: proRequestError } = await supabase
+        .from('pro_requests')
+        .insert({
+          user_id: user.id,
+          home_id: home.id,
+          category: task.category,
+          description,
+          urgency,
+          status: 'pending',
+          source: 'task'
+        })
+        .select('id')
+        .single();
+
+      if (proRequestError) throw proRequestError;
+
+      // Link all selected tasks to the pro request
+      const proRequestTasksData = taskIds.map(taskId => ({
+        pro_request_id: proRequestData.id,
+        task_id: taskId
+      }));
+
+      const { error: linkError } = await supabase
+        .from('pro_request_tasks')
+        .insert(proRequestTasksData);
+
+      if (linkError) throw linkError;
+
+      alert(`Pro request created! We'll send you quotes for ${taskIds.length} task${taskIds.length !== 1 ? 's' : ''}.`);
+      setShowCategoryBundleModal(false);
+      setHasProRequest(true);
+    } catch (error) {
+      console.error('Error creating pro request:', error);
+      alert('Failed to create pro request. Please try again.');
+    } finally {
+      setIsLoadingProRequest(false);
+    }
+  };
+
+  const handleConfirmBundle = async () => {
+    if (!task) return;
+    const allTaskIds = [task.id, ...Array.from(selectedBundleTasks)];
+    await createProRequest(allTaskIds);
   };
 
   if (!task) {
@@ -153,6 +270,36 @@ export default function TaskDetail() {
         {!isCompleted && (
           <div className="card">
             <div className="flex-col gap-md">
+              {hasProRequest ? (
+                <div style={{
+                  padding: 12,
+                  background: Colors.copperMuted,
+                  border: `1px solid ${Colors.copper}40`,
+                  borderRadius: 4,
+                  textAlign: 'center'
+                }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: Colors.copper }}>Pro Request Pending</p>
+                </div>
+              ) : (
+                ['upcoming', 'due'].includes(task.status) && (
+                  <button
+                    className="btn"
+                    onClick={handleRequestProClick}
+                    disabled={isLoadingProRequest}
+                    style={{
+                      width: '100%',
+                      background: Colors.copper,
+                      color: Colors.white,
+                      border: 'none',
+                      fontWeight: 600,
+                      opacity: isLoadingProRequest ? 0.6 : 1
+                    }}
+                  >
+                    {isLoadingProRequest ? 'Loading...' : 'Request a Pro'}
+                  </button>
+                )
+              )}
+
               <button
                 className="btn btn-primary"
                 onClick={() => quickCompleteTask(task)}
@@ -247,6 +394,163 @@ export default function TaskDetail() {
           </div>
         )}
       </div>
+
+      {/* Category Bundle Modal */}
+      {showCategoryBundleModal && bundleTasksList.length > 0 && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100
+        }}>
+          <div style={{
+            background: Colors.cardBackground,
+            borderRadius: 8,
+            padding: 24,
+            maxWidth: 400,
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
+          }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: Colors.charcoal }}>
+              Bundle {task.category} Tasks?
+            </h2>
+            <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 20 }}>
+              You have {bundleTasksList.length} other {task.category} task{bundleTasksList.length !== 1 ? 's' : ''} that need attention. Would you like to include them in this request?
+            </p>
+
+            <div style={{ marginBottom: 20, maxHeight: 300, overflowY: 'auto' }}>
+              {bundleTasksList.map((bundleTask) => (
+                <label key={bundleTask.id} style={{
+                  display: 'flex',
+                  gap: 12,
+                  padding: 12,
+                  marginBottom: 8,
+                  border: `1px solid ${Colors.lightGray}`,
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  background: selectedBundleTasks.has(bundleTask.id) ? Colors.copperMuted : 'transparent'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedBundleTasks.has(bundleTask.id)}
+                    onChange={(e) => {
+                      const newSet = new Set(selectedBundleTasks);
+                      if (e.target.checked) {
+                        newSet.add(bundleTask.id);
+                      } else {
+                        newSet.delete(bundleTask.id);
+                      }
+                      setSelectedBundleTasks(newSet);
+                    }}
+                    style={{ marginTop: 2, cursor: 'pointer' }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal, marginBottom: 2 }}>
+                      {bundleTask.title}
+                    </p>
+                    <p style={{ fontSize: 12, color: Colors.medGray }}>
+                      Due: {new Date(bundleTask.due_date).toLocaleDateString()}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowCategoryBundleModal(false)}
+                disabled={isLoadingProRequest}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn"
+                onClick={() => handleConfirmBundle()}
+                disabled={isLoadingProRequest}
+                style={{
+                  background: Colors.copper,
+                  color: Colors.white,
+                  border: 'none',
+                  fontWeight: 600,
+                  opacity: isLoadingProRequest ? 0.6 : 1
+                }}
+              >
+                {isLoadingProRequest ? 'Creating...' : `Include selected (${selectedBundleTasks.size})`}
+              </button>
+            </div>
+
+            {bundleTasksList.length > 0 && selectedBundleTasks.size === 0 && (
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  setShowCategoryBundleModal(false);
+                  createProRequest([task.id]);
+                }}
+                disabled={isLoadingProRequest}
+                style={{ width: '100%', marginTop: 12 }}
+              >
+                Just this task
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Simple Modal for no matching tasks */}
+      {showCategoryBundleModal && bundleTasksList.length === 0 && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100
+        }}>
+          <div style={{
+            background: Colors.cardBackground,
+            borderRadius: 8,
+            padding: 24,
+            maxWidth: 400,
+            textAlign: 'center',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
+          }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, color: Colors.charcoal }}>
+              Request a Pro
+            </h2>
+            <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 20 }}>
+              No other {task.category} tasks found. Proceeding with just this task.
+            </p>
+            <button
+              className="btn"
+              onClick={() => {
+                setShowCategoryBundleModal(false);
+                createProRequest([task.id]);
+              }}
+              disabled={isLoadingProRequest}
+              style={{
+                width: '100%',
+                background: Colors.copper,
+                color: Colors.white,
+                border: 'none',
+                fontWeight: 600,
+                opacity: isLoadingProRequest ? 0.6 : 1
+              }}
+            >
+              {isLoadingProRequest ? 'Creating...' : 'Continue'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

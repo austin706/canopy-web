@@ -50,7 +50,7 @@ const FAQ_SECTIONS = [
       {
         id: 'subscription-plans',
         question: 'What\'s included in each plan?',
-        answer: 'Free: Basic calendar with generic checklists and up to 5 equipment slots. Home Plan: All 37 AI-powered tasks, unlimited equipment, personalized checklists, and weather alerts. Pro/Pro+: Home Plan features plus professional service scheduling and provider matching.',
+        answer: 'Free: Basic calendar with generic checklists and up to 5 equipment slots. Home Plan: All AI-powered maintenance tasks, unlimited equipment, personalized checklists, and weather alerts. Pro/Pro+: Home Plan features plus professional service scheduling and provider matching.',
       },
       {
         id: 'gift-codes',

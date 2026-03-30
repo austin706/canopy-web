@@ -42,7 +42,7 @@ import Help from '@/pages/Help';
 import Onboarding from '@/pages/Onboarding';
 import ProPortal from '@/pages/ProPortal';
 import ProLogin from '@/pages/ProLogin';
-import ProJobs from '@/pages/ProJobs';
+// ProJobs removed — obsolete marketplace page, redirects to job-queue
 import ProAvailability from '@/pages/ProAvailability';
 import ProProfile from '@/pages/ProProfile';
 import CreateTask from '@/pages/CreateTask';
@@ -137,7 +137,7 @@ export default function App() {
           ═══════════════════════════════════════════════════════ */}
           <Route element={<RoleRoute roles={['pro_provider', 'admin']}><ProLayout /></RoleRoute>}>
             <Route path="/pro-portal" element={<ProPortal />} />
-            <Route path="/pro-portal/jobs" element={<ProJobs />} />
+            <Route path="/pro-portal/jobs" element={<Navigate to="/pro-portal/job-queue" replace />} />
             <Route path="/pro-portal/availability" element={<ProAvailability />} />
             <Route path="/pro-portal/profile" element={<ProProfile />} />
             <Route path="/pro-portal/visit-schedule" element={<ProVisitSchedule />} />

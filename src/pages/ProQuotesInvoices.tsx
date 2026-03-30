@@ -41,6 +41,13 @@ interface Invoice {
   user?: { full_name: string };
 }
 
+interface AssignedClient {
+  homeId: string;
+  homeownerId: string;
+  fullName: string;
+  address: string;
+}
+
 type TabType = 'quotes' | 'invoices';
 
 export default function ProQuotesInvoices() {
@@ -52,6 +59,7 @@ export default function ProQuotesInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [providerId, setProviderId] = useState<string | null>(null);
+  const [clients, setClients] = useState<AssignedClient[]>([]);
   const [showForm, setShowForm] = useState(false);
 
   // Form state
@@ -76,21 +84,25 @@ export default function ProQuotesInvoices() {
         return;
       }
 
-      // Admin sees all quotes/invoices
+      // Admin sees all quotes/invoices and all clients
       if (isAdmin) {
-        await Promise.all([loadQuotes(null), loadInvoices(null)]);
+        await Promise.all([loadQuotes(null), loadInvoices(null), loadAllClients()]);
         return;
       }
 
       const { data: provider } = await supabase
         .from('pro_providers')
-        .select('id')
+        .select('id, zip_codes')
         .eq('user_id', authUser.user.id)
         .single();
 
       if (provider) {
         setProviderId(provider.id);
-        await Promise.all([loadQuotes(provider.id), loadInvoices(provider.id)]);
+        await Promise.all([
+          loadQuotes(provider.id),
+          loadInvoices(provider.id),
+          loadAssignedClients(provider.zip_codes || []),
+        ]);
       }
     } catch (err) {
       console.error('Error loading provider:', err);
@@ -99,11 +111,74 @@ export default function ProQuotesInvoices() {
     }
   };
 
+  const loadAssignedClients = async (zipCodes: string[]) => {
+    try {
+      // Get homes in provider's service area with Pro/Pro+ subscriptions
+      const { data: homes } = await supabase
+        .from('homes')
+        .select('id, user_id, address, city, state, zip_code')
+        .in('zip_code', zipCodes.length > 0 ? zipCodes : ['__none__']);
+      if (!homes || homes.length === 0) return;
+
+      const userIds = [...new Set(homes.map(h => h.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, subscription_tier')
+        .in('id', userIds)
+        .in('subscription_tier', ['pro', 'pro_plus']);
+
+      if (!profiles) return;
+      const profileMap = new Map(profiles.map(p => [p.id, p]));
+
+      const assignedClients: AssignedClient[] = homes
+        .filter(h => profileMap.has(h.user_id))
+        .map(h => ({
+          homeId: h.id,
+          homeownerId: h.user_id,
+          fullName: profileMap.get(h.user_id)!.full_name || 'Unknown',
+          address: [h.address, h.city, h.state].filter(Boolean).join(', '),
+        }));
+      setClients(assignedClients);
+    } catch (err) {
+      console.error('Error loading clients:', err);
+    }
+  };
+
+  const loadAllClients = async () => {
+    try {
+      const { data: homes } = await supabase
+        .from('homes')
+        .select('id, user_id, address, city, state, zip_code');
+      if (!homes) return;
+
+      const userIds = [...new Set(homes.map(h => h.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, subscription_tier')
+        .in('id', userIds);
+
+      if (!profiles) return;
+      const profileMap = new Map(profiles.map(p => [p.id, p]));
+
+      const allClients: AssignedClient[] = homes
+        .filter(h => profileMap.has(h.user_id))
+        .map(h => ({
+          homeId: h.id,
+          homeownerId: h.user_id,
+          fullName: profileMap.get(h.user_id)!.full_name || 'Unknown',
+          address: [h.address, h.city, h.state].filter(Boolean).join(', '),
+        }));
+      setClients(allClients);
+    } catch (err) {
+      console.error('Error loading clients:', err);
+    }
+  };
+
   const loadQuotes = async (provId: string | null) => {
     try {
       let query = supabase
-        .from('pro_quotes')
-        .select('*, user:user_id(full_name)')
+        .from('quotes')
+        .select('*, user:homeowner_id(full_name)')
         .order('created_at', { ascending: false });
 
       if (provId) {
@@ -120,8 +195,8 @@ export default function ProQuotesInvoices() {
   const loadInvoices = async (provId: string | null) => {
     try {
       let query = supabase
-        .from('pro_invoices')
-        .select('*, user:user_id(full_name)')
+        .from('invoices')
+        .select('*, user:homeowner_id(full_name)')
         .order('created_at', { ascending: false });
 
       if (provId) {
@@ -181,15 +256,23 @@ export default function ProQuotesInvoices() {
     }
 
     try {
-      const { error } = await supabase.from('pro_quotes').insert({
+      const client = clients.find(c => c.homeId === formData.clientId);
+      const { error } = await supabase.from('quotes').insert({
         pro_provider_id: providerId,
         home_id: formData.clientId,
+        homeowner_id: client?.homeownerId,
         title: formData.title,
         description: formData.description,
-        line_items: formData.lineItems,
+        service_type: 'one_off',
+        line_items: formData.lineItems.map(item => ({
+          description: item.description,
+          amount: item.quantity * item.unitPrice,
+        })),
+        subtotal: subtotal,
         tax_rate: formData.taxRate,
+        tax_amount: taxAmount,
+        total_amount: total,
         status: 'draft',
-        total: total,
       });
 
       if (error) throw error;
@@ -211,17 +294,24 @@ export default function ProQuotesInvoices() {
     }
 
     try {
-      const { error } = await supabase.from('pro_invoices').insert({
+      const client = clients.find(c => c.homeId === formData.clientId);
+      const { error } = await supabase.from('invoices').insert({
         pro_provider_id: providerId,
         home_id: formData.clientId,
+        homeowner_id: client?.homeownerId,
         title: formData.title,
         description: formData.description,
-        line_items: formData.lineItems,
+        source_type: 'standalone',
+        line_items: formData.lineItems.map(item => ({
+          description: item.description,
+          amount: item.quantity * item.unitPrice,
+        })),
+        subtotal: subtotal,
         tax_rate: formData.taxRate,
-        status: 'draft',
+        tax_amount: taxAmount,
+        total_amount: total,
         due_date: formData.dueDate,
-        total: total,
-        amount_paid: 0,
+        status: 'draft',
       });
 
       if (error) throw error;
@@ -241,7 +331,7 @@ export default function ProQuotesInvoices() {
 
     try {
       const { error } = await supabase
-        .from('pro_quotes')
+        .from('quotes')
         .update({ status: 'sent' })
         .eq('id', quoteId);
 
@@ -260,17 +350,20 @@ export default function ProQuotesInvoices() {
     if (!quote || !providerId) return;
 
     try {
-      const { error } = await supabase.from('pro_invoices').insert({
+      const { error } = await supabase.from('invoices').insert({
         pro_provider_id: providerId,
         home_id: quote.home_id,
+        homeowner_id: (quote as any).homeowner_id,
         title: quote.title,
         description: quote.description,
+        source_type: 'from_quote',
         line_items: quote.line_items,
+        subtotal: (quote as any).subtotal || quote.total,
         tax_rate: quote.tax_rate,
+        tax_amount: (quote as any).tax_amount || 0,
+        total_amount: quote.total,
         status: 'sent',
         due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        total: quote.total,
-        amount_paid: 0,
       });
 
       if (error) throw error;
@@ -288,7 +381,7 @@ export default function ProQuotesInvoices() {
 
     try {
       const { error } = await supabase
-        .from('pro_invoices')
+        .from('invoices')
         .update({ status: 'sent' })
         .eq('id', invoiceId);
 
@@ -408,6 +501,11 @@ export default function ProQuotesInvoices() {
                 onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
               >
                 <option value="">Select client...</option>
+                {clients.map(client => (
+                  <option key={client.homeId} value={client.homeId}>
+                    {client.fullName} — {client.address}
+                  </option>
+                ))}
               </select>
             </div>
             <div>

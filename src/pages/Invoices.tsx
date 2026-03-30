@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
+import { payInvoice } from '@/services/quotesInvoices';
 import { Colors, StatusColors } from '@/constants/theme';
 import type { Invoice, InvoicePayment } from '@/types';
 
@@ -47,13 +48,17 @@ export default function Invoices() {
     if (!user) return;
     setProcessingPaymentId(invoiceId);
     try {
-      // const result = await payInvoice(invoiceId);
-      // Update local state or reload
-      // For now, just show a message
-      alert('Payment processing...\n\nStripe integration coming via Edge Functions. For now, please contact us to complete payment.');
-      setProcessingPaymentId(null);
+      const result = await payInvoice(invoiceId);
+      // Edge function returns checkout URL or client secret
+      if (result && (result as any).url) {
+        window.location.href = (result as any).url;
+      } else {
+        // Payment processed server-side, reload to reflect new status
+        await loadInvoices();
+      }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Payment failed. Please try again.');
+    } finally {
       setProcessingPaymentId(null);
     }
   };

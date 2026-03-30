@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
+import { approveQuote, rejectQuote } from '@/services/quotesInvoices';
 import { Colors, StatusColors } from '@/constants/theme';
 import type { Quote } from '@/types';
 
@@ -46,9 +47,8 @@ export default function Quotes() {
     if (!user) return;
     setActionInProgress(true);
     try {
-      // await approveQuote(quoteId, noteText);
-      // await loadQuotes();
-      alert('Quote approved!');
+      await approveQuote(quoteId, noteText);
+      await loadQuotes();
       setNoteText('');
       setExpandedId(null);
     } catch (err: any) {
@@ -62,9 +62,8 @@ export default function Quotes() {
     if (!user) return;
     setActionInProgress(true);
     try {
-      // await rejectQuote(quoteId, noteText);
-      // await loadQuotes();
-      alert('Quote rejected.');
+      await rejectQuote(quoteId, noteText);
+      await loadQuotes();
       setNoteText('');
       setExpandedId(null);
     } catch (err: any) {

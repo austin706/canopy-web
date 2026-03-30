@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
+import { supabase } from '@/services/supabase';
+import { getProPlusStatus, approveQuote as approveProPlusQuote, cancelProPlus, pauseProPlus } from '@/services/proPlus';
 import { Colors, StatusColors } from '@/constants/theme';
 import type { ProPlusSubscription } from '@/types';
 
 export default function ProPlusManage() {
-  const { user } = useStore();
+  const { user, home } = useStore();
   const [subscription, setSubscription] = useState<ProPlusSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -21,9 +23,8 @@ export default function ProPlusManage() {
   const loadSubscription = async () => {
     try {
       setLoading(true);
-      // const sub = await getProPlusStatus(user!.id);
-      // setSubscription(sub);
-      setSubscription(null);
+      const sub = await getProPlusStatus(user!.id);
+      setSubscription(sub);
       setError('');
     } catch (err: any) {
       setError(err.message || 'Failed to load subscription');
@@ -33,12 +34,19 @@ export default function ProPlusManage() {
   };
 
   const handleRequestConsultation = async () => {
-    if (!user) return;
+    if (!user || !home) return;
     setActionInProgress(true);
     try {
-      // await requestConsultation(user.id);
-      // await loadSubscription();
-      alert('Consultation request submitted! We will be in touch soon.');
+      const { error: insertErr } = await supabase
+        .from('pro_plus_subscriptions')
+        .insert({
+          homeowner_id: user.id,
+          home_id: home.id,
+          consultation_requested_at: new Date().toISOString(),
+          status: 'consultation_requested',
+        });
+      if (insertErr) throw insertErr;
+      await loadSubscription();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -50,9 +58,8 @@ export default function ProPlusManage() {
     if (!subscription) return;
     setActionInProgress(true);
     try {
-      // await approveQuote(subscription.id);
-      // await loadSubscription();
-      alert('Quote approved! Your Pro+ subscription is now active.');
+      await approveProPlusQuote(subscription.id);
+      await loadSubscription();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -64,9 +71,12 @@ export default function ProPlusManage() {
     if (!subscription) return;
     setActionInProgress(true);
     try {
-      // await rejectQuote(subscription.id);
-      // await loadSubscription();
-      alert('Quote declined.');
+      const { error: updateErr } = await supabase
+        .from('pro_plus_subscriptions')
+        .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+        .eq('id', subscription.id);
+      if (updateErr) throw updateErr;
+      await loadSubscription();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -79,9 +89,8 @@ export default function ProPlusManage() {
     if (!window.confirm('Pause your Pro+ subscription?')) return;
     setActionInProgress(true);
     try {
-      // await pauseProPlus(subscription.id);
-      // await loadSubscription();
-      alert('Subscription paused.');
+      await pauseProPlus(subscription.id);
+      await loadSubscription();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -94,9 +103,8 @@ export default function ProPlusManage() {
     if (!window.confirm('Are you sure you want to cancel Pro+? This action cannot be undone.')) return;
     setActionInProgress(true);
     try {
-      // await cancelProPlus(subscription.id);
-      // await loadSubscription();
-      alert('Subscription cancelled.');
+      await cancelProPlus(subscription.id);
+      await loadSubscription();
     } catch (err: any) {
       setError(err.message);
     } finally {

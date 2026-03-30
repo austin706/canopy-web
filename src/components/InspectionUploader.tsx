@@ -397,12 +397,12 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
 
         // Create one pro_request per category
         const proRequestsToInsert = Object.entries(proTasksByCategory).map(([category, items]) => {
-          const highestPriority = items.reduce((max, { task }) => {
-            const priorityOrder = { urgent: 3, high: 2, medium: 1, low: 0 };
-            return priorityOrder[task.priority as keyof typeof priorityOrder] > priorityOrder[max.priority as keyof typeof priorityOrder] ? task : max;
+          const highestPriority = items.reduce((max, curr) => {
+            const priorityOrder: Record<string, number> = { urgent: 3, high: 2, medium: 1, low: 0 };
+            return (priorityOrder[curr.task.priority] || 0) > (priorityOrder[max.task.priority] || 0) ? curr : max;
           });
 
-          const urgency = ['urgent', 'high'].includes(highestPriority.priority) ? 'urgent' : 'routine';
+          const urgency = ['urgent', 'high'].includes(highestPriority.task.priority) ? 'urgent' : 'routine';
           const description = items.map(({ task }) => task.title).join('; ');
 
           return {

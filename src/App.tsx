@@ -55,6 +55,9 @@ import ProQuotesInvoices from '@/pages/ProQuotesInvoices';
 import ProJobQueue from '@/pages/ProJobQueue';
 import ProInspection from '@/pages/ProInspection';
 import HomeAssistant from '@/pages/HomeAssistant';
+import SalePrep from '@/pages/SalePrep';
+import HomeReport from '@/pages/HomeReport';
+import HomeTransfer from '@/pages/HomeTransfer';
 import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
 
@@ -151,8 +154,12 @@ export default function App() {
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/agent" element={<AgentView />} />
-            <Route path="/logs" element={<MaintenanceLogs />} />
+            <Route path="/logs" element={<Navigate to="/calendar?tab=log" replace />} />
             <Route path="/home" element={<HomeDetails />} />
+            <Route path="/sale-prep" element={<SalePrep />} />
+            <Route path="/home-report" element={<HomeReport />} />
+            <Route path="/transfer" element={<HomeTransfer />} />
+            <Route path="/transfer/accept" element={<HomeTransfer />} />
 
             {/* Admin pages — inside homeowner Layout since admin sees everything */}
             <Route path="/admin" element={<RoleRoute roles={['admin']}><AdminDashboard /></RoleRoute>} />

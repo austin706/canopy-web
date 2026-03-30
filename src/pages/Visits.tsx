@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { isProOrHigher } from '@/services/subscriptionGate';
 import { Colors, StatusColors } from '@/constants/theme';
-import { getItemsToHaveOnHand, getUpcomingVisits, getPastVisits, confirmVisit, cancelVisit, rescheduleVisit } from '@/services/proVisits';
+import { getItemsToHaveOnHand, getUpcomingVisits, getPastVisits, confirmVisit, cancelVisit, rescheduleVisit, rateVisit } from '@/services/proVisits';
 import type { ProMonthlyVisit, VisitAllocation } from '@/types';
 
 export default function Visits() {
@@ -19,6 +19,10 @@ export default function Visits() {
   const [rescheduling, setRescheduling] = useState(false);
   const [preparedItems, setPreparedItems] = useState<Set<string>>(new Set());
   const [expandedSummary, setExpandedSummary] = useState<string | null>(null);
+  const [ratingVisitId, setRatingVisitId] = useState<string | null>(null);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingReview, setRatingReview] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
 
   const tier = user?.subscription_tier || 'free';
   const hasPro = isProOrHigher(tier);
@@ -100,6 +104,22 @@ export default function Visits() {
       setError(err.message || 'Failed to reschedule visit');
     } finally {
       setRescheduling(false);
+    }
+  };
+
+  const handleRate = async () => {
+    if (!ratingVisitId || ratingValue === 0) return;
+    setSubmittingRating(true);
+    try {
+      await rateVisit(ratingVisitId, ratingValue, ratingReview);
+      setRatingVisitId(null);
+      setRatingValue(0);
+      setRatingReview('');
+      await loadVisits();
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit rating');
+    } finally {
+      setSubmittingRating(false);
     }
   };
 
@@ -368,6 +388,38 @@ export default function Visits() {
                     )}
                   </div>
                 )}
+
+                {/* Rating Section */}
+                {visit.status === 'completed' && (
+                  <div style={{ marginTop: 12 }}>
+                    {visit.homeowner_rating ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: Colors.cream, borderRadius: 8 }}>
+                        <div style={{ display: 'flex', gap: 2 }}>
+                          {[1, 2, 3, 4, 5].map(star => (
+                            <span key={star} style={{ color: star <= visit.homeowner_rating! ? Colors.copper : '#ddd', fontSize: 16 }}>★</span>
+                          ))}
+                        </div>
+                        <span style={{ fontSize: 12, color: Colors.medGray }}>Your rating</span>
+                        {visit.homeowner_review && (
+                          <span style={{ fontSize: 12, color: Colors.charcoal, marginLeft: 'auto', fontStyle: 'italic' }}>"{visit.homeowner_review}"</span>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setRatingVisitId(visit.id); setRatingValue(0); setRatingReview(''); }}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                          padding: '8px 16px', borderRadius: 8, border: `1px solid ${Colors.copper}`,
+                          backgroundColor: 'transparent', color: Colors.copper, cursor: 'pointer',
+                          fontSize: 13, fontWeight: 600, width: '100%',
+                        }}
+                      >
+                        <span>★</span>
+                        <span>Rate This Visit</span>
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -415,6 +467,69 @@ export default function Visits() {
               </button>
               <button className="btn btn-primary" onClick={handleReschedule} disabled={!newDate || rescheduling} style={{ flex: 1 }}>
                 {rescheduling ? 'Rescheduling...' : 'Reschedule'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rating Modal */}
+      {ratingVisitId && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="card" style={{ maxWidth: 420, padding: 24 }}>
+            <h2 style={{ marginBottom: 4 }}>Rate Your Visit</h2>
+            <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 20 }}>How was your experience with this pro visit?</p>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  key={star}
+                  onClick={() => setRatingValue(star)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                    fontSize: 32, color: star <= ratingValue ? Colors.copper : '#ddd',
+                    transition: 'color 0.15s, transform 0.15s',
+                    transform: star <= ratingValue ? 'scale(1.1)' : 'scale(1)',
+                  }}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+
+            {ratingValue > 0 && (
+              <p style={{ textAlign: 'center', fontSize: 13, color: Colors.charcoal, marginBottom: 16, fontWeight: 500 }}>
+                {ratingValue === 5 ? 'Excellent!' : ratingValue === 4 ? 'Great!' : ratingValue === 3 ? 'Good' : ratingValue === 2 ? 'Fair' : 'Poor'}
+              </p>
+            )}
+
+            <div className="form-group" style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 13 }}>Comments (optional)</label>
+              <textarea
+                className="form-input"
+                rows={3}
+                placeholder="Tell us about your experience..."
+                value={ratingReview}
+                onChange={e => setRatingReview(e.target.value)}
+                style={{ resize: 'vertical' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => { setRatingVisitId(null); setRatingValue(0); setRatingReview(''); }}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleRate}
+                disabled={ratingValue === 0 || submittingRating}
+                style={{ flex: 1 }}
+              >
+                {submittingRating ? 'Submitting...' : 'Submit Rating'}
               </button>
             </div>
           </div>

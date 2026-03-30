@@ -132,6 +132,12 @@ export const addMaintenanceLog = async (log: any) => {
   return data;
 };
 
+export const updateMaintenanceLog = async (logId: string, updates: Record<string, any>) => {
+  const { data, error } = await supabase.from('maintenance_logs').update(updates).eq('id', logId).select().single();
+  if (error) throw error;
+  return data;
+};
+
 // --- Photo Upload ---
 export const uploadPhoto = async (bucket: string, path: string, file: File) => {
   const { data, error } = await supabase.storage.from(bucket).upload(path, file);

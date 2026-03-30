@@ -6,7 +6,7 @@ import { PLANS } from '@/services/subscriptionGate';
 import {
   CanopyLogo,
   NavDashboard, NavCalendar, NavWeather, NavEquipment, NavDocuments,
-  NavProServices, NavLogs, NavNotifications, NavAgent, NavHome,
+  NavProServices, NavNotifications, NavAgent, NavHome,
   NavSubscription, NavHelp, NavAdmin, NavAgentPortal, NavProPortal,
 } from '@/components/icons/CanopyLogo';
 
@@ -46,11 +46,11 @@ export default function Layout() {
     { to: '/equipment', icon: NavEquipment, label: 'Equipment' },
     { to: '/documents', icon: NavDocuments, label: 'Documents' },
     { to: '/pro-services', icon: NavProServices, label: 'Pro Services' },
-    { to: '/logs', icon: NavLogs, label: 'Maintenance Log' },
     { to: '/assistant', icon: NavAgent, label: 'AI Assistant' },
     { to: '/notifications', icon: NavNotifications, label: 'Notifications' },
     { to: '/agent', icon: NavAgent, label: 'My Agent' },
     { to: '/home', icon: NavHome, label: 'Home Details' },
+    { to: '/sale-prep', icon: NavHome, label: 'Sale Prep' },
     { to: '/subscription', icon: NavSubscription, label: 'Subscription' },
     { to: '/help', icon: NavHelp, label: 'Help & FAQ' },
   ];

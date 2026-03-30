@@ -294,6 +294,9 @@ export default function Dashboard() {
                 { label: 'Contact Agent', route: '/agent', free: true },
                 { label: 'Maintenance Log', route: '/logs', free: true },
                 { label: 'Request Pro', route: '/pro-request', free: false },
+                { label: 'Sale Prep Checklist', route: '/sale-prep', free: true },
+                { label: 'Home Report (PDF)', route: '/home-report', free: true },
+                { label: 'Transfer Home Token', route: '/transfer', free: true },
               ].map(a => {
                 const locked = tier === 'free' && !a.free;
                 return (
@@ -331,6 +334,52 @@ export default function Dashboard() {
             </div>
             <p style={{ fontSize: 28, fontWeight: 700 }}>{equipment.length}</p>
             <p className="text-xs text-gray">items registered</p>
+          </div>
+
+          {/* Emergency Info Quick Access */}
+          <div className="card" style={{ borderLeft: `4px solid ${Colors.error}` }}>
+            <div className="flex items-center justify-between mb-sm">
+              <p style={{ fontWeight: 600 }}>Emergency Info</p>
+              <button className="btn btn-ghost btn-sm" onClick={() => navigate('/home')}>Edit &rarr;</button>
+            </div>
+            {home?.water_shutoff_location || home?.main_breaker_location || home?.gas_meter_location ? (
+              <div className="flex-col gap-sm">
+                {home.water_shutoff_location && (
+                  <div className="flex items-center gap-sm">
+                    <span style={{ fontSize: 14 }}>💧</span>
+                    <div>
+                      <p className="text-xs text-gray">Water Shutoff</p>
+                      <p style={{ fontSize: 13, fontWeight: 500 }}>{home.water_shutoff_location}</p>
+                    </div>
+                  </div>
+                )}
+                {home.main_breaker_location && (
+                  <div className="flex items-center gap-sm">
+                    <span style={{ fontSize: 14 }}>⚡</span>
+                    <div>
+                      <p className="text-xs text-gray">Main Breaker</p>
+                      <p style={{ fontSize: 13, fontWeight: 500 }}>{home.main_breaker_location}</p>
+                    </div>
+                  </div>
+                )}
+                {home.gas_meter_location && (
+                  <div className="flex items-center gap-sm">
+                    <span style={{ fontSize: 14 }}>🔥</span>
+                    <div>
+                      <p className="text-xs text-gray">Gas Meter</p>
+                      <p style={{ fontSize: 13, fontWeight: 500 }}>{home.gas_meter_location}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                <p className="text-sm text-gray">Know where your shutoffs are in an emergency</p>
+                <button className="btn btn-ghost btn-sm mt-sm" style={{ color: Colors.copper }} onClick={() => navigate('/home')}>
+                  Add Locations
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getClientHome, upsertClientHome, getProfile, updateProfile } from '@/services/supabase';
+import { attestHomeRecord, calculateCompletenessScore } from '@/services/homeTransfer';
 import { Colors } from '@/constants/theme';
 
 export default function AgentClientHome() {
@@ -11,6 +12,9 @@ export default function AgentClientHome() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [attestNote, setAttestNote] = useState('');
+  const [attesting, setAttesting] = useState(false);
+  const [completenessScore, setCompletenessScore] = useState<number | null>(null);
   const [form, setForm] = useState({
     address: '', city: '', state: '', zip_code: '',
     year_built: '', square_footage: '',
@@ -32,6 +36,9 @@ export default function AgentClientHome() {
         setClient(profileData);
         if (homeData) {
           setHome(homeData);
+          if (homeData.agent_attestation_note) setAttestNote(homeData.agent_attestation_note);
+          // Load completeness score
+          try { const s = await calculateCompletenessScore(homeData.id); setCompletenessScore(s); } catch {}
           setForm({
             address: homeData.address || '', city: homeData.city || '', state: homeData.state || '', zip_code: homeData.zip_code || '',
             year_built: homeData.year_built?.toString() || '', square_footage: homeData.square_footage?.toString() || '',
@@ -166,6 +173,87 @@ export default function AgentClientHome() {
           <button className="btn btn-primary" onClick={handleSave} disabled={saving || !form.address}>{saving ? 'Saving...' : 'Save Home'}</button>
         </div>
       </div>
+
+      {/* Agent Attestation Section */}
+      {home && (
+        <div className="card" style={{ marginTop: 24 }}>
+          <h2 style={{ fontSize: 18, marginBottom: 12 }}>Record Verification</h2>
+
+          {/* Completeness Score */}
+          {completenessScore !== null && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, padding: 16, background: Colors.cream, borderRadius: 8 }}>
+              <div style={{
+                width: 60, height: 60, borderRadius: 30,
+                background: `conic-gradient(${completenessScore >= 70 ? Colors.sage : completenessScore >= 40 ? Colors.warning : Colors.error} ${completenessScore * 3.6}deg, ${Colors.lightGray} 0deg)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 24, background: Colors.cream,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: Colors.charcoal }}>{completenessScore}</span>
+                </div>
+              </div>
+              <div>
+                <p style={{ fontWeight: 600, color: Colors.charcoal }}>Record Completeness: {completenessScore}/100</p>
+                <p style={{ fontSize: 13, color: Colors.medGray }}>
+                  {completenessScore >= 80 ? 'Excellent — ready for transfer' : completenessScore >= 50 ? 'Good — consider adding more details' : 'Needs attention — key fields are missing'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Current attestation status */}
+          {home.agent_attested_at ? (
+            <div style={{ padding: 14, background: Colors.sage + '15', borderRadius: 8, border: `1px solid ${Colors.sage}40`, marginBottom: 16 }}>
+              <p style={{ fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
+                ✓ You attested to this record on {new Date(home.agent_attested_at).toLocaleDateString()}
+              </p>
+              {home.agent_attestation_note && (
+                <p style={{ fontSize: 13, color: Colors.medGray, fontStyle: 'italic' }}>"{home.agent_attestation_note}"</p>
+              )}
+            </div>
+          ) : null}
+
+          <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 12, lineHeight: 1.6 }}>
+            As the listing agent, you can attest that this home's maintenance record is accurate and complete.
+            This adds a verification badge to the Home Token, increasing buyer confidence.
+          </p>
+
+          <div className="form-group">
+            <label style={{ fontSize: 13 }}>Attestation Note (optional)</label>
+            <textarea
+              className="form-input"
+              rows={2}
+              placeholder="e.g., Verified all equipment and maintenance records during listing..."
+              value={attestNote}
+              onChange={e => setAttestNote(e.target.value)}
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+
+          <button
+            className="btn btn-primary"
+            onClick={async () => {
+              setAttesting(true);
+              try {
+                await attestHomeRecord(home.id, attestNote);
+                setHome({ ...home, agent_attested_at: new Date().toISOString(), agent_attestation_note: attestNote });
+                // Recalculate score
+                try { const s = await calculateCompletenessScore(home.id); setCompletenessScore(s); } catch {}
+                setMessage('Record attested successfully!');
+                setTimeout(() => setMessage(''), 3000);
+              } catch (e: any) {
+                setMessage('Failed to attest: ' + e.message);
+              } finally { setAttesting(false); }
+            }}
+            disabled={attesting}
+            style={{ width: '100%' }}
+          >
+            {attesting ? 'Attesting...' : home.agent_attested_at ? 'Update Attestation' : 'Attest to Record Accuracy'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

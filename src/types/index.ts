@@ -106,6 +106,11 @@ export interface Home {
   gas_meter_location?: string;
   water_meter_location?: string;
 
+  // Home Token / verification
+  agent_attested_at?: string;
+  agent_attestation_note?: string;
+  record_completeness_score?: number;
+
   created_at: string;
 }
 
@@ -357,6 +362,10 @@ export interface ProMonthlyVisit {
   ai_summary_generated_at?: string;
   overall_condition?: string;
   summary_sent_at?: string;
+  // Homeowner rating
+  homeowner_rating?: number;
+  homeowner_review?: string;
+  rated_at?: string;
   created_at: string;
   updated_at: string;
   // Joined fields

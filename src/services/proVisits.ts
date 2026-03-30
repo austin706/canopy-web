@@ -184,6 +184,22 @@ export async function completeVisit(
   if (error) throw error;
 }
 
+export async function rateVisit(
+  visitId: string,
+  rating: number,
+  review?: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('pro_monthly_visits')
+    .update({
+      homeowner_rating: rating,
+      homeowner_review: review || null,
+      rated_at: new Date().toISOString(),
+    })
+    .eq('id', visitId);
+  if (error) throw error;
+}
+
 export async function getProviderVisits(providerId: string, month?: string): Promise<ProMonthlyVisit[]> {
   let query = supabase
     .from('pro_monthly_visits')

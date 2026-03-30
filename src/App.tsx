@@ -78,12 +78,28 @@ export default function App() {
   const { reset } = useStore();
 
   useEffect(() => {
+    // Sync email_confirmed from Supabase auth on load (covers existing sessions)
+    const syncEmailConfirmed = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        const storeUser = useStore.getState().user;
+        if (storeUser && storeUser.email_confirmed !== !!authUser.email_confirmed_at) {
+          useStore.getState().setUser({ ...storeUser, email_confirmed: !!authUser.email_confirmed_at });
+        }
+      }
+    };
+    syncEmailConfirmed();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         reset();
       }
       if (event === 'TOKEN_REFRESHED' && session?.user) {
-        // Session refreshed — keep user logged in
+        // Sync email_confirmed on token refresh too
+        const storeUser = useStore.getState().user;
+        if (storeUser) {
+          useStore.getState().setUser({ ...storeUser, email_confirmed: !!session.user.email_confirmed_at });
+        }
       }
     });
     return () => subscription.unsubscribe();

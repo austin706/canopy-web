@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { signOut, resendVerificationEmail } from '@/services/supabase';
+import { signOut, resendVerificationEmail, supabase } from '@/services/supabase';
 import { PLANS } from '@/services/subscriptionGate';
 import {
   CanopyLogo,
@@ -142,10 +142,19 @@ export default function Layout() {
             <button
               onClick={async () => {
                 try {
+                  // First check if already confirmed (stale store)
+                  const { data: { user: authUser } } = await supabase.auth.getUser();
+                  if (authUser?.email_confirmed_at) {
+                    // Already verified — update store and dismiss banner
+                    const storeUser = useStore.getState().user;
+                    if (storeUser) useStore.getState().setUser({ ...storeUser, email_confirmed: true });
+                    alert('Your email is already verified!');
+                    return;
+                  }
                   await resendVerificationEmail();
-                  alert('Verification email sent!');
-                } catch {
-                  alert('Failed to send. Please try again.');
+                  alert('Verification email sent! Check your inbox.');
+                } catch (err: any) {
+                  alert(err?.message || 'Failed to send. Please try again.');
                 }
               }}
               style={{

@@ -18,7 +18,10 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 export const signUp = async (email: string, password: string, fullName: string) => {
   const { data, error } = await supabase.auth.signUp({
     email, password,
-    options: { data: { full_name: fullName } },
+    options: {
+      data: { full_name: fullName },
+      emailRedirectTo: `${window.location.origin}/login?verified=true`,
+    },
   });
   if (error) throw error;
   return data;
@@ -44,6 +47,19 @@ export const resetPassword = async (email: string) => {
 
 export const updatePassword = async (newPassword: string) => {
   const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+};
+
+export const resendVerificationEmail = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) throw new Error('No user email found');
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: user.email,
+    options: {
+      emailRedirectTo: `${window.location.origin}/login?verified=true`,
+    },
+  });
   if (error) throw error;
 };
 

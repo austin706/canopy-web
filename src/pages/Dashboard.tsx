@@ -37,39 +37,42 @@ export default function Dashboard() {
     }
   }, [user, home, navigate]);
 
-  // Fetch tasks on mount; auto-generate if home exists but no tasks in DB
+  // Fetch tasks on mount; auto-generate ONCE if home exists but no tasks in DB
+  const [tasksInitialized, setTasksInitialized] = useState(false);
   useEffect(() => {
     const loadTasks = async () => {
-      if (!tasks.length && home) {
-        try {
-          setTasksLoading(true);
-          const data = await getTasks(home.id);
-          if (data && data.length > 0) {
-            setTasks(data);
-          } else {
-            // No tasks in DB — generate from home profile and persist
-            const generated = generateTasksForHome(home, equipment, []);
-            if (generated.length > 0) {
-              try {
-                const saved = await createTasks(generated);
-                setTasks(saved);
-              } catch (saveErr) {
-                console.warn('Failed to persist generated tasks:', saveErr);
-                setTasks(generated); // still show locally
-              }
+      if (tasksInitialized || !home) {
+        setTasksLoading(false);
+        return;
+      }
+      setTasksInitialized(true);
+      try {
+        setTasksLoading(true);
+        const data = await getTasks(home.id);
+        if (data && data.length > 0) {
+          setTasks(data);
+        } else {
+          // No tasks in DB — generate from home profile and persist
+          // Pass empty array as existingTasks since DB confirmed empty
+          const generated = generateTasksForHome(home, equipment, []);
+          if (generated.length > 0) {
+            try {
+              const saved = await createTasks(generated);
+              setTasks(saved);
+            } catch (saveErr) {
+              console.warn('Failed to persist generated tasks:', saveErr);
+              setTasks(generated); // still show locally
             }
           }
-        } catch (err) {
-          console.warn('Failed to fetch tasks:', err);
-        } finally {
-          setTasksLoading(false);
         }
-      } else {
+      } catch (err) {
+        console.warn('Failed to fetch tasks:', err);
+      } finally {
         setTasksLoading(false);
       }
     };
     loadTasks();
-  }, [home?.id]);
+  }, [home?.id, tasksInitialized]);
 
   // Auto-geocode home address if lat/long are missing (needed for weather)
   useEffect(() => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { signOut } from '@/services/supabase';
+import { signOut, resendVerificationEmail } from '@/services/supabase';
 import { PLANS } from '@/services/subscriptionGate';
 import {
   CanopyLogo,
@@ -127,6 +127,44 @@ export default function Layout() {
         </div>
       </nav>
       <main className="main-content">
+        {user && !user.email_confirmed && (
+          <div style={{
+            background: '#FFF3CD',
+            borderBottom: '1px solid #FFE082',
+            padding: '10px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: 13,
+            color: '#856404',
+          }}>
+            <span>Please verify your email address. Check your inbox for a confirmation link.</span>
+            <button
+              onClick={async () => {
+                try {
+                  await resendVerificationEmail();
+                  alert('Verification email sent!');
+                } catch {
+                  alert('Failed to send. Please try again.');
+                }
+              }}
+              style={{
+                background: 'none',
+                border: '1px solid #856404',
+                borderRadius: 6,
+                padding: '4px 12px',
+                color: '#856404',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                marginLeft: 16,
+              }}
+            >
+              Resend Email
+            </button>
+          </div>
+        )}
         <Outlet />
       </main>
     </div>

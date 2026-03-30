@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { signIn, getProfile, getHome, getEquipment, getTasks, getAgent } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setUser, setHome, setEquipment, setTasks, setAgent } = useStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,6 +15,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const isNewSignup = searchParams.get('signup') === 'success';
 
   const validateForm = (): boolean => {
     setEmailError('');
@@ -62,6 +64,7 @@ export default function Login() {
         full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
         subscription_tier: profile?.subscription_tier || 'free',
         onboarding_complete: profile?.onboarding_complete || false,
+        email_confirmed: !!authUser.email_confirmed_at,
         created_at: authUser.created_at,
         role: profile?.role || 'user',
         agent_id: profile?.agent_id,
@@ -129,6 +132,11 @@ export default function Login() {
             <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Canopy</h1>
             <p className="subtitle">Sign in to your account</p>
           </div>
+          {isNewSignup && (
+            <div style={{ background: '#4CAF5020', color: '#2E7D32', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+              <strong>Account created!</strong> Sign in to get started. We've sent a verification email — you can verify anytime, but it's not required to use Canopy.
+            </div>
+          )}
           {error && <div style={{ background: '#E5393520', color: '#C62828', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 20 }}>{error}</div>}
           <form onSubmit={handleLogin}>
             <div className="form-group">

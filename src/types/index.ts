@@ -30,6 +30,7 @@ export interface User {
   subscription_tier: SubscriptionTier;
   subscription_expires_at?: string;
   onboarding_complete: boolean;
+  email_confirmed?: boolean;
   created_at: string;
   role?: 'user' | 'agent' | 'admin' | 'pro_provider';
 }

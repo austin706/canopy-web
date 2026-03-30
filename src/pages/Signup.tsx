@@ -13,7 +13,6 @@ export default function Signup() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [fullNameError, setFullNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -80,35 +79,14 @@ export default function Signup() {
     setLoading(true);
     try {
       await signUp(email, password, fullName);
-      setSuccess(true);
+      // Don't block — redirect to login with a success message
+      navigate('/login?signup=success');
     } catch (err: any) {
       setError(err.message || 'Signup failed');
     } finally {
       setLoading(false);
     }
   };
-
-  if (success) {
-    return (
-      <div className="auth-layout">
-        <div className="auth-hero">
-          <div className="auth-hero-content">
-            <div style={{ marginBottom: 16 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 56, width: 'auto', objectFit: 'contain' }} /></div>
-            <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Welcome!</h1>
-            <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)' }}>You're one step away from smart home maintenance.</p>
-          </div>
-        </div>
-        <div className="auth-form-panel">
-          <div className="auth-card" style={{ textAlign: 'center' }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#4CAF5020', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 24, fontWeight: 700, color: '#4CAF50' }}>&#10003;</div>
-            <h1 style={{ fontSize: 24 }}>Check Your Email</h1>
-            <p style={{ color: '#7A7A7A', margin: '12px 0 24px', lineHeight: 1.6 }}>We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.</p>
-            <button className="btn btn-primary btn-lg btn-full" onClick={() => navigate('/login')}>Back to Login</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const pwStrength = password.length === 0 ? 0 : password.length < 6 ? 1 : password.length < 10 ? 2 : 3;
   const pwColors = ['', '#E53935', '#FF9800', '#4CAF50'];

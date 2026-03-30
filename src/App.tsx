@@ -78,8 +78,22 @@ export default function App() {
   const { reset } = useStore();
 
   useEffect(() => {
-    // Sync email_confirmed from Supabase auth on load (covers existing sessions)
-    const syncEmailConfirmed = async () => {
+    // Validate Supabase session on app mount.
+    // Zustand persists isAuthenticated in localStorage, but the actual JWT
+    // may have expired (refresh token gone). If so, clear the store so the
+    // user gets redirected to login instead of seeing cryptic 401 errors.
+    const validateSession = async () => {
+      const { isAuthenticated } = useStore.getState();
+      if (!isAuthenticated) return; // not logged in, nothing to validate
+
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (!session || error) {
+        console.warn('[Auth] Session expired or invalid — logging out', error?.message);
+        reset();
+        return;
+      }
+
+      // Session is valid — sync email_confirmed from Supabase auth
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (authUser) {
         const storeUser = useStore.getState().user;
@@ -88,7 +102,7 @@ export default function App() {
         }
       }
     };
-    syncEmailConfirmed();
+    validateSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {

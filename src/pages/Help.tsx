@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Colors } from '@/constants/theme';
 import { MailIcon, PhoneIcon, ChevronDownIcon, ChevronUpIcon, ExternalLinkIcon } from '@/components/icons/Icons';
 
@@ -96,6 +97,7 @@ const FAQ_SECTIONS = [
 ];
 
 export default function Help() {
+  const navigate = useNavigate();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const appVersion = '1.0.0';
 
@@ -109,6 +111,35 @@ export default function Help() {
       </div>
 
       <div style={{ maxWidth: 700, margin: '0 auto' }}>
+        {/* AI Home Assistant */}
+        <div
+          className="card mb-lg"
+          style={{
+            background: `linear-gradient(135deg, ${Colors.sageMuted} 0%, ${Colors.copperMuted} 100%)`,
+            cursor: 'pointer',
+            border: `1px solid ${Colors.sage}30`,
+          }}
+          onClick={() => navigate('/assistant')}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%', background: Colors.sage,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0,
+            }}>
+              <span role="img" aria-label="leaf">🌿</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: Colors.charcoal, marginBottom: 4 }}>
+                AI Home Assistant
+              </h3>
+              <p style={{ fontSize: 13, color: Colors.medGray, lineHeight: 1.4 }}>
+                Get personalized maintenance advice, troubleshooting help, and seasonal tips from your AI assistant.
+              </p>
+            </div>
+            <span style={{ fontSize: 20, color: Colors.sage, flexShrink: 0 }}>→</span>
+          </div>
+        </div>
+
         {/* FAQ Sections */}
         {FAQ_SECTIONS.map(section => (
           <div key={section.title} style={{ marginBottom: 32 }}>

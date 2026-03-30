@@ -46,13 +46,9 @@ export default function Layout() {
     { to: '/equipment', icon: NavEquipment, label: 'Equipment' },
     { to: '/documents', icon: NavDocuments, label: 'Documents' },
     { to: '/pro-services', icon: NavProServices, label: 'Pro Services' },
-    { to: '/assistant', icon: NavAgent, label: 'AI Assistant' },
-    { to: '/notifications', icon: NavNotifications, label: 'Notifications' },
     { to: '/agent', icon: NavAgent, label: 'My Agent' },
-    { to: '/home', icon: NavHome, label: 'Home Details' },
     { to: '/sale-prep', icon: NavHome, label: 'Sale Prep' },
-    { to: '/subscription', icon: NavSubscription, label: 'Subscription' },
-    { to: '/help', icon: NavHelp, label: 'Help & FAQ' },
+    { to: '/help', icon: NavHelp, label: 'Help & Support' },
   ];
 
   return (
@@ -121,7 +117,7 @@ export default function Layout() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <NavLink to="/profile" className="btn btn-ghost btn-sm" style={{ flex: 1, textDecoration: 'none', fontSize: 12 }}>Profile</NavLink>
+            <NavLink to="/profile" className="btn btn-ghost btn-sm" style={{ flex: 1, textDecoration: 'none', fontSize: 12 }}>Settings</NavLink>
             <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 12, color: '#E53935' }} onClick={handleLogout}>Sign Out</button>
           </div>
         </div>

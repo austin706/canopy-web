@@ -154,21 +154,18 @@ export default function Profile() {
         </div>
       )}
 
-      {/* Navigation */}
+      {/* Quick Links */}
       <div className="card mb-lg">
+        <h3 style={{ fontSize: 16, marginBottom: 12 }}>Settings & Details</h3>
         <div className="flex-col">
-          {user?.role === 'admin' && (
-            <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/admin')}>
-              Admin Portal
-            </button>
-          )}
-          {user?.role === 'agent' && (
-            <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/agent-portal')}>
-              Agent Portal
-            </button>
-          )}
           <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/home')}>
             Home Details
+          </button>
+          <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/notifications')}>
+            Notifications
+          </button>
+          <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/subscription')}>
+            Subscription & Billing
           </button>
           <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/agent')}>
             My Agent
@@ -176,6 +173,16 @@ export default function Profile() {
           <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/logs')}>
             Maintenance Logs
           </button>
+          {user?.role === 'admin' && (
+            <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/admin')}>
+              Admin Portal
+            </button>
+          )}
+          {user?.role === 'agent' && (
+            <button className="btn btn-ghost" style={{ justifyContent: 'flex-start' }} onClick={() => navigate('/agent-portal')}>
+              Agent Portal
+            </button>
+          )}
         </div>
       </div>
 

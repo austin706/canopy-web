@@ -3,10 +3,12 @@ import { useStore } from '@/store/useStore';
 import { isProOrHigher } from '@/services/subscriptionGate';
 import { Colors, StatusColors } from '@/constants/theme';
 import { getItemsToHaveOnHand, getUpcomingVisits, getPastVisits, confirmVisit, cancelVisit, rescheduleVisit, rateVisit } from '@/services/proVisits';
+import { uploadInspectionDoc, getVisitDocuments, deleteInspectionDoc, type InspectionDocument } from '@/services/inspectionDocs';
+import { getEquipmentTrends, type EquipmentTrend } from '@/services/equipmentTrending';
 import type { ProMonthlyVisit, VisitAllocation } from '@/types';
 
 export default function Visits() {
-  const { user } = useStore();
+  const { user, home } = useStore();
   const [upcomingVisit, setUpcomingVisit] = useState<ProMonthlyVisit | null>(null);
   const [pastVisits, setPastVisits] = useState<ProMonthlyVisit[]>([]);
   const [allocation, setAllocation] = useState<VisitAllocation | null>(null);
@@ -23,6 +25,13 @@ export default function Visits() {
   const [ratingValue, setRatingValue] = useState(0);
   const [ratingReview, setRatingReview] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
+  const [visitDocuments, setVisitDocuments] = useState<Map<string, InspectionDocument[]>>(new Map());
+  const [loadingDocs, setLoadingDocs] = useState<Set<string>>(new Set());
+  const [expandedDocVisit, setExpandedDocVisit] = useState<string | null>(null);
+  const [uploadingDoc, setUploadingDoc] = useState<Set<string>>(new Set());
+  const [trends, setTrends] = useState<EquipmentTrend[]>([]);
+  const [trendsLoading, setTrendsLoading] = useState(false);
+  const [expandedTrend, setExpandedTrend] = useState<string | null>(null);
 
   const tier = user?.subscription_tier || 'free';
   const hasPro = isProOrHigher(tier);
@@ -56,6 +65,19 @@ export default function Visits() {
         created_at: new Date().toISOString(),
       });
       setError('');
+
+      // Load equipment trends
+      if (home?.id) {
+        setTrendsLoading(true);
+        try {
+          const t = await getEquipmentTrends(home.id);
+          setTrends(t);
+        } catch (err) {
+          console.warn('Failed to load trends:', err);
+        } finally {
+          setTrendsLoading(false);
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load visits');
     } finally {
@@ -120,6 +142,57 @@ export default function Visits() {
       setError(err.message || 'Failed to submit rating');
     } finally {
       setSubmittingRating(false);
+    }
+  };
+
+  const loadVisitDocuments = async (visitId: string) => {
+    if (visitDocuments.has(visitId)) return;
+    setLoadingDocs(prev => new Set(prev).add(visitId));
+    try {
+      const docs = await getVisitDocuments(visitId);
+      setVisitDocuments(prev => new Map(prev).set(visitId, docs));
+    } catch (err: any) {
+      console.error('Failed to load documents:', err);
+    } finally {
+      setLoadingDocs(prev => {
+        const next = new Set(prev);
+        next.delete(visitId);
+        return next;
+      });
+    }
+  };
+
+  const handleDocumentUpload = async (visitId: string, event: any) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploadingDoc(prev => new Set(prev).add(visitId));
+    try {
+      await uploadInspectionDoc(visitId, file, user.id);
+      await loadVisitDocuments(visitId);
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload document');
+    } finally {
+      setUploadingDoc(prev => {
+        const next = new Set(prev);
+        next.delete(visitId);
+        return next;
+      });
+    }
+  };
+
+  const handleDeleteDocument = async (docId: string, visitId: string) => {
+    if (!confirm('Delete this document?')) return;
+    try {
+      await deleteInspectionDoc(docId);
+      setVisitDocuments(prev => {
+        const next = new Map(prev);
+        const docs = next.get(visitId) || [];
+        next.set(visitId, docs.filter(d => d.id !== docId));
+        return next;
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete document');
     }
   };
 
@@ -422,6 +495,304 @@ export default function Visits() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Inspection Documents */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 18, marginBottom: 16, fontWeight: 600 }}>Inspection Reports</h2>
+        {pastVisits.length === 0 ? (
+          <div className="empty-state">
+            <div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>📄</div>
+            <h3>No documents</h3>
+            <p>Inspection documents will appear here as they are uploaded.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {pastVisits.map(visit => (
+              <div key={visit.id} className="card">
+                <button
+                  onClick={() => {
+                    setExpandedDocVisit(expandedDocVisit === visit.id ? null : visit.id);
+                    if (expandedDocVisit !== visit.id) {
+                      loadVisitDocuments(visit.id);
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    padding: 0,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ flex: 1, textAlign: 'left' }}>
+                    <p style={{ fontWeight: 600, marginBottom: 4 }}>{formatDate(visit.confirmed_date || visit.proposed_date || '')}</p>
+                    <p className="text-xs text-gray">{visit.provider?.business_name}</p>
+                  </div>
+                  <span style={{ fontSize: 14, color: Colors.medGray }}>{expandedDocVisit === visit.id ? '▼' : '▶'}</span>
+                </button>
+
+                {expandedDocVisit === visit.id && (
+                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${Colors.lightGray}` }}>
+                    {loadingDocs.has(visit.id) ? (
+                      <div style={{ padding: 16, textAlign: 'center', color: Colors.medGray }}>
+                        <p className="text-sm">Loading documents...</p>
+                      </div>
+                    ) : (
+                      <>
+                        {((visitDocuments.get(visit.id) || []).length > 0) ? (
+                          <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {(visitDocuments.get(visit.id) || []).map(doc => (
+                              <div
+                                key={doc.id}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 12,
+                                  padding: 12,
+                                  background: Colors.cream,
+                                  borderRadius: 8,
+                                  justifyContent: 'space-between',
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+                                  <span style={{ fontSize: 18 }}>
+                                    {doc.file_type === 'pdf' ? '📄' : '🖼️'}
+                                  </span>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 2, wordBreak: 'break-word' }}>
+                                      {doc.file_name}
+                                    </p>
+                                    <p className="text-xs text-gray">
+                                      {(doc.file_size_bytes / 1024).toFixed(1)} KB • {formatDate(doc.created_at)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                  <button
+                                    onClick={() => window.open(doc.file_url, '_blank')}
+                                    style={{
+                                      padding: '6px 12px',
+                                      borderRadius: 4,
+                                      border: `1px solid ${Colors.sage}`,
+                                      background: 'transparent',
+                                      color: Colors.sage,
+                                      cursor: 'pointer',
+                                      fontSize: 12,
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    View
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteDocument(doc.id, visit.id)}
+                                    style={{
+                                      padding: '6px 12px',
+                                      borderRadius: 4,
+                                      border: `1px solid #dc3545`,
+                                      background: 'transparent',
+                                      color: '#dc3545',
+                                      cursor: 'pointer',
+                                      fontSize: 12,
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray mb-md" style={{ fontStyle: 'italic' }}>No documents for this visit yet.</p>
+                        )}
+
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            key={`${visit.id}-upload`}
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"
+                            onChange={(e) => handleDocumentUpload(visit.id, e)}
+                            disabled={uploadingDoc.has(visit.id)}
+                            style={{
+                              display: 'none',
+                            }}
+                            id={`doc-upload-${visit.id}`}
+                          />
+                          <button
+                            onClick={() => document.getElementById(`doc-upload-${visit.id}`)?.click()}
+                            disabled={uploadingDoc.has(visit.id)}
+                            style={{
+                              width: '100%',
+                              padding: '10px 16px',
+                              borderRadius: 8,
+                              border: `1px dashed ${Colors.copper}`,
+                              background: 'transparent',
+                              color: Colors.copper,
+                              cursor: uploadingDoc.has(visit.id) ? 'not-allowed' : 'pointer',
+                              fontSize: 13,
+                              fontWeight: 600,
+                              opacity: uploadingDoc.has(visit.id) ? 0.6 : 1,
+                            }}
+                          >
+                            {uploadingDoc.has(visit.id) ? '📤 Uploading...' : '+ Upload Document'}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Equipment Health Trends */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 18, marginBottom: 16, fontWeight: 600 }}>Equipment Health Trends</h2>
+        {trendsLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+            <div className="spinner"></div>
+          </div>
+        ) : trends.length === 0 ? (
+          <div className="empty-state">
+            <div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>📊</div>
+            <h3>No trend data yet</h3>
+            <p>Equipment trends will appear after your first completed visit with inspections.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {trends.map(trend => {
+              const conditionColor = {
+                good: Colors.sage,
+                fair: Colors.copper,
+                needs_attention: '#FFC107',
+                critical: '#E74C3C',
+              }[trend.currentCondition] || Colors.medGray;
+
+              const riskColors = {
+                low: Colors.sage,
+                medium: Colors.copper,
+                high: '#E74C3C',
+              };
+
+              const trendArrow = {
+                improving: '↑',
+                stable: '→',
+                declining: '↓',
+              }[trend.trendDirection];
+
+              const trendColor = {
+                improving: Colors.sage,
+                stable: Colors.copper,
+                declining: '#E74C3C',
+              }[trend.trendDirection];
+
+              return (
+                <div key={trend.equipmentId} className="card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <div>
+                      <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{trend.equipmentName}</h3>
+                      <p className="text-xs text-gray" style={{ textTransform: 'capitalize' }}>{trend.equipmentCategory}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <span
+                        className="badge"
+                        style={{
+                          background: conditionColor + '20',
+                          color: conditionColor,
+                          textTransform: 'capitalize',
+                        }}
+                      >
+                        {trend.currentCondition.replace(/_/g, ' ')}
+                      </span>
+                      <span
+                        className="badge"
+                        style={{
+                          background: riskColors[trend.riskLevel] + '20',
+                          color: riskColors[trend.riskLevel],
+                          textTransform: 'capitalize',
+                        }}
+                      >
+                        {trend.riskLevel} risk
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: Colors.cream, borderRadius: 8, marginBottom: 12 }}>
+                    <span style={{ fontSize: 18, color: trendColor, fontWeight: 700 }}>{trendArrow}</span>
+                    <span style={{ fontSize: 13, color: Colors.charcoal, fontWeight: 500 }}>
+                      {trend.trendDirection.charAt(0).toUpperCase() + trend.trendDirection.slice(1)}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => setExpandedTrend(expandedTrend === trend.equipmentId ? null : trend.equipmentId)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      border: `1px solid ${Colors.lightGray}`,
+                      backgroundColor: expandedTrend === trend.equipmentId ? Colors.cream : 'transparent',
+                      color: Colors.sage,
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <span>{expandedTrend === trend.equipmentId ? '▼' : '▶'}</span>
+                    <span>
+                      {expandedTrend === trend.equipmentId ? 'Hide' : 'Show'} Visit History ({trend.snapshots.length})
+                    </span>
+                  </button>
+
+                  {expandedTrend === trend.equipmentId && (
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${Colors.lightGray}` }}>
+                      {trend.snapshots.map((snapshot, idx) => (
+                        <div key={idx} style={{ padding: 10, background: Colors.cream, borderRadius: 6, marginBottom: 8 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal }}>
+                              {new Date(snapshot.visitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </p>
+                            <span
+                              className="badge"
+                              style={{
+                                background: conditionColor + '20',
+                                color: conditionColor,
+                                fontSize: 11,
+                              }}
+                            >
+                              {snapshot.condition.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 12, fontSize: 12, color: Colors.medGray, marginBottom: 6 }}>
+                            <span>✓ {snapshot.itemsPassed} Passed</span>
+                            <span>⚠ {snapshot.itemsAttention} Attention</span>
+                            <span>✕ {snapshot.itemsFailed} Failed</span>
+                          </div>
+                          {snapshot.proNotes && (
+                            <p style={{ fontSize: 12, color: Colors.charcoal, fontStyle: 'italic', marginTop: 6 }}>
+                              {snapshot.proNotes}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

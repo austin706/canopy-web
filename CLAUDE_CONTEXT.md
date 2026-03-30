@@ -51,7 +51,8 @@ Standalone pages (no sidebar):
 
 ## CSS Design System
 
-- Brand tokens: `src/constants/theme.ts` (Colors, PriorityColors, StatusColors)
+- Brand tokens: `src/constants/theme.ts` (Colors, PriorityColors, StatusColors, EmailBrand)
+- Email branding: `src/constants/theme.ts` → `EmailBrand` section (sender addresses, color palette, typography, layout, footer)
 - CSS variables match theme: `--copper`, `--sage`, `--charcoal`, etc.
 - Layout classes: `.page`, `.page-wide`, `.card`, `.grid-2`, `.grid-3`, `.grid-4`
 - Responsive breakpoints: 900px (tablet — sidebar collapses, hamburger appears), 480px (phone — tighter padding/fonts)
@@ -123,10 +124,24 @@ Standalone pages (no sidebar):
 - **Layout.tsx**: Pro Visits/Quotes/Invoices sidebar links gated to pro/pro_plus tiers only
 - **Mobile screens**: visits, quotes, invoices, pro-plus — all 4 created
 
+### Session 12 (March 28 — Notifications + Email Branding):
+- **send-notifications edge function**: Deployed v6 with Resend email support (3-channel: in-app + push + email)
+  - Fixed ES256 JWT 401 by setting verify_jwt: false (function uses service role key internally)
+  - Fixed SDK invoke bug by switching AdminNotifications to raw fetch()
+  - Email template uses official brand tokens (cream #F5F0E8, sage #8B9E7E, copper #C4844E)
+- **AdminNotifications.tsx**: Live at canopyhome.app/admin/notifications — send to single user, all users, or by tier
+- **App.tsx**: Added /admin/notifications route with RoleRoute guard
+- **AdminDashboard.tsx**: Added Notifications nav link
+- **theme.ts**: Added `EmailBrand` export — full email branding (sender addresses, color palette, typography, layout, footer)
+- **brand.js** (mobile): Added matching `email` export with same branding tokens
+- **Google Workspace**: austin@, info@, support@, sales@ canopyhome.app set up
+- **Resend**: RESEND_API_KEY added to Supabase, domain verified, sends from info@canopyhome.app
+- **DNS**: MX (Google Workspace) + SPF/DKIM TXT (Resend) coexist on canopyhome.app
+
 ## Remaining Before Launch (Austin's manual tasks)
 
 - [ ] Set Stripe secrets in Supabase: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_HOME_PRICE_ID, STRIPE_PRO_PRICE_ID, STRIPE_PRO_PLUS_PRODUCT_ID
-- [ ] Set RESEND_API_KEY in Supabase (sign up at resend.com for email notifications)
+- [x] Set RESEND_API_KEY in Supabase — DONE (March 28, Resend domain verified, sends from info@canopyhome.app)
 - [ ] Configure Stripe webhook URL: https://uxxrmyxoyesipprwlxrn.supabase.co/functions/v1/stripe-webhook
 - [x] Add stripe_customer_id / stripe_subscription_id to profiles table — DONE (Migration 005)
 - [x] Deploy Edge Functions — DONE (5 functions active)

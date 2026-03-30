@@ -22,6 +22,18 @@ interface ProServiceAppointment {
   purpose: string;
 }
 
+interface AddOnService {
+  id: string;
+  title: string;
+  description: string;
+  priceRange: string;
+  priceMin: number;
+  priceMax: number;
+  icon: string;
+  turnaround: string;
+  includes: string[];
+}
+
 const PRO_SERVICE_TEMPLATES: ProServiceTemplate[] = [
   {
     id: 'hvac-tune-up',
@@ -60,6 +72,42 @@ const PRO_SERVICE_TEMPLATES: ProServiceTemplate[] = [
   },
 ];
 
+const ADD_ON_SERVICES: AddOnService[] = [
+  {
+    id: 'annual-inspection',
+    title: 'Annual Home Inspection',
+    description: 'Comprehensive inspection of your entire home — roof to foundation, all systems, all equipment.',
+    priceRange: '$199–$249',
+    priceMin: 199,
+    priceMax: 249,
+    icon: '🔍',
+    turnaround: 'Scheduled within 2 weeks',
+    includes: ['Full home walkthrough', 'Equipment condition assessment', 'Photo documentation', 'Written report with recommendations', 'Record added to your Home Token'],
+  },
+  {
+    id: 'adhoc-visit',
+    title: 'Ad-Hoc Pro Visit',
+    description: 'An extra maintenance visit outside your monthly allocation for specific tasks or concerns.',
+    priceRange: '$149',
+    priceMin: 149,
+    priceMax: 149,
+    icon: '🔧',
+    turnaround: 'Scheduled within 1 week',
+    includes: ['60-minute focused visit', 'Up to 3 task items', 'Inspection notes & photos', 'Visit logged to your record'],
+  },
+  {
+    id: 'emergency-callout',
+    title: 'Emergency Callout',
+    description: 'Urgent same-day or next-day service for unexpected issues — leaks, electrical problems, HVAC failure.',
+    priceRange: '$199',
+    priceMin: 199,
+    priceMax: 199,
+    icon: '🚨',
+    turnaround: 'Same-day or next-day',
+    includes: ['Priority scheduling', 'Diagnostic assessment', 'Temporary fix if possible', 'Quote for full repair', 'Emergency documented in record'],
+  },
+];
+
 const STATUS_COLORS: Record<string, string> = {
   pending: Colors.warning,
   requested: Colors.warning,
@@ -84,6 +132,11 @@ export default function ProServices() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedAddOn, setSelectedAddOn] = useState<AddOnService | null>(null);
+  const [addOnNotes, setAddOnNotes] = useState('');
+  const [addOnDate, setAddOnDate] = useState('');
+  const [requestingAddOn, setRequestingAddOn] = useState(false);
+  const [addOnSuccess, setAddOnSuccess] = useState('');
 
   const tier = user?.subscription_tier || 'free';
   const hasAccess = canAccess(tier, 'pro_service_scheduler');
@@ -187,6 +240,34 @@ export default function ProServices() {
       setError(err instanceof Error ? err.message : 'Failed to schedule appointment');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRequestAddOn = async () => {
+    if (!selectedAddOn || !home || !user?.id) return;
+    setRequestingAddOn(true);
+    setError('');
+    setAddOnSuccess('');
+    try {
+      const { createQuote } = await import('@/services/quotesInvoices');
+      await createQuote(
+        home.id,
+        user.id,
+        '',
+        selectedAddOn.title,
+        `${selectedAddOn.description}${addOnNotes ? '\n\nCustomer notes: ' + addOnNotes : ''}${addOnDate ? '\nPreferred date: ' + addOnDate : ''}`,
+        [{ description: selectedAddOn.title, amount: selectedAddOn.priceMin, quantity: 1, unit_price: selectedAddOn.priceMin }],
+        'add_on',
+        0
+      );
+      setAddOnSuccess(`Your ${selectedAddOn.title} request has been submitted! We'll send you a quote shortly.`);
+      setSelectedAddOn(null);
+      setAddOnNotes('');
+      setAddOnDate('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to request add-on service');
+    } finally {
+      setRequestingAddOn(false);
     }
   };
 
@@ -470,6 +551,151 @@ export default function ProServices() {
           ))}
         </div>
       </div>
+
+      {/* Add-On Services Section */}
+      <div style={sectionStyle}>
+        <h2 style={sectionTitleStyle}>Add-On Services</h2>
+        <p style={{ fontSize: '14px', color: Colors.medGray, marginBottom: '16px' }}>
+          One-time services outside your subscription
+        </p>
+        <div style={gridStyle}>
+          {ADD_ON_SERVICES.map((service) => (
+            <div
+              key={service.id}
+              onClick={() => setSelectedAddOn(service)}
+              style={selectedAddOn?.id === service.id ? templateCardHoverStyle : templateCardStyle}
+              onMouseEnter={(e) => {
+                if (selectedAddOn?.id !== service.id) {
+                  Object.assign(e.currentTarget.style, {
+                    boxShadow: `0 2px 8px ${Colors.copperMuted}`,
+                  });
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selectedAddOn?.id !== service.id) {
+                  Object.assign(e.currentTarget.style, {
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  });
+                }
+              }}
+            >
+              <div style={{ fontSize: '28px', marginBottom: '8px', textAlign: 'center' }}>
+                {service.icon}
+              </div>
+              <h3 style={{ fontSize: '15px', fontWeight: '600', color: Colors.copper, marginBottom: '4px', textAlign: 'center' }}>
+                {service.title}
+              </h3>
+              <p style={{ fontSize: '13px', color: Colors.medGray, margin: '0 0 8px 0', textAlign: 'center', fontWeight: '600' }}>
+                {service.priceRange}
+              </p>
+              <p style={{ fontSize: '12px', color: Colors.medGray, margin: '0', textAlign: 'center' }}>
+                {service.turnaround}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Add-On Request Form */}
+      {selectedAddOn && (
+        <div style={sectionStyle}>
+          <div style={cardStyle}>
+            <h2 style={{ ...sectionTitleStyle, marginBottom: '20px' }}>
+              Request {selectedAddOn.title}
+            </h2>
+
+            <div style={{ marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', color: Colors.charcoal, marginBottom: '12px' }}>
+                What's Included:
+              </h3>
+              <ul style={{ marginLeft: '20px', marginTop: '8px', marginBottom: '16px' }}>
+                {selectedAddOn.includes.map((item, idx) => (
+                  <li key={idx} style={{ fontSize: '13px', color: Colors.charcoal, marginBottom: '6px' }}>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleRequestAddOn();
+              }}
+            >
+              {/* Preferred Date */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={labelStyle}>Preferred Date</label>
+                <input
+                  type="date"
+                  value={addOnDate}
+                  onChange={(e) => setAddOnDate(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Notes */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={labelStyle}>Additional Notes</label>
+                <textarea
+                  value={addOnNotes}
+                  onChange={(e) => setAddOnNotes(e.target.value)}
+                  placeholder="Tell us more about your needs (optional)..."
+                  style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' } as React.CSSProperties}
+                />
+              </div>
+
+              {error && (
+                <div
+                  style={{
+                    color: Colors.error,
+                    fontSize: '14px',
+                    marginBottom: '16px',
+                    padding: '10px',
+                    backgroundColor: Colors.error + '10',
+                    borderRadius: '6px',
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+
+              {addOnSuccess && (
+                <div
+                  style={{
+                    color: Colors.success,
+                    fontSize: '14px',
+                    marginBottom: '16px',
+                    padding: '10px',
+                    backgroundColor: Colors.success + '10',
+                    borderRadius: '6px',
+                  }}
+                >
+                  {addOnSuccess}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button type="submit" style={buttonStyle} disabled={requestingAddOn}>
+                  {requestingAddOn ? 'Submitting...' : 'Request Quote'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedAddOn(null);
+                    setAddOnNotes('');
+                    setAddOnDate('');
+                    setAddOnSuccess('');
+                  }}
+                  style={closeButtonStyle}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Schedule Form */}
       {selectedTemplate && (

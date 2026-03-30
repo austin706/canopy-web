@@ -233,6 +233,44 @@ Return ONLY valid JSON, no other text.`,
  * Fallback for when the image scanner fails — user types in the numbers manually.
  */
 export const lookupByModelNumber = async (modelNumber: string, serialNumber?: string): Promise<ScanResult> => {
+  // Check cache first — fast lookup before hitting AI
+  if (modelNumber) {
+    try {
+      const { data: cached } = await supabase
+        .from('equipment_scan_cache')
+        .select('*')
+        .eq('model_number', modelNumber.trim().toUpperCase())
+        .single();
+
+      if (cached && cached.confidence >= 0.5) {
+        // Increment hit count in background (non-blocking)
+        supabase.from('equipment_scan_cache')
+          .update({ hit_count: (cached.hit_count || 1) + 1, updated_at: new Date().toISOString() })
+          .eq('id', cached.id)
+          .then(() => {});
+
+        return {
+          make: cached.make || '',
+          model: cached.model_display || modelNumber,
+          serial_number: serialNumber || undefined,
+          capacity: cached.capacity || undefined,
+          fuel_type: cached.fuel_type || undefined,
+          efficiency_rating: cached.efficiency_rating || undefined,
+          filter_size: cached.filter_size || undefined,
+          category: cached.category || undefined,
+          equipment_subtype: cached.equipment_subtype || undefined,
+          estimated_lifespan_years: cached.estimated_lifespan_years || undefined,
+          refrigerant_type: cached.refrigerant_type || undefined,
+          alerts: cached.alerts || [],
+          additional_info: cached.additional_info || {},
+          confidence: cached.confidence,
+        };
+      }
+    } catch {
+      // Cache miss — proceed to AI lookup
+    }
+  }
+
   const parts: string[] = [];
   if (modelNumber) parts.push(`Model number: ${modelNumber}`);
   if (serialNumber) parts.push(`Serial number: ${serialNumber}`);

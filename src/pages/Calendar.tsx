@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/utils';
@@ -7,6 +7,10 @@ import { getTasks, reopenTask as reopenTaskApi } from '@/services/supabase';
 import { getDisplayStatus } from '@/services/taskEngine';
 import { supabase } from '@/services/supabase';
 import type { MaintenanceTask, ProMonthlyVisit } from '@/types';
+
+const MaintenanceLogs = lazy(() => import('@/pages/MaintenanceLogs'));
+
+type CalendarTab = 'calendar' | 'log';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -19,8 +23,12 @@ const DEMO_TASKS: MaintenanceTask[] = [
 
 export default function Calendar() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { home, tasks: storeTasks, setTasks, reopenTask } = useStore();
   const isDemo = storeTasks.length === 0;
+  const [activeTab, setActiveTab] = useState<CalendarTab>(
+    searchParams.get('tab') === 'log' ? 'log' : 'calendar'
+  );
   const tasks = isDemo ? DEMO_TASKS : storeTasks;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -203,13 +211,83 @@ export default function Calendar() {
     return { total, completed, overdue, upcoming, visitCount };
   }, [monthTasks, monthVisits]);
 
+  const calendarTabs: { key: CalendarTab; label: string }[] = [
+    { key: 'calendar', label: 'Calendar' },
+    { key: 'log', label: 'Maintenance Log' },
+  ];
+
+  // If Maintenance Log tab is active, render that instead
+  if (activeTab === 'log') {
+    return (
+      <div className="page">
+        <div className="page-header">
+          <div>
+            <h1>Calendar</h1>
+            <p className="subtitle">Tasks, visits & maintenance history</p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${Colors.cream || '#f5f0eb'}`, marginBottom: 24 }}>
+          {calendarTabs.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              style={{
+                padding: '10px 20px',
+                fontSize: 14,
+                fontWeight: activeTab === t.key ? 700 : 500,
+                color: activeTab === t.key ? Colors.sage : Colors.medGray,
+                background: 'none',
+                border: 'none',
+                borderBottomWidth: 3,
+                borderBottomStyle: 'solid',
+                borderBottomColor: activeTab === t.key ? Colors.sage : 'transparent',
+                cursor: 'pointer',
+                marginBottom: -2,
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <Suspense fallback={<p style={{ color: Colors.medGray }}>Loading...</p>}>
+          <MaintenanceLogs />
+        </Suspense>
+      </div>
+    );
+  }
+
   return (
     <div className="page">
       <div className="page-header">
         <div>
           <h1>Calendar</h1>
-          <p className="subtitle">Track and manage maintenance tasks</p>
+          <p className="subtitle">Tasks, visits & maintenance history</p>
         </div>
+      </div>
+
+      {/* Sub-tab navigation */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${Colors.cream || '#f5f0eb'}`, marginBottom: 24 }}>
+        {calendarTabs.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            style={{
+              padding: '10px 20px',
+              fontSize: 14,
+              fontWeight: activeTab === t.key ? 700 : 500,
+              color: activeTab === t.key ? Colors.sage : Colors.medGray,
+              background: 'none',
+              border: 'none',
+              borderBottomWidth: 3,
+              borderBottomStyle: 'solid',
+              borderBottomColor: activeTab === t.key ? Colors.sage : 'transparent',
+              cursor: 'pointer',
+              marginBottom: -2,
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {/* Monthly Summary Stats */}

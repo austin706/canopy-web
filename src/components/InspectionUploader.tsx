@@ -473,8 +473,8 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           const allPages: number[] = [];
           for (let i = 1; i <= pageCount; i++) allPages.push(i);
 
-          // Render at 1.0x scale with moderate compression to keep payload manageable
-          const allImages = await renderPdfPagesToImages(file, allPages, 1.0, (page, total) => {
+          // Render at 1.5x scale for readable text — critical for extracting specific details
+          const allImages = await renderPdfPagesToImages(file, allPages, 1.5, (page, total) => {
             setProgress(`Rendering page ${page} of ${total}...`);
           });
 
@@ -483,8 +483,8 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           }
 
           // Process in batches — each batch sends one stitched image to the AI
-          // Stitch ~8 pages into a vertical strip per batch for a single API call
-          const PAGES_PER_BATCH = 8;
+          // Stitch ~5 pages per batch for better detail extraction (fewer pages = more focus)
+          const PAGES_PER_BATCH = 5;
           const batches: string[][] = [];
           for (let i = 0; i < allImages.length; i += PAGES_PER_BATCH) {
             batches.push(allImages.slice(i, i + PAGES_PER_BATCH));
@@ -501,8 +501,10 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
             const stitchedBase64 = await stitchImagesVertically(batch);
 
             const context = `Home Inspection Report (${file.name}), pages ${startPage}–${endPage} of ${pageCount}. ` +
-              `Extract ALL maintenance findings, defects, safety concerns, and recommendations visible on these pages. ` +
-              `Include the inspection section name (e.g., HVAC, Plumbing, Roof, Electrical) for each finding.`;
+              `Extract EVERY INDIVIDUAL finding visible on these pages. Be SPECIFIC: include exact locations (e.g., "left side", "master bathroom", "3-car garage"). ` +
+              `Each checkbox, deficiency, photo annotation, or recommendation = one separate task. ` +
+              `Do NOT consolidate — "rotted wood on main home" and "rotted wood on garage" are TWO tasks. ` +
+              `Use the inspector's exact language, not generic summaries.`;
 
             try {
               const batchResult = await parseHomeInspection(context, stitchedBase64);
@@ -527,13 +529,14 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
             const na = normalizeKey(a);
             const nb = normalizeKey(b);
             if (na.includes(nb) || nb.includes(na)) return true;
-            // Check word overlap — if 70%+ of words match, likely a duplicate
+            // Check word overlap — if 60%+ of significant words match, likely a duplicate
             const wordsA = new Set(a.toLowerCase().split(/\s+/).filter(w => w.length > 3));
             const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(w => w.length > 3));
             if (wordsA.size === 0 || wordsB.size === 0) return false;
             const overlap = [...wordsA].filter(w => wordsB.has(w)).length;
             const smaller = Math.min(wordsA.size, wordsB.size);
-            return smaller > 0 && overlap / smaller >= 0.7;
+            // Use 60% threshold but require at least 3 overlapping words to avoid false positives on short titles
+            return overlap >= 3 && smaller > 0 && overlap / smaller >= 0.6;
           };
 
           const dedupedTasks = allTasks.filter(task => {
@@ -811,7 +814,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                       // Delete existing inspection tasks then proceed
                       if (home) {
                         await supabase.from('maintenance_tasks')
-                          .update({ deleted: true })
+                          .update({ deleted_at: new Date().toISOString() })
                           .eq('home_id', home.id)
                           .like('notes', 'From home inspection:%');
                         setInspectionTasks([]);

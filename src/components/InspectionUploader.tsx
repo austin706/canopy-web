@@ -202,7 +202,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
   const [taskTimeframes, setTaskTimeframes] = useState<Map<number, string>>(new Map());
   const [proRequestTasks, setProRequestTasks] = useState<Set<number>>(new Set());
   const [proRequestsCreated, setProRequestsCreated] = useState(0);
-  const [inspectionFile, setInspectionFile] = useState<File | null>(null);
+  const inspectionFileRef = useRef<File | null>(null);
   const [existingInspection, setExistingInspection] = useState<{ title: string; created_at: string; file_url: string } | null>(null);
   const [checkingExisting, setCheckingExisting] = useState(true);
 
@@ -241,7 +241,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
     }
 
     setFileName(file.name);
-    setInspectionFile(file);
+    inspectionFileRef.current = file;
     setError('');
     setParsing(true);
     setProgress('');
@@ -411,36 +411,43 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
       }
 
       // Save the original inspection file to Supabase Storage + documents table
-      if (inspectionFile) {
+      const fileToUpload = inspectionFileRef.current;
+      if (fileToUpload) {
         try {
-          const storagePath = `${user.id}/inspections/${Date.now()}_${inspectionFile.name}`;
+          const storagePath = `${user.id}/inspections/${Date.now()}_${fileToUpload.name}`;
 
           const { error: uploadError } = await supabase.storage
             .from('documents')
-            .upload(storagePath, inspectionFile, { contentType: inspectionFile.type });
+            .upload(storagePath, fileToUpload, { contentType: fileToUpload.type });
 
           if (!uploadError) {
             const { error: docError } = await supabase.from('documents').insert({
               home_id: home.id,
               user_id: user.id,
-              title: inspectionFile.name,
+              title: fileToUpload.name,
               category: 'inspection',
               file_url: storagePath,
             });
             if (!docError) {
               setExistingInspection({
-                title: inspectionFile.name,
+                title: fileToUpload.name,
                 created_at: new Date().toISOString(),
                 file_url: storagePath,
               });
+            } else {
+              console.error('Document record insert failed:', docError);
+              setError('Tasks saved, but failed to save document record: ' + docError.message);
             }
           } else {
-            console.warn('Inspection file upload failed:', uploadError.message);
+            console.error('Storage upload failed:', uploadError);
+            setError('Tasks saved, but file upload failed: ' + uploadError.message);
           }
-        } catch (docErr) {
-          // Non-blocking — tasks already saved, just log the upload failure
-          console.warn('Failed to save inspection document:', docErr);
+        } catch (docErr: any) {
+          console.error('Failed to save inspection document:', docErr);
+          setError('Tasks saved, but file upload failed: ' + (docErr.message || 'Unknown error'));
         }
+      } else {
+        console.warn('No inspection file reference found — file not saved');
       }
 
       // Handle pro requests — group by category

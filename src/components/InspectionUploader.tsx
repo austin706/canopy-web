@@ -420,13 +420,20 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
             .upload(storagePath, inspectionFile, { contentType: inspectionFile.type });
 
           if (!uploadError) {
-            await supabase.from('documents').insert({
+            const { error: docError } = await supabase.from('documents').insert({
               home_id: home.id,
               user_id: user.id,
               title: inspectionFile.name,
               category: 'inspection',
               file_url: storagePath,
             });
+            if (!docError) {
+              setExistingInspection({
+                title: inspectionFile.name,
+                created_at: new Date().toISOString(),
+                file_url: storagePath,
+              });
+            }
           } else {
             console.warn('Inspection file upload failed:', uploadError.message);
           }

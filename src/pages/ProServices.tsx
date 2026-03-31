@@ -149,7 +149,7 @@ export default function ProServices() {
         .from('pro_requests')
         .select('*, provider:provider_id(business_name)')
         .eq('home_id', home.id)
-        .in('status', ['matched', 'scheduled'])
+        .in('status', ['pending', 'matched', 'scheduled'])
         .order('created_at', { ascending: false });
 
       const linkedRequestIds = new Set(
@@ -162,7 +162,7 @@ export default function ProServices() {
           id: `req-${r.id}`,
           title: `${r.category.charAt(0).toUpperCase() + r.category.slice(1)} Service`,
           date: r.scheduled_date || r.created_at,
-          status: r.status === 'matched' ? 'confirmed' as const : 'scheduled' as const,
+          status: r.status === 'pending' ? 'pending' as const : r.status === 'matched' ? 'confirmed' as const : 'scheduled' as const,
           purpose: `${r.description}${r.provider?.business_name ? ` • Provider: ${r.provider.business_name}` : ''}`,
         }));
 

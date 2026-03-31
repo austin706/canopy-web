@@ -102,7 +102,7 @@ export const deleteEquipment = async (id: string) => {
 
 // --- Tasks ---
 export const getTasks = async (homeId: string) => {
-  const { data, error } = await supabase.from('maintenance_tasks').select('*').eq('home_id', homeId).order('due_date');
+  const { data, error } = await supabase.from('maintenance_tasks').select('*').eq('home_id', homeId).is('deleted_at', null).order('due_date');
   if (error) throw error;
   return data || [];
 };
@@ -133,6 +133,13 @@ export const createTasks = async (tasks: any[]) => {
   const { data, error } = await supabase.from('maintenance_tasks').insert(tasks).select();
   if (error) throw error;
   return data || [];
+};
+
+export const deleteTask = async (taskId: string) => {
+  const { error } = await supabase.from('maintenance_tasks')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', taskId);
+  if (error) throw error;
 };
 
 // --- Maintenance Log ---
@@ -332,7 +339,7 @@ export const getClientEquipment = async (homeId: string) => {
 };
 
 export const getClientTasks = async (homeId: string) => {
-  const { data, error } = await supabase.from('maintenance_tasks').select('*').eq('home_id', homeId).order('due_date');
+  const { data, error } = await supabase.from('maintenance_tasks').select('*').eq('home_id', homeId).is('deleted_at', null).order('due_date');
   if (error) throw error;
   return data || [];
 };

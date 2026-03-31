@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { parseHomeInspection, type InspectionTask } from '@/services/ai';
 import { supabase } from '@/services/supabase';
@@ -203,6 +203,32 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
   const [proRequestTasks, setProRequestTasks] = useState<Set<number>>(new Set());
   const [proRequestsCreated, setProRequestsCreated] = useState(0);
   const [inspectionFile, setInspectionFile] = useState<File | null>(null);
+  const [existingInspection, setExistingInspection] = useState<{ title: string; created_at: string; file_url: string } | null>(null);
+  const [checkingExisting, setCheckingExisting] = useState(true);
+
+  // Check if this home already has an uploaded inspection
+  useEffect(() => {
+    if (!home) return;
+    const check = async () => {
+      try {
+        const { data } = await supabase
+          .from('documents')
+          .select('title, created_at, file_url')
+          .eq('home_id', home.id)
+          .eq('category', 'inspection')
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (data && data.length > 0) {
+          setExistingInspection(data[0]);
+        }
+      } catch (err) {
+        console.warn('Failed to check existing inspection:', err);
+      } finally {
+        setCheckingExisting(false);
+      }
+    };
+    check();
+  }, [home]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -499,6 +525,33 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
 
   // Upload step
   if (step === 'upload') {
+    if (checkingExisting) {
+      return <div style={{ textAlign: 'center', padding: 40, color: Colors.medGray }}>Checking for existing inspection...</div>;
+    }
+
+    if (existingInspection) {
+      return (
+        <div style={{
+          border: `1px solid ${Colors.sage}40`,
+          borderRadius: 12,
+          padding: 32,
+          textAlign: 'center',
+          background: Colors.sageMuted,
+        }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>&#9989;</div>
+          <p style={{ fontSize: 16, fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
+            Inspection Report Uploaded
+          </p>
+          <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 4 }}>
+            {existingInspection.title}
+          </p>
+          <p style={{ fontSize: 12, color: Colors.medGray }}>
+            Uploaded {new Date(existingInspection.created_at).toLocaleDateString()}
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div>
         <div
@@ -734,9 +787,9 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
         {proRequestsCreated > 0 && `, and ${proRequestsCreated} pro service request${proRequestsCreated !== 1 ? 's have' : ' has'} been created`}.
       </p>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-        <button className="btn btn-ghost" onClick={() => { setStep('upload'); setLocalTasks([]); setSelectedTasks(new Set()); setTaskTimeframes(new Map()); setProRequestTasks(new Set()); setProRequestsCreated(0); }}>
-          Upload Another
-        </button>
+        <p style={{ fontSize: 12, color: Colors.medGray }}>
+          Your inspection report has been saved to your documents.
+        </p>
       </div>
     </div>
   );

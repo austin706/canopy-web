@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/utils';
-import { reopenTask as reopenTaskApi } from '@/services/supabase';
+import { reopenTask as reopenTaskApi, deleteTask as deleteTaskApi } from '@/services/supabase';
 import { getDisplayStatus } from '@/services/taskEngine';
 import { supabase } from '@/services/supabase';
 
@@ -35,6 +35,21 @@ export default function TaskDetail() {
     } catch (error) {
       console.error('Error reopening task:', error);
       alert('Failed to reopen task. Please try again.');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!task) return;
+    if (!confirm('Delete this task? It will be removed from your calendar but kept in your home history.')) return;
+    try {
+      await deleteTaskApi(task.id);
+      // Remove from local store
+      const { tasks: currentTasks, setTasks: storeTasks } = useStore.getState();
+      storeTasks(currentTasks.filter(t => t.id !== task.id));
+      navigate(-1);
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      alert('Failed to delete task. Please try again.');
     }
   };
 
@@ -308,7 +323,7 @@ export default function TaskDetail() {
                 Mark as Complete
               </button>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <button
                   className="btn btn-ghost"
                   onClick={() => quickSkipTask(task)}
@@ -369,6 +384,13 @@ export default function TaskDetail() {
                     </div>
                   )}
                 </div>
+                <button
+                  className="btn btn-ghost"
+                  onClick={handleDelete}
+                  style={{ width: '100%', color: '#c0392b' }}
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </div>
@@ -388,9 +410,14 @@ export default function TaskDetail() {
             {task.completed_date && (
               <p className="text-xs text-gray">{new Date(task.completed_date).toLocaleDateString()}</p>
             )}
-            <button className="btn btn-outline" onClick={handleReopen} style={{ marginTop: 12, borderColor: Colors.copper, color: Colors.copper }}>
-              Reopen Task
-            </button>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12 }}>
+              <button className="btn btn-outline" onClick={handleReopen} style={{ borderColor: Colors.copper, color: Colors.copper }}>
+                Reopen Task
+              </button>
+              <button className="btn btn-outline" onClick={handleDelete} style={{ borderColor: '#c0392b', color: '#c0392b' }}>
+                Delete
+              </button>
+            </div>
           </div>
         )}
       </div>

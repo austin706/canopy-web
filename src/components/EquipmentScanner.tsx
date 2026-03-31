@@ -251,11 +251,11 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
       // Compress, resize, and convert to JPEG for the API
       // Tries multiple strategies: createImageBitmap, blob URL, preview data URL
       const base64String = await compressImageFromFile(selectedFile, preview, 1024, 1024, 0.7);
-      console.log('[Scanner] Compressed image size:', Math.round(base64String.length / 1024), 'KB');
+      // Image compressed for API submission
 
       // Call AI service
       const result = await scanEquipmentLabel(base64String);
-      console.log('[Scanner] Scan result:', JSON.stringify(result).slice(0, 500));
+      // Scan complete — check confidence
 
       // Check confidence level for scan quality
       if (result.confidence < 0.3) {
@@ -347,7 +347,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
 
     try {
       const result = await lookupByModelNumber(manualModel.trim(), manualSerial.trim() || undefined);
-      console.log('[Scanner] Manual lookup result:', JSON.stringify(result).slice(0, 500));
+      // Manual lookup complete
 
       const name =
         result.make && result.model

@@ -75,7 +75,7 @@ const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
   try {
     // Use raw fetch instead of supabase.functions.invoke for better error handling
     // and to avoid SDK payload size/timeout issues with large base64 images
-    console.log('[AI] Calling scan-equipment Edge Function, action:', payload.action);
+    // Call scan-equipment edge function
     const response = await fetch(
       `${SUPABASE_URL}/functions/v1/scan-equipment`,
       {

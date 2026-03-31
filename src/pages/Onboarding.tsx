@@ -1065,7 +1065,15 @@ export default function Onboarding() {
                   <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 16, lineHeight: 1.5 }}>
                     Upload your inspection report and Canopy will extract maintenance items and add them to your plan automatically.
                   </p>
-                  <InspectionUploader onTasksCreated={() => {}} />
+                  <InspectionUploader onTasksCreated={(count) => {
+                    if (count > 0) {
+                      // Refresh tasks in store so the plan reflects inspection items
+                      const { tasks } = useStore.getState();
+                      supabase.from('tasks').select('*').eq('home_id', home?.id).then(({ data }) => {
+                        if (data) setTasks(data);
+                      });
+                    }
+                  }} />
                 </div>
               </details>
             </>

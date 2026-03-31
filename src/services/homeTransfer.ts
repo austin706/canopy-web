@@ -92,11 +92,16 @@ export async function acceptTransfer(transferId: string, newOwnerId: string): Pr
   if (homeErr) throw homeErr;
 
   // 3. Clear secure notes (alarm codes, wifi passwords) — don't transfer these
+  // This is a privacy-critical operation: failing to delete means the new owner
+  // could see the previous owner's alarm codes, wifi passwords, etc.
   const { error: notesErr } = await supabase
     .from('secure_notes')
     .delete()
     .eq('home_id', homeId);
-  if (notesErr) console.warn('Failed to clear secure notes:', notesErr);
+  if (notesErr) {
+    console.error('CRITICAL: Failed to clear secure notes during home transfer:', notesErr);
+    throw new Error('Home transfer blocked: could not clear previous owner\'s secure notes. Please try again or contact support.');
+  }
 
   // 4. Update the profile — remove agent linkage for new owner's home
   // (The new owner keeps their own agent if any — we don't touch profiles)

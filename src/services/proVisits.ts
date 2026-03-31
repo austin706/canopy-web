@@ -87,10 +87,14 @@ export async function cancelVisit(visitId: string, reason: string): Promise<{ re
   // Update allocation if forfeited
   if (!rebookable) {
     const visitMonth = visit.visit_month;
-    await supabase.rpc('increment_forfeited_visits', {
+    const { error: rpcError } = await supabase.rpc('increment_forfeited_visits', {
       p_homeowner_id: visit.homeowner_id,
       p_visit_month: visitMonth,
-    }).then(() => {});
+    });
+    if (rpcError) {
+      console.error('Failed to increment forfeited visits:', rpcError);
+      throw new Error('Visit was cancelled but allocation update failed. Please contact support.');
+    }
   }
 
   return { rebookable };

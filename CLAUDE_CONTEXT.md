@@ -120,7 +120,8 @@ Standalone pages (no sidebar):
 - **subscriptionGate.ts**: updated plan descriptions (44 tasks, Pro visit/concierge details)
 
 ### Session 11 continued — Edge Functions + Mobile + Gating:
-- **Edge Functions deployed**: create-checkout (v3), stripe-webhook (v3), create-invoice-payment (v1), create-pro-plus-subscription (v1), send-notification (v1 — 13 email templates via Resend)
+- **Edge Functions deployed**: create-checkout (v3), stripe-webhook (v3), create-invoice-payment (v1), create-pro-plus-subscription (v1), send-notifications (v7 — multi-channel: in-app + Expo push + Resend email with preference checking, quiet hours, batch/cron modes)
+- **NOTE**: `send-notification` (singular, v5) is DEPRECATED — has 13 typed email templates but nothing calls it. Delete from Supabase dashboard.
 - **Layout.tsx**: Pro Visits/Quotes/Invoices sidebar links gated to pro/pro_plus tiers only
 - **Mobile screens**: visits, quotes, invoices, pro-plus — all 4 created
 

@@ -227,15 +227,9 @@ function generateSeasonalTasks(
     if (generatedMonths.has(dedupKey)) continue;
     generatedMonths.add(dedupKey);
 
-    // Check if this specific month already has this task
+    // Check if this specific month already has this task — skip to avoid duplicates
     if (existingTaskTitles.has(template.title)) {
-      // For seasonal, we only skip if there's already a task with this exact title
-      // The first occurrence is enough — we don't need to re-generate for each month
-      // if the user already has it. But we DO generate for future months.
-      // Actually: if ANY task with this title exists, we still want new months.
-      // Let's be smarter: skip based on the dedup key not just title.
-      // For now, only generate the NEXT applicable month (not all 12 months of instances)
-      // to avoid overwhelming the calendar. The engine re-runs periodically.
+      continue;
     }
 
     // Distribute tasks within the month using a hash of the template ID

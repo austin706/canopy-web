@@ -80,6 +80,9 @@ export default function Onboarding() {
   const [joinRequestSent, setJoinRequestSent] = useState(false);
   const [pendingHomeData, setPendingHomeData] = useState<any>(null);
 
+  // Detect "add property" mode — existing user coming back to add another home
+  const isAddPropertyMode = !!(user?.onboarding_complete || home);
+
   // Handle Stripe redirect back
   useEffect(() => {
     const stepParam = searchParams.get('step');
@@ -95,20 +98,26 @@ export default function Onboarding() {
   }, []);
 
   // Prevent back button from logging user out — push state on step changes
+  // In add-property mode, allow back button to return to dashboard
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
-      if (step > 0) {
+      if (step > 1 || (step === 1 && !isAddPropertyMode)) {
         setStep(s => s - 1);
+        window.history.pushState(null, '', '/onboarding');
+      } else if (isAddPropertyMode) {
+        // Existing user hitting back on step 0 or 1 — let them leave
+        navigate('/', { replace: true });
+      } else {
+        // New user at step 0 — stay on onboarding
+        window.history.pushState(null, '', '/onboarding');
       }
-      // If at step 0 (welcome), don't go back — stay on onboarding
-      window.history.pushState(null, '', '/onboarding');
     };
 
     window.history.pushState(null, '', '/onboarding');
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [step]);
+  }, [step, isAddPropertyMode, navigate]);
 
   // Step 1: Address
   const [addressForm, setAddressForm] = useState({
@@ -570,10 +579,12 @@ export default function Onboarding() {
           </div>
 
           <h1 style={{ fontSize: 28, fontWeight: 700, color: Colors.charcoal, marginBottom: 8, lineHeight: 1.2 }}>
-            Welcome to Canopy
+            {isAddPropertyMode ? 'Add a Property' : 'Welcome to Canopy'}
           </h1>
           <p style={{ fontSize: 16, color: Colors.medGray, maxWidth: 420, margin: '0 auto 32px', lineHeight: 1.6 }}>
-            Your home's maintenance co-pilot. We'll help you stay on top of everything your home needs — so nothing falls through the cracks.
+            {isAddPropertyMode
+              ? "Add another property to your Canopy account. We'll set up a personalized maintenance plan for it."
+              : "Your home's maintenance co-pilot. We'll help you stay on top of everything your home needs — so nothing falls through the cracks."}
           </p>
 
           <div style={{
@@ -601,8 +612,17 @@ export default function Onboarding() {
             style={{ padding: '14px 48px', fontSize: 16 }}
             onClick={() => setStep(1)}
           >
-            Let's Set Up Your Home
+            {isAddPropertyMode ? 'Add Another Property' : "Let's Set Up Your Home"}
           </button>
+          {isAddPropertyMode && (
+            <button
+              className="btn btn-ghost mt-sm"
+              style={{ fontSize: 14, color: Colors.medGray }}
+              onClick={() => navigate('/', { replace: true })}
+            >
+              Back to Dashboard
+            </button>
+          )}
         </div>
       )}
 
@@ -675,7 +695,9 @@ export default function Onboarding() {
           </div>
 
           <div className="flex gap-sm mt-lg">
-            <button className="btn btn-ghost" onClick={() => setStep(0)}>Back</button>
+            <button className="btn btn-ghost" onClick={() => isAddPropertyMode ? navigate('/', { replace: true }) : setStep(0)}>
+              {isAddPropertyMode ? 'Cancel' : 'Back'}
+            </button>
             <button className="btn btn-primary" onClick={handleAddressSubmit} disabled={saving}>
               {saving ? 'Saving...' : 'Next'}
             </button>
@@ -1266,9 +1288,9 @@ export default function Onboarding() {
             <CheckCircleIcon size={48} color={Colors.sage} />
           </div>
 
-          <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Welcome to Canopy!</h2>
+          <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>{isAddPropertyMode ? 'Property Added!' : 'Welcome to Canopy!'}</h2>
           <p style={{ fontSize: 16, color: Colors.medGray, maxWidth: 440, margin: '0 auto 32px', lineHeight: 1.6 }}>
-            Your personalized home maintenance plan is ready.
+            {isAddPropertyMode ? 'Your new property is set up and ready to go.' : 'Your personalized home maintenance plan is ready.'}
             {equipmentList.length > 0 && ` We've set up ${equipmentList.length} equipment item${equipmentList.length !== 1 ? 's' : ''} and generated maintenance tasks based on your home profile.`}
             {equipmentList.length === 0 && ' Head to the Equipment tab anytime to scan labels and get tailored maintenance reminders.'}
           </p>

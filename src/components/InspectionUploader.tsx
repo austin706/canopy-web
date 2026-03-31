@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { parseHomeInspection, type InspectionTask } from '@/services/ai';
 import { supabase } from '@/services/supabase';
+import { quickCompleteTask, quickSnoozeTask, quickSkipTask } from '@/services/utils';
 import { Colors } from '@/constants/theme';
+import type { MaintenanceTask } from '@/types';
 
 const MAX_FILE_SIZE_MB = 100;
 const PDF_JS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
@@ -196,7 +199,9 @@ interface Props {
 
 export default function InspectionUploader({ onTasksCreated }: Props) {
   const { user, home, setTasks } = useStore();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const reuploadFileRef = useRef<HTMLInputElement>(null);
   const [parsing, setParsing] = useState(false);
   const [tasks, setLocalTasks] = useState<InspectionTask[]>([]);
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
@@ -215,6 +220,9 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
   const [reportUrl, setReportUrl] = useState<string | null>(null);
   const [showUploadNew, setShowUploadNew] = useState(false);
   const [expandTasks, setExpandTasks] = useState(false);
+  const [showConfirmUploadNew, setShowConfirmUploadNew] = useState(false);
+  const [reuploadingDoc, setReuploadingDoc] = useState(false);
+  const [snoozeTaskId, setSnoozeTaskId] = useState<string | null>(null);
 
   // Check if this home already has an uploaded inspection + load its tasks
   useEffect(() => {
@@ -263,6 +271,70 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
     };
     check();
   }, [home]);
+
+  /** Re-upload just the PDF file to storage (without re-parsing tasks) */
+  const handleReuploadDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user || !home) return;
+
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      setError(`File is too large (${(file.size / 1024 / 1024).toFixed(0)}MB). Maximum size is ${MAX_FILE_SIZE_MB}MB.`);
+      return;
+    }
+
+    setReuploadingDoc(true);
+    setError('');
+    try {
+      const storagePath = `${user.id}/inspections/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(storagePath, file, { contentType: file.type });
+
+      if (uploadError) throw uploadError;
+
+      // Update the existing document record with the new file URL
+      await supabase.from('documents')
+        .update({ file_url: storagePath, title: file.name })
+        .eq('home_id', home.id)
+        .eq('category', 'inspection')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      // Refresh the signed URL
+      const { data: urlData } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(storagePath, 3600);
+      if (urlData?.signedUrl) setReportUrl(urlData.signedUrl);
+
+      setExistingInspection(prev => prev ? { ...prev, file_url: storagePath, title: file.name } : prev);
+    } catch (err: any) {
+      setError(`Failed to upload document: ${err.message}`);
+    } finally {
+      setReuploadingDoc(false);
+    }
+  };
+
+  /** Handle quick actions on inspection tasks and refresh the local list */
+  const handleQuickAction = async (taskId: string, action: 'complete' | 'skip' | 'snooze', days?: number) => {
+    const task = inspectionTasks.find((t: any) => t.id === taskId);
+    if (!task) return;
+    // Cast to MaintenanceTask shape for utils (inspection tasks have the required fields)
+    const mt = task as MaintenanceTask;
+    if (action === 'complete') await quickCompleteTask(mt);
+    else if (action === 'skip') await quickSkipTask(mt);
+    else if (action === 'snooze' && days) await quickSnoozeTask(mt, days);
+    setSnoozeTaskId(null);
+    // Refresh inspection tasks from DB
+    if (home) {
+      const { data } = await supabase
+        .from('maintenance_tasks')
+        .select('id, title, status, priority, category, due_date, estimated_cost, notes')
+        .eq('home_id', home.id)
+        .like('notes', 'From home inspection:%')
+        .order('priority', { ascending: true });
+      if (data) setInspectionTasks(data);
+    }
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -612,9 +684,77 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
       const overdueCount = inspectionTasks.filter(t => t.status === 'overdue').length;
       const upcomingCount = inspectionTasks.filter(t => t.status === 'upcoming' || t.status === 'due').length;
       const totalCost = inspectionTasks.reduce((sum: number, t: any) => sum + (t.estimated_cost || 0), 0);
+      const hasFileUrl = existingInspection.file_url && existingInspection.file_url.length > 0;
 
       return (
         <div>
+          {/* Confirmation dialog for Upload New */}
+          {showConfirmUploadNew && (
+            <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.4)', zIndex: 1000,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+              onClick={() => setShowConfirmUploadNew(false)}
+            >
+              <div style={{
+                background: '#fff', borderRadius: 12, padding: 24, maxWidth: 400, width: '90%',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+              }}
+                onClick={e => e.stopPropagation()}
+              >
+                <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 8px' }}>Upload New Inspection?</h3>
+                <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 20px', lineHeight: 1.5 }}>
+                  This will upload and analyze a new inspection report. What would you like to do with your existing {inspectionTasks.length} inspection tasks?
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      setShowConfirmUploadNew(false);
+                      setShowUploadNew(true);
+                    }}
+                  >
+                    Keep Existing Tasks & Upload New
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: Colors.error }}
+                    onClick={async () => {
+                      // Delete existing inspection tasks then proceed
+                      if (home) {
+                        await supabase.from('maintenance_tasks')
+                          .update({ deleted: true })
+                          .eq('home_id', home.id)
+                          .like('notes', 'From home inspection:%');
+                        setInspectionTasks([]);
+                      }
+                      setShowConfirmUploadNew(false);
+                      setShowUploadNew(true);
+                    }}
+                  >
+                    Clear Tasks & Upload New
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setShowConfirmUploadNew(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Hidden file input for re-uploading just the document */}
+          <input
+            ref={reuploadFileRef}
+            type="file"
+            accept=".pdf"
+            onChange={handleReuploadDocument}
+            style={{ display: 'none' }}
+          />
+
           {/* Report header */}
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
@@ -631,7 +771,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                 Uploaded {new Date(existingInspection.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </p>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               {reportUrl && (
                 <a
                   href={reportUrl}
@@ -643,15 +783,42 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                   View Report
                 </a>
               )}
+              {!hasFileUrl && (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: 12, color: Colors.copper, fontWeight: 600 }}
+                  onClick={() => reuploadFileRef.current?.click()}
+                  disabled={reuploadingDoc}
+                >
+                  {reuploadingDoc ? 'Uploading...' : 'Re-upload PDF'}
+                </button>
+              )}
               <button
                 className="btn btn-ghost btn-sm"
                 style={{ fontSize: 12, color: Colors.medGray }}
-                onClick={() => setShowUploadNew(true)}
+                onClick={() => {
+                  if (inspectionTasks.length > 0) {
+                    setShowConfirmUploadNew(true);
+                  } else {
+                    setShowUploadNew(true);
+                  }
+                }}
               >
                 Upload New
               </button>
             </div>
           </div>
+
+          {/* Error message (e.g., re-upload failure) */}
+          {error && (
+            <div style={{
+              marginBottom: 12, padding: '10px 14px', borderRadius: 8,
+              background: '#FEF3CD', border: '1px solid #FFC107',
+              fontSize: 13, color: '#856404',
+            }}>
+              {error}
+            </div>
+          )}
 
           {/* Task summary stats */}
           {inspectionTasks.length > 0 && (
@@ -699,12 +866,19 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                       : task.status === 'overdue' ? Colors.error
                       : task.status === 'due' ? Colors.warning : Colors.medGray;
                     const priorityColor = PRIORITY_COLORS[task.priority] || Colors.medGray;
+                    const isActive = task.status !== 'completed' && task.status !== 'skipped';
                     return (
                       <div key={task.id} style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '10px 4px', borderBottom: '1px solid #f9f9f7',
                         opacity: task.status === 'completed' ? 0.6 : 1,
-                      }}>
+                        cursor: 'pointer',
+                        transition: 'background 0.15s ease',
+                      }}
+                        onClick={() => navigate(`/task/${task.id}`)}
+                        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#f5f5f3'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                      >
                         <div style={{
                           width: 8, height: 8, borderRadius: '50%', background: priorityColor, flexShrink: 0,
                         }} />
@@ -722,13 +896,73 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                             {task.estimated_cost > 0 && ` · ~$${task.estimated_cost}`}
                           </p>
                         </div>
-                        <span style={{
-                          fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
-                          background: `${statusColor}15`, color: statusColor, textTransform: 'capitalize',
-                          whiteSpace: 'nowrap',
-                        }}>
-                          {task.status}
-                        </span>
+
+                        {/* Quick action buttons */}
+                        {isActive && (
+                          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                            <button
+                              title="Mark complete"
+                              onClick={() => handleQuickAction(task.id, 'complete')}
+                              style={{
+                                width: 28, height: 28, borderRadius: 6, border: `1px solid ${Colors.sage}`,
+                                background: 'transparent', cursor: 'pointer', fontSize: 13, color: Colors.sage,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              }}
+                            >&#10003;</button>
+                            <div style={{ position: 'relative' }}>
+                              <button
+                                title="Snooze"
+                                onClick={() => setSnoozeTaskId(snoozeTaskId === task.id ? null : task.id)}
+                                style={{
+                                  width: 28, height: 28, borderRadius: 6, border: `1px solid ${Colors.copper}`,
+                                  background: 'transparent', cursor: 'pointer', fontSize: 13, color: Colors.copper,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}
+                              >&#9203;</button>
+                              {snoozeTaskId === task.id && (
+                                <div style={{
+                                  position: 'absolute', right: 0, top: 32, background: '#fff', borderRadius: 8,
+                                  boxShadow: '0 4px 16px rgba(0,0,0,0.15)', zIndex: 10, minWidth: 120, overflow: 'hidden',
+                                }}>
+                                  {[{ days: 3, label: '3 days' }, { days: 7, label: '1 week' }, { days: 14, label: '2 weeks' }, { days: 30, label: '1 month' }].map(opt => (
+                                    <button
+                                      key={opt.days}
+                                      onClick={() => handleQuickAction(task.id, 'snooze', opt.days)}
+                                      style={{
+                                        display: 'block', width: '100%', padding: '8px 14px', border: 'none',
+                                        background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: 12,
+                                        color: Colors.charcoal,
+                                      }}
+                                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f5f5f3'; }}
+                                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+                                    >
+                                      {opt.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              title="Skip"
+                              onClick={() => handleQuickAction(task.id, 'skip')}
+                              style={{
+                                width: 28, height: 28, borderRadius: 6, border: `1px solid ${Colors.medGray}`,
+                                background: 'transparent', cursor: 'pointer', fontSize: 13, color: Colors.medGray,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              }}
+                            >&#10005;</button>
+                          </div>
+                        )}
+
+                        {!isActive && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
+                            background: `${statusColor}15`, color: statusColor, textTransform: 'capitalize',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {task.status}
+                          </span>
+                        )}
                       </div>
                     );
                   })}

@@ -34,7 +34,7 @@ import {
  * ROOF LIFESPAN EXPECTATIONS (years)
  * Used to determine when lifecycle alerts should trigger for roofs.
  */
-const ROOF_LIFESPANS: Record<string, { min: number; max: number }> = {
+export const ROOF_LIFESPANS: Record<string, { min: number; max: number }> = {
   asphalt_shingle: { min: 20, max: 25 },
   metal: { min: 40, max: 70 },
   tile: { min: 50, max: 50 },
@@ -364,11 +364,9 @@ export function generateEquipmentLifecycleAlerts(
       const percentageThrough =
         lifespan.min > 0 ? roofAge / lifespan.min : 0;
 
-      if (percentageThrough >= 0.95) {
-        alerts.push(
-          createLifecycleTask('urgent', `Plan Replacement: ${item.name}`, item, home)
-        );
-      } else if (percentageThrough >= 0.8) {
+      // "Plan Replacement" alerts now show on the Equipment page, not as calendar tasks.
+      // Only "Inspect" alerts generate calendar tasks.
+      if (percentageThrough >= 0.8 && percentageThrough < 0.95) {
         alerts.push(
           createLifecycleTask('high', `Inspect: ${item.name}`, item, home)
         );
@@ -389,11 +387,8 @@ export function generateEquipmentLifecycleAlerts(
     const daysInLifespan = item.expected_lifespan_years * 365.25;
     const percentageThrough = daysSinceInstall / daysInLifespan;
 
-    if (percentageThrough >= 0.95) {
-      alerts.push(
-        createLifecycleTask('urgent', `Plan Replacement: ${item.name}`, item, home)
-      );
-    } else if (percentageThrough >= 0.8) {
+    // "Plan Replacement" alerts now show on the Equipment page, not as calendar tasks.
+    if (percentageThrough >= 0.8 && percentageThrough < 0.95) {
       alerts.push(
         createLifecycleTask('high', `Inspect: ${item.name}`, item, home)
       );
@@ -457,6 +452,11 @@ export function getSeasonalRecommendations(
     has_deck: home.has_deck,
     has_sprinkler_system: home.has_sprinkler_system,
     has_fireplace: home.has_fireplace,
+    has_gutters: home.has_gutters,
+    has_fire_extinguisher: home.has_fire_extinguisher,
+    has_water_softener: home.has_water_softener,
+    has_sump_pump: home.has_sump_pump,
+    has_storm_shelter: home.has_storm_shelter,
   };
 
   relevantTemplates.forEach((template) => {

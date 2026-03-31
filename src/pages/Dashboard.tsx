@@ -260,6 +260,20 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))}
+              {tasksToShow.filter(t => { const d = new Date(t.due_date); return d >= monthStart && d <= monthEnd && t.status !== 'completed'; }).length === 0 && tasksToShow.length > 0 && (
+                <div style={{ textAlign: 'center', padding: '32px 20px' }}>
+                  <div style={{
+                    width: 72, height: 72, borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${Colors.sage} 0%, ${Colors.copper} 100%)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 16px', fontSize: 36, color: '#fff',
+                  }}>&#127881;</div>
+                  <h3 style={{ fontSize: 20, fontWeight: 700, color: Colors.charcoal, marginBottom: 8 }}>All tasks complete!</h3>
+                  <p style={{ fontSize: 14, color: Colors.medGray, lineHeight: 1.6, maxWidth: 320, margin: '0 auto' }}>
+                    You've finished every task for this month. Your home is in great shape — enjoy the peace of mind!
+                  </p>
+                </div>
+              )}
               {tasksToShow.length === 0 && (
                 <div className="empty-state"><div className="icon" style={{ color: Colors.success, fontSize: 40, fontWeight: 700 }}>&#10003;</div><h3>All caught up!</h3><p>No tasks due this month.</p></div>
               )}
@@ -343,7 +357,7 @@ export default function Dashboard() {
           <div className="card" style={{ borderLeft: `4px solid ${Colors.error}` }}>
             <div className="flex items-center justify-between mb-sm">
               <p style={{ fontWeight: 600 }}>Emergency Info</p>
-              <button className="btn btn-ghost btn-sm" onClick={() => navigate('/home')}>Edit &rarr;</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => navigate('/home?edit=emergency')}>Edit &rarr;</button>
             </div>
             {home?.water_shutoff_location || home?.main_breaker_location || home?.gas_meter_location ? (
               <div className="flex-col gap-sm">
@@ -378,7 +392,7 @@ export default function Dashboard() {
             ) : (
               <div style={{ textAlign: 'center', padding: '12px 0' }}>
                 <p className="text-sm text-gray">Know where your shutoffs are in an emergency</p>
-                <button className="btn btn-ghost btn-sm mt-sm" style={{ color: Colors.copper }} onClick={() => navigate('/home')}>
+                <button className="btn btn-ghost btn-sm mt-sm" style={{ color: Colors.copper }} onClick={() => navigate('/home?edit=emergency')}>
                   Add Locations
                 </button>
               </div>

@@ -178,6 +178,23 @@ export default function Subscription() {
               ))}
             </ul>
             {tier !== plan.value && !isInquiry && plan.value !== 'free' && (
+              !proAvailable && (plan.value === 'pro' || plan.value === 'pro_plus') ? (
+                <div style={{
+                  marginTop: 12,
+                  padding: '10px 16px',
+                  background: Colors.cream,
+                  borderRadius: 8,
+                  textAlign: 'center',
+                  border: `1px dashed ${Colors.silver}`,
+                }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: Colors.medGray, margin: 0 }}>
+                    Not yet available in your area
+                  </p>
+                  <p style={{ fontSize: 12, color: Colors.medGray, margin: '4px 0 0' }}>
+                    Join the waitlist below to be notified
+                  </p>
+                </div>
+              ) : (
               <button
                 className="btn btn-primary btn-full mt-md"
                 onClick={() => handleStripeCheckout(plan.value)}
@@ -189,6 +206,7 @@ export default function Subscription() {
                     ? 'Upgrade'
                     : 'Change Plan'}
               </button>
+              )
             )}
             {tier !== plan.value && !isInquiry && plan.value === 'free' && tier !== 'free' && (
               <button className="btn btn-ghost btn-full mt-md" onClick={() => setMessage('To downgrade, cancel your subscription from your Stripe billing portal.')}>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import { SALE_PREP_CATEGORIES, SALE_PREP_ITEMS, type SalePrepCategory } from '@/constants/salePrep';
@@ -13,6 +14,7 @@ import {
 } from '@/services/salePrep';
 
 export default function SalePrep() {
+  const navigate = useNavigate();
   const { user, home } = useStore();
   const [prep, setPrep] = useState<HomeSalePrep | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +40,8 @@ export default function SalePrep() {
 
   useEffect(() => { loadPrep(); }, [loadPrep]);
 
+  const [activationMessage, setActivationMessage] = useState('');
+
   const handleActivate = async () => {
     if (!home?.id || !user?.id) return;
     setActivating(true);
@@ -47,7 +51,14 @@ export default function SalePrep() {
 
       // Notify linked agent if exists
       if (user.agent_id && home.address) {
-        await notifyAgentSalePrep(user.id, user.agent_id, home.address);
+        try {
+          await notifyAgentSalePrep(user.id, user.agent_id, home.address);
+          setActivationMessage('Your agent has been notified that you\'re preparing to sell.');
+        } catch {
+          setActivationMessage('Sale prep activated, but we couldn\'t notify your agent. You may want to reach out directly.');
+        }
+      } else if (!user.agent_id) {
+        setActivationMessage('Sale prep activated! Link an agent in your profile to keep them in the loop.');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to activate sale prep');
@@ -173,6 +184,11 @@ export default function SalePrep() {
       </div>
 
       {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: '#E5393520', color: '#C62828', fontSize: 14, marginBottom: 16 }}>{error}</div>}
+      {activationMessage && (
+        <div style={{ padding: '10px 16px', borderRadius: 8, background: Colors.sageMuted, color: Colors.charcoal, fontSize: 14, marginBottom: 16, borderLeft: `4px solid ${Colors.sage}` }}>
+          {activationMessage}
+        </div>
+      )}
 
       {/* Progress bar */}
       <div className="card" style={{ marginBottom: 20, padding: 16 }}>
@@ -300,17 +316,66 @@ export default function SalePrep() {
         })}
       </div>
 
+      {/* Sale Documents — Home Token & Home Report PDF */}
+      <div style={{ marginTop: 24 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: Colors.charcoal }}>Sale Documents</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div
+            className="card card-clickable"
+            onClick={() => navigate('/home-report')}
+            style={{ cursor: 'pointer', padding: 16, textAlign: 'center' }}
+          >
+            <div style={{ fontSize: 28, marginBottom: 8 }}>&#128196;</div>
+            <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, marginBottom: 4 }}>Home Report PDF</p>
+            <p style={{ fontSize: 12, color: Colors.medGray }}>Generate a full home report for buyers and agents</p>
+          </div>
+          <div
+            className="card card-clickable"
+            onClick={() => navigate('/transfer')}
+            style={{ cursor: 'pointer', padding: 16, textAlign: 'center' }}
+          >
+            <div style={{ fontSize: 28, marginBottom: 8 }}>&#127968;</div>
+            <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, marginBottom: 4 }}>Home Token</p>
+            <p style={{ fontSize: 12, color: Colors.medGray }}>Transfer your home's maintenance history to the new owner</p>
+          </div>
+        </div>
+      </div>
+
       {/* Completion CTA */}
       {progressPct === 100 && (
         <div className="card" style={{ marginTop: 24, padding: 24, textAlign: 'center', background: Colors.sageMuted, border: `1px solid ${Colors.sage}` }}>
-          <div style={{ fontSize: 36, marginBottom: 8 }}>🎉</div>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>&#127881;</div>
           <h3 style={{ fontSize: 18, color: Colors.charcoal, marginBottom: 8 }}>All Done!</h3>
           <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 16 }}>
             Your home is ready for the market. Great work!
           </p>
-          <button className="btn btn-primary" onClick={() => handleClose('completed')}>
-            Mark Sale Prep Complete
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button className="btn btn-primary" onClick={() => handleClose('completed')} style={{ width: '100%' }}>
+              Mark Sale Prep Complete
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => navigate('/transfer')}
+              style={{ width: '100%' }}
+            >
+              I'm Ready — Initiate Home Transfer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Ready to transfer — show even before 100% */}
+      {progressPct < 100 && progressPct >= 50 && (
+        <div className="card" style={{ marginTop: 24, padding: 16, borderLeft: `4px solid ${Colors.copper}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, marginBottom: 2 }}>Ready to transfer early?</p>
+              <p style={{ fontSize: 12, color: Colors.medGray }}>You can initiate the home token transfer at any time</p>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/transfer')} style={{ color: Colors.copper, whiteSpace: 'nowrap' }}>
+              Transfer &rarr;
+            </button>
+          </div>
         </div>
       )}
 

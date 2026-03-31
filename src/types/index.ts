@@ -47,7 +47,8 @@ export interface ProProvider {
   bio?: string;
   years_experience?: number;
   service_categories: string[];
-  service_area_miles: number;
+  service_area_miles: number; // legacy
+  service_area_zips?: string[];
   max_jobs_per_day: number;
   is_available: boolean;
   schedule?: any;
@@ -89,6 +90,8 @@ export interface Home {
   has_gutters: boolean;
   has_fire_extinguisher: boolean;
   has_water_softener: boolean;
+  has_sump_pump: boolean;
+  has_storm_shelter: boolean;
   fireplace_type?: 'wood_burning' | 'gas_starter' | 'gas';
   fireplace_count?: number;
   countertop_type?: 'granite' | 'marble' | 'quartz' | 'butcher_block' | 'laminate' | 'tile' | 'concrete' | 'stainless_steel';
@@ -327,6 +330,10 @@ export interface GiftCode {
   redeemed_by?: string;
   redeemed_at?: string;
   expires_at?: string;
+  client_email?: string;
+  client_name?: string;
+  delivery_method?: 'code' | 'direct';
+  pending_home?: any;
   created_at: string;
 }
 

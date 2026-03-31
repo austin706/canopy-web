@@ -590,15 +590,37 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
 
           {parsing ? (
             <>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>&#128270;</div>
+              <style>{`
+                @keyframes inspectionSpin {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+                }
+                @keyframes inspectionPulse {
+                  0%, 100% { opacity: 0.6; }
+                  50% { opacity: 1; }
+                }
+              `}</style>
+              <div style={{
+                width: 64, height: 64,
+                borderRadius: '50%',
+                border: `3px dashed ${Colors.copper}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                animation: 'inspectionSpin 3s linear infinite',
+                marginBottom: 16,
+              }}>
+                <span style={{ fontSize: 28, animation: 'none' }}>&#128270;</span>
+              </div>
               <p style={{ fontSize: 16, fontWeight: 600, color: Colors.charcoal }}>
                 Analyzing inspection report...
               </p>
               <p style={{ fontSize: 13, color: Colors.medGray, marginTop: 4 }}>
                 {fileName}
               </p>
-              <p style={{ fontSize: 13, color: Colors.copper, fontWeight: 500 }}>
-                {progress || 'AI is reading and extracting maintenance items. This may take a moment.'}
+              <p style={{ fontSize: 13, color: Colors.copper, fontWeight: 500, animation: 'inspectionPulse 2s ease-in-out infinite' }}>
+                {progress || 'AI is reading and extracting maintenance items...'}
+              </p>
+              <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 12, fontStyle: 'italic' }}>
+                Please stay on this page while analysis completes
               </p>
             </>
           ) : (

@@ -1422,6 +1422,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 15,
     estimated_cost: 0,
     applicable_regions: ['midwest', 'north'],
+    requires_home_feature: 'has_sump_pump',
   },
 
   // ═══ NEW TASKS ═══
@@ -1491,6 +1492,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 20,
     estimated_cost: 0,
     applicable_regions: ['midwest', 'south'],
+    requires_home_feature: 'has_storm_shelter',
   },
   {
     id: 'caulk-windows-doors',

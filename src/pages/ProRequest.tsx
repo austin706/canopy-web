@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { createProRequest, getProRequests, supabase } from '@/services/supabase';
+import { createProRequest, getProRequests, supabase, sendNotification } from '@/services/supabase';
 import { isProOrHigher } from '@/services/subscriptionGate';
 import { Colors, StatusColors } from '@/constants/theme';
 import type { ProRequest } from '@/types';
@@ -50,6 +50,21 @@ export default function ProRequest() {
     try {
       const r = await createProRequest({ id: crypto.randomUUID(), user_id: user.id, home_id: home.id, ...form, status: 'pending', created_at: new Date().toISOString() });
       setRequests(prev => [r, ...prev]);
+
+      // Notify admins about the new pro service request
+      try {
+        const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin');
+        for (const admin of (admins || [])) {
+          await sendNotification({
+            user_id: admin.id,
+            title: `New Pro Request: ${form.service_type}`,
+            body: `${user.full_name || user.email} submitted a ${form.service_type} request.${form.preferred_date ? ` Preferred date: ${new Date(form.preferred_date).toLocaleDateString()}.` : ''}`,
+            category: 'admin',
+            action_url: '/admin/pro-requests',
+          });
+        }
+      } catch { /* Non-blocking */ }
+
       setMessage('Request submitted!');
       setForm({ service_type: SERVICE_TYPES[0], description: '', preferred_date: '' });
       setTimeout(() => setMessage(''), 3000);

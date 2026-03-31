@@ -1,4 +1,4 @@
-import { supabase } from '@/services/supabase';
+import { supabase, sendNotification } from '@/services/supabase';
 
 export interface HomeTransfer {
   id: string;
@@ -154,19 +154,15 @@ export async function notifyBuyerOfTransfer(
     .maybeSingle();
 
   if (existingUser) {
-    // Create in-app notification
-    await supabase.from('notifications').insert({
+    // Send notification via edge function (in-app + email + push)
+    await sendNotification({
       user_id: existingUser.id,
       title: 'Home Record Transfer',
       body: `${fromUserName} wants to transfer their home record at ${homeAddress} to you. This includes the full maintenance history, equipment inventory, and inspection reports.`,
       category: 'general',
       action_url: `/transfer/accept?token=${transferToken}`,
-      read: false,
     });
   }
-
-  // Email notification would be sent via send-notifications edge function
-  // For now, the in-app notification covers existing users
 }
 
 /** Record an edit to a maintenance log entry */

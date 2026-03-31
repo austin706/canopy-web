@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/services/supabase';
+import { supabase, getNotifications, markNotificationRead } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 
@@ -56,6 +56,8 @@ export default function ProPortal() {
   const [stats, setStats] = useState<JobStats>({ upcomingVisits: 0, completedThisMonth: 0, assignedClients: 0 });
   const [myClients, setMyClients] = useState<AssignedClient[]>([]);
   const [upcomingVisits, setUpcomingVisits] = useState<UpcomingVisit[]>([]);
+
+  const [proNotifications, setProNotifications] = useState<any[]>([]);
 
   // Admin mode
   const [allProviders, setAllProviders] = useState<ProProvider[]>([]);
@@ -298,6 +300,12 @@ export default function ProPortal() {
         completedThisMonth: completedRes.count || 0,
         assignedClients: clientCount,
       });
+
+      // Load notifications for this provider
+      try {
+        const notifs = await getNotifications(authUser.user.id);
+        setProNotifications(notifs);
+      } catch {}
     } catch (error) {
       console.error('Error loading dashboard:', error);
     } finally {
@@ -628,7 +636,7 @@ export default function ProPortal() {
       )}
 
       {/* My Zip Codes */}
-      <div className="card" style={{ padding: '16px 20px', backgroundColor: Colors.cream }}>
+      <div className="card" style={{ padding: '16px 20px', backgroundColor: Colors.cream, marginBottom: 32 }}>
         <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, margin: '0 0 6px' }}>My Service Area</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {(provider?.zip_codes || []).length > 0 ? (
@@ -643,6 +651,73 @@ export default function ProPortal() {
           )}
         </div>
       </div>
+
+      {/* Notifications */}
+      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>
+        Alerts
+        {proNotifications.filter(n => !n.read).length > 0 && (
+          <span style={{
+            marginLeft: 8, padding: '2px 8px', borderRadius: 10, fontSize: 12,
+            backgroundColor: `${Colors.error}20`, color: Colors.error, fontWeight: 600,
+          }}>
+            {proNotifications.filter(n => !n.read).length} new
+          </span>
+        )}
+      </h2>
+      {proNotifications.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 32, color: Colors.medGray }}>
+          <p>No alerts yet. You'll be notified here when you're assigned new service requests.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {proNotifications.slice(0, 10).map(n => (
+            <div
+              key={n.id}
+              className="card"
+              style={{
+                padding: '12px 16px',
+                borderLeft: `3px solid ${n.read ? Colors.lightGray : Colors.copper}`,
+                opacity: n.read ? 0.7 : 1,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <p style={{ fontSize: 14, fontWeight: n.read ? 500 : 700, margin: 0 }}>{n.title}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11, color: Colors.medGray }}>
+                    {n.created_at ? new Date(n.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}
+                  </span>
+                  {!n.read && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ fontSize: 11, padding: '2px 8px' }}
+                      onClick={async () => {
+                        try {
+                          await markNotificationRead(n.id);
+                          setProNotifications(prev =>
+                            prev.map(notif => notif.id === n.id ? { ...notif, read: true } : notif)
+                          );
+                        } catch {}
+                      }}
+                    >
+                      Mark read
+                    </button>
+                  )}
+                </div>
+              </div>
+              <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>{n.body}</p>
+              {n.action_url && (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: 12, padding: '4px 0', color: Colors.copper, marginTop: 4 }}
+                  onClick={() => navigate(n.action_url)}
+                >
+                  View details &rarr;
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

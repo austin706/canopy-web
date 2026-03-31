@@ -1,4 +1,4 @@
-import { supabase } from '@/services/supabase';
+import { supabase, sendNotification } from '@/services/supabase';
 
 export interface HomeSalePrep {
   id: string;
@@ -97,18 +97,41 @@ export async function notifyAgentSalePrep(
   agentId: string,
   homeAddress: string
 ): Promise<void> {
-  // Insert in-app notification for the agent
-  const { error: notifError } = await supabase
-    .from('notifications')
-    .insert({
-      user_id: agentId,
+  // Resolve agent's auth uid (profiles.id) from agents table id
+  // agents.id != profiles.id — we need the profile id for notification delivery
+  let notifyUserId = agentId;
+  try {
+    const { data: agentData } = await supabase
+      .from('agents')
+      .select('email')
+      .eq('id', agentId)
+      .single();
+    if (agentData?.email) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', agentData.email)
+        .single();
+      if (profileData?.id) {
+        notifyUserId = profileData.id;
+      }
+    }
+  } catch {
+    // Fall back to agentId if lookup fails
+  }
+
+  // Send notification via edge function (in-app + email + push)
+  try {
+    await sendNotification({
+      user_id: notifyUserId,
       title: 'Client preparing to sell',
       body: `Your client is preparing their home at ${homeAddress} for sale. They've activated the Canopy Sale Prep checklist.`,
-      category: 'general',
+      category: 'agent',
       action_url: '/agent-portal',
-      read: false,
     });
-  if (notifError) console.warn('Failed to create agent notification:', notifError);
+  } catch (e) {
+    console.warn('Failed to send agent notification:', e);
+  }
 
   // Mark that the agent was notified on the sale prep record
   const { error: updateError } = await supabase

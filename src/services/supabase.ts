@@ -391,6 +391,46 @@ export const markAllNotificationsRead = async (userId: string) => {
   if (error) throw error;
 };
 
+/**
+ * Send a notification via the send-notifications edge function.
+ * This creates an in-app notification AND sends email + push if configured.
+ * Always use this instead of direct notifications table inserts.
+ */
+export const sendNotification = async (params: {
+  user_id: string;
+  title: string;
+  body: string;
+  category?: string;
+  action_url?: string;
+  data?: Record<string, any>;
+}): Promise<{ pushed: boolean; saved: boolean; emailed: boolean }> => {
+  const { data, error } = await supabase.functions.invoke('send-notifications', {
+    body: {
+      user_id: params.user_id,
+      title: params.title,
+      body: params.body,
+      category: params.category || 'general',
+      action_url: params.action_url,
+      data: params.data,
+    },
+  });
+  if (error) {
+    console.error('sendNotification edge function error:', error);
+    // Fallback: try direct insert so at least the in-app notification is created
+    const { error: insertError } = await supabase.from('notifications').insert({
+      user_id: params.user_id,
+      title: params.title,
+      body: params.body,
+      category: params.category || 'general',
+      action_url: params.action_url || null,
+      read: false,
+    });
+    if (insertError) console.error('Fallback notification insert failed:', insertError);
+    return { pushed: false, saved: !insertError, emailed: false };
+  }
+  return data || { pushed: false, saved: true, emailed: false };
+};
+
 // --- Notification Preferences ---
 export const getNotificationPreferences = async (userId: string) => {
   const { data, error } = await supabase.from('profiles').select('notification_preferences').eq('id', userId).single();

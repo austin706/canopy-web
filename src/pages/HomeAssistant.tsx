@@ -60,6 +60,8 @@ export default function HomeAssistant() {
       if (home.has_pool) parts.push('Has pool');
       if (home.has_fireplace) parts.push('Has fireplace');
       if (home.has_sprinkler_system) parts.push('Has sprinkler system');
+      if (home.has_sump_pump) parts.push('Has sump pump');
+      if (home.has_storm_shelter) parts.push('Has storm shelter');
     }
     if (equipment && equipment.length > 0) {
       const eqList = equipment.map(e =>

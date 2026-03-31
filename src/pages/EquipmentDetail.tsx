@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertEquipment, deleteEquipment as deleteEquipApi } from '@/services/supabase';
+import { upsertEquipment, deleteEquipment as deleteEquipApi, createProRequest } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
+import { ROOF_LIFESPANS } from '@/services/taskEngine';
 import type { Equipment as EquipmentType, EquipmentCategory } from '@/types';
 
 const CATEGORIES: { value: EquipmentCategory; label: string }[] = [
@@ -21,11 +22,13 @@ const CATEGORIES: { value: EquipmentCategory; label: string }[] = [
 export default function EquipmentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { equipment, updateEquipment, removeEquipment } = useStore();
+  const { user, home, equipment, updateEquipment, removeEquipment } = useStore();
 
   const item = equipment.find(e => e.id === id);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [requestingPro, setRequestingPro] = useState(false);
+  const [proRequested, setProRequested] = useState(false);
 
   // Edit form state
   const [editForm, setEditForm] = useState({
@@ -57,11 +60,42 @@ export default function EquipmentDetail() {
     );
   }
 
-  const age = item.install_date
-    ? Math.floor((Date.now() - new Date(item.install_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
-    : 0;
-  const expectedLifespan = item.expected_lifespan_years || 15;
+  // Compute lifespan — roof uses ROOF_LIFESPANS, others use install_date + lifespan
+  let age = 0;
+  let expectedLifespan = item.expected_lifespan_years || 15;
+  if (item.category === 'roof' && home?.roof_type) {
+    const roofData = ROOF_LIFESPANS[home.roof_type as keyof typeof ROOF_LIFESPANS];
+    if (roofData) {
+      age = home.roof_age_years ?? 0;
+      expectedLifespan = roofData.min;
+    }
+  } else if (item.install_date) {
+    age = Math.floor((Date.now() - new Date(item.install_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+  }
   const lifespanPercent = Math.min((age / expectedLifespan) * 100, 100);
+  const isReplacementDue = lifespanPercent >= 95;
+  const isInspectionDue = lifespanPercent >= 80 && lifespanPercent < 95;
+
+  const handleGetProQuote = async () => {
+    if (!user || !home) return;
+    setRequestingPro(true);
+    try {
+      await createProRequest({
+        id: crypto.randomUUID(),
+        user_id: user.id,
+        home_id: home.id,
+        service_type: item.category === 'hvac' ? 'hvac' : item.category === 'plumbing' ? 'plumbing' : item.category === 'electrical' ? 'electrical' : 'general',
+        description: `Equipment replacement quote: ${item.name}${item.make ? ` (${item.make} ${item.model || ''})` : ''}. Currently at ${Math.round(lifespanPercent)}% of expected lifespan (${age}yr / ${expectedLifespan}yr).`,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      });
+      setProRequested(true);
+    } catch (err: any) {
+      alert('Failed to submit request: ' + (err.message || 'Unknown error'));
+    } finally {
+      setRequestingPro(false);
+    }
+  };
 
   const getLifespanColor = () => {
     if (lifespanPercent < 50) return Colors.sage;
@@ -268,6 +302,69 @@ export default function EquipmentDetail() {
       </div>
 
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
+        {/* Replacement / Inspection Alert Banner */}
+        {isReplacementDue && (
+          <div style={{
+            background: 'linear-gradient(135deg, #C62828 0%, #D84315 100%)',
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 20,
+            color: '#fff',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span style={{ fontSize: 22 }}>&#9888;</span>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Replacement Due</span>
+            </div>
+            <p style={{ fontSize: 14, margin: '0 0 4px', opacity: 0.95, lineHeight: 1.5 }}>
+              Your {item.name} is at <strong>{Math.round(lifespanPercent)}%</strong> of its expected {expectedLifespan}-year lifespan ({age} years old).
+            </p>
+            <p style={{ fontSize: 13, margin: '0 0 16px', opacity: 0.8, lineHeight: 1.5 }}>
+              Equipment past its expected lifespan is more likely to fail unexpectedly. Get a pro quote for replacement before it becomes an emergency.
+            </p>
+            {proRequested ? (
+              <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: '10px 16px', fontSize: 14, fontWeight: 600 }}>
+                Pro quote requested — check Pro Services for updates
+              </div>
+            ) : (
+              <button
+                onClick={handleGetProQuote}
+                disabled={requestingPro}
+                style={{
+                  background: '#fff',
+                  color: Colors.error,
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '12px 24px',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  width: '100%',
+                }}
+              >
+                {requestingPro ? 'Submitting...' : 'Get Pro Replacement Quote'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {isInspectionDue && (
+          <div style={{
+            background: '#FFF3E0',
+            border: `1px solid ${Colors.warning}`,
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 20,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <span style={{ fontSize: 18 }}>&#128269;</span>
+              <span style={{ fontWeight: 700, fontSize: 15, color: Colors.charcoal }}>Inspection Recommended</span>
+            </div>
+            <p style={{ fontSize: 13, color: Colors.medGray, margin: 0, lineHeight: 1.5 }}>
+              Your {item.name} is at {Math.round(lifespanPercent)}% of its expected lifespan. Schedule a professional inspection to assess its condition and plan ahead.
+            </p>
+          </div>
+        )}
+
         {/* Basic Info */}
         <div className="card mb-lg">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>

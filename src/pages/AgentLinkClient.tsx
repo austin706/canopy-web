@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import { supabase } from '@/services/supabase';
+import { supabase, sendNotification } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 
 /**
@@ -129,15 +129,13 @@ export default function AgentLinkClient() {
       });
       if (insertErr) throw insertErr;
 
-      // Send notification to user
-      await supabase.from('notifications').insert({
-        id: crypto.randomUUID(),
+      // Send notification to user (in-app + email + push)
+      await sendNotification({
         user_id: searchResult.id,
         title: 'Agent Link Request',
         body: `${user.full_name || 'An agent'} has requested to link with your account. Go to My Agent to approve or decline.`,
         category: 'agent',
-        read: false,
-        created_at: new Date().toISOString(),
+        action_url: '/my-agent',
       });
 
       setSent(true);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAllProRequests, updateProRequest, getAllProProviders } from '@/services/supabase';
+import { getAllProRequests, updateProRequest, getAllProProviders, sendNotification, supabase } from '@/services/supabase';
 import { StatusColors, Colors } from '@/constants/theme';
 
 interface Provider {
@@ -29,6 +29,31 @@ export default function AdminProRequests() {
     try {
       await updateProRequest(id, { status });
       setRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+
+      // Notify homeowner about meaningful status changes
+      const request = requests.find(r => r.id === id);
+      if (request?.user_id && (status === 'scheduled' || status === 'completed')) {
+        const messages: Record<string, { title: string; body: string }> = {
+          scheduled: {
+            title: 'Service Scheduled',
+            body: `Your ${request.category || request.service_type} service has been scheduled. Your provider will reach out with the exact time.`,
+          },
+          completed: {
+            title: 'Service Completed',
+            body: `Your ${request.category || request.service_type} service has been marked as completed. Thank you for using Canopy Pro!`,
+          },
+        };
+        const msg = messages[status];
+        if (msg) {
+          sendNotification({
+            user_id: request.user_id,
+            title: msg.title,
+            body: msg.body,
+            category: 'pro_service',
+            action_url: '/pro-request',
+          }).catch(() => {});
+        }
+      }
     } catch (e: any) { alert(e.message); }
   };
 
@@ -37,6 +62,34 @@ export default function AdminProRequests() {
     try {
       await updateProRequest(requestId, { provider_id: providerId, status: 'matched' });
       setRequests(prev => prev.map(r => r.id === requestId ? { ...r, provider_id: providerId, status: 'matched' } : r));
+
+      // Notify the homeowner that a provider has been assigned
+      const request = requests.find(r => r.id === requestId);
+      const provider = providers.find(p => p.id === providerId);
+      if (request?.user_id) {
+        sendNotification({
+          user_id: request.user_id,
+          title: 'Pro Provider Assigned',
+          body: `${provider?.business_name || provider?.contact_name || 'A pro provider'} has been assigned to your ${request.category || request.service_type} request. They will be in touch to schedule service.`,
+          category: 'pro_service',
+          action_url: '/pro-request',
+        }).catch(() => {});
+      }
+
+      // Notify the provider about the new assignment
+      if (provider) {
+        const { data: providerProfile } = await supabase
+          .from('pro_providers').select('user_id').eq('id', providerId).single();
+        if (providerProfile?.user_id) {
+          sendNotification({
+            user_id: providerProfile.user_id,
+            title: 'New Service Assignment',
+            body: `You've been assigned a ${request?.category || request?.service_type || 'service'} request from ${request?.user?.full_name || 'a homeowner'}.${request?.preferred_date ? ` Preferred date: ${new Date(request.preferred_date).toLocaleDateString()}.` : ''}`,
+            category: 'pro_service',
+            action_url: '/pro-portal',
+          }).catch(() => {});
+        }
+      }
     } catch (e: any) { alert(e.message); }
   };
 

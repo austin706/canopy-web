@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { upsertEquipment, deleteEquipment as deleteEquipApi, getEquipment, createTasks } from '@/services/supabase';
 import { getEquipmentLimit } from '@/services/subscriptionGate';
@@ -6,7 +7,22 @@ import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/servic
 import EquipmentScanner from '@/components/EquipmentScanner';
 import { Colors } from '@/constants/theme';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
+import { ROOF_LIFESPANS } from '@/services/taskEngine';
 import type { Equipment as EquipmentType, EquipmentCategory } from '@/types';
+
+/** Compute lifespan percentage for an equipment item */
+function getLifespanPct(item: EquipmentType, home: any): number | null {
+  // Roof special handling
+  if (item.category === 'roof' && home?.roof_type) {
+    const lifespan = ROOF_LIFESPANS[home.roof_type as keyof typeof ROOF_LIFESPANS];
+    if (!lifespan) return null;
+    const roofAge = home.roof_age_years ?? 0;
+    return lifespan.min > 0 ? (roofAge / lifespan.min) * 100 : 0;
+  }
+  if (!item.install_date || !item.expected_lifespan_years) return null;
+  const age = (Date.now() - new Date(item.install_date).getTime()) / (365.25 * 86400000);
+  return Math.min(100, (age / item.expected_lifespan_years) * 100);
+}
 
 /** Common equipment items to guide users on what to scan */
 const SCAN_SUGGESTIONS = [
@@ -35,6 +51,7 @@ const CATEGORIES: { value: EquipmentCategory; label: string; abbr: string }[] = 
 
 export default function Equipment() {
   const { user, home, equipment, tasks, setEquipment, addEquipment, removeEquipment, setTasks } = useStore();
+  const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [filter, setFilter] = useState<string>('all');
@@ -295,35 +312,96 @@ export default function Equipment() {
           </div>
         </div>
       ) : (
+        <>
+        {/* Replacement Alerts Summary */}
+        {(() => {
+          const alerts = equipment.filter(item => {
+            const pct = getLifespanPct(item, home);
+            return pct !== null && pct >= 95;
+          });
+          if (alerts.length === 0) return null;
+          return (
+            <div style={{
+              background: '#FFF3E0',
+              border: `1px solid ${Colors.warning}`,
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 20,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <span style={{ fontSize: 20 }}>&#9888;</span>
+                <span style={{ fontWeight: 700, fontSize: 15, color: Colors.charcoal }}>
+                  {alerts.length} item{alerts.length > 1 ? 's' : ''} nearing end of life
+                </span>
+              </div>
+              <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 12px 0', lineHeight: 1.5 }}>
+                {alerts.map(a => a.name).join(', ')} — tap an item below for details and to request a pro quote.
+              </p>
+            </div>
+          );
+        })()}
+
         <div className="grid-2">
-          {filtered.map(item => (
-            <div key={item.id} className="card">
-              <div className="equip-card">
+          {filtered.map(item => {
+            const pct = getLifespanPct(item, home);
+            const isReplacement = pct !== null && pct >= 95;
+            const isInspect = pct !== null && pct >= 80 && pct < 95;
+            return (
+            <div key={item.id} className="card" onClick={() => navigate(`/equipment/${item.id}`)} style={{ cursor: 'pointer', position: 'relative', borderLeft: isReplacement ? `4px solid ${Colors.error}` : isInspect ? `4px solid ${Colors.warning}` : undefined }}>
+              {isReplacement && (
+                <div style={{
+                  background: Colors.error,
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: '3px 8px',
+                  borderRadius: '0 0 8px 0',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                }}>REPLACEMENT DUE</div>
+              )}
+              {isInspect && !isReplacement && (
+                <div style={{
+                  background: Colors.warning,
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: '3px 8px',
+                  borderRadius: '0 0 8px 0',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                }}>SCHEDULE INSPECTION</div>
+              )}
+              <div className="equip-card" style={{ paddingTop: isReplacement || isInspect ? 24 : undefined }}>
                 <div className="equip-icon" style={{ background: Colors.copperMuted, fontSize: 11, fontWeight: 700, color: Colors.copper }}>{catAbbr(item.category)}</div>
                 <div className="equip-info">
                   <div className="equip-name">{item.name}</div>
                   <div className="equip-detail">{item.make} {item.model}</div>
                   {item.install_date && <div className="equip-detail">Installed: {new Date(item.install_date).toLocaleDateString()}</div>}
                   {item.location_in_home && <div className="equip-detail">Location: {item.location_in_home}</div>}
-                  {item.expected_lifespan_years && item.install_date && (() => {
-                    const age = (Date.now() - new Date(item.install_date).getTime()) / (365.25 * 86400000);
-                    const pct = Math.min(100, Math.round((age / item.expected_lifespan_years) * 100));
+                  {pct !== null && (() => {
+                    const rounded = Math.round(pct);
+                    const ageYrs = item.install_date ? Math.round((Date.now() - new Date(item.install_date).getTime()) / (365.25 * 86400000)) : 0;
+                    const lifespan = item.expected_lifespan_years || 15;
                     return (
                       <div className="mt-sm">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray">Lifespan: {pct}%</span>
-                          <span className="text-xs" style={{ color: pct > 80 ? Colors.error : pct > 60 ? Colors.warning : Colors.sage }}>{Math.round(age)}yr / {item.expected_lifespan_years}yr</span>
+                          <span className="text-xs text-gray">Lifespan: {rounded}%</span>
+                          <span className="text-xs" style={{ color: rounded > 80 ? Colors.error : rounded > 60 ? Colors.warning : Colors.sage }}>{ageYrs}yr / {lifespan}yr</span>
                         </div>
-                        <div className="progress-bar mt-sm"><div className="progress-fill" style={{ width: `${pct}%`, background: pct > 80 ? Colors.error : pct > 60 ? Colors.warning : Colors.sage }} /></div>
+                        <div className="progress-bar mt-sm"><div className="progress-fill" style={{ width: `${rounded}%`, background: rounded > 80 ? Colors.error : rounded > 60 ? Colors.warning : Colors.sage }} /></div>
                       </div>
                     );
                   })()}
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(item.id)} title="Delete" style={{ color: Colors.error }}>Delete</button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
+        </>
       )}
       </>
       )}

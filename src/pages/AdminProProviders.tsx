@@ -14,6 +14,7 @@ const SERVICE_CATEGORIES = [
 const emptyForm = {
   business_name: '', contact_name: '', email: '', phone: '',
   service_categories: [] as string[], service_area_miles: 25,
+  service_area_zips: '' as string,
   license_number: '', bio: '', years_experience: 0,
   is_available: true,
 };
@@ -51,6 +52,7 @@ export default function AdminProProviders() {
       phone: provider.phone || '',
       service_categories: provider.service_categories || [],
       service_area_miles: provider.service_area_miles || 25,
+      service_area_zips: (provider.service_area_zips || []).join(', '),
       license_number: provider.license_number || '',
       bio: provider.bio || '',
       years_experience: provider.years_experience || 0,
@@ -63,11 +65,17 @@ export default function AdminProProviders() {
     if (!form.business_name || !form.contact_name) return;
     setSaving(true);
     try {
+      const payload = {
+        ...form,
+        service_area_zips: form.service_area_zips
+          ? form.service_area_zips.split(',').map(z => z.trim()).filter(Boolean)
+          : [],
+      };
       if (editing) {
-        const updated = await updateProProvider(editing.id, form);
+        const updated = await updateProProvider(editing.id, payload);
         setProviders(prev => prev.map(p => p.id === editing.id ? updated : p));
       } else {
-        const created = await createProProvider({ id: crypto.randomUUID(), ...form, created_at: new Date().toISOString() });
+        const created = await createProProvider({ id: crypto.randomUUID(), ...payload, created_at: new Date().toISOString() });
         setProviders(prev => [...prev, created]);
       }
       setShowModal(false);
@@ -220,8 +228,9 @@ export default function AdminProProviders() {
               </div>
             </div>
             <div className="form-group">
-              <label>Service Area (miles)</label>
-              <input className="form-input" type="number" min="1" value={form.service_area_miles} onChange={e => setForm({ ...form, service_area_miles: parseInt(e.target.value) || 25 })} style={{ maxWidth: 200 }} />
+              <label>Service Area Zip Codes</label>
+              <input className="form-input" value={form.service_area_zips} onChange={e => setForm({ ...form, service_area_zips: e.target.value })} placeholder="74101, 74103, 74105..." />
+              <p style={{ fontSize: 11, color: Colors.medGray, marginTop: 4 }}>Comma-separated zip codes this provider services</p>
             </div>
             <div className="form-group">
               <label>Service Categories</label>

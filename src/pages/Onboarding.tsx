@@ -120,6 +120,7 @@ export default function Onboarding() {
     has_pool: false, has_deck: false, has_sprinkler_system: false,
     has_fireplace: false, has_gutters: true,
     has_fire_extinguisher: false, has_water_softener: false,
+    has_sump_pump: false, has_storm_shelter: false,
     countertop_type: '',
     // Per-fireplace tracking
     fireplace_count: '1',
@@ -230,6 +231,8 @@ export default function Onboarding() {
         has_gutters: systemsForm.has_gutters,
         has_fire_extinguisher: systemsForm.has_fire_extinguisher,
         has_water_softener: systemsForm.has_water_softener,
+        has_sump_pump: systemsForm.has_sump_pump,
+        has_storm_shelter: systemsForm.has_storm_shelter,
         countertop_type: systemsForm.countertop_type || null,
         number_of_hvac_filters: parseInt(systemsForm.number_of_hvac_filters) || null,
         hvac_filter_size: systemsForm.filters.map(f => f.size).filter(Boolean).join(', ') || null,
@@ -697,7 +700,7 @@ export default function Onboarding() {
           {/* System toggles */}
           <p style={{ fontSize: 14, fontWeight: 600, margin: '20px 0 12px', color: Colors.charcoal }}>Home features</p>
           <div className="grid-2">
-            {(['has_pool', 'has_deck', 'has_sprinkler_system', 'has_fireplace', 'has_gutters', 'has_fire_extinguisher', 'has_water_softener'] as const).map(key => (
+            {(['has_pool', 'has_deck', 'has_sprinkler_system', 'has_fireplace', 'has_gutters', 'has_fire_extinguisher', 'has_water_softener', 'has_sump_pump', 'has_storm_shelter'] as const).map(key => (
               <label key={key} className="flex items-center gap-sm" style={{ cursor: 'pointer', padding: '8px 0' }}>
                 <input type="checkbox" checked={systemsForm[key] as boolean}
                   onChange={e => setSystemsForm({ ...systemsForm, [key]: e.target.checked })} />

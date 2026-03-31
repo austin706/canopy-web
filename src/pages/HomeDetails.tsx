@@ -1,13 +1,15 @@
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { upsertHome, updateProfile, uploadPhoto } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 
 export default function HomeDetails() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, home, setHome } = useStore();
-  const [editing, setEditing] = useState(!home);
+  const [editing, setEditing] = useState(!home || searchParams.get('edit') === 'emergency');
+  const emergencySectionRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -24,6 +26,8 @@ export default function HomeDetails() {
     has_gutters: home?.has_gutters ?? true,
     has_fire_extinguisher: home?.has_fire_extinguisher || false,
     has_water_softener: home?.has_water_softener || false,
+    has_sump_pump: home?.has_sump_pump || false,
+    has_storm_shelter: home?.has_storm_shelter || false,
     countertop_type: home?.countertop_type || '',
     fireplace_count: home?.fireplace_count?.toString() || '1',
     lawn_type: home?.lawn_type || 'none',
@@ -39,6 +43,13 @@ export default function HomeDetails() {
     hose_bib_locations: home?.hose_bib_locations || '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Auto-scroll to emergency/infrastructure section if linked from Dashboard
+  useEffect(() => {
+    if (searchParams.get('edit') === 'emergency' && emergencySectionRef.current) {
+      setTimeout(() => emergencySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
+    }
+  }, [editing]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -91,6 +102,8 @@ export default function HomeDetails() {
         has_gutters: form.has_gutters,
         has_fire_extinguisher: form.has_fire_extinguisher,
         has_water_softener: form.has_water_softener,
+        has_sump_pump: form.has_sump_pump,
+        has_storm_shelter: form.has_storm_shelter,
         countertop_type: form.countertop_type || null,
         fireplace_count: form.has_fireplace ? (parseInt(form.fireplace_count) || 1) : null,
         created_at: home?.created_at || new Date().toISOString(),
@@ -208,7 +221,7 @@ export default function HomeDetails() {
             <div className="form-group"><label>&nbsp;</label><p className="text-xs text-gray" style={{ padding: '10px 0' }}>Used for seasonal lawn care tasks</p></div>
           </div>
           <div className="grid-2 mt-md">
-            {(['has_pool','has_deck','has_sprinkler_system','has_fireplace','has_gutters','has_fire_extinguisher','has_water_softener'] as const).map(key => (
+            {(['has_pool','has_deck','has_sprinkler_system','has_fireplace','has_gutters','has_fire_extinguisher','has_water_softener','has_sump_pump','has_storm_shelter'] as const).map(key => (
               <label key={key} className="flex items-center gap-sm" style={{ cursor: 'pointer', padding: '8px 0' }}>
                 <input type="checkbox" checked={form[key] as boolean} onChange={e => setForm({...form, [key]: e.target.checked})} />
                 <span style={{ fontSize: 14 }}>{key.replace(/has_/,'').replace(/_/g,' ')}</span>
@@ -269,6 +282,7 @@ export default function HomeDetails() {
           <p className="text-xs text-gray" style={{ marginTop: -8, marginBottom: 8 }}>Helps track filter replacement tasks and sizes to order</p>
 
           {/* Infrastructure Locations */}
+          <div ref={emergencySectionRef} />
           <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 24, marginBottom: 8 }}>Infrastructure Locations</h3>
           <p className="text-xs text-gray" style={{ marginBottom: 12 }}>Know where your key systems are in an emergency.</p>
           <div className="grid-2">
@@ -348,7 +362,9 @@ export default function HomeDetails() {
               {home.has_gutters && <span className="badge badge-info">Gutters</span>}
               {home.has_fire_extinguisher && <span className="badge badge-warning">Fire Extinguisher</span>}
               {home.has_water_softener && <span className="badge badge-sage">Water Softener</span>}
-              {!home.has_pool && !home.has_deck && !home.has_sprinkler_system && !home.has_fireplace && !home.has_gutters && !home.has_fire_extinguisher && !home.has_water_softener && <span className="text-sm text-gray">None selected</span>}
+              {home.has_sump_pump && <span className="badge badge-info">Sump Pump</span>}
+              {home.has_storm_shelter && <span className="badge badge-warning">Storm Shelter</span>}
+              {!home.has_pool && !home.has_deck && !home.has_sprinkler_system && !home.has_fireplace && !home.has_gutters && !home.has_fire_extinguisher && !home.has_water_softener && !home.has_sump_pump && !home.has_storm_shelter && <span className="text-sm text-gray">None selected</span>}
             </div>
           </Field>
           {home.number_of_hvac_filters && (

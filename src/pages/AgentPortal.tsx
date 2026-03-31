@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, getClientHome, createGiftCodes } from '@/services/supabase';
+import { supabase, getClientHome, createGiftCodes, getNotifications, markNotificationRead } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors, StatusColors } from '@/constants/theme';
 
@@ -23,9 +23,10 @@ interface ClientData {
 export default function AgentPortal() {
   const navigate = useNavigate();
   const { user } = useStore();
-  const [tab, setTab] = useState<'clients' | 'new-client' | 'codes'>('clients');
+  const [tab, setTab] = useState<'clients' | 'new-client' | 'codes' | 'notifications'>('clients');
   const [clients, setClients] = useState<ClientData[]>([]);
   const [codes, setCodes] = useState<any[]>([]);
+  const [agentNotifications, setAgentNotifications] = useState<any[]>([]);
   const [agentId, setAgentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
@@ -67,6 +68,14 @@ export default function AgentPortal() {
 
           const { data: codeData } = await supabase.from('gift_codes').select('*').eq('agent_id', agentData.id);
           setCodes(codeData || []);
+
+          // Load notifications for this agent (using their auth uid, not agents.id)
+          if (user?.id) {
+            try {
+              const notifs = await getNotifications(user.id);
+              setAgentNotifications(notifs);
+            } catch {}
+          }
         }
       } catch {} finally { setLoading(false); }
     };
@@ -178,6 +187,16 @@ export default function AgentPortal() {
         <button className={`tab ${tab === 'clients' ? 'active' : ''}`} onClick={() => setTab('clients')}>Clients ({clients.length})</button>
         <button className={`tab ${tab === 'new-client' ? 'active' : ''}`} onClick={() => { setTab('new-client'); resetSetupForm(); }}>+ New Client</button>
         <button className={`tab ${tab === 'codes' ? 'active' : ''}`} onClick={() => setTab('codes')}>Gift Codes ({codes.length})</button>
+        <button className={`tab ${tab === 'notifications' ? 'active' : ''}`} onClick={() => setTab('notifications')} style={{ position: 'relative' }}>
+          Alerts
+          {agentNotifications.filter(n => !n.read).length > 0 && (
+            <span style={{
+              position: 'absolute', top: 2, right: 2,
+              width: 8, height: 8, borderRadius: '50%',
+              background: Colors.error,
+            }} />
+          )}
+        </button>
       </div>
 
       {loading ? <div className="text-center"><div className="spinner" /></div> :
@@ -501,7 +520,7 @@ export default function AgentPortal() {
       ) :
 
       // ═══ Gift Codes Tab ═══
-      (
+      tab === 'codes' ? (
         <>
           <div className="grid-2 mb-lg">
             <div className="card stat-card">
@@ -555,6 +574,76 @@ export default function AgentPortal() {
                 </table>
               </div>
             </>
+          )}
+        </>
+      ) :
+
+      // ═══ Notifications Tab ═══
+      (
+        <>
+          <div className="flex items-center justify-between mb-md">
+            <h2 style={{ fontSize: 18, fontWeight: 600 }}>Alerts</h2>
+            {agentNotifications.filter(n => !n.read).length > 0 && (
+              <span className="text-sm text-gray">{agentNotifications.filter(n => !n.read).length} unread</span>
+            )}
+          </div>
+
+          {agentNotifications.length === 0 ? (
+            <div className="empty-state">
+              <div className="icon" style={{ fontSize: 32, color: Colors.medGray }}>--</div>
+              <h3>No alerts yet</h3>
+              <p>You'll be notified here when clients activate sale prep, request services, or need attention.</p>
+            </div>
+          ) : (
+            <div className="flex-col gap-sm">
+              {agentNotifications.map(n => (
+                <div
+                  key={n.id}
+                  className="card"
+                  style={{
+                    padding: '14px 18px',
+                    borderLeft: `3px solid ${n.read ? Colors.lightGray : Colors.copper}`,
+                    opacity: n.read ? 0.7 : 1,
+                    background: n.read ? undefined : `${Colors.copperMuted}40`,
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-xs">
+                    <p style={{ fontSize: 15, fontWeight: n.read ? 500 : 700 }}>{n.title}</p>
+                    <div className="flex items-center gap-sm">
+                      <span className="text-xs text-gray">
+                        {n.created_at ? new Date(n.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}
+                      </span>
+                      {!n.read && (
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ fontSize: 11, padding: '2px 8px' }}
+                          onClick={async () => {
+                            try {
+                              await markNotificationRead(n.id);
+                              setAgentNotifications(prev =>
+                                prev.map(notif => notif.id === n.id ? { ...notif, read: true } : notif)
+                              );
+                            } catch {}
+                          }}
+                        >
+                          Mark read
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray">{n.body}</p>
+                  {n.action_url && (
+                    <button
+                      className="btn btn-ghost btn-sm mt-sm"
+                      style={{ fontSize: 12, padding: '4px 0', color: Colors.copper }}
+                      onClick={() => navigate(n.action_url)}
+                    >
+                      View details &rarr;
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </>
       )}

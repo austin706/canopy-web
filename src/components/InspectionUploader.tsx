@@ -346,12 +346,32 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
             throw new Error('AI could not extract any maintenance tasks from this report. The pages may contain only photos or non-inspection content.');
           }
 
-          // Deduplicate tasks by title similarity
+          // Deduplicate tasks — exact key match + fuzzy title similarity
+          const normalizeKey = (t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, '');
           const seen = new Set<string>();
+          const seenTitles: string[] = [];
+
+          const isSimilar = (a: string, b: string): boolean => {
+            // Check if one title contains the other (catches "Replace roof shingles" vs "Replace deteriorated roof shingles")
+            const na = normalizeKey(a);
+            const nb = normalizeKey(b);
+            if (na.includes(nb) || nb.includes(na)) return true;
+            // Check word overlap — if 70%+ of words match, likely a duplicate
+            const wordsA = new Set(a.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+            const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+            if (wordsA.size === 0 || wordsB.size === 0) return false;
+            const overlap = [...wordsA].filter(w => wordsB.has(w)).length;
+            const smaller = Math.min(wordsA.size, wordsB.size);
+            return smaller > 0 && overlap / smaller >= 0.7;
+          };
+
           const dedupedTasks = allTasks.filter(task => {
-            const key = task.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const key = normalizeKey(task.title);
             if (seen.has(key)) return false;
+            // Check fuzzy similarity against all previously accepted titles
+            if (seenTitles.some(prev => isSimilar(task.title, prev))) return false;
             seen.add(key);
+            seenTitles.push(task.title);
             return true;
           });
 
@@ -440,42 +460,48 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
 
       // Save the original inspection file to Supabase Storage + documents table
       const fileToUpload = inspectionFileRef.current;
+      let fileUploadSucceeded = false;
       if (fileToUpload) {
-        try {
-          const storagePath = `${user.id}/inspections/${Date.now()}_${fileToUpload.name}`;
+        const storagePath = `${user.id}/inspections/${Date.now()}_${fileToUpload.name}`;
 
+        try {
           const { error: uploadError } = await supabase.storage
             .from('documents')
             .upload(storagePath, fileToUpload, { contentType: fileToUpload.type });
 
-          if (!uploadError) {
-            const { error: docError } = await supabase.from('documents').insert({
-              home_id: home.id,
-              user_id: user.id,
-              title: fileToUpload.name,
-              category: 'inspection',
-              file_url: storagePath,
-            });
-            if (!docError) {
-              setExistingInspection({
-                title: fileToUpload.name,
-                created_at: new Date().toISOString(),
-                file_url: storagePath,
-              });
-            } else {
-              console.error('Document record insert failed:', docError);
-              setError('Tasks saved, but failed to save document record: ' + docError.message);
-            }
+          if (uploadError) {
+            console.warn('Storage upload failed:', uploadError.message);
+            // Still save the document record without file_url so the summary view works
           } else {
-            console.error('Storage upload failed:', uploadError);
-            setError('Tasks saved, but file upload failed: ' + uploadError.message);
+            fileUploadSucceeded = true;
+          }
+        } catch (storageErr: any) {
+          console.warn('Storage upload exception:', storageErr?.message);
+        }
+
+        // Always save the document record — with or without the file URL
+        try {
+          const { error: docError } = await supabase.from('documents').insert({
+            home_id: home.id,
+            user_id: user.id,
+            title: fileToUpload.name,
+            category: 'inspection',
+            file_url: fileUploadSucceeded ? storagePath : null,
+          });
+          if (!docError) {
+            setExistingInspection({
+              title: fileToUpload.name,
+              created_at: new Date().toISOString(),
+              file_url: fileUploadSucceeded ? storagePath : '',
+            });
           }
         } catch (docErr: any) {
-          console.error('Failed to save inspection document:', docErr);
-          setError('Tasks saved, but file upload failed: ' + (docErr.message || 'Unknown error'));
+          console.warn('Document record insert failed:', docErr?.message);
         }
-      } else {
-        console.warn('No inspection file reference found — file not saved');
+
+        if (!fileUploadSucceeded) {
+          setError('Tasks were saved, but the inspection file was too large to upload. You can re-upload a smaller version later.');
+        }
       }
 
       // Handle pro requests — group by category
@@ -945,6 +971,41 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
   }
 
   // Done step — show success then reset to summary view
+  const goToSummary = () => {
+    setStep('upload');
+    setLocalTasks([]);
+    setShowUploadNew(false);
+    setError('');
+    // Reload existing inspection data
+    if (home) {
+      supabase
+        .from('documents')
+        .select('title, created_at, file_url')
+        .eq('home_id', home.id)
+        .eq('category', 'inspection')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setExistingInspection(data[0]);
+            if (data[0].file_url) {
+              supabase.storage.from('documents').createSignedUrl(data[0].file_url, 3600)
+                .then(({ data: urlData }) => { if (urlData?.signedUrl) setReportUrl(urlData.signedUrl); });
+            } else {
+              setReportUrl(null);
+            }
+            supabase
+              .from('maintenance_tasks')
+              .select('id, title, status, priority, category, due_date, estimated_cost, notes')
+              .eq('home_id', home.id)
+              .like('notes', 'From home inspection:%')
+              .order('priority', { ascending: true })
+              .then(({ data: taskData }) => { if (taskData) setInspectionTasks(taskData); });
+          }
+        });
+    }
+  };
+
   return (
     <div style={{ textAlign: 'center', padding: '32px 0' }}>
       <div style={{
@@ -961,47 +1022,48 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
         &#10003;
       </div>
       <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Tasks Scheduled!</h3>
-      <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 24 }}>
+      <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 12 }}>
         {selectedTasks.size} maintenance task{selectedTasks.size !== 1 ? 's' : ''} from your home inspection
         {selectedTasks.size !== 1 ? ' have' : ' has'} been added to your calendar
         {proRequestsCreated > 0 && `, and ${proRequestsCreated} pro service request${proRequestsCreated !== 1 ? 's have' : ' has'} been created`}.
       </p>
-      <button
-        className="btn btn-ghost btn-sm"
-        style={{ color: Colors.copper }}
-        onClick={() => {
-          // Reset to the summary view which will show the report + tasks
-          setStep('upload');
-          setLocalTasks([]);
-          setShowUploadNew(false);
-          // Reload existing inspection data
-          if (home) {
-            supabase
-              .from('documents')
-              .select('title, created_at, file_url')
-              .eq('home_id', home.id)
-              .eq('category', 'inspection')
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .then(({ data }) => {
-                if (data && data.length > 0) {
-                  setExistingInspection(data[0]);
-                  supabase.storage.from('documents').createSignedUrl(data[0].file_url, 3600)
-                    .then(({ data: urlData }) => { if (urlData?.signedUrl) setReportUrl(urlData.signedUrl); });
-                  supabase
-                    .from('maintenance_tasks')
-                    .select('id, title, status, priority, category, due_date, estimated_cost, notes')
-                    .eq('home_id', home.id)
-                    .like('notes', 'From home inspection:%')
-                    .order('priority', { ascending: true })
-                    .then(({ data: taskData }) => { if (taskData) setInspectionTasks(taskData); });
-                }
-              });
-          }
-        }}
-      >
-        View Inspection Summary
-      </button>
+
+      {error && (
+        <div style={{
+          background: '#FEF3CD',
+          border: '1px solid #FFC107',
+          borderRadius: 8,
+          padding: '12px 16px',
+          marginBottom: 16,
+          fontSize: 13,
+          color: '#856404',
+          textAlign: 'left',
+        }}>
+          <strong>Note:</strong> {error}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 8 }}>
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={goToSummary}
+        >
+          View Inspection Summary
+        </button>
+        {error && (
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => {
+              setStep('upload');
+              setLocalTasks([]);
+              setError('');
+              setShowUploadNew(true);
+            }}
+          >
+            Re-upload Report
+          </button>
+        )}
+      </div>
     </div>
   );
 }

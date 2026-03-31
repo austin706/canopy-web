@@ -202,6 +202,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
   const [taskTimeframes, setTaskTimeframes] = useState<Map<number, string>>(new Map());
   const [proRequestTasks, setProRequestTasks] = useState<Set<number>>(new Set());
   const [proRequestsCreated, setProRequestsCreated] = useState(0);
+  const [inspectionFile, setInspectionFile] = useState<File | null>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -214,6 +215,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
     }
 
     setFileName(file.name);
+    setInspectionFile(file);
     setError('');
     setParsing(true);
     setProgress('');
@@ -380,6 +382,32 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
         // Update store with new tasks
         const { tasks: existingTasks } = useStore.getState();
         setTasks([...existingTasks, ...created]);
+      }
+
+      // Save the original inspection file to Supabase Storage + documents table
+      if (inspectionFile) {
+        try {
+          const storagePath = `${user.id}/inspections/${Date.now()}_${inspectionFile.name}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('documents')
+            .upload(storagePath, inspectionFile, { contentType: inspectionFile.type });
+
+          if (!uploadError) {
+            await supabase.from('documents').insert({
+              home_id: home.id,
+              user_id: user.id,
+              title: inspectionFile.name,
+              category: 'inspection',
+              file_url: storagePath,
+            });
+          } else {
+            console.warn('Inspection file upload failed:', uploadError.message);
+          }
+        } catch (docErr) {
+          // Non-blocking — tasks already saved, just log the upload failure
+          console.warn('Failed to save inspection document:', docErr);
+        }
       }
 
       // Handle pro requests — group by category

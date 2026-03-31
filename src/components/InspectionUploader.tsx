@@ -432,8 +432,8 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
               const createdTask = created[index];
               if (createdTask) {
                 proTaskLinks.push({
-                  pro_request_id: request.id,
-                  maintenance_task_id: createdTask.id,
+                  request_id: request.id,
+                  task_id: createdTask.id,
                 });
               }
             });

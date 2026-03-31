@@ -204,13 +204,18 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
   const [proRequestsCreated, setProRequestsCreated] = useState(0);
   const inspectionFileRef = useRef<File | null>(null);
   const [existingInspection, setExistingInspection] = useState<{ title: string; created_at: string; file_url: string } | null>(null);
+  const [inspectionTasks, setInspectionTasks] = useState<any[]>([]);
   const [checkingExisting, setCheckingExisting] = useState(true);
+  const [reportUrl, setReportUrl] = useState<string | null>(null);
+  const [showUploadNew, setShowUploadNew] = useState(false);
+  const [expandTasks, setExpandTasks] = useState(false);
 
-  // Check if this home already has an uploaded inspection
+  // Check if this home already has an uploaded inspection + load its tasks
   useEffect(() => {
     if (!home) return;
     const check = async () => {
       try {
+        // Fetch the most recent inspection document
         const { data } = await supabase
           .from('documents')
           .select('title, created_at, file_url')
@@ -220,6 +225,29 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           .limit(1);
         if (data && data.length > 0) {
           setExistingInspection(data[0]);
+
+          // Get a signed URL for viewing the report
+          try {
+            const { data: urlData } = await supabase.storage
+              .from('documents')
+              .createSignedUrl(data[0].file_url, 3600); // 1 hour
+            if (urlData?.signedUrl) setReportUrl(urlData.signedUrl);
+          } catch {
+            // Storage URL failed — report will be viewable without direct link
+          }
+
+          // Load tasks that came from inspection
+          try {
+            const { data: taskData } = await supabase
+              .from('maintenance_tasks')
+              .select('id, title, status, priority, category, due_date, estimated_cost, notes')
+              .eq('home_id', home.id)
+              .like('notes', 'From home inspection:%')
+              .order('priority', { ascending: true });
+            if (taskData) setInspectionTasks(taskData);
+          } catch {
+            // Tasks load failed — show report without tasks
+          }
         }
       } catch (err) {
         console.warn('Failed to check existing inspection:', err);
@@ -543,25 +571,141 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
       return <div style={{ textAlign: 'center', padding: 40, color: Colors.medGray }}>Checking for existing inspection...</div>;
     }
 
-    if (existingInspection) {
+    if (existingInspection && !showUploadNew) {
+      const completedCount = inspectionTasks.filter(t => t.status === 'completed').length;
+      const overdueCount = inspectionTasks.filter(t => t.status === 'overdue').length;
+      const upcomingCount = inspectionTasks.filter(t => t.status === 'upcoming' || t.status === 'due').length;
+      const totalCost = inspectionTasks.reduce((sum: number, t: any) => sum + (t.estimated_cost || 0), 0);
+
       return (
-        <div style={{
-          border: `1px solid ${Colors.sage}40`,
-          borderRadius: 12,
-          padding: 32,
-          textAlign: 'center',
-          background: Colors.sageMuted,
-        }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>&#9989;</div>
-          <p style={{ fontSize: 16, fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
-            Inspection Report Uploaded
-          </p>
-          <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 4 }}>
-            {existingInspection.title}
-          </p>
-          <p style={{ fontSize: 12, color: Colors.medGray }}>
-            Uploaded {new Date(existingInspection.created_at).toLocaleDateString()}
-          </p>
+        <div>
+          {/* Report header */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+            padding: '16px 0', borderBottom: '1px solid #f3f4f6', marginBottom: 16,
+          }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 20 }}>&#128203;</span>
+                <p style={{ fontSize: 15, fontWeight: 600, color: Colors.charcoal, margin: 0 }}>
+                  {existingInspection.title}
+                </p>
+              </div>
+              <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
+                Uploaded {new Date(existingInspection.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {reportUrl && (
+                <a
+                  href={reportUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: 12, textDecoration: 'none', color: Colors.copper }}
+                >
+                  View Report
+                </a>
+              )}
+              <button
+                className="btn btn-ghost btn-sm"
+                style={{ fontSize: 12, color: Colors.medGray }}
+                onClick={() => setShowUploadNew(true)}
+              >
+                Upload New
+              </button>
+            </div>
+          </div>
+
+          {/* Task summary stats */}
+          {inspectionTasks.length > 0 && (
+            <>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: '#f9f9f7', textAlign: 'center' }}>
+                  <p style={{ fontSize: 20, fontWeight: 700, color: Colors.sage, margin: 0 }}>{completedCount}</p>
+                  <p style={{ fontSize: 11, color: Colors.medGray, margin: '2px 0 0' }}>Completed</p>
+                </div>
+                <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: '#f9f9f7', textAlign: 'center' }}>
+                  <p style={{ fontSize: 20, fontWeight: 700, color: Colors.copper, margin: 0 }}>{upcomingCount}</p>
+                  <p style={{ fontSize: 11, color: Colors.medGray, margin: '2px 0 0' }}>Remaining</p>
+                </div>
+                {overdueCount > 0 && (
+                  <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: '#FFF3E0', textAlign: 'center' }}>
+                    <p style={{ fontSize: 20, fontWeight: 700, color: Colors.error, margin: 0 }}>{overdueCount}</p>
+                    <p style={{ fontSize: 11, color: Colors.medGray, margin: '2px 0 0' }}>Overdue</p>
+                  </div>
+                )}
+                {totalCost > 0 && (
+                  <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: '#f9f9f7', textAlign: 'center' }}>
+                    <p style={{ fontSize: 20, fontWeight: 700, color: Colors.charcoal, margin: 0 }}>${totalCost.toLocaleString()}</p>
+                    <p style={{ fontSize: 11, color: Colors.medGray, margin: '2px 0 0' }}>Est. Total</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Task list — collapsible */}
+              <button
+                onClick={() => setExpandTasks(!expandTasks)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer',
+                  borderTop: '1px solid #f3f4f6', fontSize: 14, fontWeight: 600, color: Colors.charcoal,
+                }}
+              >
+                <span>{inspectionTasks.length} Inspection Tasks</span>
+                <span style={{ fontSize: 11, color: Colors.medGray }}>{expandTasks ? '\u25B2 Hide' : '\u25BC Show All'}</span>
+              </button>
+
+              {expandTasks && (
+                <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                  {inspectionTasks.map((task: any) => {
+                    const statusColor = task.status === 'completed' ? Colors.sage
+                      : task.status === 'overdue' ? Colors.error
+                      : task.status === 'due' ? Colors.warning : Colors.medGray;
+                    const priorityColor = PRIORITY_COLORS[task.priority] || Colors.medGray;
+                    return (
+                      <div key={task.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 4px', borderBottom: '1px solid #f9f9f7',
+                        opacity: task.status === 'completed' ? 0.6 : 1,
+                      }}>
+                        <div style={{
+                          width: 8, height: 8, borderRadius: '50%', background: priorityColor, flexShrink: 0,
+                        }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{
+                            fontSize: 13, fontWeight: 500, margin: 0,
+                            textDecoration: task.status === 'completed' ? 'line-through' : 'none',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                            {task.title}
+                          </p>
+                          <p style={{ fontSize: 11, color: Colors.medGray, margin: '2px 0 0' }}>
+                            {task.category}
+                            {task.due_date && ` · Due ${new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                            {task.estimated_cost > 0 && ` · ~$${task.estimated_cost}`}
+                          </p>
+                        </div>
+                        <span style={{
+                          fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
+                          background: `${statusColor}15`, color: statusColor, textTransform: 'capitalize',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {task.status}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {inspectionTasks.length === 0 && (
+            <p style={{ fontSize: 13, color: Colors.medGray, textAlign: 'center', padding: '12px 0' }}>
+              No tasks were created from this inspection report.
+            </p>
+          )}
         </div>
       );
     }
@@ -800,7 +944,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
     );
   }
 
-  // Done step
+  // Done step — show success then reset to summary view
   return (
     <div style={{ textAlign: 'center', padding: '32px 0' }}>
       <div style={{
@@ -822,11 +966,42 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
         {selectedTasks.size !== 1 ? ' have' : ' has'} been added to your calendar
         {proRequestsCreated > 0 && `, and ${proRequestsCreated} pro service request${proRequestsCreated !== 1 ? 's have' : ' has'} been created`}.
       </p>
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-        <p style={{ fontSize: 12, color: Colors.medGray }}>
-          Your inspection report has been saved to your documents.
-        </p>
-      </div>
+      <button
+        className="btn btn-ghost btn-sm"
+        style={{ color: Colors.copper }}
+        onClick={() => {
+          // Reset to the summary view which will show the report + tasks
+          setStep('upload');
+          setLocalTasks([]);
+          setShowUploadNew(false);
+          // Reload existing inspection data
+          if (home) {
+            supabase
+              .from('documents')
+              .select('title, created_at, file_url')
+              .eq('home_id', home.id)
+              .eq('category', 'inspection')
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .then(({ data }) => {
+                if (data && data.length > 0) {
+                  setExistingInspection(data[0]);
+                  supabase.storage.from('documents').createSignedUrl(data[0].file_url, 3600)
+                    .then(({ data: urlData }) => { if (urlData?.signedUrl) setReportUrl(urlData.signedUrl); });
+                  supabase
+                    .from('maintenance_tasks')
+                    .select('id, title, status, priority, category, due_date, estimated_cost, notes')
+                    .eq('home_id', home.id)
+                    .like('notes', 'From home inspection:%')
+                    .order('priority', { ascending: true })
+                    .then(({ data: taskData }) => { if (taskData) setInspectionTasks(taskData); });
+                }
+              });
+          }
+        }}
+      >
+        View Inspection Summary
+      </button>
     </div>
   );
 }

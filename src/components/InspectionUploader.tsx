@@ -17,8 +17,8 @@ async function loadPdfJs(): Promise<any> {
   return pdfjsLib;
 }
 
-/** Extract text from all pages of a PDF using pdf.js */
-async function extractPdfText(file: File, onProgress?: (page: number, total: number) => void): Promise<{ text: string; pageCount: number }> {
+/** Extract text from all pages of a PDF using pdf.js — returns per-page texts for batching */
+async function extractPdfText(file: File, onProgress?: (page: number, total: number) => void): Promise<{ text: string; pageTexts: string[]; pageCount: number }> {
   const pdfjs = await loadPdfJs();
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
@@ -34,13 +34,19 @@ async function extractPdfText(file: File, onProgress?: (page: number, total: num
         .map((item: any) => item.str)
         .join(' ')
         .trim();
-      if (text) pageTexts.push(`--- Page ${i} ---\n${text}`);
+      // Always push an entry (empty string for blank pages) to keep indices aligned with page numbers
+      pageTexts.push(text || '');
     } catch {
-      // Skip unreadable pages
+      pageTexts.push('');
     }
   }
 
-  return { text: pageTexts.join('\n\n'), pageCount };
+  // Build combined text for backward compat (only non-empty pages)
+  const combinedParts = pageTexts
+    .map((t, i) => t ? `--- Page ${i + 1} ---\n${t}` : '')
+    .filter(Boolean);
+
+  return { text: combinedParts.join('\n\n'), pageTexts, pageCount };
 }
 
 /** Render specific PDF pages to images using pdf.js canvas rendering */
@@ -282,15 +288,84 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
         // Use pdf.js for proper text extraction from PDFs
         setProgress('Loading PDF library...');
 
-        const { text, pageCount } = await extractPdfText(file, (page, total) => {
+        const { text, pageTexts, pageCount } = await extractPdfText(file, (page, total) => {
           setProgress(`Extracting text: page ${page} of ${total}...`);
         });
 
         // Check if we got meaningful text (at least ~20 chars per page on average)
         const hasGoodText = text.length > pageCount * 20;
 
-        if (hasGoodText) {
-          // Text-based PDF — send extracted text (cap at ~80k chars for API limits)
+        if (hasGoodText && pageCount > 15) {
+          // Large text-based PDF — batch pages into multiple AI calls so nothing gets missed
+          // Each batch gets ~10 pages of text to keep AI focused on that section
+          const TEXT_PAGES_PER_BATCH = 10;
+          const allTasks: InspectionTask[] = [];
+          const totalBatches = Math.ceil(pageCount / TEXT_PAGES_PER_BATCH);
+
+          for (let b = 0; b < totalBatches; b++) {
+            const startIdx = b * TEXT_PAGES_PER_BATCH;
+            const endIdx = Math.min(startIdx + TEXT_PAGES_PER_BATCH, pageCount);
+            const startPage = startIdx + 1;
+            const endPage = endIdx;
+
+            setProgress(`Analyzing pages ${startPage}–${endPage} of ${pageCount} (batch ${b + 1}/${totalBatches})...`);
+
+            // Build text for this batch from individual page texts
+            const batchParts = pageTexts
+              .slice(startIdx, endIdx)
+              .map((t, i) => t ? `--- Page ${startIdx + i + 1} ---\n${t}` : '')
+              .filter(Boolean);
+
+            if (batchParts.length === 0) continue; // Skip batches with no text
+
+            const batchText = `Home Inspection Report (${file.name}), pages ${startPage}–${endPage} of ${pageCount}. ` +
+              `Extract ALL maintenance findings, defects, safety concerns, and recommendations from these pages. ` +
+              `Include the inspection section name (e.g., HVAC, Plumbing, Roof, Electrical) for each finding.\n\n${batchParts.join('\n\n')}`;
+
+            try {
+              const batchResult = await parseHomeInspection(batchText);
+              allTasks.push(...batchResult);
+            } catch (err: any) {
+              console.warn(`Text batch ${b + 1} failed:`, err.message);
+            }
+          }
+
+          if (allTasks.length === 0) {
+            throw new Error('AI could not extract any maintenance tasks from this report.');
+          }
+
+          // Deduplicate tasks — exact key match + fuzzy title similarity
+          const normalizeKey = (t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const seen = new Set<string>();
+          const seenTitles: string[] = [];
+
+          const isSimilar = (a: string, b: string): boolean => {
+            const na = normalizeKey(a);
+            const nb = normalizeKey(b);
+            if (na.includes(nb) || nb.includes(na)) return true;
+            const wordsA = new Set(a.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+            const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+            if (wordsA.size === 0 || wordsB.size === 0) return false;
+            const overlap = [...wordsA].filter(w => wordsB.has(w)).length;
+            const smaller = Math.min(wordsA.size, wordsB.size);
+            return smaller > 0 && overlap / smaller >= 0.7;
+          };
+
+          const dedupedTasks = allTasks.filter(task => {
+            const key = normalizeKey(task.title);
+            if (seen.has(key)) return false;
+            if (seenTitles.some(prev => isSimilar(task.title, prev))) return false;
+            seen.add(key);
+            seenTitles.push(task.title);
+            return true;
+          });
+
+          setLocalTasks(dedupedTasks);
+          setSelectedTasks(new Set(dedupedTasks.map((_, i) => i)));
+          setStep('review');
+          return;
+        } else if (hasGoodText) {
+          // Small text-based PDF — single API call is fine
           const trimmed = text.length > 80000 ? text.substring(0, 80000) + '\n\n[Report truncated]' : text;
           documentText = `Home Inspection Report (${file.name}, ${pageCount} pages):\n\n${trimmed}`;
           setProgress('Analyzing report with AI...');

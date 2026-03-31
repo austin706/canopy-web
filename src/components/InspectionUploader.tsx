@@ -365,7 +365,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           due_date: getDueDateFromTimeframe(overriddenTimeframe),
           estimated_cost: task.estimated_cost,
           notes: `From home inspection: ${task.inspection_section}`,
-          frequency: 'once' as const,
+          frequency: 'as_needed' as const,
         };
       });
 

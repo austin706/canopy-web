@@ -7,9 +7,97 @@ import { quickCompleteTask, quickSnoozeTask, quickSkipTask } from '@/services/ut
 import { Colors } from '@/constants/theme';
 import type { MaintenanceTask } from '@/types';
 
-const MAX_FILE_SIZE_MB = 100;
+const MAX_FILE_SIZE_MB = 500; // Supabase supports up to 5GB via resumable, 50GB via S3
+const RESUMABLE_THRESHOLD_MB = 5; // Use resumable upload for files > 5MB
 const PDF_JS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
 const PDF_JS_WORKER_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+
+/**
+ * Upload a file to Supabase Storage using resumable (TUS) protocol for large files,
+ * falling back to standard upload for small files.
+ */
+async function uploadToStorage(
+  file: File,
+  storagePath: string,
+  onProgress?: (pct: number) => void,
+): Promise<{ error: Error | null }> {
+  const fileSizeMB = file.size / (1024 * 1024);
+
+  if (fileSizeMB <= RESUMABLE_THRESHOLD_MB) {
+    // Small file — standard upload
+    const { error } = await supabase.storage
+      .from('documents')
+      .upload(storagePath, file, { contentType: file.type, upsert: true });
+    return { error: error ? new Error(error.message) : null };
+  }
+
+  // Large file — resumable upload via TUS protocol
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return { error: new Error('Not authenticated') };
+
+  const projectRef = import.meta.env.VITE_SUPABASE_URL?.match(/\/\/([^.]+)\./)?.[1] || '';
+  const tusEndpoint = `https://${projectRef}.supabase.co/storage/v1/upload/resumable`;
+  const CHUNK_SIZE = 6 * 1024 * 1024; // 6MB — required by Supabase TUS
+
+  try {
+    // Step 1: Create the upload
+    const createRes = await fetch(tusEndpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+        'Tus-Resumable': '1.0.0',
+        'Upload-Length': String(file.size),
+        'Upload-Metadata': [
+          `bucketName ${btoa('documents')}`,
+          `objectName ${btoa(storagePath)}`,
+          `contentType ${btoa(file.type || 'application/pdf')}`,
+        ].join(','),
+        'x-upsert': 'true',
+      },
+    });
+
+    if (!createRes.ok) {
+      const errText = await createRes.text();
+      return { error: new Error(`Upload init failed: ${createRes.status} ${errText}`) };
+    }
+
+    const uploadUrl = createRes.headers.get('Location');
+    if (!uploadUrl) return { error: new Error('No upload URL returned') };
+
+    // Step 2: Upload in chunks
+    let offset = 0;
+    while (offset < file.size) {
+      const end = Math.min(offset + CHUNK_SIZE, file.size);
+      const chunk = file.slice(offset, end);
+
+      const patchRes = await fetch(uploadUrl, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+          'Tus-Resumable': '1.0.0',
+          'Upload-Offset': String(offset),
+          'Content-Type': 'application/offset+octet-stream',
+        },
+        body: chunk,
+      });
+
+      if (!patchRes.ok) {
+        const errText = await patchRes.text();
+        return { error: new Error(`Chunk upload failed at ${offset}: ${patchRes.status} ${errText}`) };
+      }
+
+      const newOffset = patchRes.headers.get('Upload-Offset');
+      offset = newOffset ? parseInt(newOffset, 10) : end;
+      onProgress?.(Math.round((offset / file.size) * 100));
+    }
+
+    return { error: null };
+  } catch (err: any) {
+    return { error: new Error(err.message || 'Resumable upload failed') };
+  }
+}
 
 /** Dynamically load pdf.js from CDN (cached after first load) */
 let pdfjsLib: any = null;
@@ -286,9 +374,10 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
     setError('');
     try {
       const storagePath = `${user.id}/inspections/${Date.now()}_${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(storagePath, file, { contentType: file.type });
+      const { error: uploadError } = await uploadToStorage(file, storagePath, (pct) => {
+        setError(`Uploading... ${pct}%`);
+      });
+      setError('');
 
       if (uploadError) throw uploadError;
 
@@ -547,9 +636,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
         const storagePath = `${user.id}/inspections/${Date.now()}_${fileToUpload.name}`;
 
         try {
-          const { error: uploadError } = await supabase.storage
-            .from('documents')
-            .upload(storagePath, fileToUpload, { contentType: fileToUpload.type });
+          const { error: uploadError } = await uploadToStorage(fileToUpload, storagePath);
 
           if (uploadError) {
             console.warn('Storage upload failed:', uploadError.message);

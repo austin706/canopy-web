@@ -11,6 +11,11 @@ interface CanopyState {
   setUser: (user: User | null) => void;
   home: Home | null;
   setHome: (home: Home | null) => void;
+  homes: Home[];
+  setHomes: (homes: Home[]) => void;
+  activeHomeId: string | null;
+  setActiveHomeId: (id: string | null) => void;
+  switchHome: (id: string) => void;
   equipment: Equipment[];
   setEquipment: (items: Equipment[]) => void;
   addEquipment: (item: Equipment) => void;
@@ -44,7 +49,21 @@ export const useStore = create<CanopyState>()(
       isAuthenticated: false,
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       home: null,
-      setHome: (home) => set({ home }),
+      setHome: (home) => set((s) => {
+        const homes = home ? (s.homes.some(h => h.id === home.id)
+          ? s.homes.map(h => h.id === home.id ? home : h)
+          : [...s.homes, home]
+        ) : s.homes;
+        return { home, homes, activeHomeId: home?.id || s.activeHomeId };
+      }),
+      homes: [],
+      setHomes: (homes) => set({ homes }),
+      activeHomeId: null,
+      setActiveHomeId: (activeHomeId) => set({ activeHomeId }),
+      switchHome: (id) => set((s) => {
+        const home = s.homes.find(h => h.id === id) || null;
+        return { home, activeHomeId: id, equipment: [], tasks: [], maintenanceLogs: [] };
+      }),
       equipment: [],
       setEquipment: (equipment) => set({ equipment }),
       addEquipment: (item) => set((s) => ({ equipment: [...s.equipment, item] })),
@@ -81,7 +100,7 @@ export const useStore = create<CanopyState>()(
       setLoading: (isLoading) => set({ isLoading }),
       onboardingStep: 0,
       setOnboardingStep: (onboardingStep) => set({ onboardingStep }),
-      reset: () => set({ user: null, isAuthenticated: false, home: null, equipment: [], tasks: [], maintenanceLogs: [], weather: null, agent: null, onboardingStep: 0 }),
+      reset: () => set({ user: null, isAuthenticated: false, home: null, homes: [], activeHomeId: null, equipment: [], tasks: [], maintenanceLogs: [], weather: null, agent: null, onboardingStep: 0 }),
     }),
     {
       name: 'canopy-web-store',
@@ -89,6 +108,8 @@ export const useStore = create<CanopyState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         home: state.home,
+        homes: state.homes,
+        activeHomeId: state.activeHomeId,
         equipment: state.equipment,
         tasks: state.tasks,
         maintenanceLogs: state.maintenanceLogs,

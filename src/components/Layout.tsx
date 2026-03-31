@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { signOut, resendVerificationEmail, supabase } from '@/services/supabase';
+import { signOut, resendVerificationEmail, supabase, getUserHomes } from '@/services/supabase';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { PLANS } from '@/services/subscriptionGate';
+import { Colors } from '@/constants/theme';
 import {
   CanopyLogo,
   NavDashboard, NavCalendar, NavWeather, NavEquipment, NavDocuments,
@@ -13,9 +15,17 @@ import {
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, reset } = useStore();
+  const { user, reset, home, homes, setHomes, switchHome } = useStore();
   const tier = user?.subscription_tier || 'free';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showHomeSwitcher, setShowHomeSwitcher] = useState(false);
+
+  // Load all homes for user on mount
+  useEffect(() => {
+    if (user?.id) {
+      getUserHomes(user.id).then(setHomes).catch(() => {});
+    }
+  }, [user?.id]);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -33,7 +43,11 @@ export default function Layout() {
   }, [mobileMenuOpen]);
 
   const handleLogout = async () => {
-    try { await signOut(); } catch {}
+    try {
+      await signOut();
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
     reset();
     navigate('/login');
   };
@@ -81,6 +95,58 @@ export default function Layout() {
           </div>
           <span>Oak &amp; Sage Realty</span>
         </div>
+        {/* Property Switcher */}
+        {homes.length > 0 && (
+          <div style={{ padding: '0 16px 8px', position: 'relative' }}>
+            <button
+              onClick={() => setShowHomeSwitcher(!showHomeSwitcher)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 12px', background: home ? Colors.cream : '#f3f4f6',
+                border: '1px solid #e5e7eb', borderRadius: 8, cursor: 'pointer',
+                fontSize: 13, fontWeight: 500, color: '#374151',
+              }}
+            >
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>
+                {home ? `${home.address || 'My Home'}` : 'Select Home'}
+              </span>
+              <span style={{ fontSize: 10, marginLeft: 8, color: '#9ca3af' }}>{showHomeSwitcher ? '\u25B2' : '\u25BC'}</span>
+            </button>
+            {showHomeSwitcher && (
+              <div style={{
+                position: 'absolute', left: 16, right: 16, top: '100%', background: '#fff',
+                border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                zIndex: 50, maxHeight: 200, overflowY: 'auto',
+              }}>
+                {homes.map(h => (
+                  <button
+                    key={h.id}
+                    onClick={() => { switchHome(h.id); setShowHomeSwitcher(false); }}
+                    style={{
+                      width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none',
+                      background: h.id === home?.id ? (Colors.cream) : 'transparent',
+                      cursor: 'pointer', fontSize: 13, borderBottom: '1px solid #f3f4f6',
+                      fontWeight: h.id === home?.id ? 600 : 400,
+                    }}
+                  >
+                    <div style={{ fontWeight: 500 }}>{h.address || 'Unnamed Home'}</div>
+                    <div style={{ fontSize: 11, color: '#9ca3af' }}>{h.city}, {h.state} {h.zip_code}</div>
+                  </button>
+                ))}
+                <button
+                  onClick={() => { setShowHomeSwitcher(false); navigate('/onboarding?step=1'); }}
+                  style={{
+                    width: '100%', textAlign: 'center', padding: '10px 12px', border: 'none',
+                    background: 'transparent', cursor: 'pointer', fontSize: 13,
+                    color: Colors.copper, fontWeight: 600,
+                  }}
+                >
+                  + Add Another Property
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         <div className="sidebar-nav">
           {navItems.map(item => (
             <NavLink
@@ -170,7 +236,9 @@ export default function Layout() {
             </button>
           </div>
         )}
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   );

@@ -23,6 +23,9 @@ export const fetchWeather = async (lat: number, lon: number): Promise<WeatherDat
   // ─── Try Edge Function first (keeps API key server-side) ───
   if (SUPABASE_URL) {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
       const res = await fetch(`${SUPABASE_URL}/functions/v1/weather`, {
         method: 'POST',
         headers: {
@@ -31,7 +34,9 @@ export const fetchWeather = async (lat: number, lon: number): Promise<WeatherDat
           'apikey': SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({ lat, lon }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
 
       if (res.ok) {
         return await res.json() as WeatherData;

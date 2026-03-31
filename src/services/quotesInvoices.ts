@@ -229,6 +229,59 @@ export async function getInvoicePayments(invoiceId: string): Promise<InvoicePaym
   return data || [];
 }
 
+/** Record a manual (non-Stripe) payment — cash, check, Venmo, etc. */
+export async function recordManualPayment(
+  invoiceId: string,
+  amount: number,
+  paymentMethod: 'cash' | 'check' | 'venmo' | 'zelle' | 'other',
+  notes?: string
+): Promise<InvoicePayment> {
+  // Insert payment record
+  const { data: payment, error: paymentError } = await supabase
+    .from('invoice_payments')
+    .insert({
+      invoice_id: invoiceId,
+      amount,
+      payment_method: paymentMethod,
+      status: 'completed',
+      notes: notes || null,
+      paid_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+  if (paymentError) throw paymentError;
+
+  // Check if invoice is fully paid
+  const { data: allPayments } = await supabase
+    .from('invoice_payments')
+    .select('amount')
+    .eq('invoice_id', invoiceId)
+    .eq('status', 'completed');
+  const totalPaid = (allPayments || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const { data: invoice } = await supabase
+    .from('invoices')
+    .select('total_amount')
+    .eq('id', invoiceId)
+    .single();
+
+  if (invoice && totalPaid >= invoice.total_amount) {
+    await supabase
+      .from('invoices')
+      .update({ status: 'paid', paid_at: new Date().toISOString() })
+      .eq('id', invoiceId);
+  } else {
+    // Partial payment — mark as sent (still outstanding) if currently draft
+    await supabase
+      .from('invoices')
+      .update({ status: 'sent' })
+      .eq('id', invoiceId)
+      .eq('status', 'draft');
+  }
+
+  return payment;
+}
+
 // ─── Provider-side invoice functions ───
 
 export async function getProviderQuotes(providerId: string): Promise<Quote[]> {

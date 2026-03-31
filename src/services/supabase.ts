@@ -70,16 +70,126 @@ export const getHome = async (userId: string) => {
   return data;
 };
 
-export const createHome = async (home: any) => {
-  const { data, error } = await supabase.from('homes').insert(home).select().single();
-  if (error) throw error;
-  return data;
-};
+// createHome is deprecated — use upsertHome instead
+// export const createHome = async (home: any) => { ... };
 
 export const upsertHome = async (home: any) => {
   const { data, error } = await supabase.from('homes').upsert(home).select().single();
   if (error) throw error;
   return data;
+};
+
+// --- Multi-Property Support ---
+
+/** Get all homes for a user */
+export const getUserHomes = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('homes')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+};
+
+/** Check if an address is already claimed by another user */
+export const checkAddressClaimed = async (
+  address: string,
+  city: string,
+  state: string,
+  zipCode: string,
+  excludeUserId?: string
+): Promise<{ claimed: boolean; homeId?: string; ownerId?: string }> => {
+  let query = supabase
+    .from('homes')
+    .select('id, user_id')
+    .ilike('address', address.trim())
+    .ilike('city', city.trim())
+    .ilike('state', state.trim())
+    .eq('zip_code', zipCode.trim());
+
+  if (excludeUserId) {
+    query = query.neq('user_id', excludeUserId);
+  }
+
+  const { data, error } = await query.limit(1);
+  if (error) throw error;
+
+  if (data && data.length > 0) {
+    return { claimed: true, homeId: data[0].id, ownerId: data[0].user_id };
+  }
+  return { claimed: false };
+};
+
+/** Request to join an existing home */
+export const createHomeJoinRequest = async (
+  homeId: string,
+  requesterId: string,
+  ownerId: string,
+  message?: string
+) => {
+  const { data, error } = await supabase
+    .from('home_join_requests')
+    .insert({
+      home_id: homeId,
+      requester_id: requesterId,
+      owner_id: ownerId,
+      message: message || null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+/** Get pending join requests for a home owner */
+export const getHomeJoinRequests = async (ownerId: string) => {
+  const { data, error } = await supabase
+    .from('home_join_requests')
+    .select('*, homes(address, city, state), requester:profiles!home_join_requests_requester_id_fkey(full_name, email)')
+    .eq('owner_id', ownerId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+};
+
+/** Approve a join request — creates a new home record for the requester linked to same address */
+export const approveHomeJoinRequest = async (requestId: string) => {
+  // Get the request details
+  const { data: request, error: reqErr } = await supabase
+    .from('home_join_requests')
+    .select('*, homes(*)')
+    .eq('id', requestId)
+    .single();
+  if (reqErr || !request) throw reqErr || new Error('Request not found');
+
+  // Create a home copy for the joining user (they get their own home record with same address)
+  const originalHome = request.homes;
+  const { id: _id, user_id: _uid, created_at: _ca, updated_at: _ua, ...homeFields } = originalHome;
+  const { data: newHome, error: homeErr } = await supabase
+    .from('homes')
+    .insert({ ...homeFields, user_id: request.requester_id })
+    .select()
+    .single();
+  if (homeErr) throw homeErr;
+
+  // Mark request as approved
+  await supabase
+    .from('home_join_requests')
+    .update({ status: 'approved', responded_at: new Date().toISOString() })
+    .eq('id', requestId);
+
+  return newHome;
+};
+
+/** Deny a join request */
+export const denyHomeJoinRequest = async (requestId: string) => {
+  const { error } = await supabase
+    .from('home_join_requests')
+    .update({ status: 'denied', responded_at: new Date().toISOString() })
+    .eq('id', requestId);
+  if (error) throw error;
 };
 
 // --- Equipment ---
@@ -332,17 +442,9 @@ export const getClientHome = async (clientUserId: string) => {
   return data;
 };
 
-export const getClientEquipment = async (homeId: string) => {
-  const { data, error } = await supabase.from('equipment').select('*').eq('home_id', homeId).order('category');
-  if (error) throw error;
-  return data || [];
-};
-
-export const getClientTasks = async (homeId: string) => {
-  const { data, error } = await supabase.from('maintenance_tasks').select('*').eq('home_id', homeId).is('deleted_at', null).order('due_date');
-  if (error) throw error;
-  return data || [];
-};
+// getClientEquipment and getClientTasks are unused — use getEquipment/getTasks instead
+// export const getClientEquipment = async (homeId: string) => { ... };
+// export const getClientTasks = async (homeId: string) => { ... };
 
 export const upsertClientHome = async (home: any) => {
   const { data, error } = await supabase.from('homes').upsert(home).select().single();
@@ -375,11 +477,8 @@ export const getNotifications = async (userId: string, limit = 50) => {
   return data || [];
 };
 
-export const getUnreadNotificationCount = async (userId: string) => {
-  const { count, error } = await supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('read', false);
-  if (error) throw error;
-  return count || 0;
-};
+// getUnreadNotificationCount is unused — notification badge uses getNotifications().filter(n => !n.read)
+// export const getUnreadNotificationCount = async (userId: string) => { ... };
 
 export const markNotificationRead = async (id: string) => {
   const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);

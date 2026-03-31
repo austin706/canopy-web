@@ -99,7 +99,7 @@ export async function notifyAgentSalePrep(
 ): Promise<void> {
   // Resolve agent's auth uid (profiles.id) from agents table id
   // agents.id != profiles.id — we need the profile id for notification delivery
-  let notifyUserId = agentId;
+  let notifyUserId: string | null = null;
   try {
     const { data: agentData } = await supabase
       .from('agents')
@@ -117,10 +117,15 @@ export async function notifyAgentSalePrep(
       }
     }
   } catch {
-    // Fall back to agentId if lookup fails
+    console.error('Agent notification: could not resolve profile ID for agent', agentId);
   }
 
   // Send notification via edge function (in-app + email + push)
+  // Only send if we resolved a valid profile ID — agents.id ≠ profiles.id
+  if (!notifyUserId) {
+    console.warn('Skipping agent notification: could not resolve profile ID for agent', agentId);
+    return;
+  }
   try {
     await sendNotification({
       user_id: notifyUserId,

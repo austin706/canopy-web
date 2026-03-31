@@ -240,7 +240,7 @@ export const lookupByModelNumber = async (modelNumber: string, serialNumber?: st
         .from('equipment_scan_cache')
         .select('*')
         .eq('model_number', modelNumber.trim().toUpperCase())
-        .single();
+        .maybeSingle();
 
       if (cached && cached.confidence >= 0.5) {
         // Increment hit count in background (non-blocking)

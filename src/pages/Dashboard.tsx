@@ -4,7 +4,7 @@ import { useStore } from '@/store/useStore';
 import { canAccess, getTaskLimit, PLANS } from '@/services/subscriptionGate';
 import { Colors, PriorityColors, StatusColors } from '@/constants/theme';
 import { quickCompleteTask } from '@/services/utils';
-import { getTasks, createTasks } from '@/services/supabase';
+import { getTasks, createTasks, getHomeJoinRequests, approveHomeJoinRequest, denyHomeJoinRequest } from '@/services/supabase';
 import { fetchWeather } from '@/services/weather';
 import { Skeleton } from '@/components/Skeleton';
 import { HealthGauge } from '@/components/HealthGauge';
@@ -12,6 +12,7 @@ import { generateTasksForHome, getDisplayStatus } from '@/services/taskEngine';
 import { geocodeAddress } from '@/services/geocoding';
 import { upsertHome } from '@/services/supabase';
 import { CanopyLogo, NavWeather, NavHome } from '@/components/icons/CanopyLogo';
+import { generateCostForecast, FORECAST_DISCLAIMER } from '@/services/costForecast';
 import type { MaintenanceTask } from '@/types';
 
 const DEMO_TASKS = [
@@ -29,6 +30,15 @@ export default function Dashboard() {
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
   const [tasksLoading, setTasksLoading] = useState(false);
+  const [joinRequests, setJoinRequests] = useState<any[]>([]);
+  const [processingRequest, setProcessingRequest] = useState<string | null>(null);
+
+  // Load pending home join requests
+  useEffect(() => {
+    if (user?.id) {
+      getHomeJoinRequests(user.id).then(setJoinRequests).catch(() => {});
+    }
+  }, [user?.id]);
 
   // Redirect new users who haven't set up their home yet
   useEffect(() => {
@@ -133,6 +143,13 @@ export default function Dashboard() {
     return { healthScore: monthTasks.length > 0 ? Math.round((completed / monthTasks.length) * 100) : 0, completedCount: completed, totalCount: monthTasks.length };
   }, [tasks, tier]);
 
+  const costForecast = useMemo(() => generateCostForecast(equipment, home ? {
+    square_footage: home.square_footage,
+    stories: home.stories,
+    roof_type: home.roof_type,
+    has_pool: home.has_pool,
+  } : undefined), [equipment, home]);
+
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
@@ -146,6 +163,68 @@ export default function Dashboard() {
         </div>
         <img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 40, width: 'auto', objectFit: 'contain' }} />
       </div>
+
+      {/* Pending Home Join Requests */}
+      {joinRequests.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          {joinRequests.map((req) => (
+            <div key={req.id} style={{
+              background: Colors.cream, border: `1px solid ${Colors.copper}40`,
+              borderRadius: 12, padding: '14px 18px', marginBottom: 8,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexWrap: 'wrap', gap: 10,
+            }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>
+                  {req.requester?.full_name || req.requester?.email || 'Someone'} wants to join your home
+                </div>
+                <div style={{ fontSize: 12, color: Colors.medGray, marginTop: 2 }}>
+                  {req.homes?.address}, {req.homes?.city}, {req.homes?.state}
+                  {req.message && <span> &mdash; "{req.message}"</span>}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn btn-sm"
+                  style={{ background: Colors.sage, color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  disabled={processingRequest === req.id}
+                  onClick={async () => {
+                    setProcessingRequest(req.id);
+                    try {
+                      await approveHomeJoinRequest(req.id);
+                      setJoinRequests(prev => prev.filter(r => r.id !== req.id));
+                    } catch (err: any) {
+                      alert(err?.message || 'Failed to approve.');
+                    } finally {
+                      setProcessingRequest(null);
+                    }
+                  }}
+                >
+                  {processingRequest === req.id ? '...' : 'Approve'}
+                </button>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  style={{ fontSize: 12, color: Colors.error }}
+                  disabled={processingRequest === req.id}
+                  onClick={async () => {
+                    setProcessingRequest(req.id);
+                    try {
+                      await denyHomeJoinRequest(req.id);
+                      setJoinRequests(prev => prev.filter(r => r.id !== req.id));
+                    } catch (err: any) {
+                      alert(err?.message || 'Failed to deny.');
+                    } finally {
+                      setProcessingRequest(null);
+                    }
+                  }}
+                >
+                  Deny
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="dashboard-layout">
         <div className="flex-col gap-lg">
@@ -352,6 +431,71 @@ export default function Dashboard() {
             <p style={{ fontSize: 28, fontWeight: 700 }}>{equipment.length}</p>
             <p className="text-xs text-gray">items registered</p>
           </div>
+
+          {/* Cost Forecast */}
+          {costForecast.items.length > 0 && (
+            <div className="card" style={{ borderLeft: `4px solid ${costForecast.urgentCount > 0 ? Colors.warning : Colors.sage}` }}>
+              <p style={{ fontWeight: 600, marginBottom: 4 }}>Replacement Forecast</p>
+              <p style={{ fontSize: 11, color: Colors.silver, marginBottom: 12, lineHeight: 1.4 }}>
+                Based on national averages &amp; equipment age
+              </p>
+              <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+                <div>
+                  <p style={{ fontSize: 22, fontWeight: 700, color: costForecast.totalNextYear > 0 ? Colors.warning : Colors.sage }}>
+                    ${costForecast.totalNextYear.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray">Next 12 months</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: 22, fontWeight: 700, color: Colors.charcoal }}>
+                    ${costForecast.totalNext5Years.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray">Next 5 years</p>
+                </div>
+              </div>
+              {costForecast.items.slice(0, 3).map(item => {
+                const urgencyColor = item.urgency === 'replace_now' ? Colors.error
+                  : item.urgency === 'replace_soon' ? Colors.warning
+                  : item.urgency === 'plan_ahead' ? Colors.info : Colors.sage;
+                return (
+                  <div key={item.equipment.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderTop: '1px solid #f3f4f6' }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: urgencyColor, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <p style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.equipment.name}
+                        </p>
+                        {item.isProQuote && (
+                          <span style={{
+                            fontSize: 9, fontWeight: 700, color: Colors.sage, background: Colors.sageMuted,
+                            padding: '1px 5px', borderRadius: 4, textTransform: 'uppercase', whiteSpace: 'nowrap',
+                          }}>Pro Quote</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray">
+                        {item.remainingYears <= 0 ? 'Past expected lifespan' : `~${Math.round(item.remainingYears)}yr remaining`}
+                        {' · '}
+                        {item.isProQuote
+                          ? `$${item.estimatedCost.toLocaleString()}`
+                          : item.costRange
+                            ? `$${item.costRange.low.toLocaleString()} – $${item.costRange.high.toLocaleString()}`
+                            : `~$${item.estimatedCost.toLocaleString()}`
+                        }
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+              {costForecast.items.length > 3 && (
+                <button className="btn btn-ghost btn-sm mt-sm" style={{ width: '100%', fontSize: 12 }} onClick={() => navigate('/equipment')}>
+                  View all {costForecast.items.length} items &rarr;
+                </button>
+              )}
+              <p style={{ fontSize: 10, color: Colors.silver, marginTop: 10, lineHeight: 1.5 }}>
+                {FORECAST_DISCLAIMER}
+              </p>
+            </div>
+          )}
 
           {/* Emergency Info Quick Access */}
           <div className="card" style={{ borderLeft: `4px solid ${Colors.error}` }}>

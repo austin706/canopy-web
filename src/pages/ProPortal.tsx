@@ -91,13 +91,15 @@ export default function ProPortal() {
 
       const providers = providersRes.data || [];
 
-      // Count assigned Pro/Pro+ clients per provider
+      // Count assigned Pro/Pro+ clients per provider, filtered by their zip codes
       for (const p of providers) {
         if (p.zip_codes && p.zip_codes.length > 0) {
+          // Join through homes table to match provider zip codes with homeowner addresses
           const { count } = await supabase
             .from('profiles')
-            .select('*', { count: 'exact', head: true })
-            .in('subscription_tier', ['pro', 'pro_plus']);
+            .select('*, homes!inner(zip)', { count: 'exact', head: true })
+            .in('subscription_tier', ['pro', 'pro_plus'])
+            .in('homes.zip', p.zip_codes);
           p.assigned_clients = count || 0;
         } else {
           p.assigned_clients = 0;
@@ -245,13 +247,14 @@ export default function ProPortal() {
           .gte('scheduled_date', monthStart),
       ]);
 
-      // Get assigned clients count from zip codes
+      // Get assigned clients count filtered by provider's zip codes
       let clientCount = 0;
       if (providerData.zip_codes && providerData.zip_codes.length > 0) {
         const { count } = await supabase
           .from('profiles')
-          .select('*', { count: 'exact', head: true })
-          .in('subscription_tier', ['pro', 'pro_plus']);
+          .select('*, homes!inner(zip)', { count: 'exact', head: true })
+          .in('subscription_tier', ['pro', 'pro_plus'])
+          .in('homes.zip', providerData.zip_codes);
         clientCount = count || 0;
       }
 

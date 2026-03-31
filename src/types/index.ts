@@ -67,6 +67,8 @@ export interface Home {
   zip_code: string;
   latitude?: number;
   longitude?: number;
+  /** USPS-standardized canonical address for reliable dedup (e.g. "123 N MAIN ST APT 1") */
+  normalized_address?: string;
   year_built?: number;
   square_footage?: number;
   lot_size_sqft?: number;
@@ -163,6 +165,10 @@ export interface Equipment {
   opener_type?: 'chain' | 'belt' | 'screw' | 'direct_drive' | 'jackshaft';
   remote_frequency?: string;
   has_battery_backup?: boolean;
+
+  estimated_replacement_cost?: number;
+  /** Where the replacement cost came from: 'pro_quote' = a Canopy Pro gave a real quote, 'homeowner' = user entered, 'estimate' = national average */
+  replacement_quote_source?: 'estimate' | 'pro_quote' | 'homeowner';
 
   created_at: string;
   updated_at: string;

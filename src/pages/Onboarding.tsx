@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase } from '@/services/supabase';
+import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase, createHomeJoinRequest } from '@/services/supabase';
+import { verifyAddress, findExistingProperty } from '@/services/addressVerification';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
 import { PLANS, isProAvailableInArea, loadServiceAreas } from '@/services/subscriptionGate';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
@@ -72,6 +73,12 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [generatingTasks, setGeneratingTasks] = useState(false);
+
+  // Address claim state
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [claimInfo, setClaimInfo] = useState<{ homeId: string; ownerId: string } | null>(null);
+  const [joinRequestSent, setJoinRequestSent] = useState(false);
+  const [pendingHomeData, setPendingHomeData] = useState<any>(null);
 
   // Handle Stripe redirect back
   useEffect(() => {
@@ -176,6 +183,17 @@ export default function Onboarding() {
     }
     setSaving(true);
     try {
+      // Step 1: Verify & standardize address (USPS + geocoding)
+      let verified;
+      try {
+        verified = await verifyAddress(
+          addressForm.address, addressForm.city, addressForm.state, addressForm.zip_code
+        );
+      } catch {
+        // Verification unavailable — proceed with raw input
+        verified = null;
+      }
+
       const homeData: any = {
         id: crypto.randomUUID(),
         user_id: user.id,
@@ -187,13 +205,74 @@ export default function Onboarding() {
         bathrooms: parseInt(addressForm.bathrooms) || 2,
         garage_spaces: parseInt(addressForm.garage_spaces) || 0,
         created_at: new Date().toISOString(),
+        // Store verified data when available
+        ...(verified?.normalizedAddress && { normalized_address: verified.normalizedAddress }),
+        ...(verified?.latitude && { latitude: verified.latitude }),
+        ...(verified?.longitude && { longitude: verified.longitude }),
       };
+
+      // Step 2: Check if this property already exists (normalized address → lat/lng → ilike fallback)
+      try {
+        const match = await findExistingProperty(
+          verified?.normalizedAddress || '',
+          verified?.latitude,
+          verified?.longitude,
+          addressForm.address, addressForm.city, addressForm.state, addressForm.zip_code,
+          user.id
+        );
+        if (match.found && match.homeId && match.ownerId) {
+          setPendingHomeData(homeData);
+          setClaimInfo({ homeId: match.homeId, ownerId: match.ownerId });
+          setShowClaimModal(true);
+          setSaving(false);
+          return;
+        }
+      } catch {
+        // If claim check fails, proceed normally — don't block onboarding
+      }
+
       try {
         const saved = await upsertHome(homeData);
         setHome(saved);
       } catch {
         setHome(homeData);
       }
+      setStep(2);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** User chose to request to join the existing home */
+  const handleJoinRequest = async () => {
+    if (!user || !claimInfo) return;
+    setSaving(true);
+    try {
+      await createHomeJoinRequest(claimInfo.homeId, user.id, claimInfo.ownerId,
+        `${user.full_name || user.email} would like to join your home on Canopy.`
+      );
+      setJoinRequestSent(true);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to send join request. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** User chose to proceed with their own separate home record anyway */
+  const handleProceedAnyway = async () => {
+    if (!pendingHomeData) return;
+    setSaving(true);
+    try {
+      try {
+        const saved = await upsertHome(pendingHomeData);
+        setHome(saved);
+      } catch {
+        setHome(pendingHomeData);
+      }
+      setShowClaimModal(false);
+      setClaimInfo(null);
+      setPendingHomeData(null);
       setStep(2);
     } finally {
       setSaving(false);
@@ -600,6 +679,90 @@ export default function Onboarding() {
             <button className="btn btn-primary" onClick={handleAddressSubmit} disabled={saving}>
               {saving ? 'Saving...' : 'Next'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Address Claim Modal ===== */}
+      {showClaimModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 9999, padding: 20,
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 16, padding: 32, maxWidth: 440, width: '100%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }}>
+            {joinRequestSent ? (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                  <span style={{ fontSize: 48 }}>&#x2709;</span>
+                </div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
+                  Request Sent
+                </h3>
+                <p style={{ color: Colors.medGray, fontSize: 14, lineHeight: 1.6, textAlign: 'center', marginBottom: 24 }}>
+                  The current homeowner has been notified. Once they approve your request,
+                  this property will appear in your account. We'll send you an email when it's ready.
+                </p>
+                <button
+                  className="btn btn-primary"
+                  style={{ width: '100%' }}
+                  onClick={() => {
+                    setShowClaimModal(false);
+                    setJoinRequestSent(false);
+                    setClaimInfo(null);
+                    setPendingHomeData(null);
+                    navigate('/');
+                  }}
+                >
+                  Go to Dashboard
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                  <span style={{ fontSize: 48 }}>&#x1F3E0;</span>
+                </div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
+                  This Property Already Has an Account
+                </h3>
+                <p style={{ color: Colors.medGray, fontSize: 14, lineHeight: 1.6, textAlign: 'center', marginBottom: 24 }}>
+                  <strong>{addressForm.address}, {addressForm.city}, {addressForm.state} {addressForm.zip_code}</strong> is already
+                  associated with a Canopy account. Would you like to request to join this home, or create a separate entry?
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: '100%' }}
+                    onClick={handleJoinRequest}
+                    disabled={saving}
+                  >
+                    {saving ? 'Sending...' : 'Request to Join This Home'}
+                  </button>
+                  <button
+                    className="btn btn-ghost"
+                    style={{ width: '100%', color: Colors.medGray }}
+                    onClick={handleProceedAnyway}
+                    disabled={saving}
+                  >
+                    Create My Own Entry
+                  </button>
+                  <button
+                    className="btn btn-ghost"
+                    style={{ width: '100%', fontSize: 13, color: Colors.medGray }}
+                    onClick={() => {
+                      setShowClaimModal(false);
+                      setClaimInfo(null);
+                      setPendingHomeData(null);
+                    }}
+                  >
+                    Go Back &amp; Edit Address
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

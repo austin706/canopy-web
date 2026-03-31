@@ -117,7 +117,7 @@ Standalone pages (no sidebar):
 - **App.tsx**: 6 new routes added
 - **Layout.tsx**: sidebar links for Pro Visits, Quotes, Invoices
 - **ProPortal.tsx**: quick actions for Visit Schedule and Quotes & Invoices
-- **subscriptionGate.ts**: updated plan descriptions (44 tasks, Pro visit/concierge details)
+- **subscriptionGate.ts**: updated plan descriptions (80+ tasks, Pro visit/concierge details)
 
 ### Session 11 continued — Edge Functions + Mobile + Gating:
 - **Edge Functions deployed**: create-checkout (v3), stripe-webhook (v3), create-invoice-payment (v1), create-pro-plus-subscription (v1), send-notifications (v7 — multi-channel: in-app + Expo push + Resend email with preference checking, quiet hours, batch/cron modes)

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { signOut } from '@/services/supabase';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { Colors } from '@/constants/theme';
 
 /**
@@ -17,7 +18,11 @@ export default function ProLayout() {
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
 
   const handleLogout = async () => {
-    try { await signOut(); } catch {}
+    try {
+      await signOut();
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
     reset();
     navigate('/login');
   };
@@ -86,7 +91,9 @@ export default function ProLayout() {
         </div>
       </nav>
       <main className="main-content">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   );

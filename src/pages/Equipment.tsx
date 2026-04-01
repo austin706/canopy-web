@@ -36,17 +36,17 @@ const SCAN_SUGGESTIONS = [
   { label: 'Garage Door Opener', hint: 'Sticker on the motor housing', icon: '🚗' },
 ];
 
-const CATEGORIES: { value: EquipmentCategory; label: string; abbr: string }[] = [
-  { value: 'hvac', label: 'HVAC', abbr: 'HC' },
-  { value: 'water_heater', label: 'Water Heater', abbr: 'WH' },
-  { value: 'appliance', label: 'Appliance', abbr: 'AP' },
-  { value: 'roof', label: 'Roof', abbr: 'RF' },
-  { value: 'plumbing', label: 'Plumbing', abbr: 'PL' },
-  { value: 'electrical', label: 'Electrical', abbr: 'EL' },
-  { value: 'outdoor', label: 'Outdoor', abbr: 'OD' },
-  { value: 'safety', label: 'Safety', abbr: 'SF' },
-  { value: 'pool', label: 'Pool', abbr: 'PO' },
-  { value: 'garage', label: 'Garage', abbr: 'GR' },
+const CATEGORIES: { value: EquipmentCategory; label: string; abbr: string; icon?: string }[] = [
+  { value: 'hvac', label: 'HVAC', abbr: 'HC', icon: '/icons/equipment/furnace.svg' },
+  { value: 'water_heater', label: 'Water Heater', abbr: 'WH', icon: '/icons/equipment/water-heater.svg' },
+  { value: 'appliance', label: 'Appliance', abbr: 'AP', icon: '/icons/equipment/appliances.svg' },
+  { value: 'roof', label: 'Roof', abbr: 'RF', icon: '/icons/equipment/Roof.png' },
+  { value: 'plumbing', label: 'Plumbing', abbr: 'PL', icon: '/icons/equipment/Plumbing.png' },
+  { value: 'electrical', label: 'Electrical', abbr: 'EL', icon: '/icons/equipment/electrical-panel.svg' },
+  { value: 'outdoor', label: 'Outdoor', abbr: 'OD', icon: '/icons/equipment/septic-well.svg' },
+  { value: 'safety', label: 'Safety', abbr: 'SF', icon: '/icons/equipment/fireplace.svg' },
+  { value: 'pool', label: 'Pool', abbr: 'PO', icon: '/icons/equipment/pool-spa.svg' },
+  { value: 'garage', label: 'Garage', abbr: 'GR', icon: '/icons/equipment/garage-door.svg' },
 ];
 
 export default function Equipment() {
@@ -87,6 +87,7 @@ export default function Equipment() {
 
   const filtered = filter === 'all' ? equipment : equipment.filter(e => e.category === filter);
   const catAbbr = (cat: string) => CATEGORIES.find(c => c.value === cat)?.abbr || 'EQ';
+  const catIcon = (cat: string) => CATEGORIES.find(c => c.value === cat)?.icon;
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -375,7 +376,12 @@ export default function Equipment() {
                 }}>SCHEDULE INSPECTION</div>
               )}
               <div className="equip-card" style={{ paddingTop: isReplacement || isInspect ? 24 : undefined }}>
-                <div className="equip-icon" style={{ background: Colors.copperMuted, fontSize: 11, fontWeight: 700, color: Colors.copper }}>{catAbbr(item.category)}</div>
+                <div className="equip-icon" style={{ background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {catIcon(item.category)
+                    ? <img src={catIcon(item.category)} alt={item.category} style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                    : <span style={{ fontSize: 11, fontWeight: 700, color: Colors.copper }}>{catAbbr(item.category)}</span>
+                  }
+                </div>
                 <div className="equip-info">
                   <div className="equip-name">{item.name}</div>
                   <div className="equip-detail">{item.make} {item.model}</div>

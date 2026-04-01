@@ -456,20 +456,119 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
         // Check if we got meaningful text (at least ~20 chars per page on average)
         const hasGoodText = text.length > pageCount * 20;
 
-        if (hasGoodText && pageCount <= 15) {
-          // Small text-based PDF — single API call is fine
-          const trimmed = text.length > 80000 ? text.substring(0, 80000) + '\n\n[Report truncated]' : text;
-          documentText = `Home Inspection Report (${file.name}, ${pageCount} pages):\n\n${trimmed}`;
-          setProgress('Analyzing report with AI...');
-        } else {
-          // Large PDF or image-based PDF — ALWAYS use vision batching for thorough extraction
-          // Text extraction misses form fields, checkboxes, photo annotations, and table content
-          // that inspection reports commonly use in their body sections
-          setProgress(pageCount > 15
-            ? 'Large report detected — rendering pages for thorough AI vision analysis...'
-            : 'PDF is image-based, rendering all pages for AI vision analysis...');
+        if (hasGoodText) {
+          // Text-rich PDF — use text extraction (faster, more accurate than vision OCR)
+          // Works for any page count. For large reports, chunk the text into segments.
+          const TEXT_CHUNK_LIMIT = 60000; // chars per AI call — leave room for prompt overhead
 
-          // Render every page (skip cover pages 1-2 which are usually branding, not findings)
+          if (text.length <= TEXT_CHUNK_LIMIT) {
+            // Fits in a single API call
+            documentText = `Home Inspection Report (${file.name}, ${pageCount} pages):\n\n${text}`;
+            setProgress('Analyzing report with AI...');
+          } else {
+            // Large text report — split into overlapping chunks and merge results
+            setProgress('Large report detected — analyzing text in sections...');
+            const allTasks: InspectionTask[] = [];
+            const chunks: string[] = [];
+            let pos = 0;
+
+            // Split on paragraph boundaries to avoid cutting mid-sentence
+            while (pos < text.length) {
+              let end = Math.min(pos + TEXT_CHUNK_LIMIT, text.length);
+              // If not at the end, find a good split point (double newline or section break)
+              if (end < text.length) {
+                const searchBack = text.lastIndexOf('\n\n', end);
+                if (searchBack > pos + TEXT_CHUNK_LIMIT * 0.6) {
+                  end = searchBack;
+                }
+              }
+              chunks.push(text.substring(pos, end));
+              pos = end;
+            }
+
+            for (let c = 0; c < chunks.length; c++) {
+              setProgress(`Analyzing section ${c + 1} of ${chunks.length}...`);
+              const context = `Home Inspection Report (${file.name}, ${pageCount} pages), ` +
+                `text section ${c + 1} of ${chunks.length}. ` +
+                `Extract EVERY INDIVIDUAL finding. Be SPECIFIC with locations. ` +
+                `Each deficiency, recommendation, or maintenance item = one separate task. ` +
+                `Do NOT consolidate — "rotted wood on main home" and "rotted wood on garage" are TWO tasks.`;
+              try {
+                const chunkResult = await parseHomeInspection(
+                  `${context}\n\n[INSPECTION REPORT TEXT:]\n${chunks[c]}`
+                );
+                allTasks.push(...chunkResult);
+              } catch (err: any) {
+                console.warn(`Text chunk ${c + 1} failed:`, err.message);
+              }
+            }
+
+            if (allTasks.length === 0) {
+              throw new Error('AI could not extract any maintenance tasks from this report.');
+            }
+
+            console.log(`Total tasks before dedup: ${allTasks.length} (from ${chunks.length} text chunks)`);
+
+            // Deduplicate — same logic used for vision batching
+            const normalizeKey = (t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const seen = new Set<string>();
+            const seenTitles: string[] = [];
+
+            const LOCATION_WORDS = new Set([
+              'front', 'back', 'rear', 'left', 'right', 'north', 'south', 'east', 'west',
+              'ne', 'nw', 'se', 'sw', 'upper', 'lower', 'main', 'master', 'guest',
+              'garage', '1-car', '2-car', '3-car', 'detached', 'attached', 'basement',
+              'attic', 'crawl', 'kitchen', 'bathroom', 'bedroom', 'living', 'family',
+              'foyer', 'hallway', 'laundry', 'closet', 'patio', 'deck', 'porch',
+              'pool', 'chimney', 'exterior', 'interior', 'upstairs', 'downstairs',
+            ]);
+
+            const isSimilar = (a: string, b: string): boolean => {
+              const na = normalizeKey(a);
+              const nb = normalizeKey(b);
+              if (na === nb) return true;
+              if (na.length > nb.length + 10 && na.includes(nb)) return true;
+              if (nb.length > na.length + 10 && nb.includes(na)) return true;
+
+              const wordsA = new Set(a.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+              const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+              if (wordsA.size === 0 || wordsB.size === 0) return false;
+
+              const overlap = [...wordsA].filter(w => wordsB.has(w)).length;
+              const smaller = Math.min(wordsA.size, wordsB.size);
+              const ratio = smaller > 0 ? overlap / smaller : 0;
+
+              const locA = [...wordsA].filter(w => LOCATION_WORDS.has(w));
+              const locB = [...wordsB].filter(w => LOCATION_WORDS.has(w));
+              const locOverlap = locA.filter(w => locB.includes(w)).length;
+              const hasDistinctLocations = (locA.length > 0 || locB.length > 0) &&
+                (locA.length !== locB.length || locOverlap < Math.max(locA.length, locB.length));
+
+              if (hasDistinctLocations) {
+                return overlap >= 4 && ratio >= 0.9;
+              }
+
+              return overlap >= 3 && ratio >= 0.8;
+            };
+
+            const dedupedTasks = allTasks.filter(task => {
+              const key = normalizeKey(task.title);
+              if (seen.has(key)) return false;
+              if (seenTitles.some(prev => isSimilar(task.title, prev))) return false;
+              seen.add(key);
+              seenTitles.push(task.title);
+              return true;
+            });
+
+            setLocalTasks(dedupedTasks);
+            setSelectedTasks(new Set(dedupedTasks.map((_, i) => i)));
+            setStep('review');
+            return;
+          }
+        } else {
+          // Image-based PDF — use vision batching for OCR extraction
+          setProgress('PDF is image-based, rendering pages for AI vision analysis...');
+
           const allPages: number[] = [];
           for (let i = 1; i <= pageCount; i++) allPages.push(i);
 
@@ -540,7 +639,6 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           const seen = new Set<string>();
           const seenTitles: string[] = [];
 
-          // Location keywords that distinguish otherwise-similar tasks
           const LOCATION_WORDS = new Set([
             'front', 'back', 'rear', 'left', 'right', 'north', 'south', 'east', 'west',
             'ne', 'nw', 'se', 'sw', 'upper', 'lower', 'main', 'master', 'guest',
@@ -551,15 +649,12 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           ]);
 
           const isSimilar = (a: string, b: string): boolean => {
-            // Check if one normalized title contains the other entirely
             const na = normalizeKey(a);
             const nb = normalizeKey(b);
             if (na === nb) return true;
-            // Only flag as duplicate if one FULLY contains the other (not partial overlap)
             if (na.length > nb.length + 10 && na.includes(nb)) return true;
             if (nb.length > na.length + 10 && nb.includes(na)) return true;
 
-            // Word overlap check
             const wordsA = new Set(a.toLowerCase().split(/\s+/).filter(w => w.length > 3));
             const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(w => w.length > 3));
             if (wordsA.size === 0 || wordsB.size === 0) return false;
@@ -568,26 +663,22 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
             const smaller = Math.min(wordsA.size, wordsB.size);
             const ratio = smaller > 0 ? overlap / smaller : 0;
 
-            // If location words differ between titles, they're likely distinct tasks
             const locA = [...wordsA].filter(w => LOCATION_WORDS.has(w));
             const locB = [...wordsB].filter(w => LOCATION_WORDS.has(w));
             const locOverlap = locA.filter(w => locB.includes(w)).length;
             const hasDistinctLocations = (locA.length > 0 || locB.length > 0) &&
               (locA.length !== locB.length || locOverlap < Math.max(locA.length, locB.length));
 
-            // If locations differ, require very high overlap (90%+) to consider duplicate
             if (hasDistinctLocations) {
               return overlap >= 4 && ratio >= 0.9;
             }
 
-            // Standard dedup: 80% overlap with at least 3 matching words
             return overlap >= 3 && ratio >= 0.8;
           };
 
           const dedupedTasks = allTasks.filter(task => {
             const key = normalizeKey(task.title);
             if (seen.has(key)) return false;
-            // Check fuzzy similarity against all previously accepted titles
             if (seenTitles.some(prev => isSimilar(task.title, prev))) return false;
             seen.add(key);
             seenTitles.push(task.title);

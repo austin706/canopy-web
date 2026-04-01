@@ -220,11 +220,22 @@ export default function Calendar() {
   if (activeTab === 'log') {
     return (
       <div className="page">
-        <div className="page-header">
+        <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1>Calendar</h1>
             <p className="subtitle">Tasks, visits & maintenance history</p>
           </div>
+          <button
+            className="btn btn-primary btn-sm"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 16px', fontSize: 13, fontWeight: 600,
+              borderRadius: 8, whiteSpace: 'nowrap',
+            }}
+            onClick={() => navigate('/task/create')}
+          >
+            + New Task
+          </button>
         </div>
         <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${Colors.cream || '#f5f0eb'}`, marginBottom: 24 }}>
           {calendarTabs.map(t => (
@@ -258,11 +269,22 @@ export default function Calendar() {
 
   return (
     <div className="page">
-      <div className="page-header">
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1>Calendar</h1>
           <p className="subtitle">Tasks, visits & maintenance history</p>
         </div>
+        <button
+          className="btn btn-primary btn-sm"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 16px', fontSize: 13, fontWeight: 600,
+            borderRadius: 8, whiteSpace: 'nowrap',
+          }}
+          onClick={() => navigate('/task/create')}
+        >
+          + New Task
+        </button>
       </div>
 
       {/* Sub-tab navigation */}

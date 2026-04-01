@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { canAccess, getTaskLimit, PLANS } from '@/services/subscriptionGate';
 import { Colors, PriorityColors, StatusColors } from '@/constants/theme';
+import DashboardChat from '@/components/DashboardChat';
 import { quickCompleteTask } from '@/services/utils';
 import { getTasks, createTasks, getHomeJoinRequests, approveHomeJoinRequest, denyHomeJoinRequest } from '@/services/supabase';
 import { fetchWeather } from '@/services/weather';
@@ -379,6 +380,25 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* AI Home Assistant */}
+          {canAccess(tier, 'ai_chat') ? (
+            <DashboardChat />
+          ) : (
+            <div className="card" style={{ background: Colors.sageMuted, borderLeft: `4px solid ${Colors.sage}` }}>
+              <div className="flex items-center gap-md">
+                <div style={{
+                  width: 40, height: 40, borderRadius: '50%', background: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                }}>&#127807;</div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 600, fontSize: 14 }}>AI Home Assistant</p>
+                  <p className="text-sm text-gray">Get personalized maintenance advice</p>
+                </div>
+              </div>
+              <button className="btn btn-primary btn-sm mt-md" onClick={() => navigate('/subscription')}>Upgrade to Access</button>
+            </div>
+          )}
+
           {/* Quick Actions */}
           <div className="card">
             <p style={{ fontWeight: 600, marginBottom: 12 }}>Quick Actions</p>
@@ -388,8 +408,6 @@ export default function Dashboard() {
                 { label: 'Scan Equipment', route: '/equipment', free: true },
                 { label: 'Pro Services', route: '/pro-services', free: false },
                 { label: 'Contact Agent', route: '/agent', free: true },
-                { label: 'Maintenance Log', route: '/logs', free: true },
-                { label: 'Request Pro', route: '/pro-request', free: false },
                 { label: 'Sale Prep Checklist', route: '/sale-prep', free: true },
                 { label: 'Home Report (PDF)', route: '/home-report', free: true },
                 { label: 'Transfer Home Token', route: '/transfer', free: true },

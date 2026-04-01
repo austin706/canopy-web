@@ -524,19 +524,48 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           const seen = new Set<string>();
           const seenTitles: string[] = [];
 
+          // Location keywords that distinguish otherwise-similar tasks
+          const LOCATION_WORDS = new Set([
+            'front', 'back', 'rear', 'left', 'right', 'north', 'south', 'east', 'west',
+            'ne', 'nw', 'se', 'sw', 'upper', 'lower', 'main', 'master', 'guest',
+            'garage', '1-car', '2-car', '3-car', 'detached', 'attached', 'basement',
+            'attic', 'crawl', 'kitchen', 'bathroom', 'bedroom', 'living', 'family',
+            'foyer', 'hallway', 'laundry', 'closet', 'patio', 'deck', 'porch',
+            'pool', 'chimney', 'exterior', 'interior', 'upstairs', 'downstairs',
+          ]);
+
           const isSimilar = (a: string, b: string): boolean => {
-            // Check if one title contains the other (catches "Replace roof shingles" vs "Replace deteriorated roof shingles")
+            // Check if one normalized title contains the other entirely
             const na = normalizeKey(a);
             const nb = normalizeKey(b);
-            if (na.includes(nb) || nb.includes(na)) return true;
-            // Check word overlap — if 60%+ of significant words match, likely a duplicate
+            if (na === nb) return true;
+            // Only flag as duplicate if one FULLY contains the other (not partial overlap)
+            if (na.length > nb.length + 10 && na.includes(nb)) return true;
+            if (nb.length > na.length + 10 && nb.includes(na)) return true;
+
+            // Word overlap check
             const wordsA = new Set(a.toLowerCase().split(/\s+/).filter(w => w.length > 3));
             const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(w => w.length > 3));
             if (wordsA.size === 0 || wordsB.size === 0) return false;
+
             const overlap = [...wordsA].filter(w => wordsB.has(w)).length;
             const smaller = Math.min(wordsA.size, wordsB.size);
-            // Use 60% threshold but require at least 3 overlapping words to avoid false positives on short titles
-            return overlap >= 3 && smaller > 0 && overlap / smaller >= 0.6;
+            const ratio = smaller > 0 ? overlap / smaller : 0;
+
+            // If location words differ between titles, they're likely distinct tasks
+            const locA = [...wordsA].filter(w => LOCATION_WORDS.has(w));
+            const locB = [...wordsB].filter(w => LOCATION_WORDS.has(w));
+            const locOverlap = locA.filter(w => locB.includes(w)).length;
+            const hasDistinctLocations = (locA.length > 0 || locB.length > 0) &&
+              (locA.length !== locB.length || locOverlap < Math.max(locA.length, locB.length));
+
+            // If locations differ, require very high overlap (90%+) to consider duplicate
+            if (hasDistinctLocations) {
+              return overlap >= 4 && ratio >= 0.9;
+            }
+
+            // Standard dedup: 80% overlap with at least 3 matching words
+            return overlap >= 3 && ratio >= 0.8;
           };
 
           const dedupedTasks = allTasks.filter(task => {

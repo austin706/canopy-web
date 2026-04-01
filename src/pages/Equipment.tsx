@@ -88,6 +88,7 @@ export default function Equipment() {
   const filtered = filter === 'all' ? equipment : equipment.filter(e => e.category === filter);
   const catAbbr = (cat: string) => CATEGORIES.find(c => c.value === cat)?.abbr || 'EQ';
   const catIcon = (cat: string) => CATEGORIES.find(c => c.value === cat)?.icon;
+  const catLabel = (cat: string) => CATEGORIES.find(c => c.value === cat)?.label || cat;
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -383,6 +384,7 @@ export default function Equipment() {
                   }
                 </div>
                 <div className="equip-info">
+                  <div style={{ fontSize: 11, fontWeight: 600, color: Colors.sage, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>{catLabel(item.category)}</div>
                   <div className="equip-name">{item.name}</div>
                   <div className="equip-detail">{item.make} {item.model}</div>
                   {item.install_date && <div className="equip-detail">Installed: {new Date(item.install_date).toLocaleDateString()}</div>}

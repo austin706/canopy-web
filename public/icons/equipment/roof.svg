@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" stroke="#8B9A6B" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Simple gable roofline -->
+  <path d="M35 120 L100 70 L165 120" stroke-width="5" fill="none"/>
+  <!-- Chimney on right slope -->
+  <rect x="128" y="80" width="16" height="25" rx="1" stroke-width="3.5" fill="none"/>
+</svg>

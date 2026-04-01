@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" stroke="#8B9A6B" stroke-linecap="round" stroke-linejoin="round">
+  <!-- L-shaped pipe spout with thickness -->
+  <path d="M135 72 L88 72 Q72 72 72 88 L72 112" stroke-width="8" fill="none"/>
+  <!-- Inner edge to show pipe opening -->
+  <path d="M135 82 L95 82 Q82 82 82 95 L82 112" stroke-width="3.5" fill="none"/>
+  <!-- Pipe opening bottom edge -->
+  <line x1="68" y1="112" x2="86" y2="112" stroke-width="3.5"/>
+  <!-- Water drop -->
+  <path d="M77 125 C77 125 71 135 71 139 C71 142.5 73.7 145 77 145 C80.3 145 83 142.5 83 139 C83 135 77 125 77 125Z" stroke-width="3" fill="#8B9A6B" stroke="none"/>
+  <circle cx="77" cy="138" r="2" fill="#FAF9F6" stroke="none"/>
+</svg>

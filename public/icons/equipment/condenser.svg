@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" stroke="#8B9A6B" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Main axes -->
+  <line x1="100" y1="25" x2="100" y2="175"/>
+  <line x1="35" y1="62" x2="165" y2="138"/>
+  <line x1="35" y1="138" x2="165" y2="62"/>
+  <!-- Top branch -->
+  <line x1="85" y1="40" x2="100" y2="55"/>
+  <line x1="115" y1="40" x2="100" y2="55"/>
+  <!-- Bottom branch -->
+  <line x1="85" y1="160" x2="100" y2="145"/>
+  <line x1="115" y1="160" x2="100" y2="145"/>
+  <!-- Upper-right branch -->
+  <line x1="152" y1="60" x2="140" y2="72"/>
+  <line x1="160" y1="80" x2="140" y2="72"/>
+  <!-- Lower-right branch -->
+  <line x1="152" y1="140" x2="140" y2="128"/>
+  <line x1="160" y1="120" x2="140" y2="128"/>
+  <!-- Lower-left branch -->
+  <line x1="48" y1="140" x2="60" y2="128"/>
+  <line x1="40" y1="120" x2="60" y2="128"/>
+  <!-- Upper-left branch -->
+  <line x1="48" y1="60" x2="60" y2="72"/>
+  <line x1="40" y1="80" x2="60" y2="72"/>
+  <!-- Center diamond -->
+  <path d="M100 85 L115 100 L100 115 L85 100 Z" stroke-width="3"/>
+</svg>

@@ -483,21 +483,21 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           }
 
           // Process in batches — each batch sends one stitched image to the AI
-          // Stitch ~5 pages per batch for better detail extraction (fewer pages = more focus)
-          const PAGES_PER_BATCH = 5;
+          // Stitch ~3 pages per batch for maximum detail extraction
+          const PAGES_PER_BATCH = 3;
           const batches: string[][] = [];
           for (let i = 0; i < allImages.length; i += PAGES_PER_BATCH) {
             batches.push(allImages.slice(i, i + PAGES_PER_BATCH));
           }
 
+          // === PASS 1: Extract all tasks from every batch ===
           const allTasks: InspectionTask[] = [];
           for (let b = 0; b < batches.length; b++) {
             const batch = batches[b];
             const startPage = b * PAGES_PER_BATCH + 1;
             const endPage = Math.min(startPage + batch.length - 1, pageCount);
-            setProgress(`Analyzing pages ${startPage}–${endPage} of ${pageCount} (batch ${b + 1}/${batches.length})...`);
+            setProgress(`Pass 1: Analyzing pages ${startPage}–${endPage} of ${pageCount} (batch ${b + 1}/${batches.length})...`);
 
-            // Stitch batch pages into a single tall image
             const stitchedBase64 = await stitchImagesVertically(batch);
 
             const context = `Home Inspection Report (${file.name}), pages ${startPage}–${endPage} of ${pageCount}. ` +
@@ -510,13 +510,48 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
               const batchResult = await parseHomeInspection(context, stitchedBase64);
               allTasks.push(...batchResult);
             } catch (err: any) {
-              console.warn(`Batch ${b + 1} failed:`, err.message);
-              // Continue with other batches — don't fail the whole report
+              console.warn(`Pass 1 batch ${b + 1} failed:`, err.message);
             }
           }
 
           if (allTasks.length === 0) {
             throw new Error('AI could not extract any maintenance tasks from this report. The pages may contain only photos or non-inspection content.');
+          }
+
+          // === PASS 2: Gap-fill — re-scan each batch asking AI to find missed items ===
+          const pass1Titles = allTasks.map(t => t.title);
+          const pass2Tasks: InspectionTask[] = [];
+          for (let b = 0; b < batches.length; b++) {
+            const batch = batches[b];
+            const startPage = b * PAGES_PER_BATCH + 1;
+            const endPage = Math.min(startPage + batch.length - 1, pageCount);
+            setProgress(`Pass 2: Checking for missed items on pages ${startPage}–${endPage} (${b + 1}/${batches.length})...`);
+
+            const stitchedBase64 = await stitchImagesVertically(batch);
+
+            // Include up to 30 already-found titles so the AI knows what to skip
+            const relevantTitles = pass1Titles.slice(0, 80).map((t, i) => `${i + 1}. ${t}`).join('\n');
+            const gapContext = `Home Inspection Report (${file.name}), pages ${startPage}–${endPage} of ${pageCount}.\n\n` +
+              `The following tasks have ALREADY been extracted from this report:\n${relevantTitles}\n\n` +
+              `CAREFULLY re-examine these pages and extract ONLY findings that are NOT already in the list above. ` +
+              `Look specifically for: individual checkbox items, photo annotations, minor deficiencies, safety concerns, ` +
+              `routine maintenance recommendations, and any findings in different LOCATIONS than what's listed. ` +
+              `If there are truly no additional findings on these pages, return an empty JSON array [].`;
+
+            try {
+              const gapResult = await parseHomeInspection(gapContext, stitchedBase64);
+              if (gapResult.length > 0) {
+                console.log(`Pass 2 batch ${b + 1}: found ${gapResult.length} additional tasks`);
+                pass2Tasks.push(...gapResult);
+              }
+            } catch (err: any) {
+              console.warn(`Pass 2 batch ${b + 1} failed:`, err.message);
+            }
+          }
+
+          if (pass2Tasks.length > 0) {
+            console.log(`Pass 2 total: ${pass2Tasks.length} additional tasks found`);
+            allTasks.push(...pass2Tasks);
           }
 
           // Deduplicate tasks — exact key match + fuzzy title similarity

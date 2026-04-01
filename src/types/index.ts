@@ -371,6 +371,7 @@ export interface ProMonthlyVisit {
   time_spent_minutes?: number;
   max_minutes: number;
   pro_notes?: string;
+  homeowner_notes?: string;
   photos: { url: string; caption?: string }[];
   ai_summary?: string;
   ai_summary_generated_at?: string;

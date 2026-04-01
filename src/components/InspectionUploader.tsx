@@ -458,112 +458,23 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
 
         if (hasGoodText) {
           // Text-rich PDF — use text extraction (faster, more accurate than vision OCR)
-          // Works for any page count. For large reports, chunk the text into segments.
-          const TEXT_CHUNK_LIMIT = 60000; // chars per AI call — leave room for prompt overhead
+          // Claude's context window (200K tokens) easily handles full inspection reports.
+          // Sending the full text in ONE call avoids duplicate extraction from summary vs body.
+          const MAX_TEXT_LENGTH = 200000; // ~50K tokens — well within Claude's context
 
-          if (text.length <= TEXT_CHUNK_LIMIT) {
-            // Fits in a single API call
-            documentText = `Home Inspection Report (${file.name}, ${pageCount} pages):\n\n${text}`;
+          if (text.length <= MAX_TEXT_LENGTH) {
+            // Full report fits in a single API call — best quality, no dedup needed
+            documentText = `Home Inspection Report (${file.name}, ${pageCount} pages).\n` +
+              `IMPORTANT: This report likely contains a SUMMARY section followed by DETAILED sections that repeat the same findings with photos. ` +
+              `Extract each finding ONCE — prefer the detailed version but do NOT create duplicate tasks for the same issue.\n\n${text}`;
             setProgress('Analyzing report with AI...');
           } else {
-            // Large text report — split into overlapping chunks and merge results
-            setProgress('Large report detected — analyzing text in sections...');
-            const allTasks: InspectionTask[] = [];
-            const chunks: string[] = [];
-            let pos = 0;
-
-            // Split on paragraph boundaries to avoid cutting mid-sentence
-            while (pos < text.length) {
-              let end = Math.min(pos + TEXT_CHUNK_LIMIT, text.length);
-              // If not at the end, find a good split point (double newline or section break)
-              if (end < text.length) {
-                const searchBack = text.lastIndexOf('\n\n', end);
-                if (searchBack > pos + TEXT_CHUNK_LIMIT * 0.6) {
-                  end = searchBack;
-                }
-              }
-              chunks.push(text.substring(pos, end));
-              pos = end;
-            }
-
-            for (let c = 0; c < chunks.length; c++) {
-              setProgress(`Analyzing section ${c + 1} of ${chunks.length}...`);
-              const context = `Home Inspection Report (${file.name}, ${pageCount} pages), ` +
-                `text section ${c + 1} of ${chunks.length}. ` +
-                `Extract EVERY INDIVIDUAL finding. Be SPECIFIC with locations. ` +
-                `Each deficiency, recommendation, or maintenance item = one separate task. ` +
-                `Do NOT consolidate — "rotted wood on main home" and "rotted wood on garage" are TWO tasks.`;
-              try {
-                const chunkResult = await parseHomeInspection(
-                  `${context}\n\n[INSPECTION REPORT TEXT:]\n${chunks[c]}`
-                );
-                allTasks.push(...chunkResult);
-              } catch (err: any) {
-                console.warn(`Text chunk ${c + 1} failed:`, err.message);
-              }
-            }
-
-            if (allTasks.length === 0) {
-              throw new Error('AI could not extract any maintenance tasks from this report.');
-            }
-
-            console.log(`Total tasks before dedup: ${allTasks.length} (from ${chunks.length} text chunks)`);
-
-            // Deduplicate — same logic used for vision batching
-            const normalizeKey = (t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const seen = new Set<string>();
-            const seenTitles: string[] = [];
-
-            const LOCATION_WORDS = new Set([
-              'front', 'back', 'rear', 'left', 'right', 'north', 'south', 'east', 'west',
-              'ne', 'nw', 'se', 'sw', 'upper', 'lower', 'main', 'master', 'guest',
-              'garage', '1-car', '2-car', '3-car', 'detached', 'attached', 'basement',
-              'attic', 'crawl', 'kitchen', 'bathroom', 'bedroom', 'living', 'family',
-              'foyer', 'hallway', 'laundry', 'closet', 'patio', 'deck', 'porch',
-              'pool', 'chimney', 'exterior', 'interior', 'upstairs', 'downstairs',
-            ]);
-
-            const isSimilar = (a: string, b: string): boolean => {
-              const na = normalizeKey(a);
-              const nb = normalizeKey(b);
-              if (na === nb) return true;
-              if (na.length > nb.length + 10 && na.includes(nb)) return true;
-              if (nb.length > na.length + 10 && nb.includes(na)) return true;
-
-              const wordsA = new Set(a.toLowerCase().split(/\s+/).filter(w => w.length > 3));
-              const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(w => w.length > 3));
-              if (wordsA.size === 0 || wordsB.size === 0) return false;
-
-              const overlap = [...wordsA].filter(w => wordsB.has(w)).length;
-              const smaller = Math.min(wordsA.size, wordsB.size);
-              const ratio = smaller > 0 ? overlap / smaller : 0;
-
-              const locA = [...wordsA].filter(w => LOCATION_WORDS.has(w));
-              const locB = [...wordsB].filter(w => LOCATION_WORDS.has(w));
-              const locOverlap = locA.filter(w => locB.includes(w)).length;
-              const hasDistinctLocations = (locA.length > 0 || locB.length > 0) &&
-                (locA.length !== locB.length || locOverlap < Math.max(locA.length, locB.length));
-
-              if (hasDistinctLocations) {
-                return overlap >= 4 && ratio >= 0.9;
-              }
-
-              return overlap >= 3 && ratio >= 0.8;
-            };
-
-            const dedupedTasks = allTasks.filter(task => {
-              const key = normalizeKey(task.title);
-              if (seen.has(key)) return false;
-              if (seenTitles.some(prev => isSimilar(task.title, prev))) return false;
-              seen.add(key);
-              seenTitles.push(task.title);
-              return true;
-            });
-
-            setLocalTasks(dedupedTasks);
-            setSelectedTasks(new Set(dedupedTasks.map((_, i) => i)));
-            setStep('review');
-            return;
+            // Extremely large report — truncate to fit (very rare for inspection reports)
+            const trimmed = text.substring(0, MAX_TEXT_LENGTH) + '\n\n[Report truncated due to length]';
+            documentText = `Home Inspection Report (${file.name}, ${pageCount} pages).\n` +
+              `IMPORTANT: This report likely contains a SUMMARY section followed by DETAILED sections that repeat the same findings with photos. ` +
+              `Extract each finding ONCE — prefer the detailed version but do NOT create duplicate tasks for the same issue.\n\n${trimmed}`;
+            setProgress('Analyzing report with AI...');
           }
         } else {
           // Image-based PDF — use vision batching for OCR extraction

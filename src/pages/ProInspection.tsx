@@ -477,6 +477,21 @@ export default function ProInspection() {
           </div>
         </div>
 
+        {/* Homeowner Notes (if any) */}
+        {visit.homeowner_notes && (
+          <div style={{
+            padding: '12px 16px', borderRadius: 8, marginBottom: Spacing.md,
+            backgroundColor: Colors.copperMuted || '#FDF0E6', border: `1px solid ${Colors.copper}40`,
+          }}>
+            <p style={{ fontWeight: 600, fontSize: FontSize.sm, color: Colors.copper, margin: '0 0 4px' }}>
+              Homeowner Notes
+            </p>
+            <p style={{ fontSize: FontSize.sm, color: Colors.charcoal, margin: 0, whiteSpace: 'pre-wrap' }}>
+              {visit.homeowner_notes}
+            </p>
+          </div>
+        )}
+
         {/* Tab Bar */}
         <div style={{ display: 'flex', gap: Spacing.sm, overflowX: 'auto', paddingBottom: Spacing.sm }}>
           {inspections.map((insp) => {

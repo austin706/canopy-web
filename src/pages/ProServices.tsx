@@ -8,12 +8,22 @@ const Visits = lazy(() => import('@/pages/Visits'));
 const Quotes = lazy(() => import('@/pages/Quotes'));
 const Invoices = lazy(() => import('@/pages/Invoices'));
 
-interface ProServiceAppointment {
+interface ServiceRequest {
   id: string;
   title: string;
   date: string;
-  status: 'pending' | 'requested' | 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
-  purpose: string;
+  status: string;
+  description: string;
+  source: 'pro_request' | 'appointment';
+}
+
+interface NextVisit {
+  id: string;
+  visit_month: string;
+  proposed_date: string | null;
+  confirmed_date: string | null;
+  status: string;
+  homeowner_notes: string;
 }
 
 interface ServiceItem {
@@ -101,10 +111,23 @@ const AD_HOC_SERVICES: ServiceItem[] = [
 const STATUS_COLORS: Record<string, string> = {
   pending: Colors.warning,
   requested: Colors.warning,
+  matched: Colors.info,
   scheduled: Colors.info,
+  proposed: Colors.info,
   confirmed: Colors.sage,
   completed: Colors.success,
   cancelled: Colors.medGray,
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Requested',
+  requested: 'Requested',
+  matched: 'Matched',
+  scheduled: 'Scheduled',
+  proposed: 'Proposed',
+  confirmed: 'Confirmed',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
 };
 
 type SubTab = 'services' | 'visits' | 'quotes' | 'invoices';
@@ -113,7 +136,17 @@ export default function ProServices() {
   const { user, home } = useStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<SubTab>('services');
-  const [appointments, setAppointments] = useState<ProServiceAppointment[]>([]);
+
+  // Bimonthly visit state
+  const [nextVisit, setNextVisit] = useState<NextVisit | null>(null);
+  const [visitNotes, setVisitNotes] = useState('');
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [notesSaved, setNotesSaved] = useState(false);
+
+  // Service requests state (ad-hoc requests from pro_requests + pro_service_appointments)
+  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
+
+  // New service request form
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
   const [formData, setFormData] = useState({ date: '', time: '', notes: '' });
   const [isLoading, setIsLoading] = useState(false);
@@ -125,50 +158,102 @@ export default function ProServices() {
   const isProPlus = tier === 'pro_plus';
 
   useEffect(() => {
-    if (home) fetchAppointments();
-  }, [home]);
+    if (home && user) {
+      fetchServiceRequests();
+      if (isPro) fetchNextVisit();
+    }
+  }, [home, user]);
 
-  const fetchAppointments = async () => {
+  // Fetch the next upcoming bimonthly visit from pro_monthly_visits
+  const fetchNextVisit = async () => {
+    try {
+      if (!user) return;
+      const { data } = await supabase
+        .from('pro_monthly_visits')
+        .select('*')
+        .eq('homeowner_id', user.id)
+        .in('status', ['proposed', 'confirmed', 'pending'])
+        .order('visit_month', { ascending: true })
+        .limit(1);
+
+      if (data && data.length > 0) {
+        const visit = data[0];
+        setNextVisit({
+          id: visit.id,
+          visit_month: visit.visit_month,
+          proposed_date: visit.proposed_date,
+          confirmed_date: visit.confirmed_date,
+          status: visit.status,
+          homeowner_notes: visit.homeowner_notes || '',
+        });
+        setVisitNotes(visit.homeowner_notes || '');
+      } else {
+        setNextVisit(null);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch next visit:', err);
+    }
+  };
+
+  // Fetch ad-hoc service requests (pro_requests + pro_service_appointments)
+  const fetchServiceRequests = async () => {
     try {
       if (!home) return;
-      const { data: apptData } = await supabase
-        .from('pro_service_appointments')
-        .select('*')
-        .eq('home_id', home.id)
-        .order('scheduled_date', { ascending: true });
 
-      const directAppts: ProServiceAppointment[] = (apptData || []).map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        date: row.scheduled_date,
-        status: row.status,
-        purpose: row.service_purpose || row.description || '',
-      }));
-
+      // Fetch from pro_requests
       const { data: reqData } = await supabase
         .from('pro_requests')
         .select('*, provider:provider_id(business_name)')
         .eq('home_id', home.id)
-        .in('status', ['pending', 'matched', 'scheduled'])
         .order('created_at', { ascending: false });
 
-      const linkedRequestIds = new Set(
-        (apptData || []).filter((a: any) => a.request_id).map((a: any) => a.request_id)
-      );
+      const requests: ServiceRequest[] = (reqData || []).map((r: any) => ({
+        id: `req-${r.id}`,
+        title: `${r.category.charAt(0).toUpperCase() + r.category.slice(1)} Service`,
+        date: r.scheduled_date || r.created_at,
+        status: r.status,
+        description: `${r.description}${r.provider?.business_name ? ` | Provider: ${r.provider.business_name}` : ''}`,
+        source: 'pro_request' as const,
+      }));
 
-      const requestAppts: ProServiceAppointment[] = (reqData || [])
-        .filter((r: any) => !linkedRequestIds.has(r.id))
-        .map((r: any) => ({
-          id: `req-${r.id}`,
-          title: `${r.category.charAt(0).toUpperCase() + r.category.slice(1)} Service`,
-          date: r.scheduled_date || r.created_at,
-          status: r.status === 'pending' ? 'pending' as const : r.status === 'matched' ? 'confirmed' as const : 'scheduled' as const,
-          purpose: `${r.description}${r.provider?.business_name ? ` • Provider: ${r.provider.business_name}` : ''}`,
-        }));
+      // Fetch from pro_service_appointments (custom requests)
+      const { data: apptData } = await supabase
+        .from('pro_service_appointments')
+        .select('*')
+        .eq('home_id', home.id)
+        .order('scheduled_date', { ascending: false });
 
-      setAppointments([...directAppts, ...requestAppts]);
+      const appts: ServiceRequest[] = (apptData || []).map((a: any) => ({
+        id: a.id,
+        title: a.title,
+        date: a.scheduled_date || a.created_at,
+        status: a.status,
+        description: a.service_purpose || a.description || '',
+        source: 'appointment' as const,
+      }));
+
+      setServiceRequests([...requests, ...appts]);
     } catch (err) {
-      console.warn('Failed to fetch appointments:', err);
+      console.warn('Failed to fetch service requests:', err);
+    }
+  };
+
+  // Save homeowner notes for the next bimonthly visit
+  const handleSaveVisitNotes = async () => {
+    if (!nextVisit) return;
+    setSavingNotes(true);
+    setNotesSaved(false);
+    try {
+      await supabase
+        .from('pro_monthly_visits')
+        .update({ homeowner_notes: visitNotes })
+        .eq('id', nextVisit.id);
+      setNotesSaved(true);
+      setTimeout(() => setNotesSaved(false), 3000);
+    } catch (err) {
+      console.warn('Failed to save visit notes:', err);
+    } finally {
+      setSavingNotes(false);
     }
   };
 
@@ -181,7 +266,6 @@ export default function ProServices() {
 
     try {
       if (selectedService.priceMin) {
-        // Create a quote request for priced services
         const { createQuote } = await import('@/services/quotesInvoices');
         await createQuote(
           home.id,
@@ -194,7 +278,6 @@ export default function ProServices() {
           0
         );
       } else {
-        // Custom request — just create an appointment entry
         await supabase.from('pro_service_appointments').insert({
           id: crypto.randomUUID(),
           home_id: home.id,
@@ -212,7 +295,7 @@ export default function ProServices() {
       setSuccess(`Your ${selectedService.title} request has been submitted! We'll follow up shortly.`);
       setSelectedService(null);
       setFormData({ date: '', time: '', notes: '' });
-      fetchAppointments();
+      fetchServiceRequests();
     } catch (err: any) {
       setError(err.message || 'Failed to submit request');
     } finally {
@@ -235,21 +318,24 @@ export default function ProServices() {
     { key: 'invoices', label: 'Invoices' },
   ];
 
-  // Sub-tab rendering for Visits, Quotes, Invoices
+  const tabBar = (
+    <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${Colors.cream}`, marginBottom: 24 }}>
+      {tabs.map(t => (
+        <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
+          padding: '10px 20px', fontSize: 14, fontWeight: activeTab === t.key ? 700 : 500,
+          color: activeTab === t.key ? Colors.sage : Colors.medGray, background: 'none', border: 'none',
+          borderBottomWidth: 3, borderBottomStyle: 'solid',
+          borderBottomColor: activeTab === t.key ? Colors.sage : 'transparent', cursor: 'pointer', marginBottom: -2,
+        }}>{t.label}</button>
+      ))}
+    </div>
+  );
+
   if (activeTab !== 'services') {
     return (
       <div className="page" style={{ maxWidth: 900 }}>
         <h1 style={{ fontSize: 24, fontWeight: 600, color: Colors.charcoal, marginBottom: 16 }}>Pro Services</h1>
-        <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${Colors.cream}`, marginBottom: 24 }}>
-          {tabs.map(t => (
-            <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
-              padding: '10px 20px', fontSize: 14, fontWeight: activeTab === t.key ? 700 : 500,
-              color: activeTab === t.key ? Colors.sage : Colors.medGray, background: 'none', border: 'none',
-              borderBottomWidth: 3, borderBottomStyle: 'solid',
-              borderBottomColor: activeTab === t.key ? Colors.sage : 'transparent', cursor: 'pointer', marginBottom: -2,
-            }}>{t.label}</button>
-          ))}
-        </div>
+        {tabBar}
         <Suspense fallback={<p style={{ color: Colors.medGray }}>Loading...</p>}>
           {activeTab === 'visits' && <Visits />}
           {activeTab === 'quotes' && <Quotes />}
@@ -259,21 +345,20 @@ export default function ProServices() {
     );
   }
 
+  const activeRequests = serviceRequests.filter(r => !['completed', 'cancelled'].includes(r.status));
+  const pastRequests = serviceRequests.filter(r => r.status === 'completed');
+
+  const visitDate = nextVisit?.confirmed_date || nextVisit?.proposed_date;
+  const visitMonth = nextVisit?.visit_month
+    ? new Date(nextVisit.visit_month + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : null;
+
   return (
     <div className="page" style={{ maxWidth: 900 }}>
       <h1 style={{ fontSize: 24, fontWeight: 600, color: Colors.charcoal, marginBottom: 16 }}>Pro Services</h1>
-      <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${Colors.cream}`, marginBottom: 24 }}>
-        {tabs.map(t => (
-          <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
-            padding: '10px 20px', fontSize: 14, fontWeight: activeTab === t.key ? 700 : 500,
-            color: activeTab === t.key ? Colors.sage : Colors.medGray, background: 'none', border: 'none',
-            borderBottomWidth: 3, borderBottomStyle: 'solid',
-            borderBottomColor: activeTab === t.key ? Colors.sage : 'transparent', cursor: 'pointer', marginBottom: -2,
-          }}>{t.label}</button>
-        ))}
-      </div>
+      {tabBar}
 
-      {/* ── Your Plan ── */}
+      {/* ── Your Plan Banner ── */}
       <div className="card mb-lg" style={{ padding: '20px 24px', background: isPro ? Colors.sageMuted : Colors.cream }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -282,9 +367,9 @@ export default function ProServices() {
             </p>
             <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>
               {isProPlus
-                ? 'Full concierge service — all maintenance handled for you. Contact your Canopy team for anything.'
+                ? 'Full concierge service — all maintenance handled for you.'
                 : isPro
-                ? 'Includes bimonthly maintenance visits from your assigned Canopy pro.'
+                ? 'Includes 6 bimonthly maintenance visits per year from your assigned Canopy pro.'
                 : 'Request any service below on-demand. Upgrade to Pro for scheduled maintenance visits.'}
             </p>
           </div>
@@ -296,56 +381,112 @@ export default function ProServices() {
         </div>
       </div>
 
-      {/* ── Pro/Pro+ Included Visits ── */}
+      {/* ── Section 1: Next Bimonthly Visit (Pro/Pro+ only) ── */}
       {isPro && (
         <div style={{ marginBottom: 32 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, color: Colors.charcoal, marginBottom: 8 }}>
-            {isProPlus ? 'Your Concierge Service' : 'Your Bimonthly Visits'}
+            {isProPlus ? 'Your Next Concierge Visit' : 'Your Next Bimonthly Visit'}
           </h2>
           <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>
             {isProPlus
-              ? 'Your Pro+ plan includes complete home care management. Your Canopy team handles scheduling, maintenance, and coordination — just let us know what you need.'
-              : 'Your Pro plan includes a maintenance visit from your assigned Canopy pro every other month. These visits cover routine inspections, filter changes, and minor tasks.'}
+              ? 'Your Pro+ plan includes complete home care. Your Canopy team handles scheduling, maintenance, and coordination.'
+              : 'Your Pro plan includes a maintenance visit every other month covering routine inspections, filter changes, and minor tasks. These visits are included in your plan at no extra cost.'}
           </p>
 
-          {/* Upcoming visit appointments */}
-          {appointments.filter(a => a.status !== 'completed' && a.status !== 'cancelled').length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {appointments
-                .filter(a => a.status !== 'completed' && a.status !== 'cancelled')
-                .map(apt => (
-                  <div key={apt.id} className="card" style={{ padding: '14px 18px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px' }}>
-                          {apt.title}
-                          <span style={{
-                            display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, marginLeft: 8,
-                            backgroundColor: (STATUS_COLORS[apt.status] || Colors.medGray) + '20',
-                            color: STATUS_COLORS[apt.status] || Colors.medGray,
-                          }}>{apt.status === 'pending' ? 'Requested' : apt.status}</span>
-                        </p>
-                        <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
-                          {new Date(apt.date).toLocaleDateString()} — {apt.purpose}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          {nextVisit ? (
+            <div className="card" style={{ padding: '20px 24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 16, color: Colors.charcoal, margin: '0 0 4px' }}>
+                    {visitMonth} Visit
+                  </p>
+                  <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>
+                    {visitDate
+                      ? `${nextVisit.status === 'confirmed' ? 'Confirmed' : 'Proposed'}: ${new Date(visitDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
+                      : 'Date pending — your Canopy team will propose a date soon.'}
+                  </p>
+                </div>
+                <span style={{
+                  display: 'inline-block', padding: '4px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600,
+                  backgroundColor: (STATUS_COLORS[nextVisit.status] || Colors.medGray) + '20',
+                  color: STATUS_COLORS[nextVisit.status] || Colors.medGray,
+                }}>{STATUS_LABELS[nextVisit.status] || nextVisit.status}</span>
+              </div>
+
+              {/* Homeowner notes for the tech */}
+              <div style={{ borderTop: `1px solid ${Colors.cream}`, paddingTop: 16 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: Colors.charcoal, marginBottom: 6 }}>
+                  Notes for your technician
+                </label>
+                <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 8px' }}>
+                  Anything specific you'd like checked during this visit? Leave notes here and your tech will see them before arriving.
+                </p>
+                <textarea
+                  className="form-input"
+                  value={visitNotes}
+                  onChange={e => { setVisitNotes(e.target.value); setNotesSaved(false); }}
+                  placeholder="e.g., AC seems to be running louder than usual, please check. Also the garage door opener has been slow..."
+                  style={{ minHeight: 80, resize: 'vertical', marginBottom: 8 }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={handleSaveVisitNotes}
+                    disabled={savingNotes}
+                  >
+                    {savingNotes ? 'Saving...' : 'Save Notes'}
+                  </button>
+                  {notesSaved && (
+                    <span style={{ fontSize: 12, color: Colors.sage, fontWeight: 500 }}>Saved!</span>
+                  )}
+                </div>
+              </div>
             </div>
           ) : (
             <div className="card" style={{ padding: '24px', textAlign: 'center', color: Colors.medGray }}>
-              <p style={{ margin: 0, fontSize: 14 }}>No upcoming visits scheduled. Your next visit will be coordinated by your Canopy team.</p>
+              <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 500 }}>No upcoming visit scheduled yet.</p>
+              <p style={{ margin: 0, fontSize: 13 }}>Your Canopy team will coordinate your next bimonthly visit. Check the Visits tab for full history.</p>
             </div>
           )}
         </div>
       )}
 
-      {/* ── On-Demand Services (all tiers) ── */}
+      {/* ── Section 2: Your Service Requests (ad-hoc, separate from bimonthly) ── */}
+      {activeRequests.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: Colors.charcoal, marginBottom: 8 }}>Your Service Requests</h2>
+          <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>
+            On-demand service requests you've submitted. These are separate from your included bimonthly visits.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {activeRequests.map(req => (
+              <div key={req.id} className="card" style={{ padding: '14px 18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px' }}>
+                      {req.title}
+                      <span style={{
+                        display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, marginLeft: 8,
+                        backgroundColor: (STATUS_COLORS[req.status] || Colors.medGray) + '20',
+                        color: STATUS_COLORS[req.status] || Colors.medGray,
+                      }}>{STATUS_LABELS[req.status] || req.status}</span>
+                    </p>
+                    <p style={{ fontSize: 12, color: Colors.medGray, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {new Date(req.date).toLocaleDateString()} — {req.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Section 3: On-Demand Services Catalog ── */}
       <div style={{ marginBottom: 32 }}>
         <h2 style={{ fontSize: 18, fontWeight: 600, color: Colors.charcoal, marginBottom: 8 }}>On-Demand Services</h2>
         <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>
-          Available to all Canopy members. Request any service and we'll get you scheduled.
+          Available to all Canopy members as add-ons. These are billed separately from your plan.
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
@@ -434,24 +575,22 @@ export default function ProServices() {
         </div>
       )}
 
-      {/* ── Past Appointments ── */}
-      {appointments.filter(a => a.status === 'completed').length > 0 && (
+      {/* ── Past Service Requests ── */}
+      {pastRequests.length > 0 && (
         <div style={{ marginBottom: 32 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: Colors.charcoal, marginBottom: 12 }}>Past Services</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: Colors.charcoal, marginBottom: 12 }}>Past Service Requests</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {appointments
-              .filter(a => a.status === 'completed')
-              .map(apt => (
-                <div key={apt.id} className="card" style={{ padding: '12px 18px', opacity: 0.8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <p style={{ fontWeight: 500, fontSize: 14, color: Colors.charcoal, margin: '0 0 2px' }}>{apt.title}</p>
-                      <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>{new Date(apt.date).toLocaleDateString()} — {apt.purpose}</p>
-                    </div>
-                    <span style={{ fontSize: 11, color: Colors.success, fontWeight: 600 }}>Completed</span>
+            {pastRequests.map(req => (
+              <div key={req.id} className="card" style={{ padding: '12px 18px', opacity: 0.8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <p style={{ fontWeight: 500, fontSize: 14, color: Colors.charcoal, margin: '0 0 2px' }}>{req.title}</p>
+                    <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>{new Date(req.date).toLocaleDateString()} — {req.description}</p>
                   </div>
+                  <span style={{ fontSize: 11, color: Colors.success, fontWeight: 600 }}>Completed</span>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
         </div>
       )}

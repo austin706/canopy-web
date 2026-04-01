@@ -10,10 +10,36 @@ import { supabase } from '@/services/supabase';
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { tasks, reopenTask, user, home } = useStore();
+  const { tasks, reopenTask, setTasks, user, home } = useStore();
 
   const rawTask = tasks.find(t => t.id === id);
-  const task = useMemo(() => rawTask ? { ...rawTask, status: getDisplayStatus(rawTask) } : undefined, [rawTask]);
+  const [dbTask, setDbTask] = useState<any>(null);
+  const [loadingDb, setLoadingDb] = useState(false);
+
+  // If task isn't in the store (e.g. navigated from inspection summary), fetch from DB
+  useEffect(() => {
+    if (rawTask || !id || loadingDb || dbTask) return;
+    setLoadingDb(true);
+    supabase
+      .from('maintenance_tasks')
+      .select('*')
+      .eq('id', id)
+      .single()
+      .then(({ data, error }) => {
+        if (data && !error) {
+          setDbTask(data);
+          // Also add to the store so subsequent renders find it
+          const { tasks: current } = useStore.getState();
+          if (!current.find(t => t.id === data.id)) {
+            setTasks([...current, data]);
+          }
+        }
+        setLoadingDb(false);
+      });
+  }, [id, rawTask]);
+
+  const resolvedRaw = rawTask || dbTask;
+  const task = useMemo(() => resolvedRaw ? { ...resolvedRaw, status: getDisplayStatus(resolvedRaw) } : undefined, [resolvedRaw]);
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
   const [showCategoryBundleModal, setShowCategoryBundleModal] = useState(false);
   const [bundleTasksList, setBundleTasksList] = useState<any[]>([]);
@@ -169,9 +195,9 @@ export default function TaskDetail() {
       <div className="page">
         <div className="page-header">
           <div>
-            <h1>Task Not Found</h1>
+            <h1>{loadingDb ? 'Loading...' : 'Task Not Found'}</h1>
           </div>
-          <button className="btn btn-primary" onClick={() => navigate('/calendar')}>Back to Calendar</button>
+          {!loadingDb && <button className="btn btn-primary" onClick={() => navigate('/calendar')}>Back to Calendar</button>}
         </div>
       </div>
     );

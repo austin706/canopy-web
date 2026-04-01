@@ -7,7 +7,7 @@ import { quickCompleteTask, quickSnoozeTask, quickSkipTask } from '@/services/ut
 import { Colors } from '@/constants/theme';
 import type { MaintenanceTask } from '@/types';
 
-const MAX_FILE_SIZE_MB = 500; // Supabase supports up to 5GB via resumable, 50GB via S3
+const MAX_FILE_SIZE_MB = 250; // Supabase bucket limit — also check project-level Storage settings
 const RESUMABLE_THRESHOLD_MB = 5; // Use resumable upload for files > 5MB
 const PDF_JS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
 const PDF_JS_WORKER_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
@@ -397,7 +397,12 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
 
       setExistingInspection(prev => prev ? { ...prev, file_url: storagePath, title: file.name } : prev);
     } catch (err: any) {
-      setError(`Failed to upload document: ${err.message}`);
+      const msg = err.message || 'Unknown error';
+      if (msg.includes('413') || msg.toLowerCase().includes('size exceeded')) {
+        setError(`File too large for storage (${(file.size / 1024 / 1024).toFixed(0)}MB). Try a compressed version or update the Storage upload limit in Supabase dashboard.`);
+      } else {
+        setError(`Failed to upload document: ${msg}`);
+      }
     } finally {
       setReuploadingDoc(false);
     }

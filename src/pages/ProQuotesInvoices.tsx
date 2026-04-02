@@ -29,6 +29,7 @@ interface Invoice {
   id: string;
   pro_provider_id: string;
   home_id: string;
+  homeowner_id?: string;
   title: string;
   description: string;
   line_items: LineItem[];

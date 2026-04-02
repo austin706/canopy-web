@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase, createHomeJoinRequest, sendNotification } from '@/services/supabase';
@@ -60,6 +60,28 @@ interface Equipment {
   equipment_subtype?: string;
   refrigerant_type?: string;
   estimated_lifespan_years?: number;
+}
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
+
+// Load Stripe.js from CDN (cached after first load)
+let stripePromise: Promise<any> | null = null;
+function loadStripe(): Promise<any> {
+  if (stripePromise) return stripePromise;
+  stripePromise = new Promise((resolve, reject) => {
+    if ((window as any).Stripe) {
+      resolve((window as any).Stripe(STRIPE_PUBLISHABLE_KEY));
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://js.stripe.com/v3/';
+    script.onload = () => resolve((window as any).Stripe(STRIPE_PUBLISHABLE_KEY));
+    script.onerror = () => reject(new Error('Failed to load Stripe.js'));
+    document.head.appendChild(script);
+  });
+  return stripePromise;
 }
 
 // Total onboarding steps (0-indexed): Welcome(0), Address(1), Systems(2), Plan(3), Equipment(4), Done(5)
@@ -164,6 +186,22 @@ export default function Onboarding() {
   const [planMessage, setPlanMessage] = useState('');
   const [planMessageType, setPlanMessageType] = useState<'success' | 'error'>('success');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  // Embedded checkout state
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<string | null>(null);
+  const checkoutRef = useRef<HTMLDivElement>(null);
+  const checkoutInstanceRef = useRef<any>(null);
+
+  const closeCheckoutModal = useCallback(() => {
+    if (checkoutInstanceRef.current) {
+      checkoutInstanceRef.current.destroy();
+      checkoutInstanceRef.current = null;
+    }
+    setShowCheckoutModal(false);
+    setCheckoutPlan(null);
+    setCheckoutLoading(false);
+  }, []);
 
   // Step 4: Equipment
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
@@ -615,7 +653,6 @@ export default function Onboarding() {
       setStep(4);
       return;
     }
-    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
     if (selectedPlan === 'home' || selectedPlan === 'pro') {
       try {
         setCheckoutLoading(true);
@@ -627,33 +664,83 @@ export default function Onboarding() {
           setTimeout(() => setPlanMessage(''), 5000);
           return;
         }
+
+        // Fallback to redirect mode if no publishable key configured
+        if (!STRIPE_PUBLISHABLE_KEY) {
+          const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+              'apikey': SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({
+              tier: selectedPlan,
+              success_url: `${window.location.origin}/onboarding?step=4&success=true&plan=${selectedPlan}`,
+              cancel_url: `${window.location.origin}/onboarding?step=3&canceled=true`,
+            }),
+          });
+          const data = await res.json();
+          if (res.ok && data.url) {
+            window.location.replace(data.url);
+            return;
+          }
+          setPlanMessage(data?.error || 'Checkout failed — please try again or continue with the Free plan.');
+          setPlanMessageType('error');
+          setTimeout(() => setPlanMessage(''), 5000);
+          return;
+        }
+
+        // Embedded checkout mode
+        setCheckoutPlan(selectedPlan);
+        setShowCheckoutModal(true);
+
+        const [stripe, authSession] = await Promise.all([
+          loadStripe(),
+          supabase.auth.getSession(),
+        ]);
+        const freshToken = authSession.data.session?.access_token || token;
+
         const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${freshToken}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
           body: JSON.stringify({
             tier: selectedPlan,
-            success_url: `${window.location.origin}/onboarding?step=4&success=true&plan=${selectedPlan}`,
-            cancel_url: `${window.location.origin}/onboarding?step=3&canceled=true`,
+            ui_mode: 'embedded',
+            return_url: `${window.location.origin}/onboarding?step=4&success=true&plan=${selectedPlan}&session_id={CHECKOUT_SESSION_ID}`,
           }),
         });
         const data = await res.json();
-        if (res.ok && data.url) {
-          window.location.replace(data.url);
-          return;
-        }
-        // Checkout returned an error — show it, don't silently proceed
-        setPlanMessage(data?.error || 'Checkout failed — please try again or continue with the Free plan.');
-        setPlanMessageType('error');
-        setTimeout(() => setPlanMessage(''), 5000);
+        if (!res.ok || data.error) throw new Error(data.error || 'Failed to create checkout session');
+
+        // Mount embedded checkout
+        const checkout = await stripe.initEmbeddedCheckout({
+          clientSecret: data.client_secret,
+        });
+        checkoutInstanceRef.current = checkout;
+
+        // Wait for the modal DOM to be ready, then mount
+        requestAnimationFrame(() => {
+          if (checkoutRef.current) {
+            checkout.mount(checkoutRef.current);
+          }
+        });
+
+        setCheckoutLoading(false);
         return;
-      } catch (e) {
+      } catch (e: any) {
+        closeCheckoutModal();
         console.warn('Stripe checkout not available:', e);
-        setPlanMessage('Checkout unavailable — please try again or continue with the Free plan.');
+        setPlanMessage(e.message || 'Checkout unavailable — please try again or continue with the Free plan.');
         setPlanMessageType('error');
         setTimeout(() => setPlanMessage(''), 5000);
         return;
       } finally {
-        setCheckoutLoading(false);
+        if (!showCheckoutModal) setCheckoutLoading(false);
       }
     }
     // Pro+ or unknown plan — proceed (Pro+ is inquiry-based)
@@ -1297,7 +1384,7 @@ export default function Onboarding() {
           <div className="flex gap-sm">
             <button className="btn btn-ghost" onClick={() => setStep(2)}>Back</button>
             <button className="btn btn-primary" onClick={handlePlanCheckout} disabled={checkoutLoading}>
-              {checkoutLoading ? 'Setting up checkout...'
+              {checkoutLoading ? 'Loading checkout...'
                 : selectedPlan === 'free' ? 'Continue with Free'
                 : `Continue with ${PLANS.find(p => p.value === selectedPlan)?.name}`}
             </button>
@@ -1589,6 +1676,77 @@ export default function Onboarding() {
           >
             Go to Dashboard
           </button>
+        </div>
+      )}
+
+      {/* Stripe Embedded Checkout Modal */}
+      {showCheckoutModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeCheckoutModal(); }}
+        >
+          <div style={{
+            background: '#fff',
+            borderRadius: 16,
+            width: '100%',
+            maxWidth: 520,
+            maxHeight: '90vh',
+            overflow: 'auto',
+            position: 'relative',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          }}>
+            {/* Modal header */}
+            <div style={{
+              padding: '20px 24px 16px',
+              borderBottom: `1px solid ${Colors.lightGray}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: Colors.charcoal }}>
+                  Upgrade to {PLANS.find(p => p.value === checkoutPlan)?.name || checkoutPlan}
+                </p>
+                <p style={{ margin: '4px 0 0', fontSize: 14, color: Colors.medGray }}>
+                  Secure checkout powered by Stripe
+                </p>
+              </div>
+              <button
+                onClick={closeCheckoutModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 24,
+                  cursor: 'pointer',
+                  color: Colors.medGray,
+                  padding: '4px 8px',
+                  lineHeight: 1,
+                }}
+                aria-label="Close checkout"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Stripe embedded checkout mounts here */}
+            <div ref={checkoutRef} style={{ minHeight: 300 }}>
+              {checkoutLoading && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px' }}>
+                  <div className="spinner" style={{ marginBottom: 16 }} />
+                  <p style={{ fontSize: 14, color: Colors.medGray, margin: 0 }}>Loading secure checkout...</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

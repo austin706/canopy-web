@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { redeemGiftCode, insertProInterest, supabase } from '@/services/supabase';
@@ -11,6 +11,25 @@ import ServiceAreaMap from '@/components/ServiceAreaMap';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
+
+// Load Stripe.js from CDN (cached after first load)
+let stripePromise: Promise<any> | null = null;
+function loadStripe(): Promise<any> {
+  if (stripePromise) return stripePromise;
+  stripePromise = new Promise((resolve, reject) => {
+    if ((window as any).Stripe) {
+      resolve((window as any).Stripe(STRIPE_PUBLISHABLE_KEY));
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://js.stripe.com/v3/';
+    script.onload = () => resolve((window as any).Stripe(STRIPE_PUBLISHABLE_KEY));
+    script.onerror = () => reject(new Error('Failed to load Stripe.js'));
+    document.head.appendChild(script);
+  });
+  return stripePromise;
+}
 
 export default function Subscription() {
   const navigate = useNavigate();
@@ -99,15 +118,72 @@ export default function Subscription() {
     }
   };
 
+  // Embedded checkout state
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<string | null>(null);
+  const checkoutRef = useRef<HTMLDivElement>(null);
+  const checkoutInstanceRef = useRef<any>(null);
+
+  const closeCheckoutModal = useCallback(() => {
+    if (checkoutInstanceRef.current) {
+      checkoutInstanceRef.current.destroy();
+      checkoutInstanceRef.current = null;
+    }
+    setShowCheckoutModal(false);
+    setCheckoutPlan(null);
+    setCheckoutLoading(null);
+  }, []);
+
   const handleStripeCheckout = async (plan: string) => {
     if (!user || !SUPABASE_URL) {
       setMessage('Payment system is not configured. Use a gift code to upgrade.');
       return;
     }
+
+    // Fall back to redirect mode if no publishable key configured
+    if (!STRIPE_PUBLISHABLE_KEY) {
+      setCheckoutLoading(plan);
+      try {
+        const session = await supabase.auth.getSession();
+        const token = session.data.session?.access_token;
+        if (!token) throw new Error('Not authenticated');
+
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            tier: plan,
+            success_url: `${window.location.origin}/subscription?success=true&plan=${plan}`,
+            cancel_url: `${window.location.origin}/subscription?canceled=true`,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Failed to create checkout session');
+        window.location.replace(data.url);
+      } catch (e: any) {
+        setMessage(e.message || 'Checkout failed');
+        setTimeout(() => setMessage(''), 5000);
+      } finally {
+        setCheckoutLoading(null);
+      }
+      return;
+    }
+
+    // Embedded checkout mode
     setCheckoutLoading(plan);
+    setCheckoutPlan(plan);
+    setShowCheckoutModal(true);
+
     try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
+      const [stripe, authSession] = await Promise.all([
+        loadStripe(),
+        supabase.auth.getSession(),
+      ]);
+      const token = authSession.data.session?.access_token;
       if (!token) throw new Error('Not authenticated');
 
       const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
@@ -119,23 +195,31 @@ export default function Subscription() {
         },
         body: JSON.stringify({
           tier: plan,
-          success_url: `${window.location.origin}/subscription?success=true&plan=${plan}`,
-          cancel_url: `${window.location.origin}/subscription?canceled=true`,
+          ui_mode: 'embedded',
+          return_url: `${window.location.origin}/subscription?success=true&plan=${plan}&session_id={CHECKOUT_SESSION_ID}`,
         }),
       });
       const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to create checkout session');
 
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'Failed to create checkout session');
-      }
+      // Mount embedded checkout
+      const checkout = await stripe.initEmbeddedCheckout({
+        clientSecret: data.client_secret,
+      });
+      checkoutInstanceRef.current = checkout;
 
-      // Redirect to Stripe Checkout (replace so back button doesn't return to Stripe)
-      window.location.replace(data.url);
+      // Wait for the modal DOM to be ready, then mount
+      requestAnimationFrame(() => {
+        if (checkoutRef.current) {
+          checkout.mount(checkoutRef.current);
+        }
+      });
+
+      setCheckoutLoading(null);
     } catch (e: any) {
+      closeCheckoutModal();
       setMessage(e.message || 'Checkout failed');
       setTimeout(() => setMessage(''), 5000);
-    } finally {
-      setCheckoutLoading(null);
     }
   };
 
@@ -299,7 +383,7 @@ export default function Subscription() {
                 disabled={checkoutLoading === plan.value}
               >
                 {checkoutLoading === plan.value
-                  ? 'Redirecting to checkout...'
+                  ? 'Loading checkout...'
                   : (plan.price || 0) > (PLANS.find(p => p.value === tier)?.price || 0)
                     ? 'Upgrade'
                     : 'Change Plan'}
@@ -384,6 +468,77 @@ export default function Subscription() {
               {submittingWaitlist ? 'Joining...' : 'Join Waitlist'}
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Embedded Stripe Checkout Modal */}
+      {showCheckoutModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeCheckoutModal(); }}
+        >
+          <div style={{
+            background: '#fff',
+            borderRadius: 16,
+            width: '100%',
+            maxWidth: 520,
+            maxHeight: '90vh',
+            overflow: 'auto',
+            position: 'relative',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          }}>
+            {/* Modal header */}
+            <div style={{
+              padding: '20px 24px 16px',
+              borderBottom: `1px solid ${Colors.lightGray}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: Colors.charcoal }}>
+                  Upgrade to {PLANS.find(p => p.value === checkoutPlan)?.name || checkoutPlan}
+                </p>
+                <p style={{ margin: '4px 0 0', fontSize: 14, color: Colors.medGray }}>
+                  Secure checkout powered by Stripe
+                </p>
+              </div>
+              <button
+                onClick={closeCheckoutModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 24,
+                  cursor: 'pointer',
+                  color: Colors.medGray,
+                  padding: '4px 8px',
+                  lineHeight: 1,
+                }}
+                aria-label="Close checkout"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Stripe embedded checkout mounts here */}
+            <div ref={checkoutRef} style={{ minHeight: 300 }}>
+              {checkoutLoading && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px' }}>
+                  <div className="spinner" style={{ marginBottom: 16 }} />
+                  <p style={{ fontSize: 14, color: Colors.medGray, margin: 0 }}>Loading secure checkout...</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

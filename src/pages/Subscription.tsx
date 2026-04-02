@@ -65,6 +65,8 @@ export default function Subscription() {
   useEffect(() => {
     if (searchParams.get('success') === 'true') {
       const plan = searchParams.get('plan');
+      // Clean URL and replace history so back button doesn't go to Stripe
+      window.history.replaceState({}, '', '/subscription');
       setMessage(`Successfully upgraded to ${PLANS.find(p => p.value === plan)?.name || plan}! Your subscription is now active.`);
       // Refresh user profile to pick up new tier
       if (user?.id) {
@@ -79,6 +81,7 @@ export default function Subscription() {
         });
       }
     } else if (searchParams.get('canceled') === 'true') {
+      window.history.replaceState({}, '', '/subscription');
       setMessage('Checkout was canceled. No charges were made.');
     }
   }, [searchParams]);
@@ -126,8 +129,8 @@ export default function Subscription() {
         throw new Error(data.error || 'Failed to create checkout session');
       }
 
-      // Redirect to Stripe Checkout
-      window.location.href = data.url;
+      // Redirect to Stripe Checkout (replace so back button doesn't return to Stripe)
+      window.location.replace(data.url);
     } catch (e: any) {
       setMessage(e.message || 'Checkout failed');
       setTimeout(() => setMessage(''), 5000);

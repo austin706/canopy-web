@@ -638,7 +638,7 @@ export default function Onboarding() {
         });
         const data = await res.json();
         if (res.ok && data.url) {
-          window.location.href = data.url;
+          window.location.replace(data.url);
           return;
         }
         // Checkout returned an error — show it, don't silently proceed

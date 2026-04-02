@@ -4,7 +4,7 @@ import { useStore } from '@/store/useStore';
 import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase, createHomeJoinRequest, sendNotification } from '@/services/supabase';
 import { verifyAddress, findExistingProperty } from '@/services/addressVerification';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
-import { PLANS, isProAvailableInArea, loadServiceAreas } from '@/services/subscriptionGate';
+import { PLANS, isProAvailableInArea, loadServiceAreas, getEquipmentLimit, isPremium } from '@/services/subscriptionGate';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
 import EquipmentScanner from '@/components/EquipmentScanner';
 import InspectionUploader from '@/components/InspectionUploader';
@@ -79,6 +79,13 @@ export default function Onboarding() {
   const [claimInfo, setClaimInfo] = useState<{ homeId: string; ownerId: string } | null>(null);
   const [joinRequestSent, setJoinRequestSent] = useState(false);
   const [pendingHomeData, setPendingHomeData] = useState<any>(null);
+
+  // Address verification state
+  const [verifiedAddress, setVerifiedAddress] = useState<{
+    normalizedAddress: string; city: string; state: string; zipCode: string;
+    latitude?: number; longitude?: number; isValid: boolean;
+  } | null>(null);
+  const [showVerifiedConfirm, setShowVerifiedConfirm] = useState(false);
 
   // Detect "add property" mode — existing user coming back to add another home
   const isAddPropertyMode = !!(user?.onboarding_complete || home);
@@ -185,6 +192,7 @@ export default function Onboarding() {
 
   // ----- Submit Handlers -----
 
+  /** Step 1a: Verify address and show confirmation if USPS standardized it */
   const handleAddressSubmit = async () => {
     if (!user || !addressForm.address || !addressForm.city || !addressForm.state || !addressForm.zip_code) {
       alert('Please fill in address, city, state, and zip code');
@@ -192,64 +200,119 @@ export default function Onboarding() {
     }
     setSaving(true);
     try {
-      // Step 1: Verify & standardize address (USPS + geocoding)
+      // Verify & standardize address (USPS + geocoding)
       let verified;
       try {
         verified = await verifyAddress(
           addressForm.address, addressForm.city, addressForm.state, addressForm.zip_code
         );
-      } catch {
-        // Verification unavailable — proceed with raw input
+      } catch (err) {
+        console.warn('Address verification failed:', err);
         verified = null;
       }
 
-      const homeData: any = {
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        ...addressForm,
-        year_built: addressForm.year_built ? parseInt(addressForm.year_built) : null,
-        square_footage: addressForm.square_footage ? parseInt(addressForm.square_footage) : null,
-        stories: parseInt(addressForm.stories) || 1,
-        bedrooms: parseInt(addressForm.bedrooms) || 3,
-        bathrooms: parseInt(addressForm.bathrooms) || 2,
-        garage_spaces: parseInt(addressForm.garage_spaces) || 0,
-        created_at: new Date().toISOString(),
-        // Store verified data when available
-        ...(verified?.normalizedAddress && { normalized_address: verified.normalizedAddress }),
-        ...(verified?.latitude && { latitude: verified.latitude }),
-        ...(verified?.longitude && { longitude: verified.longitude }),
-      };
+      // If USPS returned a different standardized address, show confirmation
+      if (verified && verified.normalizedAddress) {
+        const rawUpper = addressForm.address.trim().toUpperCase().replace(/[.,]/g, '');
+        const normalizedDiffers = verified.normalizedAddress !== rawUpper
+          || verified.city.toUpperCase() !== addressForm.city.trim().toUpperCase()
+          || verified.zipCode !== addressForm.zip_code.trim();
 
-      // Step 2: Check if this property already exists (normalized address → lat/lng → ilike fallback)
-      try {
-        const match = await findExistingProperty(
-          verified?.normalizedAddress || '',
-          verified?.latitude,
-          verified?.longitude,
-          addressForm.address, addressForm.city, addressForm.state, addressForm.zip_code,
-          user.id
-        );
-        if (match.found && match.homeId && match.ownerId) {
-          setPendingHomeData(homeData);
-          setClaimInfo({ homeId: match.homeId, ownerId: match.ownerId });
-          setShowClaimModal(true);
+        if (normalizedDiffers) {
+          // Show the standardized address to the user for confirmation
+          setVerifiedAddress(verified);
+          setShowVerifiedConfirm(true);
           setSaving(false);
           return;
         }
-      } catch {
-        // If claim check fails, proceed normally — don't block onboarding
       }
 
-      try {
-        const saved = await upsertHome(homeData);
-        setHome(saved);
-      } catch {
-        setHome(homeData);
-      }
-      setStep(2);
+      // No difference or no verification — proceed directly
+      await saveAddressAndCheckDuplicates(verified);
     } finally {
       setSaving(false);
     }
+  };
+
+  /** Accept USPS-standardized address — update form fields and proceed */
+  const handleAcceptVerifiedAddress = async () => {
+    if (!verifiedAddress) return;
+    // Update form with standardized values
+    setAddressForm(prev => ({
+      ...prev,
+      address: verifiedAddress.normalizedAddress,
+      city: verifiedAddress.city,
+      state: verifiedAddress.state,
+      zip_code: verifiedAddress.zipCode,
+    }));
+    setShowVerifiedConfirm(false);
+    setSaving(true);
+    try {
+      await saveAddressAndCheckDuplicates(verifiedAddress);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** Keep original address the user typed */
+  const handleKeepOriginalAddress = async () => {
+    setShowVerifiedConfirm(false);
+    setSaving(true);
+    try {
+      // Still use the verified data for lat/lng and duplicate check, but keep raw address text
+      await saveAddressAndCheckDuplicates(verifiedAddress);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** Shared: build homeData, check for duplicates, save */
+  const saveAddressAndCheckDuplicates = async (verified: typeof verifiedAddress) => {
+    if (!user) return;
+    const homeData: any = {
+      id: crypto.randomUUID(),
+      user_id: user.id,
+      ...addressForm,
+      year_built: addressForm.year_built ? parseInt(addressForm.year_built) : null,
+      square_footage: addressForm.square_footage ? parseInt(addressForm.square_footage) : null,
+      stories: parseInt(addressForm.stories) || 1,
+      bedrooms: parseInt(addressForm.bedrooms) || 3,
+      bathrooms: parseInt(addressForm.bathrooms) || 2,
+      garage_spaces: parseInt(addressForm.garage_spaces) || 0,
+      created_at: new Date().toISOString(),
+      // Store verified data when available
+      ...(verified?.normalizedAddress && { normalized_address: verified.normalizedAddress }),
+      ...(verified?.latitude && { latitude: verified.latitude }),
+      ...(verified?.longitude && { longitude: verified.longitude }),
+    };
+
+    // Check if this property already exists
+    try {
+      const match = await findExistingProperty(
+        verified?.normalizedAddress || '',
+        verified?.latitude,
+        verified?.longitude,
+        addressForm.address, addressForm.city, addressForm.state, addressForm.zip_code,
+        user.id
+      );
+      if (match.found && match.homeId && match.ownerId) {
+        setPendingHomeData(homeData);
+        setClaimInfo({ homeId: match.homeId, ownerId: match.ownerId });
+        setShowClaimModal(true);
+        return;
+      }
+    } catch (err) {
+      console.error('Duplicate address check failed:', err);
+      // Proceed — don't block onboarding, but log the error
+    }
+
+    try {
+      const saved = await upsertHome(homeData);
+      setHome(saved);
+    } catch {
+      setHome(homeData);
+    }
+    setStep(2);
   };
 
   /** User chose to request to join the existing home */
@@ -339,8 +402,17 @@ export default function Onboarding() {
     }
   };
 
+  const effectiveTier = (user?.subscription_tier && user.subscription_tier !== 'free') ? user.subscription_tier : selectedPlan;
+  const equipmentLimit = getEquipmentLimit(effectiveTier);
+  const atEquipmentLimit = equipmentLimit !== null && equipmentList.length >= equipmentLimit;
+  const canUseAiScan = isPremium(effectiveTier);
+
   const handleAddEquipment = () => {
     if (!equipmentForm.name) { alert('Please enter equipment name'); return; }
+    if (atEquipmentLimit) {
+      alert(`Free plan allows up to ${equipmentLimit} equipment items. Upgrade to Home or Pro for unlimited equipment.`);
+      return;
+    }
     setEquipmentList([...equipmentList, { ...equipmentForm }]);
     setEquipmentForm({ name: '', category: 'hvac', make: '', model: '', serial_number: '' });
   };
@@ -386,6 +458,11 @@ export default function Onboarding() {
   };
 
   const handleScannerComplete = (scannedData: any) => {
+    if (atEquipmentLimit) {
+      alert(`Free plan allows up to ${equipmentLimit} equipment items. Upgrade to Home or Pro for unlimited equipment.`);
+      setShowScanner(false);
+      return;
+    }
     const { name, category, make, model, serial_number, equipment_subtype, refrigerant_type, estimated_lifespan_years } = scannedData;
     setEquipmentList([
       ...equipmentList,
@@ -463,21 +540,42 @@ export default function Onboarding() {
       try { await updateProfile(user.id, { onboarding_complete: true }); } catch {}
 
       // Send welcome notification (for all tiers)
-      const tier = user.subscription_tier || 'free';
+      const tier = user.subscription_tier || selectedPlan || 'free';
       const tierLabel = tier === 'pro_plus' ? 'Pro+' : tier === 'pro' ? 'Pro' : tier === 'home' ? 'Home' : 'Free';
       const welcomeBody = tier === 'free'
         ? 'Your home profile is set up! Canopy will help you stay on top of maintenance with personalized task reminders, equipment tracking, and seasonal checklists. Explore your dashboard to see what\'s coming up.'
         : tier === 'home'
         ? 'Your Home plan is active! You now have AI-powered maintenance tasks, unlimited equipment tracking, personalized checklists, and weather alerts. Check your dashboard to see your first tasks.'
-        : null; // Pro/Pro+ get their own welcome via enrollProSubscriber
-      if (welcomeBody) {
-        sendNotification({
-          user_id: user.id,
-          title: `Welcome to Canopy${tierLabel !== 'Free' ? ' ' + tierLabel : ''}!`,
-          body: welcomeBody,
-          category: 'onboarding',
-          action_url: '/dashboard',
-        }).catch(() => {});
+        : tier === 'pro'
+        ? 'Your Pro plan is active! You now have bimonthly professional visits, AI-powered tasks, and full equipment tracking. We\'ll reach out soon to schedule your first visit.'
+        : 'Your Pro+ concierge plan is active! Your dedicated technician will be in touch shortly.';
+      sendNotification({
+        user_id: user.id,
+        title: `Welcome to Canopy${tierLabel !== 'Free' ? ' ' + tierLabel : ''}!`,
+        body: welcomeBody,
+        category: 'onboarding',
+        action_url: '/dashboard',
+      }).catch(() => {});
+
+      // Send branded welcome email (fire-and-forget)
+      const totalTasks = useStore.getState().tasks?.length || 0;
+      try {
+        const session = await supabase.auth.getSession();
+        const token = session.data.session?.access_token;
+        const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+        if (token && SUPABASE_URL) {
+          fetch(`${SUPABASE_URL}/functions/v1/send-welcome-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({
+              tier,
+              equipment_count: allEquipment.length,
+              task_count: totalTasks,
+            }),
+          }).catch(() => {});
+        }
+      } catch {
+        // Welcome email is non-blocking — don't fail onboarding
       }
 
       setStep(5);
@@ -523,25 +621,42 @@ export default function Onboarding() {
         setCheckoutLoading(true);
         const session = await supabase.auth.getSession();
         const token = session.data.session?.access_token;
-        if (token && SUPABASE_URL) {
-          const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({
-              plan: selectedPlan,
-              success_url: `${window.location.origin}/onboarding?step=4&success=true&plan=${selectedPlan}`,
-              cancel_url: `${window.location.origin}/onboarding?step=3&canceled=true`,
-            }),
-          });
-          const data = await res.json();
-          if (res.ok && data.url) { window.location.href = data.url; return; }
+        if (!token || !SUPABASE_URL) {
+          setPlanMessage('Unable to start checkout — please try again.');
+          setPlanMessageType('error');
+          setTimeout(() => setPlanMessage(''), 5000);
+          return;
         }
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            tier: selectedPlan,
+            success_url: `${window.location.origin}/onboarding?step=4&success=true&plan=${selectedPlan}`,
+            cancel_url: `${window.location.origin}/onboarding?step=3&canceled=true`,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          window.location.href = data.url;
+          return;
+        }
+        // Checkout returned an error — show it, don't silently proceed
+        setPlanMessage(data?.error || 'Checkout failed — please try again or continue with the Free plan.');
+        setPlanMessageType('error');
+        setTimeout(() => setPlanMessage(''), 5000);
+        return;
       } catch (e) {
         console.warn('Stripe checkout not available:', e);
+        setPlanMessage('Checkout unavailable — please try again or continue with the Free plan.');
+        setPlanMessageType('error');
+        setTimeout(() => setPlanMessage(''), 5000);
+        return;
       } finally {
         setCheckoutLoading(false);
       }
     }
+    // Pro+ or unknown plan — proceed (Pro+ is inquiry-based)
     setStep(4);
   };
 
@@ -803,6 +918,76 @@ export default function Onboarding() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== Verified Address Confirmation Modal ===== */}
+      {showVerifiedConfirm && verifiedAddress && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 9999, padding: 20,
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 16, padding: 32, maxWidth: 440, width: '100%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <span style={{ fontSize: 36 }}>&#x2705;</span>
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
+              Address Verified
+            </h3>
+            <p style={{ color: Colors.medGray, fontSize: 14, lineHeight: 1.6, textAlign: 'center', marginBottom: 16 }}>
+              We standardized your address using USPS. Would you like to use the corrected version?
+            </p>
+
+            <div style={{ marginBottom: 20 }}>
+              <div style={{
+                padding: 14, backgroundColor: '#f0fdf4', borderRadius: 10,
+                border: `1px solid ${Colors.sage}40`, marginBottom: 10,
+              }}>
+                <p style={{ fontSize: 11, color: Colors.sage, fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase' }}>USPS Standardized</p>
+                <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: Colors.charcoal }}>
+                  {verifiedAddress.normalizedAddress}
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: 13, color: Colors.charcoal }}>
+                  {verifiedAddress.city}, {verifiedAddress.state} {verifiedAddress.zipCode}
+                </p>
+              </div>
+              <div style={{
+                padding: 14, backgroundColor: '#f9f9f7', borderRadius: 10,
+                border: '1px solid #eee',
+              }}>
+                <p style={{ fontSize: 11, color: Colors.medGray, fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase' }}>You entered</p>
+                <p style={{ margin: 0, fontSize: 14, color: Colors.medGray }}>
+                  {addressForm.address}
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: 13, color: Colors.medGray }}>
+                  {addressForm.city}, {addressForm.state} {addressForm.zip_code}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                onClick={handleAcceptVerifiedAddress}
+                disabled={saving}
+              >
+                {saving ? 'Saving...' : 'Use Standardized Address'}
+              </button>
+              <button
+                className="btn btn-ghost"
+                style={{ width: '100%', color: Colors.medGray }}
+                onClick={handleKeepOriginalAddress}
+                disabled={saving}
+              >
+                {saving ? 'Saving...' : 'Keep My Original'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1131,7 +1316,7 @@ export default function Onboarding() {
             Scanning your equipment labels lets Canopy build a personalized maintenance schedule, track warranty info, and alert you to issues like phased-out refrigerants.
           </p>
 
-          {showScanner ? (
+          {showScanner && canUseAiScan ? (
             <div style={{ marginBottom: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <h3 style={{ fontSize: 16, margin: 0 }}>Scan Equipment Label</h3>
@@ -1145,7 +1330,7 @@ export default function Onboarding() {
               {equipmentList.length > 0 && (
                 <div style={{ marginBottom: 24 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal, marginBottom: 12 }}>
-                    {equipmentList.length} item{equipmentList.length !== 1 ? 's' : ''} added
+                    {equipmentList.length} item{equipmentList.length !== 1 ? 's' : ''} added{equipmentLimit ? ` (${equipmentLimit - equipmentList.length} remaining on Free plan)` : ''}
                   </p>
                   {equipmentList.map((item, i) => (
                     <div key={i} style={{
@@ -1167,10 +1352,37 @@ export default function Onboarding() {
                 </div>
               )}
 
-              <button className="btn btn-primary" onClick={() => setShowScanner(true)}
-                style={{ width: '100%', marginBottom: 24, padding: '14px 0', fontSize: 15 }}>
-                {equipmentList.length > 0 ? '+ Scan Another Label' : 'Scan Equipment Label'}
-              </button>
+              {/* AI Photo Scan — paid users only */}
+              {canUseAiScan ? (
+                <>
+                  <button className="btn btn-primary" onClick={() => setShowScanner(true)}
+                    disabled={atEquipmentLimit}
+                    style={{ width: '100%', marginBottom: atEquipmentLimit ? 8 : 24, padding: '14px 0', fontSize: 15, opacity: atEquipmentLimit ? 0.5 : 1 }}>
+                    {atEquipmentLimit ? `Equipment limit reached (${equipmentLimit})` : equipmentList.length > 0 ? '+ Scan Another Label' : 'Scan Equipment Label'}
+                  </button>
+                  {atEquipmentLimit && (
+                    <p style={{ fontSize: 12, color: Colors.copper, marginBottom: 24, textAlign: 'center' }}>
+                      Upgrade to Home or Pro for unlimited equipment tracking.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div style={{
+                  padding: 20, backgroundColor: '#faf9f7', borderRadius: 12,
+                  border: `1px dashed ${Colors.copper}40`, marginBottom: 24, textAlign: 'center',
+                }}>
+                  <span style={{ fontSize: 28, display: 'block', marginBottom: 8 }}>📸</span>
+                  <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px' }}>
+                    AI Label Scanning
+                  </p>
+                  <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 12px', lineHeight: 1.5 }}>
+                    Snap a photo of any equipment label and our AI will extract make, model, serial number, and more automatically.
+                  </p>
+                  <p style={{ fontSize: 12, color: Colors.copper, fontWeight: 600, margin: 0 }}>
+                    Available on Home, Pro, and Pro+ plans
+                  </p>
+                </div>
+              )}
 
               {/* Equipment suggestions */}
               <div style={{ backgroundColor: '#faf9f7', borderRadius: 12, padding: 20, marginBottom: 24 }}>
@@ -1259,26 +1471,41 @@ export default function Onboarding() {
                 </div>
               </details>
 
-              {/* Inspection report upload */}
-              <details style={{ marginBottom: 24 }}>
-                <summary style={{ fontSize: 13, color: Colors.copper, cursor: 'pointer', fontWeight: 500, marginBottom: 12 }}>
-                  Have a home inspection report?
-                </summary>
-                <div style={{ paddingTop: 12 }}>
-                  <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 16, lineHeight: 1.5 }}>
-                    Upload your inspection report and Canopy will extract maintenance items and add them to your plan automatically.
-                  </p>
-                  <InspectionUploader onTasksCreated={(count) => {
-                    if (count > 0) {
-                      // Refresh tasks in store so the plan reflects inspection items
-                      const { tasks } = useStore.getState();
-                      supabase.from('tasks').select('*').eq('home_id', home?.id).then(({ data }) => {
-                        if (data) setTasks(data);
-                      });
-                    }
-                  }} />
-                </div>
-              </details>
+              {/* Inspection report upload — paid users only */}
+              {canUseAiScan ? (
+                <details style={{ marginBottom: 24 }}>
+                  <summary style={{ fontSize: 13, color: Colors.copper, cursor: 'pointer', fontWeight: 500, marginBottom: 12 }}>
+                    Have a home inspection report?
+                  </summary>
+                  <div style={{ paddingTop: 12 }}>
+                    <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 16, lineHeight: 1.5 }}>
+                      Upload your inspection report and Canopy will extract maintenance items and add them to your plan automatically.
+                    </p>
+                    <InspectionUploader onTasksCreated={(count) => {
+                      if (count > 0) {
+                        const { tasks } = useStore.getState();
+                        supabase.from('tasks').select('*').eq('home_id', home?.id).then(({ data }) => {
+                          if (data) setTasks(data);
+                        });
+                      }
+                    }} />
+                  </div>
+                </details>
+              ) : (
+                <details style={{ marginBottom: 24 }}>
+                  <summary style={{ fontSize: 13, color: Colors.medGray, cursor: 'pointer', fontWeight: 500, marginBottom: 12 }}>
+                    Have a home inspection report?
+                  </summary>
+                  <div style={{ paddingTop: 12, textAlign: 'center' }}>
+                    <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 8, lineHeight: 1.5 }}>
+                      AI-powered inspection report analysis is available on Home, Pro, and Pro+ plans.
+                    </p>
+                    <p style={{ fontSize: 12, color: Colors.copper, fontWeight: 600, margin: 0 }}>
+                      Upgrade in Settings to unlock this feature.
+                    </p>
+                  </div>
+                </details>
+              )}
             </>
           )}
 

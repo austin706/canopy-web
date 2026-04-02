@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { redeemGiftCode, insertProInterest, supabase } from '@/services/supabase';
 import { PLANS, loadServiceAreas, isProAvailableInArea } from '@/services/subscriptionGate';
-import { enrollProSubscriber } from '@/services/proEnrollment';
+import { enrollProSubscriber, findProviderForZip } from '@/services/proEnrollment';
+import { requestConsultation } from '@/services/proPlus';
 import { Colors } from '@/constants/theme';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import ServiceAreaMap from '@/components/ServiceAreaMap';
@@ -27,6 +28,38 @@ export default function Subscription() {
 
   const [enrolling, setEnrolling] = useState(false);
   const [enrollmentResult, setEnrollmentResult] = useState<{ provider: { business_name: string } | null; visitCreated: boolean } | null>(null);
+  const [requestingProPlus, setRequestingProPlus] = useState(false);
+
+  // Handle Pro+ consultation request
+  const handleProPlusRequest = async () => {
+    if (!user || !home) {
+      setMessage('Please complete your home profile before requesting Pro+.');
+      setTimeout(() => setMessage(''), 5000);
+      return;
+    }
+    setRequestingProPlus(true);
+    try {
+      // Find a provider for their zip
+      const provider = home.zip_code ? await findProviderForZip(home.zip_code) : null;
+      if (!provider) {
+        setMessage('No Pro+ providers are available in your area yet. Join the waitlist below to be notified!');
+        setTimeout(() => setMessage(''), 5000);
+        return;
+      }
+      await requestConsultation(home.id, provider.id);
+      setMessage('Consultation requested! Your Canopy pro will reach out to schedule an in-home assessment. Check your notifications for updates.');
+      setTimeout(() => setMessage(''), 8000);
+    } catch (e: any) {
+      if (e.message?.includes('duplicate') || e.code === '23505') {
+        setMessage('You already have a Pro+ consultation request. Check your Pro+ page for status updates.');
+      } else {
+        setMessage(e.message || 'Failed to request consultation');
+      }
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setRequestingProPlus(false);
+    }
+  };
 
   // Handle Stripe redirect success/cancel
   useEffect(() => {
@@ -173,7 +206,7 @@ export default function Subscription() {
       {/* Pro Enrollment Result */}
       {enrollmentResult && !enrolling && (
         <div className="card mb-lg" style={{ background: Colors.sageMuted, padding: '20px 24px' }}>
-          <p style={{ fontWeight: 700, fontSize: 18, color: Colors.sage, margin: '0 0 8px' }}>Welcome to Canopy Pro!</p>
+          <p style={{ fontWeight: 700, fontSize: 18, color: Colors.sage, margin: '0 0 8px' }}>Welcome to Canopy {tier === 'pro_plus' ? 'Pro+' : 'Pro'}!</p>
           {enrollmentResult.provider ? (
             <>
               <p style={{ fontSize: 14, color: Colors.charcoal, margin: '0 0 4px' }}>
@@ -276,13 +309,13 @@ export default function Subscription() {
               </button>
             )}
             {tier !== plan.value && isInquiry && (
-              <a
-                href="mailto:support@canopyhome.app?subject=Canopy%20Pro%2B%20Inquiry"
+              <button
                 className="btn btn-secondary btn-full mt-md"
-                style={{ textAlign: 'center', textDecoration: 'none', display: 'block' }}
+                onClick={handleProPlusRequest}
+                disabled={requestingProPlus}
               >
-                Contact Us for Pricing
-              </a>
+                {requestingProPlus ? 'Requesting...' : 'Request Consultation'}
+              </button>
             )}
           </div>
           );

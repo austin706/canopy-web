@@ -134,7 +134,7 @@ export default function Login() {
           </div>
           {isNewSignup && (
             <div style={{ background: '#4CAF5020', color: '#2E7D32', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-              <strong>Account created!</strong> Sign in to get started. We've sent a verification email — you can verify anytime, but it's not required to use Canopy.
+              <strong>Account created!</strong> Sign in to get started. Check your email for a verification link — you can verify anytime, but it's not required to use Canopy.
             </div>
           )}
           {error && <div style={{ background: '#E5393520', color: '#C62828', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 20 }}>{error}</div>}

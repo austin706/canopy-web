@@ -24,6 +24,23 @@ export const signUp = async (email: string, password: string, fullName: string) 
     },
   });
   if (error) throw error;
+
+  // Send welcome/verification email via our Resend-backed notification system.
+  // Supabase Auth's built-in confirmation email may be disabled, so we send our own
+  // to make sure the user always gets a welcome email regardless of auth config.
+  if (data.user?.id) {
+    sendDirectEmailNotification({
+      recipient_email: email,
+      user_id: data.user.id,
+      title: `Welcome to Canopy, ${fullName}!`,
+      body: `Thanks for creating your Canopy account! Sign in to set up your home profile, scan your equipment, and get personalized maintenance reminders.\n\nYour next step: Complete the onboarding walkthrough to unlock your dashboard.`,
+      subject: `Welcome to Canopy, ${fullName}!`,
+      category: 'onboarding',
+      action_url: '/onboarding',
+      action_label: 'Get Started',
+    }).catch(() => {}); // Non-blocking
+  }
+
   return data;
 };
 

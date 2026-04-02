@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase, createHomeJoinRequest } from '@/services/supabase';
+import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase, createHomeJoinRequest, sendNotification } from '@/services/supabase';
 import { verifyAddress, findExistingProperty } from '@/services/addressVerification';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
 import { PLANS, isProAvailableInArea, loadServiceAreas } from '@/services/subscriptionGate';
@@ -461,6 +461,24 @@ export default function Onboarding() {
 
       // Mark onboarding complete
       try { await updateProfile(user.id, { onboarding_complete: true }); } catch {}
+
+      // Send welcome notification (for all tiers)
+      const tier = user.subscription_tier || 'free';
+      const tierLabel = tier === 'pro_plus' ? 'Pro+' : tier === 'pro' ? 'Pro' : tier === 'home' ? 'Home' : 'Free';
+      const welcomeBody = tier === 'free'
+        ? 'Your home profile is set up! Canopy will help you stay on top of maintenance with personalized task reminders, equipment tracking, and seasonal checklists. Explore your dashboard to see what\'s coming up.'
+        : tier === 'home'
+        ? 'Your Home plan is active! You now have AI-powered maintenance tasks, unlimited equipment tracking, personalized checklists, and weather alerts. Check your dashboard to see your first tasks.'
+        : null; // Pro/Pro+ get their own welcome via enrollProSubscriber
+      if (welcomeBody) {
+        sendNotification({
+          user_id: user.id,
+          title: `Welcome to Canopy${tierLabel !== 'Free' ? ' ' + tierLabel : ''}!`,
+          body: welcomeBody,
+          category: 'onboarding',
+          action_url: '/dashboard',
+        }).catch(() => {});
+      }
 
       setStep(5);
     } finally {

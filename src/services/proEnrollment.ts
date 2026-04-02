@@ -105,15 +105,34 @@ export async function findProviderForZip(zipCode: string): Promise<{ id: string;
 
   // Find providers whose zip_codes array contains this zip
   const matching = providers.filter(p =>
-    p.zip_codes && Array.isArray(p.zip_codes) && p.zip_codes.includes(zipCode)
+    p.zip_codes && Array.isArray(p.zip_codes) && p.zip_codes.length > 0 && p.zip_codes.includes(zipCode)
   );
 
   if (matching.length > 0) {
-    // Return the first matching available provider
     return matching[0];
   }
 
-  // No exact zip match — return null (admin will need to manually assign)
+  // Fallback: if providers exist but have empty zip_codes, check service_areas
+  // to see if this zip is in an active service area and assign the first available provider
+  const providersWithEmptyZips = providers.filter(p =>
+    !p.zip_codes || !Array.isArray(p.zip_codes) || p.zip_codes.length === 0
+  );
+
+  if (providersWithEmptyZips.length > 0) {
+    const { data: serviceArea } = await supabase
+      .from('service_areas')
+      .select('zip_code')
+      .eq('zip_code', zipCode)
+      .eq('is_active', true)
+      .single();
+
+    if (serviceArea) {
+      // Zip is in an active service area — assign the first available provider
+      return providersWithEmptyZips[0];
+    }
+  }
+
+  // No match — admin will need to manually assign
   return null;
 }
 

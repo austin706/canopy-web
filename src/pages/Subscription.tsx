@@ -48,6 +48,34 @@ export default function Subscription() {
   const [enrolling, setEnrolling] = useState(false);
   const [enrollmentResult, setEnrollmentResult] = useState<{ provider: { business_name: string } | null; visitCreated: boolean } | null>(null);
   const [requestingProPlus, setRequestingProPlus] = useState(false);
+  const [notifyMeSubmitted, setNotifyMeSubmitted] = useState<Record<string, boolean>>({});
+  const [notifyMeLoading, setNotifyMeLoading] = useState<string | null>(null);
+
+  const handleNotifyMe = async (tierInterest: 'pro' | 'pro_plus') => {
+    if (!user) return;
+    setNotifyMeLoading(tierInterest);
+    try {
+      await insertProInterest({
+        email: user.email,
+        zip_code: home?.zip_code || null,
+        user_id: user.id,
+        state: home?.state || null,
+        city: home?.city || null,
+        full_name: user.full_name || null,
+        tier_interest: tierInterest,
+      });
+      setNotifyMeSubmitted(prev => ({ ...prev, [tierInterest]: true }));
+    } catch (e: any) {
+      if (e.code === '23505' || e.message?.includes('duplicate')) {
+        setNotifyMeSubmitted(prev => ({ ...prev, [tierInterest]: true }));
+      } else {
+        setMessage('Could not save your interest — please try again.');
+        setTimeout(() => setMessage(''), 5000);
+      }
+    } finally {
+      setNotifyMeLoading(null);
+    }
+  };
 
   // Handle Pro+ consultation request
   const handleProPlusRequest = async () => {
@@ -258,6 +286,9 @@ export default function Subscription() {
         zip_code: waitlistZip,
         user_id: user?.id || null,
         state: home?.state || null,
+        city: home?.city || null,
+        full_name: user?.full_name || null,
+        tier_interest: 'pro',
       });
       setWaitlistMessage('Thanks! We will notify you when Pro services are available in your area.');
       setWaitlistEmail('');
@@ -359,7 +390,7 @@ export default function Subscription() {
                 </li>
               ))}
             </ul>
-            {tier !== plan.value && !isInquiry && plan.value !== 'free' && (
+            {tier !== plan.value && plan.value !== 'free' && (
               !proAvailable && (plan.value === 'pro' || plan.value === 'pro_plus') ? (
                 <div style={{
                   marginTop: 12,
@@ -369,39 +400,56 @@ export default function Subscription() {
                   textAlign: 'center',
                   border: `1px dashed ${Colors.silver}`,
                 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: Colors.medGray, margin: 0 }}>
-                    Not yet available in your area
-                  </p>
-                  <p style={{ fontSize: 12, color: Colors.medGray, margin: '4px 0 0' }}>
-                    Join the waitlist below to be notified
-                  </p>
+                  {notifyMeSubmitted[plan.value] ? (
+                    <>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: Colors.sage, margin: 0 }}>
+                        <CheckIcon size={12} color={Colors.sage} /> You're on the list!
+                      </p>
+                      <p style={{ fontSize: 12, color: Colors.medGray, margin: '4px 0 0' }}>
+                        We'll notify you when {plan.name} is available in your area.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: Colors.medGray, margin: 0 }}>
+                        Not yet available in your area
+                      </p>
+                      <button
+                        className="btn btn-secondary btn-sm mt-sm"
+                        onClick={() => handleNotifyMe(plan.value as 'pro' | 'pro_plus')}
+                        disabled={notifyMeLoading === plan.value}
+                        style={{ fontSize: 12 }}
+                      >
+                        {notifyMeLoading === plan.value ? 'Saving...' : 'Notify Me When Available'}
+                      </button>
+                    </>
+                  )}
                 </div>
+              ) : isInquiry ? (
+                <button
+                  className="btn btn-secondary btn-full mt-md"
+                  onClick={handleProPlusRequest}
+                  disabled={requestingProPlus}
+                >
+                  {requestingProPlus ? 'Requesting...' : 'Request Consultation'}
+                </button>
               ) : (
-              <button
-                className="btn btn-primary btn-full mt-md"
-                onClick={() => handleStripeCheckout(plan.value)}
-                disabled={checkoutLoading === plan.value}
-              >
-                {checkoutLoading === plan.value
-                  ? 'Loading checkout...'
-                  : (plan.price || 0) > (PLANS.find(p => p.value === tier)?.price || 0)
-                    ? 'Upgrade'
-                    : 'Change Plan'}
-              </button>
+                <button
+                  className="btn btn-primary btn-full mt-md"
+                  onClick={() => handleStripeCheckout(plan.value)}
+                  disabled={checkoutLoading === plan.value}
+                >
+                  {checkoutLoading === plan.value
+                    ? 'Loading checkout...'
+                    : (plan.price || 0) > (PLANS.find(p => p.value === tier)?.price || 0)
+                      ? 'Upgrade'
+                      : 'Change Plan'}
+                </button>
               )
             )}
-            {tier !== plan.value && !isInquiry && plan.value === 'free' && tier !== 'free' && (
+            {tier !== plan.value && plan.value === 'free' && tier !== 'free' && (
               <button className="btn btn-ghost btn-full mt-md" onClick={() => setMessage('To downgrade, cancel your subscription from your Stripe billing portal.')}>
                 Downgrade
-              </button>
-            )}
-            {tier !== plan.value && isInquiry && (
-              <button
-                className="btn btn-secondary btn-full mt-md"
-                onClick={handleProPlusRequest}
-                disabled={requestingProPlus}
-              >
-                {requestingProPlus ? 'Requesting...' : 'Request Consultation'}
               </button>
             )}
           </div>

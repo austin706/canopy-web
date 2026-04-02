@@ -475,8 +475,15 @@ export const insertProInterest = async (interest: {
   zip_code?: string | null;
   user_id?: string | null;
   state?: string | null;
+  city?: string | null;
+  full_name?: string | null;
+  tier_interest?: 'pro' | 'pro_plus';
 }) => {
-  const { data, error } = await supabase.from('pro_interest').insert(interest).select().single();
+  const { data, error } = await supabase
+    .from('pro_interest')
+    .upsert(interest, { onConflict: 'user_id,tier_interest' })
+    .select()
+    .single();
   if (error) throw error;
   return data;
 };

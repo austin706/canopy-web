@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase, createHomeJoinRequest, sendNotification } from '@/services/supabase';
+import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase, createHomeJoinRequest, sendNotification, insertProInterest } from '@/services/supabase';
 import { verifyAddress, findExistingProperty } from '@/services/addressVerification';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
 import { PLANS, isProAvailableInArea, loadServiceAreas, getEquipmentLimit, isPremium } from '@/services/subscriptionGate';
+import { requestConsultation } from '@/services/proPlus';
+import { findProviderForZip } from '@/services/proEnrollment';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
 import EquipmentScanner from '@/components/EquipmentScanner';
 import InspectionUploader from '@/components/InspectionUploader';
@@ -186,6 +188,38 @@ export default function Onboarding() {
   const [planMessage, setPlanMessage] = useState('');
   const [planMessageType, setPlanMessageType] = useState<'success' | 'error'>('success');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [requestingProPlus, setRequestingProPlus] = useState(false);
+  const [notifyMeSubmitted, setNotifyMeSubmitted] = useState<Record<string, boolean>>({});
+  const [notifyMeLoading, setNotifyMeLoading] = useState<string | null>(null);
+
+  const handleNotifyMe = async (tierInterest: 'pro' | 'pro_plus') => {
+    if (!user) return;
+    setNotifyMeLoading(tierInterest);
+    try {
+      const home = useStore.getState().home;
+      await insertProInterest({
+        email: user.email,
+        zip_code: home?.zip_code || addressForm.zip_code || null,
+        user_id: user.id,
+        state: home?.state || addressForm.state || null,
+        city: home?.city || addressForm.city || null,
+        full_name: user.full_name || null,
+        tier_interest: tierInterest,
+      });
+      setNotifyMeSubmitted(prev => ({ ...prev, [tierInterest]: true }));
+    } catch (e: any) {
+      // If duplicate, still show success
+      if (e.code === '23505' || e.message?.includes('duplicate')) {
+        setNotifyMeSubmitted(prev => ({ ...prev, [tierInterest]: true }));
+      } else {
+        setPlanMessage('Could not save your interest — please try again.');
+        setPlanMessageType('error');
+        setTimeout(() => setPlanMessage(''), 5000);
+      }
+    } finally {
+      setNotifyMeLoading(null);
+    }
+  };
 
   // Embedded checkout state
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
@@ -202,6 +236,63 @@ export default function Onboarding() {
     setCheckoutPlan(null);
     setCheckoutLoading(false);
   }, []);
+
+  // Handle Pro+ consultation request
+  const handleProPlusRequest = async () => {
+    if (!user) {
+      setPlanMessage('Please sign in before requesting Pro+.');
+      setPlanMessageType('error');
+      setTimeout(() => setPlanMessage(''), 5000);
+      return;
+    }
+    setRequestingProPlus(true);
+    try {
+      const home = useStore.getState().home;
+      if (!home?.id) {
+        setPlanMessage('Please complete your home profile before requesting Pro+.');
+        setPlanMessageType('error');
+        setTimeout(() => setPlanMessage(''), 5000);
+        return;
+      }
+      const provider = await findProviderForZip(home.zip_code || '');
+      if (!provider) {
+        // No provider matched — still submit the request to admins via notification
+        // and let them know we'll follow up
+        const { sendNotification } = await import('@/services/supabase');
+        const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin');
+        if (admins) {
+          for (const admin of admins) {
+            sendNotification({
+              user_id: admin.id,
+              title: 'New Pro+ Consultation Interest',
+              body: `${user.full_name || user.email} at ${home.address || 'their home'}, ${home.city || ''} ${home.state || ''} ${home.zip_code || ''} is interested in Pro+ but no provider is matched to their area yet.`,
+              category: 'pro_plus',
+              action_url: '/admin/users',
+            }).catch(() => {});
+          }
+        }
+        setPlanMessage('Consultation request submitted! Our team will reach out to discuss Pro+ options for your area.');
+        setPlanMessageType('success');
+        setTimeout(() => setPlanMessage(''), 8000);
+        return;
+      }
+      await requestConsultation(home.id, provider.id);
+      setPlanMessage('Consultation requested! Your Canopy pro will reach out to schedule an in-home assessment.');
+      setPlanMessageType('success');
+      setTimeout(() => setPlanMessage(''), 8000);
+    } catch (e: any) {
+      if (e.message?.includes('duplicate') || e.code === '23505') {
+        setPlanMessage('You already have a Pro+ consultation request. You\'ll be contacted soon!');
+        setPlanMessageType('success');
+      } else {
+        setPlanMessage(e.message || 'Failed to request consultation');
+        setPlanMessageType('error');
+      }
+      setTimeout(() => setPlanMessage(''), 5000);
+    } finally {
+      setRequestingProPlus(false);
+    }
+  };
 
   // Step 4: Equipment
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
@@ -1326,8 +1417,27 @@ export default function Onboarding() {
                     </span>
                   )}
                   {isLocked && (
-                    <div style={{ fontSize: 12, color: Colors.medGray, marginBottom: 8 }}>
-                      Not available in your area yet
+                    <div style={{ fontSize: 12, marginBottom: 8 }}>
+                      {notifyMeSubmitted[plan.value] ? (
+                        <span style={{ color: Colors.sage, fontWeight: 600 }}>
+                          <CheckIcon size={12} color={Colors.sage} /> We'll notify you when this is available in your area!
+                        </span>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ color: Colors.medGray }}>Not available in your area yet</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleNotifyMe(plan.value as 'pro' | 'pro_plus'); }}
+                            disabled={notifyMeLoading === plan.value}
+                            style={{
+                              background: 'none', border: `1px solid ${Colors.copper}`, borderRadius: 6,
+                              color: Colors.copper, fontSize: 11, fontWeight: 600, padding: '3px 10px',
+                              cursor: 'pointer', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {notifyMeLoading === plan.value ? 'Saving...' : 'Notify Me'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1383,11 +1493,22 @@ export default function Onboarding() {
 
           <div className="flex gap-sm">
             <button className="btn btn-ghost" onClick={() => setStep(2)}>Back</button>
-            <button className="btn btn-primary" onClick={handlePlanCheckout} disabled={checkoutLoading}>
-              {checkoutLoading ? 'Loading checkout...'
-                : selectedPlan === 'free' ? 'Continue with Free'
-                : `Continue with ${PLANS.find(p => p.value === selectedPlan)?.name}`}
-            </button>
+            {selectedPlan === 'pro_plus' ? (
+              <button
+                className="btn btn-secondary"
+                onClick={handleProPlusRequest}
+                disabled={requestingProPlus}
+                style={{ flex: 1 }}
+              >
+                {requestingProPlus ? 'Requesting...' : 'Request Pro+ Consultation'}
+              </button>
+            ) : (
+              <button className="btn btn-primary" onClick={handlePlanCheckout} disabled={checkoutLoading}>
+                {checkoutLoading ? 'Loading checkout...'
+                  : selectedPlan === 'free' ? 'Continue with Free'
+                  : `Continue with ${PLANS.find(p => p.value === selectedPlan)?.name}`}
+              </button>
+            )}
           </div>
           <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 12 }}>
             You can always change your plan later from Settings.

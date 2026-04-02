@@ -242,16 +242,35 @@ export async function seedEmailTemplates(): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Helper: call send-notifications edge function via raw fetch.
+ * supabase.functions.invoke() has a CORS issue where the POST never reaches the
+ * edge function after the OPTIONS preflight. Raw fetch with explicit headers works.
+ */
+async function invokeNotificationsFn(payload: Record<string, any>): Promise<void> {
+  const session = (await supabase.auth.getSession()).data.session;
+  const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notifications`;
+  const res = await fetch(fnUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session?.access_token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `Edge function returned ${res.status}`);
+  }
+}
+
 // Send a test email for a template
 export async function sendTestEmail(templateKey: string, recipientEmail: string): Promise<void> {
-  const { error } = await supabase.functions.invoke('send-notifications', {
-    body: {
-      type: 'test_email',
-      template_key: templateKey,
-      recipient_email: recipientEmail,
-    },
+  await invokeNotificationsFn({
+    type: 'test_email',
+    template_key: templateKey,
+    recipient_email: recipientEmail,
   });
-  if (error) throw error;
 }
 
 // Trigger an admin notification
@@ -259,12 +278,9 @@ export async function sendAdminNotification(
   templateKey: string,
   variables: Record<string, string>
 ): Promise<void> {
-  const { error } = await supabase.functions.invoke('send-notifications', {
-    body: {
-      type: 'admin_email',
-      template_key: templateKey,
-      variables,
-    },
+  await invokeNotificationsFn({
+    type: 'admin_email',
+    template_key: templateKey,
+    variables,
   });
-  if (error) throw error;
 }

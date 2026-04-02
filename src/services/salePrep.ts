@@ -1,4 +1,4 @@
-import { supabase, sendNotification } from '@/services/supabase';
+import { supabase, sendNotification, sendDirectEmailNotification } from '@/services/supabase';
 
 export interface HomeSalePrep {
   id: string;
@@ -88,25 +88,26 @@ export async function toggleSalePrepItem(
               ? `${ownerName} has completed all sale prep items for ${addr}. The home is ready to list!`
               : `${ownerName} is ${hitMilestone}% through their sale prep checklist for ${addr} (${newItems.length}/${totalItems} items done).`;
 
-            if (agent?.user_id) {
-              sendNotification({
-                user_id: agent.user_id,
-                title: hitMilestone === 100 ? 'Sale Prep Complete!' : `Sale Prep ${hitMilestone}% Done`,
+            const milestoneTitle = hitMilestone === 100 ? 'Sale Prep Complete!' : `Sale Prep ${hitMilestone}% Done`;
+
+            // Resolve agent's profile ID for in-app notification
+            let agentProfileId: string | null = null;
+            if (agent?.email) {
+              const { data: agentProfile } = await supabase.from('profiles').select('id').eq('email', agent.email).single();
+              agentProfileId = agentProfile?.id || null;
+            }
+
+            // Save to DB — process-queue cron handles email + push delivery server-side
+            if (agent?.email) {
+              sendDirectEmailNotification({
+                recipient_email: agent.email,
+                user_id: agentProfileId || undefined,
+                title: milestoneTitle,
                 body: msg,
+                subject: milestoneTitle,
                 category: 'agent',
                 action_url: '/agent-portal',
-              }).catch(() => {});
-            } else if (agent?.email) {
-              supabase.functions.invoke('send-notifications', {
-                body: {
-                  direct_email: true,
-                  recipient_email: agent.email,
-                  subject: hitMilestone === 100 ? 'Sale Prep Complete!' : `Sale Prep ${hitMilestone}% Done`,
-                  title: hitMilestone === 100 ? 'Sale Prep Complete!' : `Sale Prep ${hitMilestone}% Done`,
-                  body: msg,
-                  action_url: 'https://canopyhome.app/agent-portal',
-                  action_label: 'View in Canopy',
-                },
+                action_label: 'View in Canopy',
               }).catch(() => {});
             }
           }
@@ -148,20 +149,22 @@ export async function notifyAgentSalePrep(
   agentId: string,
   homeAddress: string
 ): Promise<void> {
-  // Resolve agent's auth uid (profiles.id) from agents table id
-  // agents.id != profiles.id — we need the profile id for notification delivery
+  // Resolve agent's profile and email from agents table
+  // agents.id != profiles.id — we need both the profile id (for in-app) and email (for email delivery)
   let notifyUserId: string | null = null;
+  let agentEmail: string | null = null;
   try {
     const { data: agentData } = await supabase
       .from('agents')
-      .select('email')
+      .select('email, name')
       .eq('id', agentId)
       .single();
-    if (agentData?.email) {
+    agentEmail = agentData?.email || null;
+    if (agentEmail) {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('id')
-        .eq('email', agentData.email)
+        .eq('email', agentEmail)
         .single();
       if (profileData?.id) {
         notifyUserId = profileData.id;
@@ -171,46 +174,29 @@ export async function notifyAgentSalePrep(
     console.error('Agent notification: could not resolve profile ID for agent', agentId);
   }
 
-  // Send notification via edge function (in-app + email + push)
-  if (notifyUserId) {
+  const notifTitle = 'Client preparing to sell';
+  const notifBody = `Your client is preparing their home at ${homeAddress} for sale. They've activated the Canopy Sale Prep checklist. Log in to Canopy to see their progress and the home's full record.`;
+
+  // Save notification to DB — process-queue cron handles email + push delivery server-side.
+  // sendDirectEmailNotification handles both cases: agents with accounts (in-app + email)
+  // and agents without accounts (email only via recipient_email).
+  if (agentEmail) {
     try {
-      await sendNotification({
-        user_id: notifyUserId,
-        title: 'Client preparing to sell',
-        body: `Your client is preparing their home at ${homeAddress} for sale. They've activated the Canopy Sale Prep checklist. Log in to Canopy to see their progress and the home's full record.`,
+      await sendDirectEmailNotification({
+        recipient_email: agentEmail,
+        user_id: notifyUserId || undefined,
+        title: notifTitle,
+        body: notifBody,
+        subject: 'Your client is preparing to sell',
         category: 'agent',
         action_url: '/agent-portal',
+        action_label: 'View in Canopy',
       });
     } catch (e) {
-      console.warn('Failed to send agent notification via sendNotification:', e);
+      console.warn('Failed to save agent sale prep notification:', e);
     }
   } else {
-    // Fallback: send direct email to agent even if we couldn't resolve their profile ID
-    // This ensures agents without Canopy accounts still get notified
-    try {
-      const { data: agentFallback } = await supabase
-        .from('agents')
-        .select('email, name')
-        .eq('id', agentId)
-        .single();
-      if (agentFallback?.email) {
-        await supabase.functions.invoke('send-notifications', {
-          body: {
-            direct_email: true,
-            recipient_email: agentFallback.email,
-            subject: 'Your client is preparing to sell',
-            title: 'Client Preparing to Sell',
-            body: `Your client is preparing their home at ${homeAddress} for sale. They've activated the Canopy Sale Prep checklist.\n\nLog in to Canopy to see their progress, the home's full maintenance record, equipment inventory, and inspection history.`,
-            action_url: 'https://canopyhome.app/agent-portal',
-            action_label: 'View in Canopy',
-          },
-        });
-      } else {
-        console.warn('Agent notification fallback: no email found for agent', agentId);
-      }
-    } catch (e) {
-      console.warn('Failed to send agent fallback email:', e);
-    }
+    console.warn('Agent notification: no email found for agent', agentId);
   }
 
   // Mark that the agent was notified on the sale prep record

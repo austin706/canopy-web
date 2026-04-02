@@ -59,6 +59,7 @@ export default function Layout() {
     { to: '/weather', icon: NavWeather, label: 'Weather' },
     { to: '/equipment', icon: NavEquipment, label: 'Equipment' },
     { to: '/documents', icon: NavDocuments, label: 'Documents' },
+    { to: '/notifications', icon: NavNotifications, label: 'Notifications' },
     { to: '/pro-services', icon: NavProServices, label: 'Pro Services' },
     { to: '/agent', icon: NavAgent, label: 'My Agent' },
     { to: '/sale-prep', icon: NavHome, label: 'Sale Prep' },

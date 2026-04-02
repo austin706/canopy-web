@@ -139,6 +139,52 @@ Items marked "Needed" above don't yet have custom email artwork/illustrations. A
 - Warranty expiration
 - Admin daily digest
 
+## Notification Delivery Architecture (updated 2026-04-02)
+
+Notifications use a **decouple-and-queue** pattern: the client saves to DB, a server-side cron handles email + push.
+
+### How it works:
+
+1. **Client saves notification to DB** — `sendNotification()` or `sendDirectEmailNotification()` inserts a row into the `notifications` table with `pushed=false`, `emailed=false`. This is fast, reliable, and doesn't depend on edge functions.
+
+2. **pg_cron picks up pending notifications every 2 minutes** — calls `send-notifications?mode=process-queue` server-to-server via pg_net. The process-queue:
+   - Finds rows where `pushed=false OR emailed=false` (created in last 2 hours)
+   - Looks up `profiles.push_token` + `profiles.email` for registered users
+   - Uses `recipient_email` column for non-account recipients (agents, buyers, etc.)
+   - Sends email via Resend, push via Expo Push API
+   - Marks `pushed=true`, `emailed=true` after successful delivery
+   - Respects `notification_preferences` per category
+
+3. **Admin/broadcast notifications** use raw `fetch()` to call the edge function directly (the `supabase.functions.invoke()` SDK method has a CORS issue where the POST never reaches the function after the OPTIONS preflight — discovered 2026-04-02).
+
+### Key functions:
+- `sendNotification(params)` — for registered users (saves in-app + queues email/push)
+- `sendDirectEmailNotification(params)` — for any recipient including non-account users; supports optional `user_id` for in-app + email combo
+
+### Notifications table columns:
+- `user_id` (nullable) — registered user; used for in-app display + profile email lookup
+- `recipient_email` (nullable) — explicit email target; takes priority over profile email
+- `pushed` (boolean) — tracks push delivery status
+- `emailed` (boolean) — tracks email delivery status
+- `data` (jsonb) — stores `action_label`, `subject` for process-queue to use
+
+### In-app notification display:
+- **Homeowner sidebar** — /notifications page (added 2026-04-02)
+- **Pro Portal** — built-in notifications section with unread badge
+- **Agent Portal** — notifications tab with unread count
+
+## Cron Schedules
+
+| Job | Schedule | Function | Mode |
+|-----|----------|----------|------|
+| notification-process-queue | Every 2 min | send-notifications | process-queue |
+| pro-lifecycle-monthly | 1st of month 6am | pro-visit-lifecycle | allocate + forfeit |
+| pro-lifecycle-daily-notify | Daily 8am | pro-visit-lifecycle | notify (48h reminders) |
+| pro-lifecycle-daily-admin | Daily 7am | pro-visit-lifecycle | admin (daily digest) |
+| pro-lifecycle-daily-renewal | Daily 9am | pro-visit-lifecycle | renewal (3-day warning) |
+| pro-lifecycle-daily-warranty | Daily 10am | pro-visit-lifecycle | warranty (30-day warning) |
+| weekly-home-health-summary | Monday 2pm | send-notifications | weekly-summary |
+
 ## Future Considerations
 
 - **Provider en route / arriving soon** — requires manual trigger or location-based

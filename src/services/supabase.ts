@@ -491,9 +491,16 @@ export const markAllNotificationsRead = async (userId: string) => {
 };
 
 /**
- * Send a notification via the send-notifications edge function.
- * This creates an in-app notification AND sends email + push if configured.
- * Always use this instead of direct notifications table inserts.
+ * Save a notification to the database.
+ *
+ * Email and push delivery are handled server-side by a pg_cron job that calls
+ * send-notifications?mode=process-queue every 2 minutes. This decouples the
+ * fast in-app save (done here) from the slower email/push delivery, which
+ * must happen server-to-server (the browser→edge function POST path is broken
+ * by a CORS issue where the POST never reaches the function after preflight).
+ *
+ * The process-queue picks up rows with pushed=false OR emailed=false, sends
+ * the email/push, and marks them delivered.
  */
 export const sendNotification = async (params: {
   user_id: string;
@@ -502,32 +509,58 @@ export const sendNotification = async (params: {
   category?: string;
   action_url?: string;
   data?: Record<string, any>;
-}): Promise<{ pushed: boolean; saved: boolean; emailed: boolean }> => {
-  const { data, error } = await supabase.functions.invoke('send-notifications', {
-    body: {
-      user_id: params.user_id,
-      title: params.title,
-      body: params.body,
-      category: params.category || 'general',
-      action_url: params.action_url,
-      data: params.data,
-    },
+}): Promise<{ saved: boolean }> => {
+  const { error } = await supabase.from('notifications').insert({
+    user_id: params.user_id,
+    title: params.title,
+    body: params.body,
+    category: params.category || 'general',
+    action_url: params.action_url || null,
+    data: params.data || null,
+    read: false,
+    pushed: false,
+    emailed: false,
   });
   if (error) {
-    console.error('sendNotification edge function error:', error);
-    // Fallback: try direct insert so at least the in-app notification is created
-    const { error: insertError } = await supabase.from('notifications').insert({
-      user_id: params.user_id,
-      title: params.title,
-      body: params.body,
-      category: params.category || 'general',
-      action_url: params.action_url || null,
-      read: false,
-    });
-    if (insertError) console.error('Fallback notification insert failed:', insertError);
-    return { pushed: false, saved: !insertError, emailed: false };
+    console.error('sendNotification insert failed:', error);
+    return { saved: false };
   }
-  return data || { pushed: false, saved: true, emailed: false };
+  return { saved: true };
+};
+
+/**
+ * Queue an email-only notification for a recipient who may not have a Canopy account.
+ * Used for agents without accounts, external parties, etc.
+ * The process-queue cron will pick this up and send via Resend.
+ * If the recipient also has a Canopy account, pass their user_id to also create an in-app notification.
+ */
+export const sendDirectEmailNotification = async (params: {
+  recipient_email: string;
+  title: string;
+  body: string;
+  subject?: string;
+  category?: string;
+  action_url?: string;
+  action_label?: string;
+  user_id?: string; // optional: also saves in-app notification if they have an account
+}): Promise<{ saved: boolean }> => {
+  const { error } = await supabase.from('notifications').insert({
+    user_id: params.user_id || null,
+    recipient_email: params.recipient_email,
+    title: params.title,
+    body: params.body,
+    category: params.category || 'general',
+    action_url: params.action_url || null,
+    data: params.action_label ? { action_label: params.action_label, subject: params.subject } : null,
+    read: false,
+    pushed: false,
+    emailed: false,
+  });
+  if (error) {
+    console.error('sendDirectEmailNotification insert failed:', error);
+    return { saved: false };
+  }
+  return { saved: true };
 };
 
 // --- Notification Preferences ---

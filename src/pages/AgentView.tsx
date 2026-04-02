@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { supabase, sendNotification } from '@/services/supabase';
+import { supabase, sendNotification, sendDirectEmailNotification } from '@/services/supabase';
 import { linkAgent } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { AgentAvatar } from '@/components/AgentAvatar';
@@ -124,27 +124,24 @@ export default function AgentView() {
       setPendingRequests(prev => prev.filter(r => r.id !== request.id));
 
       // Notify the agent that the link was approved
-      if (agentData?.user_id) {
-        const userName = user.full_name || user.email || 'A homeowner';
-        sendNotification({
-          user_id: agentData.user_id,
+      // Resolve agent's profile ID for in-app notification
+      const userName = user.full_name || user.email || 'A homeowner';
+      let agentProfileId: string | null = null;
+      if (agentData?.email) {
+        const { data: agentProfile } = await supabase.from('profiles').select('id').eq('email', agentData.email).single();
+        agentProfileId = agentProfile?.id || null;
+      }
+      // Save to DB — process-queue cron handles email + push delivery server-side
+      if (agentData?.email) {
+        sendDirectEmailNotification({
+          recipient_email: agentData.email,
+          user_id: agentProfileId || undefined,
           title: 'Agent Link Approved',
           body: `${userName} has approved your link request. You can now view their home details in your Agent Portal.`,
+          subject: 'Your agent link request was approved',
           category: 'agent',
           action_url: '/agent-portal',
-        }).catch(() => {});
-      } else if (agentData?.email) {
-        // Agent may not have a Canopy user account — send direct email
-        supabase.functions.invoke('send-notifications', {
-          body: {
-            direct_email: true,
-            recipient_email: agentData.email,
-            subject: 'Your agent link request was approved',
-            title: 'Agent Link Approved',
-            body: `${user.full_name || user.email || 'A homeowner'} has approved your link request on Canopy Home. Log in to your Agent Portal to view their home details.`,
-            action_url: 'https://canopyhome.app/agent-portal',
-            action_label: 'View Agent Portal',
-          },
+          action_label: 'View Agent Portal',
         }).catch(() => {});
       }
     } catch (e: any) {
@@ -164,7 +161,20 @@ export default function AgentView() {
 
       // Notify the agent that the link was declined
       const { data: agentData } = await supabase.from('agents').select('user_id, email, name').eq('id', request.agent_id).single();
-      if (agentData?.user_id) {
+      if (agentData?.email) {
+        let agentProfileId: string | null = null;
+        const { data: agentProfile } = await supabase.from('profiles').select('id').eq('email', agentData.email).single();
+        agentProfileId = agentProfile?.id || null;
+        sendDirectEmailNotification({
+          recipient_email: agentData.email,
+          user_id: agentProfileId || undefined,
+          title: 'Agent Link Declined',
+          body: `A homeowner has declined your link request. They may not be ready to link with an agent at this time.`,
+          category: 'agent',
+          action_url: '/agent-portal',
+        }).catch(() => {});
+      } else if (agentData?.user_id) {
+        // No email on file — at least save in-app
         sendNotification({
           user_id: agentData.user_id,
           title: 'Agent Link Declined',

@@ -1,4 +1,4 @@
-import { supabase, sendNotification } from '@/services/supabase';
+import { supabase, sendNotification, sendDirectEmailNotification } from '@/services/supabase';
 
 export interface HomeTransfer {
   id: string;
@@ -204,23 +204,21 @@ export async function notifyBuyerOfTransfer(
       action_url: `/transfer/accept?token=${transferToken}`,
     });
   } else {
-    // Buyer doesn't have a Canopy account — send a direct email via the edge function
-    // using the send-direct-email mode so they still get notified
+    // Buyer doesn't have a Canopy account — save email-only notification to DB
+    // process-queue cron will pick it up and send via Resend
     const acceptUrl = `https://canopyhome.app/transfer/accept?token=${transferToken}&email=${encodeURIComponent(toEmail.toLowerCase())}`;
     try {
-      await supabase.functions.invoke('send-notifications', {
-        body: {
-          direct_email: true,
-          recipient_email: toEmail.toLowerCase(),
-          subject: `${fromUserName} wants to transfer a home record to you`,
-          title: 'Home Record Transfer',
-          body: `${fromUserName} wants to transfer their home record at ${homeAddress} to you on Canopy Home. This includes the full maintenance history, equipment inventory, and inspection reports.\n\nCanopy is a free home management app that helps you track maintenance, equipment, and more. Create your free account to accept this transfer.`,
-          action_url: acceptUrl,
-          action_label: 'Accept Transfer',
-        },
+      await sendDirectEmailNotification({
+        recipient_email: toEmail.toLowerCase(),
+        subject: `${fromUserName} wants to transfer a home record to you`,
+        title: 'Home Record Transfer',
+        body: `${fromUserName} wants to transfer their home record at ${homeAddress} to you on Canopy Home. This includes the full maintenance history, equipment inventory, and inspection reports.\n\nCanopy is a free home management app that helps you track maintenance, equipment, and more. Create your free account to accept this transfer.`,
+        action_url: acceptUrl,
+        action_label: 'Accept Transfer',
+        category: 'general',
       });
     } catch (e) {
-      console.warn('Failed to send transfer email to non-Canopy buyer:', e);
+      console.warn('Failed to save transfer email notification:', e);
     }
   }
 }

@@ -47,8 +47,8 @@ export default function Signup() {
     if (!password) {
       setPasswordError('Password is required');
       isValid = false;
-    } else if (password.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
+    } else if (password.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
       isValid = false;
     }
 
@@ -88,7 +88,7 @@ export default function Signup() {
     }
   };
 
-  const pwStrength = password.length === 0 ? 0 : password.length < 6 ? 1 : password.length < 10 ? 2 : 3;
+  const pwStrength = password.length === 0 ? 0 : password.length < 8 ? 1 : password.length < 12 ? 2 : 3;
   const pwColors = ['', '#E53935', '#FF9800', '#4CAF50'];
   const pwLabels = ['', 'Weak', 'Good', 'Strong'];
 
@@ -131,7 +131,7 @@ export default function Signup() {
             <div className="form-group">
               <label>Password</label>
               <div className="password-wrapper">
-                <input className="form-input" type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 6 characters" required minLength={6} />
+                <input className="form-input" type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 8 characters" required minLength={8} />
                 <button type="button" className="password-toggle" onClick={() => setShowPw(!showPw)}>{showPw ? 'Hide' : 'Show'}</button>
               </div>
               {passwordError && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{passwordError}</p>}

@@ -1,6 +1,42 @@
-import { supabase } from '@/services/supabase';
+import { supabase, sendNotification } from '@/services/supabase';
 import type { ProMonthlyVisit, VisitAllocation } from '@/types';
 import { TASK_TEMPLATES } from '@/constants/maintenance';
+
+// ─── Internal Helpers ───
+
+/** Fetch the provider's user_id (for notifications) from a visit record */
+async function getProviderUserId(visitId: string): Promise<{ providerId: string; providerUserId: string | null; providerName: string }> {
+  const { data } = await supabase
+    .from('pro_monthly_visits')
+    .select('pro_provider_id, provider:pro_providers(user_id, business_name, contact_name)')
+    .eq('id', visitId)
+    .single();
+  const provider = (data as any)?.provider;
+  return {
+    providerId: data?.pro_provider_id || '',
+    providerUserId: provider?.user_id || null,
+    providerName: provider?.business_name || provider?.contact_name || 'Provider',
+  };
+}
+
+/** Fetch homeowner display name from a visit */
+async function getHomeownerInfo(homeownerId: string): Promise<{ name: string; address: string }> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('full_name, email')
+    .eq('id', homeownerId)
+    .single();
+  const name = data?.full_name || data?.email || 'Homeowner';
+  // Also get home address for context
+  const { data: home } = await supabase
+    .from('homes')
+    .select('address, city')
+    .eq('user_id', homeownerId)
+    .limit(1)
+    .single();
+  const address = home ? `${home.address}, ${home.city}` : '';
+  return { name, address };
+}
 
 const CANCELLATION_WINDOW_HOURS = 48;
 
@@ -53,6 +89,25 @@ export async function confirmVisit(visitId: string): Promise<void> {
     })
     .eq('id', visitId);
   if (error) throw error;
+
+  // Notify the provider that the homeowner confirmed
+  try {
+    const { data: visit } = await supabase.from('pro_monthly_visits').select('homeowner_id, proposed_date, confirmed_date').eq('id', visitId).single();
+    if (visit) {
+      const { providerUserId } = await getProviderUserId(visitId);
+      const { name } = await getHomeownerInfo(visit.homeowner_id);
+      const dateStr = new Date((visit.confirmed_date || visit.proposed_date) + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      if (providerUserId) {
+        sendNotification({
+          user_id: providerUserId,
+          title: 'Visit Confirmed',
+          body: `${name} has confirmed their visit on ${dateStr}.`,
+          category: 'pro_service',
+          action_url: '/pro-portal',
+        }).catch(() => {});
+      }
+    }
+  } catch (e) { console.warn('Failed to send visit confirmation notification:', e); }
 }
 
 export async function cancelVisit(visitId: string, reason: string): Promise<{ rebookable: boolean }> {
@@ -97,10 +152,31 @@ export async function cancelVisit(visitId: string, reason: string): Promise<{ re
     }
   }
 
+  // Notify the provider about the cancellation
+  try {
+    const { providerUserId } = await getProviderUserId(visitId);
+    const { name } = await getHomeownerInfo(visit.homeowner_id);
+    const dateStr = new Date((visit.confirmed_date || visit.proposed_date) + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    if (providerUserId) {
+      sendNotification({
+        user_id: providerUserId,
+        title: rebookable ? 'Visit Cancelled' : 'Visit Cancelled (Forfeited)',
+        body: rebookable
+          ? `${name} has cancelled their visit on ${dateStr}. Reason: ${reason}. They can still rebook this month.`
+          : `${name} has cancelled their visit on ${dateStr} within 48 hours. Reason: ${reason}. This month's visit has been forfeited.`,
+        category: 'pro_service',
+        action_url: '/pro-portal',
+      }).catch(() => {});
+    }
+  } catch (e) { console.warn('Failed to send cancellation notification:', e); }
+
   return { rebookable };
 }
 
 export async function rescheduleVisit(visitId: string, newDate: string, newTimeSlot: string): Promise<void> {
+  // Fetch visit before update so we can notify provider
+  const { data: visit } = await supabase.from('pro_monthly_visits').select('homeowner_id').eq('id', visitId).single();
+
   const { error } = await supabase
     .from('pro_monthly_visits')
     .update({
@@ -114,6 +190,24 @@ export async function rescheduleVisit(visitId: string, newDate: string, newTimeS
     })
     .eq('id', visitId);
   if (error) throw error;
+
+  // Notify provider about the reschedule
+  if (visit) {
+    try {
+      const { providerUserId } = await getProviderUserId(visitId);
+      const { name } = await getHomeownerInfo(visit.homeowner_id);
+      const dateStr = new Date(newDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      if (providerUserId) {
+        sendNotification({
+          user_id: providerUserId,
+          title: 'Visit Rescheduled',
+          body: `${name} has rescheduled their visit to ${dateStr} (${newTimeSlot}). Please review and confirm.`,
+          category: 'pro_service',
+          action_url: '/pro-portal',
+        }).catch(() => {});
+      }
+    } catch (e) { console.warn('Failed to send reschedule notification:', e); }
+  }
 }
 
 export async function getVisitAllocation(homeownerId: string, visitMonth: string): Promise<VisitAllocation | null> {
@@ -153,6 +247,21 @@ export async function proposeVisit(
     .select()
     .single();
   if (error) throw error;
+
+  // Notify the homeowner about the proposed visit
+  try {
+    const { data: provider } = await supabase.from('pro_providers').select('business_name, contact_name').eq('id', providerId).single();
+    const providerName = provider?.business_name || provider?.contact_name || 'Your Canopy Pro';
+    const dateStr = new Date(proposedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    sendNotification({
+      user_id: homeownerId,
+      title: 'New Visit Proposed',
+      body: `${providerName} has proposed a visit on ${dateStr} (${proposedTimeSlot}). Please confirm or reschedule on the Pro Services page.`,
+      category: 'pro_service',
+      action_url: '/pro-services',
+    }).catch(() => {});
+  } catch (e) { console.warn('Failed to send visit proposal notification:', e); }
+
   return data;
 }
 
@@ -174,6 +283,9 @@ export async function completeVisit(
   notes: string,
   photos: { url: string; caption?: string }[]
 ): Promise<void> {
+  // Fetch homeowner ID before update
+  const { data: visit } = await supabase.from('pro_monthly_visits').select('homeowner_id, pro_provider_id').eq('id', visitId).single();
+
   const { error } = await supabase
     .from('pro_monthly_visits')
     .update({
@@ -186,6 +298,25 @@ export async function completeVisit(
     })
     .eq('id', visitId);
   if (error) throw error;
+
+  // Notify homeowner that the visit is complete
+  if (visit) {
+    try {
+      const { data: provider } = await supabase.from('pro_providers').select('business_name, contact_name').eq('id', visit.pro_provider_id).single();
+      const providerName = provider?.business_name || provider?.contact_name || 'Your Canopy Pro';
+      const taskCount = completedTaskIds.length;
+      const hours = Math.floor(timeSpentMinutes / 60);
+      const mins = timeSpentMinutes % 60;
+      const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins} minutes`;
+      sendNotification({
+        user_id: visit.homeowner_id,
+        title: 'Home Visit Completed',
+        body: `${providerName} has completed your home visit — ${taskCount} tasks done in ${timeStr}. Your detailed AI summary will be ready shortly.`,
+        category: 'pro_service',
+        action_url: '/pro-services',
+      }).catch(() => {});
+    } catch (e) { console.warn('Failed to send visit completion notification:', e); }
+  }
 }
 
 export async function rateVisit(
@@ -202,6 +333,25 @@ export async function rateVisit(
     })
     .eq('id', visitId);
   if (error) throw error;
+
+  // Notify the provider about the rating
+  try {
+    const { data: visit } = await supabase.from('pro_monthly_visits').select('homeowner_id').eq('id', visitId).single();
+    if (visit) {
+      const { providerUserId } = await getProviderUserId(visitId);
+      const { name } = await getHomeownerInfo(visit.homeowner_id);
+      const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+      if (providerUserId) {
+        sendNotification({
+          user_id: providerUserId,
+          title: 'New Visit Rating',
+          body: `${name} rated their visit ${stars} (${rating}/5).${review ? ` "${review}"` : ''}`,
+          category: 'pro_service',
+          action_url: '/pro-portal',
+        }).catch(() => {});
+      }
+    }
+  } catch (e) { console.warn('Failed to send rating notification:', e); }
 }
 
 export async function getProviderVisits(providerId: string, month?: string): Promise<ProMonthlyVisit[]> {

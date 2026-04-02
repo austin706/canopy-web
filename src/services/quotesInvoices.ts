@@ -1,4 +1,4 @@
-import { supabase } from '@/services/supabase';
+import { supabase, sendNotification } from '@/services/supabase';
 import type { Quote, Invoice, InvoicePayment, LineItem } from '@/types';
 
 // ─── Quote Functions ───
@@ -196,6 +196,27 @@ export async function sendInvoice(invoiceId: string): Promise<void> {
     .update({ status: 'sent', sent_at: new Date().toISOString() })
     .eq('id', invoiceId);
   if (error) throw error;
+
+  // Notify the homeowner about the new invoice
+  try {
+    const { data: invoice } = await supabase
+      .from('invoices')
+      .select('homeowner_id, title, total_amount, due_date, pro_provider_id')
+      .eq('id', invoiceId)
+      .single();
+    if (invoice?.homeowner_id) {
+      const { data: provider } = await supabase.from('pro_providers').select('business_name, contact_name').eq('id', invoice.pro_provider_id).single();
+      const providerName = provider?.business_name || provider?.contact_name || 'Your service provider';
+      const dueDateStr = invoice.due_date ? new Date(invoice.due_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+      sendNotification({
+        user_id: invoice.homeowner_id,
+        title: 'New Invoice Received',
+        body: `${providerName} sent you an invoice for "${invoice.title}" — $${invoice.total_amount.toFixed(2)}${dueDateStr ? ` due ${dueDateStr}` : ''}. Tap to review and pay.`,
+        category: 'account_billing',
+        action_url: `/invoices/${invoiceId}`,
+      }).catch(() => {});
+    }
+  } catch (e) { console.warn('Failed to send invoice notification:', e); }
 }
 
 export async function payInvoice(invoiceId: string): Promise<{ clientSecret: string }> {

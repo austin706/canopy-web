@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { supabase } from '@/services/supabase';
+import { supabase, sendNotification } from '@/services/supabase';
 import { linkAgent } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { AgentAvatar } from '@/components/AgentAvatar';
@@ -122,6 +122,31 @@ export default function AgentView() {
         if (user) setUser({ ...user, agent_id: request.agent_id } as any);
       }
       setPendingRequests(prev => prev.filter(r => r.id !== request.id));
+
+      // Notify the agent that the link was approved
+      if (agentData?.user_id) {
+        const userName = user.full_name || user.email || 'A homeowner';
+        sendNotification({
+          user_id: agentData.user_id,
+          title: 'Agent Link Approved',
+          body: `${userName} has approved your link request. You can now view their home details in your Agent Portal.`,
+          category: 'agent',
+          action_url: '/agent-portal',
+        }).catch(() => {});
+      } else if (agentData?.email) {
+        // Agent may not have a Canopy user account — send direct email
+        supabase.functions.invoke('send-notifications', {
+          body: {
+            direct_email: true,
+            recipient_email: agentData.email,
+            subject: 'Your agent link request was approved',
+            title: 'Agent Link Approved',
+            body: `${user.full_name || user.email || 'A homeowner'} has approved your link request on Canopy Home. Log in to your Agent Portal to view their home details.`,
+            action_url: 'https://canopyhome.app/agent-portal',
+            action_label: 'View Agent Portal',
+          },
+        }).catch(() => {});
+      }
     } catch (e: any) {
       alert('Failed to approve: ' + e.message);
     } finally {
@@ -136,6 +161,18 @@ export default function AgentView() {
     try {
       await supabase.from('agent_link_requests').update({ status: 'rejected' }).eq('id', request.id);
       setPendingRequests(prev => prev.filter(r => r.id !== request.id));
+
+      // Notify the agent that the link was declined
+      const { data: agentData } = await supabase.from('agents').select('user_id, email, name').eq('id', request.agent_id).single();
+      if (agentData?.user_id) {
+        sendNotification({
+          user_id: agentData.user_id,
+          title: 'Agent Link Declined',
+          body: `A homeowner has declined your link request. They may not be ready to link with an agent at this time.`,
+          category: 'agent',
+          action_url: '/agent-portal',
+        }).catch(() => {});
+      }
     } catch (e: any) {
       alert('Failed to reject: ' + e.message);
     } finally {

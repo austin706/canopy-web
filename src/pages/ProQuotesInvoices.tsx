@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/services/supabase';
+import { supabase, sendNotification } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 
@@ -382,10 +382,25 @@ export default function ProQuotesInvoices() {
     try {
       const { error } = await supabase
         .from('invoices')
-        .update({ status: 'sent' })
+        .update({ status: 'sent', sent_at: new Date().toISOString() })
         .eq('id', invoiceId);
 
       if (error) throw error;
+
+      // Notify homeowner about the invoice
+      const invoice = invoices.find(i => i.id === invoiceId);
+      if (invoice?.homeowner_id) {
+        const { data: provider } = await supabase.from('pro_providers').select('business_name, contact_name').eq('id', providerId).single();
+        const providerName = provider?.business_name || provider?.contact_name || 'Your service provider';
+        const dueDateStr = invoice.due_date ? new Date(invoice.due_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+        sendNotification({
+          user_id: invoice.homeowner_id,
+          title: 'New Invoice Received',
+          body: `${providerName} sent you an invoice for "${invoice.title}" — $${invoice.total.toFixed(2)}${dueDateStr ? ` due ${dueDateStr}` : ''}. Tap to review and pay.`,
+          category: 'account_billing',
+          action_url: `/invoices/${invoiceId}`,
+        }).catch(() => {});
+      }
 
       await loadInvoices(providerId);
       alert('Invoice sent to client');

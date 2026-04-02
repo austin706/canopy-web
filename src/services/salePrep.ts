@@ -50,7 +50,8 @@ export async function toggleSalePrepItem(
   prepId: string,
   itemId: string,
   completed: boolean,
-  currentItems: string[]
+  currentItems: string[],
+  totalItems = 40
 ): Promise<string[]> {
   const newItems = completed
     ? [...currentItems, itemId]
@@ -64,6 +65,56 @@ export async function toggleSalePrepItem(
     })
     .eq('id', prepId);
   if (error) throw error;
+
+  // Notify agent at milestones (25%, 50%, 75%, 100%)
+  if (completed && totalItems > 0) {
+    const prevPct = Math.floor((currentItems.length / totalItems) * 100);
+    const newPct = Math.floor((newItems.length / totalItems) * 100);
+    const milestones = [25, 50, 75, 100];
+    const hitMilestone = milestones.find(m => prevPct < m && newPct >= m);
+
+    if (hitMilestone) {
+      try {
+        const { data: prep } = await supabase.from('home_sale_prep').select('home_id').eq('id', prepId).single();
+        if (prep?.home_id) {
+          const { data: home } = await supabase.from('homes').select('user_id, address, city, agent_id').eq('id', prep.home_id).single();
+          if (home?.agent_id) {
+            // Resolve agent's user_id for in-app notification
+            const { data: agent } = await supabase.from('agents').select('user_id, email, name').eq('id', home.agent_id).single();
+            const { data: owner } = await supabase.from('profiles').select('full_name, email').eq('id', home.user_id).single();
+            const ownerName = owner?.full_name || owner?.email || 'Your client';
+            const addr = `${home.address}, ${home.city}`;
+            const msg = hitMilestone === 100
+              ? `${ownerName} has completed all sale prep items for ${addr}. The home is ready to list!`
+              : `${ownerName} is ${hitMilestone}% through their sale prep checklist for ${addr} (${newItems.length}/${totalItems} items done).`;
+
+            if (agent?.user_id) {
+              sendNotification({
+                user_id: agent.user_id,
+                title: hitMilestone === 100 ? 'Sale Prep Complete!' : `Sale Prep ${hitMilestone}% Done`,
+                body: msg,
+                category: 'agent',
+                action_url: '/agent-portal',
+              }).catch(() => {});
+            } else if (agent?.email) {
+              supabase.functions.invoke('send-notifications', {
+                body: {
+                  direct_email: true,
+                  recipient_email: agent.email,
+                  subject: hitMilestone === 100 ? 'Sale Prep Complete!' : `Sale Prep ${hitMilestone}% Done`,
+                  title: hitMilestone === 100 ? 'Sale Prep Complete!' : `Sale Prep ${hitMilestone}% Done`,
+                  body: msg,
+                  action_url: 'https://canopyhome.app/agent-portal',
+                  action_label: 'View in Canopy',
+                },
+              }).catch(() => {});
+            }
+          }
+        }
+      } catch (e) { console.warn('Failed to send sale prep milestone notification:', e); }
+    }
+  }
+
   return newItems;
 }
 

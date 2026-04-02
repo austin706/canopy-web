@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Colors } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
-import { supabase } from '@/services/supabase';
+import { supabase, sendNotification } from '@/services/supabase';
 import { useNavigate } from 'react-router-dom';
 
 const Visits = lazy(() => import('@/pages/Visits'));
@@ -277,6 +277,21 @@ export default function ProServices() {
         .eq('id', nextVisit.id);
       setNotesSaved(true);
       setTimeout(() => setNotesSaved(false), 3000);
+
+      // Notify the provider that the homeowner added notes
+      if (visitNotes.trim() && (nextVisit as any).pro_provider_id) {
+        const { data: provider } = await supabase.from('pro_providers').select('user_id').eq('id', (nextVisit as any).pro_provider_id).single();
+        if (provider?.user_id) {
+          const userName = user?.full_name || user?.email || 'Homeowner';
+          sendNotification({
+            user_id: provider.user_id,
+            title: 'Homeowner Added Visit Notes',
+            body: `${userName} added notes for their upcoming visit: "${visitNotes.length > 100 ? visitNotes.slice(0, 100) + '...' : visitNotes}"`,
+            category: 'pro_service',
+            action_url: '/pro-portal',
+          }).catch(() => {});
+        }
+      }
     } catch (err) {
       console.warn('Failed to save visit notes:', err);
     } finally {

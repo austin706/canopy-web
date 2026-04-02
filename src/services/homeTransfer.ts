@@ -117,10 +117,31 @@ export async function acceptTransfer(transferId: string, newOwnerId: string): Pr
     })
     .eq('id', transferId);
   if (updateErr) throw updateErr;
+
+  // 6. Notify the seller that the transfer was accepted
+  try {
+    const fromUserId = transfer.from_user_id;
+    if (fromUserId) {
+      const { data: buyer } = await supabase.from('profiles').select('full_name, email').eq('id', newOwnerId).single();
+      const { data: home } = await supabase.from('homes').select('address, city').eq('id', homeId).single();
+      const buyerName = buyer?.full_name || buyer?.email || 'The new owner';
+      const addr = home ? `${home.address}, ${home.city}` : 'your home';
+      sendNotification({
+        user_id: fromUserId,
+        title: 'Home Transfer Accepted',
+        body: `${buyerName} has accepted the transfer of ${addr}. The home record and all associated data have been transferred to the new owner.`,
+        category: 'general',
+        action_url: '/dashboard',
+      }).catch(() => {});
+    }
+  } catch (e) { console.warn('Failed to send transfer accepted notification:', e); }
 }
 
 /** Decline a transfer */
 export async function declineTransfer(transferId: string): Promise<void> {
+  // Fetch transfer details before updating for notification
+  const { data: transfer } = await supabase.from('home_transfers').select('from_user_id, home_id, to_email').eq('id', transferId).single();
+
   const { error } = await supabase
     .from('home_transfers')
     .update({
@@ -130,6 +151,21 @@ export async function declineTransfer(transferId: string): Promise<void> {
     })
     .eq('id', transferId);
   if (error) throw error;
+
+  // Notify the seller that the transfer was declined
+  if (transfer?.from_user_id) {
+    try {
+      const { data: home } = await supabase.from('homes').select('address, city').eq('id', transfer.home_id).single();
+      const addr = home ? `${home.address}, ${home.city}` : 'your home';
+      sendNotification({
+        user_id: transfer.from_user_id,
+        title: 'Home Transfer Declined',
+        body: `The transfer of ${addr} to ${transfer.to_email || 'the recipient'} has been declined. You can initiate a new transfer from the Home Transfer page if needed.`,
+        category: 'general',
+        action_url: '/home-transfer',
+      }).catch(() => {});
+    } catch (e) { console.warn('Failed to send transfer declined notification:', e); }
+  }
 }
 
 /** Cancel a pending transfer (by the seller) */

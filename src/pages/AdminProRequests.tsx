@@ -63,8 +63,29 @@ export default function AdminProRequests() {
       await updateProRequest(requestId, { provider_id: providerId, status: 'matched' });
       setRequests(prev => prev.map(r => r.id === requestId ? { ...r, provider_id: providerId, status: 'matched' } : r));
 
-      // Notify the homeowner that a provider has been assigned
+      // Create linked pro_service_appointment so it shows in the provider portal
       const request = requests.find(r => r.id === requestId);
+      if (request) {
+        const appointmentDate = request.preferred_date || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+        await supabase
+          .from('pro_service_appointments')
+          .insert({
+            home_id: request.home_id || null,
+            title: `${(request.category || request.service_type || 'Service').replace(/^\w/, (c: string) => c.toUpperCase())} Request`,
+            scheduled_date: appointmentDate,
+            scheduled_time: '09:00',
+            status: 'proposed',
+            service_purpose: request.description,
+            pro_provider_id: providerId,
+            request_id: requestId,
+            notes: 'Assigned by admin',
+          })
+          .then(({ error: apptErr }) => {
+            if (apptErr) console.warn('Failed to create linked appointment:', apptErr);
+          });
+      }
+
+      // Notify the homeowner that a provider has been assigned
       const provider = providers.find(p => p.id === providerId);
       if (request?.user_id) {
         sendNotification({

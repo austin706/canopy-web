@@ -57,17 +57,21 @@ export default function ProPortal() {
   const [myClients, setMyClients] = useState<AssignedClient[]>([]);
   const [upcomingVisits, setUpcomingVisits] = useState<UpcomingVisit[]>([]);
 
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [newClients, setNewClients] = useState<{ id: string; full_name: string; email: string; address?: string; city?: string; hasFirstVisit: boolean }[]>([]);
   const [proNotifications, setProNotifications] = useState<any[]>([]);
 
   // Admin mode
   const [allProviders, setAllProviders] = useState<ProProvider[]>([]);
-  const [adminStats, setAdminStats] = useState({ totalProviders: 0, availableProviders: 0, totalClients: 0, upcomingVisits: 0 });
+  const [adminStats, setAdminStats] = useState({ totalProviders: 0, availableProviders: 0, totalClients: 0, upcomingVisits: 0, pendingRequests: 0 });
   const [selectedProvider, setSelectedProvider] = useState<ProProvider | null>(null);
   const [providerClients, setProviderClients] = useState<AssignedClient[]>([]);
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [assignZip, setAssignZip] = useState('');
   const [editingZips, setEditingZips] = useState<string | null>(null);
   const [zipInput, setZipInput] = useState('');
+  const [availableZips, setAvailableZips] = useState<{ zip: string; count: number }[]>([]);
+  const [selectedZips, setSelectedZips] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -82,14 +86,41 @@ export default function ProPortal() {
   // ─── Admin: load provider overview with zip codes ───
   const loadAdminDashboard = async () => {
     try {
-      const [providersRes, visitsRes] = await Promise.all([
+      const [providersRes, visitsRes, pendingReqRes] = await Promise.all([
         supabase.from('pro_providers').select('*'),
         supabase.from('pro_service_appointments').select('*', { count: 'exact', head: true })
           .gte('scheduled_date', new Date().toISOString().split('T')[0])
           .in('status', ['proposed', 'confirmed', 'scheduled']),
+        supabase.from('pro_requests').select('*', { count: 'exact', head: true })
+          .in('status', ['pending', 'matched']),
       ]);
 
       const providers = providersRes.data || [];
+
+      // Fetch all unique zip codes from homes with Pro/Pro+ subscribers
+      const { data: homeZips } = await supabase
+        .from('homes')
+        .select('zip_code, profiles!inner(subscription_tier)')
+        .not('zip_code', 'is', null);
+
+      // Count homes per zip code (only Pro/Pro+ subscribers)
+      const zipCounts: Record<string, number> = {};
+      for (const h of (homeZips || [])) {
+        const tier = (h as any).profiles?.subscription_tier;
+        if (h.zip_code && (tier === 'pro' || tier === 'pro_plus')) {
+          zipCounts[h.zip_code] = (zipCounts[h.zip_code] || 0) + 1;
+        }
+      }
+      // Also include zips from ALL homes (even non-Pro) so admin can preemptively assign
+      for (const h of (homeZips || [])) {
+        if (h.zip_code && !zipCounts[h.zip_code]) {
+          zipCounts[h.zip_code] = 0;
+        }
+      }
+      const sortedZips = Object.entries(zipCounts)
+        .map(([zip, count]) => ({ zip, count }))
+        .sort((a, b) => b.count - a.count || a.zip.localeCompare(b.zip));
+      setAvailableZips(sortedZips);
 
       // Count assigned Pro/Pro+ clients per provider, filtered by their zip codes
       for (const p of providers) {
@@ -97,9 +128,9 @@ export default function ProPortal() {
           // Join through homes table to match provider zip codes with homeowner addresses
           const { count } = await supabase
             .from('profiles')
-            .select('*, homes!inner(zip)', { count: 'exact', head: true })
+            .select('*, homes!inner(zip_code)', { count: 'exact', head: true })
             .in('subscription_tier', ['pro', 'pro_plus'])
-            .in('homes.zip', p.zip_codes);
+            .in('homes.zip_code', p.zip_codes);
           p.assigned_clients = count || 0;
         } else {
           p.assigned_clients = 0;
@@ -118,6 +149,7 @@ export default function ProPortal() {
         availableProviders: providers.filter(p => p.is_available).length,
         totalClients: totalProClients || 0,
         upcomingVisits: visitsRes.count || 0,
+        pendingRequests: pendingReqRes.count || 0,
       });
     } catch (error) {
       console.error('Error loading admin dashboard:', error);
@@ -219,20 +251,66 @@ export default function ProPortal() {
       const today = new Date().toISOString().split('T')[0];
       const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
 
-      // Get upcoming visits
-      const { data: visitData } = await supabase
+      // Get upcoming service appointments
+      const { data: apptData } = await supabase
         .from('pro_service_appointments')
-        .select('*, user:user_id(full_name), home:home_id(address, city, state)')
+        .select('*, home:home_id(address, city, state)')
         .eq('pro_provider_id', providerData.id)
         .gte('scheduled_date', today)
         .in('status', ['proposed', 'confirmed', 'scheduled'])
         .order('scheduled_date', { ascending: true })
         .limit(10);
 
+      // Also get upcoming bimonthly visits
+      const { data: bimonthlyData } = await supabase
+        .from('pro_monthly_visits')
+        .select('*, homeowner:homeowner_id(full_name), home:home_id(address, city, state)')
+        .eq('pro_provider_id', providerData.id)
+        .or(`proposed_date.gte.${today},confirmed_date.gte.${today}`)
+        .in('status', ['proposed', 'confirmed'])
+        .order('proposed_date', { ascending: true })
+        .limit(10);
+
+      // Merge into unified visit format
+      const mergedVisits: UpcomingVisit[] = [];
+      for (const a of (apptData || [])) {
+        mergedVisits.push({
+          id: a.id,
+          title: a.title || 'Service Appointment',
+          scheduled_date: a.scheduled_date,
+          scheduled_time: a.scheduled_time || '',
+          status: a.status,
+          home: a.home as any,
+        });
+      }
+      for (const v of (bimonthlyData || [])) {
+        mergedVisits.push({
+          id: v.id,
+          title: 'Bimonthly Home Visit',
+          scheduled_date: v.confirmed_date || v.proposed_date || '',
+          scheduled_time: v.confirmed_start_time || v.proposed_time_slot || '',
+          status: v.status,
+          user: v.homeowner as any,
+          home: v.home as any,
+        });
+      }
+      mergedVisits.sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
+      const visitData = mergedVisits.slice(0, 10);
+
       setUpcomingVisits(visitData || []);
 
-      // Stats
-      const [upcomingRes, completedRes] = await Promise.all([
+      // Get pending/matched pro_requests assigned to this provider
+      const { data: requestData } = await supabase
+        .from('pro_requests')
+        .select('*, user:user_id(full_name, email), home:home_id(address, city, state)')
+        .eq('provider_id', providerData.id)
+        .in('status', ['matched', 'scheduled', 'pending'])
+        .order('created_at', { ascending: false });
+
+      setPendingRequests(requestData || []);
+
+      // Stats — count from BOTH tables
+      const [apptUpcoming, apptCompleted, visitUpcoming, visitCompleted] = await Promise.all([
         supabase
           .from('pro_service_appointments')
           .select('*', { count: 'exact', head: true })
@@ -245,16 +323,29 @@ export default function ProPortal() {
           .eq('pro_provider_id', providerData.id)
           .eq('status', 'completed')
           .gte('scheduled_date', monthStart),
+        supabase
+          .from('pro_monthly_visits')
+          .select('*', { count: 'exact', head: true })
+          .eq('pro_provider_id', providerData.id)
+          .in('status', ['proposed', 'confirmed']),
+        supabase
+          .from('pro_monthly_visits')
+          .select('*', { count: 'exact', head: true })
+          .eq('pro_provider_id', providerData.id)
+          .eq('status', 'completed')
+          .gte('completed_at', monthStart),
       ]);
+      const upcomingRes = { count: (apptUpcoming.count || 0) + (visitUpcoming.count || 0) };
+      const completedRes = { count: (apptCompleted.count || 0) + (visitCompleted.count || 0) };
 
       // Get assigned clients count filtered by provider's zip codes
       let clientCount = 0;
       if (providerData.zip_codes && providerData.zip_codes.length > 0) {
         const { count } = await supabase
           .from('profiles')
-          .select('*, homes!inner(zip)', { count: 'exact', head: true })
+          .select('*, homes!inner(zip_code)', { count: 'exact', head: true })
           .in('subscription_tier', ['pro', 'pro_plus'])
-          .in('homes.zip', providerData.zip_codes);
+          .in('homes.zip_code', providerData.zip_codes);
         clientCount = count || 0;
       }
 
@@ -297,6 +388,35 @@ export default function ProPortal() {
       }
 
       setMyClients(clientList);
+
+      // Identify new clients who haven't had their first visit yet
+      const newClientsList: typeof newClients = [];
+      for (const client of clientList) {
+        const { count: visitCount } = await supabase
+          .from('pro_monthly_visits')
+          .select('*', { count: 'exact', head: true })
+          .eq('homeowner_id', client.id)
+          .eq('pro_provider_id', providerData.id);
+
+        if (!visitCount || visitCount === 0) {
+          // Check if a first visit has been proposed
+          const { data: proposedVisit } = await supabase
+            .from('pro_monthly_visits')
+            .select('id')
+            .eq('homeowner_id', client.id)
+            .limit(1);
+
+          newClientsList.push({
+            id: client.id,
+            full_name: client.full_name,
+            email: client.email,
+            address: client.address,
+            city: client.city,
+            hasFirstVisit: (proposedVisit && proposedVisit.length > 0) || false,
+          });
+        }
+      }
+      setNewClients(newClientsList);
 
       setStats({
         upcomingVisits: upcomingRes.count || 0,
@@ -354,12 +474,13 @@ export default function ProPortal() {
         </div>
 
         {/* Admin Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 24 }}>
           {[
             { label: 'Providers', value: adminStats.totalProviders, color: Colors.sage },
             { label: 'Available', value: adminStats.availableProviders, color: Colors.success },
             { label: 'Pro/Pro+ Clients', value: adminStats.totalClients, color: Colors.copper },
-            { label: 'Upcoming Visits', value: adminStats.upcomingVisits, color: Colors.warning },
+            { label: 'Pending Requests', value: adminStats.pendingRequests, color: Colors.warning },
+            { label: 'Upcoming Visits', value: adminStats.upcomingVisits, color: Colors.info },
           ].map(s => (
             <div key={s.label} className="card" style={{ textAlign: 'center', padding: '20px 16px' }}>
               <div style={{ fontSize: 28, fontWeight: 'bold', color: s.color, marginBottom: 4 }}>{s.value}</div>
@@ -422,23 +543,87 @@ export default function ProPortal() {
                     <span style={{ fontSize: 12, fontWeight: 600, color: Colors.charcoal }}>Service Zip Codes:</span>
                     <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: '2px 8px' }}
                       onClick={() => {
-                        setEditingZips(editingZips === p.id ? null : p.id);
-                        setZipInput((p.zip_codes || []).join(', '));
+                        if (editingZips === p.id) {
+                          setEditingZips(null);
+                        } else {
+                          setEditingZips(p.id);
+                          setSelectedZips(p.zip_codes || []);
+                          setZipInput((p.zip_codes || []).join(', '));
+                        }
                       }}>
                       {editingZips === p.id ? 'Cancel' : 'Edit'}
                     </button>
                   </div>
 
                   {editingZips === p.id ? (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <input
-                        className="form-input"
-                        value={zipInput}
-                        onChange={e => setZipInput(e.target.value)}
-                        placeholder="74101, 74104, 74105..."
-                        style={{ flex: 1, fontSize: 13 }}
-                      />
-                      <button className="btn btn-primary btn-sm" onClick={() => handleSaveZips(p.id)}>Save</button>
+                    <div>
+                      {availableZips.length > 0 ? (
+                        <div style={{
+                          maxHeight: 200, overflowY: 'auto', border: `1px solid ${Colors.lightGray}`,
+                          borderRadius: 8, padding: '8px 12px', marginBottom: 8, background: '#fff',
+                        }}>
+                          {availableZips.map(z => (
+                            <label key={z.zip} style={{
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              padding: '4px 0', cursor: 'pointer', fontSize: 13,
+                            }}>
+                              <input
+                                type="checkbox"
+                                checked={selectedZips.includes(z.zip)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedZips(prev => [...prev, z.zip]);
+                                  } else {
+                                    setSelectedZips(prev => prev.filter(zip => zip !== z.zip));
+                                  }
+                                }}
+                              />
+                              <span style={{ fontWeight: 500 }}>{z.zip}</span>
+                              {z.count > 0 && (
+                                <span style={{ fontSize: 11, color: Colors.sage }}>
+                                  ({z.count} Pro client{z.count !== 1 ? 's' : ''})
+                                </span>
+                              )}
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                          <input
+                            className="form-input"
+                            value={zipInput}
+                            onChange={e => setZipInput(e.target.value)}
+                            placeholder="74101, 74104, 74105..."
+                            style={{ flex: 1, fontSize: 13 }}
+                          />
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn btn-primary btn-sm" onClick={() => {
+                          if (availableZips.length > 0) {
+                            // Save from checkbox selection
+                            if (selectedZips.length === 0) {
+                              alert('Please select at least one zip code.');
+                              return;
+                            }
+                            supabase
+                              .from('pro_providers')
+                              .update({ zip_codes: selectedZips })
+                              .eq('id', p.id)
+                              .then(({ error }) => {
+                                if (error) { alert('Failed to update: ' + error.message); return; }
+                                setAllProviders(prev => prev.map(pr => pr.id === p.id ? { ...pr, zip_codes: selectedZips } : pr));
+                                setEditingZips(null);
+                                setSelectedZips([]);
+                              });
+                          } else {
+                            handleSaveZips(p.id);
+                          }
+                        }}>Save</button>
+                        <span style={{ fontSize: 12, color: Colors.medGray, alignSelf: 'center' }}>
+                          {selectedZips.length} selected
+                        </span>
+                      </div>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -568,6 +753,58 @@ export default function ProPortal() {
         </button>
       </div>
 
+      {/* New Clients Needing First Visit */}
+      {newClients.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>
+            New Clients
+            <span style={{
+              marginLeft: 8, padding: '2px 8px', borderRadius: 10, fontSize: 12,
+              backgroundColor: `${Colors.copper}20`, color: Colors.copper, fontWeight: 600,
+            }}>
+              {newClients.length} need first visit
+            </span>
+          </h2>
+          <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 12 }}>
+            These Pro subscribers haven't had their first bimonthly visit yet. Schedule their orientation visit to get started.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {newClients.map(c => (
+              <div key={c.id} className="card" style={{
+                padding: '14px 18px',
+                borderLeft: `4px solid ${Colors.copper}`,
+                background: Colors.copperMuted,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px' }}>
+                      {c.full_name || c.email}
+                      {c.hasFirstVisit && (
+                        <span style={{
+                          marginLeft: 8, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                          backgroundColor: `${Colors.sage}20`, color: Colors.sage,
+                        }}>
+                          Visit Proposed
+                        </span>
+                      )}
+                    </p>
+                    <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
+                      {c.address ? `${c.address}, ${c.city}` : c.email}
+                    </p>
+                  </div>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => navigate('/pro-portal/visit-schedule')}
+                  >
+                    {c.hasFirstVisit ? 'View' : 'Schedule Visit'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Upcoming Visits */}
       <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Upcoming Visits</h2>
       {upcomingVisits.length === 0 ? (
@@ -599,6 +836,73 @@ export default function ProPortal() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pending Service Requests */}
+      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>
+        Service Requests
+        {pendingRequests.length > 0 && (
+          <span style={{
+            marginLeft: 8, padding: '2px 8px', borderRadius: 10, fontSize: 12,
+            backgroundColor: `${Colors.copper}20`, color: Colors.copper, fontWeight: 600,
+          }}>
+            {pendingRequests.length}
+          </span>
+        )}
+      </h2>
+      {pendingRequests.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 32, color: Colors.medGray, marginBottom: 32 }}>
+          <p>No pending service requests. New assignments will appear here.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+          {pendingRequests.map(r => {
+            const statusColor = r.status === 'scheduled' ? Colors.sage
+              : r.status === 'matched' ? Colors.info
+              : Colors.warning;
+            return (
+              <div key={r.id} className="card" style={{ padding: '14px 18px', borderLeft: `4px solid ${statusColor}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px' }}>
+                      {(r.category || r.service_type || 'Service Request').replace(/^\w/, (c: string) => c.toUpperCase())}
+                      <span style={{
+                        marginLeft: 8, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                        backgroundColor: statusColor + '20', color: statusColor,
+                      }}>
+                        {r.status}
+                      </span>
+                      {r.urgency && (
+                        <span style={{
+                          marginLeft: 4, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                          backgroundColor: r.urgency === 'urgent' ? Colors.error + '20' : Colors.warning + '20',
+                          color: r.urgency === 'urgent' ? Colors.error : Colors.warning,
+                        }}>
+                          {r.urgency}
+                        </span>
+                      )}
+                    </p>
+                    <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 4px' }}>
+                      {r.description}
+                    </p>
+                    <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
+                      {r.user?.full_name || r.user?.email || 'Homeowner'}
+                      {r.home ? ` · ${r.home.address}, ${r.home.city}` : ''}
+                      {r.scheduled_date ? ` · Scheduled: ${new Date(r.scheduled_date).toLocaleDateString()}` : ''}
+                    </p>
+                  </div>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    style={{ fontSize: 12, whiteSpace: 'nowrap' }}
+                    onClick={() => navigate('/pro-portal/job-queue')}
+                  >
+                    Manage &rarr;
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

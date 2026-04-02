@@ -19,6 +19,7 @@ import {
 } from '@/services/inspections';
 import { createNextDynamicTask } from '@/services/taskEngine';
 import { createTask } from '@/services/supabase';
+import { proposeNextVisit } from '@/services/proEnrollment';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 
@@ -354,8 +355,18 @@ export default function ProInspection() {
         }
       }
 
+      // Auto-propose the next bimonthly visit
+      try {
+        const { nextVisitId } = await proposeNextVisit(visitId!);
+        if (nextVisitId) {
+          console.log('Next bimonthly visit auto-proposed:', nextVisitId);
+        }
+      } catch (nextErr) {
+        console.warn('Auto-propose next visit failed (non-blocking):', nextErr);
+      }
+
       setShowCompleteModal(false);
-      navigate('/pro-portal/job-queue', { state: { success: 'Visit completed successfully' } });
+      navigate('/pro-portal/job-queue', { state: { success: 'Visit completed successfully. Next visit has been auto-proposed.' } });
     } catch (error) {
       console.error('Error completing visit:', error);
       alert('Failed to complete visit');
@@ -476,6 +487,24 @@ export default function ProInspection() {
             <p style={{ margin: 0, fontSize: FontSize.xs, color: Colors.medGray }}>Elapsed</p>
           </div>
         </div>
+
+        {/* First Visit Orientation Banner (for provider) */}
+        {(visit as any).is_first_visit && (
+          <div style={{
+            padding: '12px 16px', borderRadius: 8, marginBottom: Spacing.md,
+            background: `linear-gradient(135deg, #E8F5E9, ${Colors.sageMuted})`,
+            border: `1px solid ${Colors.sage}40`,
+          }}>
+            <p style={{ fontWeight: 700, fontSize: FontSize.sm, color: Colors.sage, margin: '0 0 4px' }}>
+              First Visit — Orientation
+            </p>
+            <p style={{ fontSize: FontSize.sm, color: Colors.charcoal, margin: 0, lineHeight: 1.5 }}>
+              This is this homeowner's first Pro visit. Please do a thorough walkthrough of all systems,
+              document equipment details and conditions, and set a maintenance baseline.
+              Take extra time to explain what you're checking and why — this sets the tone for the relationship.
+            </p>
+          </div>
+        )}
 
         {/* Homeowner Notes (if any) */}
         {visit.homeowner_notes && (

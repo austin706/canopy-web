@@ -121,21 +121,45 @@ export async function notifyAgentSalePrep(
   }
 
   // Send notification via edge function (in-app + email + push)
-  // Only send if we resolved a valid profile ID — agents.id ≠ profiles.id
-  if (!notifyUserId) {
-    console.warn('Skipping agent notification: could not resolve profile ID for agent', agentId);
-    return;
-  }
-  try {
-    await sendNotification({
-      user_id: notifyUserId,
-      title: 'Client preparing to sell',
-      body: `Your client is preparing their home at ${homeAddress} for sale. They've activated the Canopy Sale Prep checklist.`,
-      category: 'agent',
-      action_url: '/agent-portal',
-    });
-  } catch (e) {
-    console.warn('Failed to send agent notification:', e);
+  if (notifyUserId) {
+    try {
+      await sendNotification({
+        user_id: notifyUserId,
+        title: 'Client preparing to sell',
+        body: `Your client is preparing their home at ${homeAddress} for sale. They've activated the Canopy Sale Prep checklist. Log in to Canopy to see their progress and the home's full record.`,
+        category: 'agent',
+        action_url: '/agent-portal',
+      });
+    } catch (e) {
+      console.warn('Failed to send agent notification via sendNotification:', e);
+    }
+  } else {
+    // Fallback: send direct email to agent even if we couldn't resolve their profile ID
+    // This ensures agents without Canopy accounts still get notified
+    try {
+      const { data: agentFallback } = await supabase
+        .from('agents')
+        .select('email, name')
+        .eq('id', agentId)
+        .single();
+      if (agentFallback?.email) {
+        await supabase.functions.invoke('send-notifications', {
+          body: {
+            direct_email: true,
+            recipient_email: agentFallback.email,
+            subject: 'Your client is preparing to sell',
+            title: 'Client Preparing to Sell',
+            body: `Your client is preparing their home at ${homeAddress} for sale. They've activated the Canopy Sale Prep checklist.\n\nLog in to Canopy to see their progress, the home's full maintenance record, equipment inventory, and inspection history.`,
+            action_url: 'https://canopyhome.app/agent-portal',
+            action_label: 'View in Canopy',
+          },
+        });
+      } else {
+        console.warn('Agent notification fallback: no email found for agent', agentId);
+      }
+    } catch (e) {
+      console.warn('Failed to send agent fallback email:', e);
+    }
   }
 
   // Mark that the agent was notified on the sale prep record

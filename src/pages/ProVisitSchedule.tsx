@@ -4,54 +4,65 @@ import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 
-interface ProMonthlyVisit {
+// Unified calendar event from either table
+interface CalendarVisit {
   id: string;
+  type: 'bimonthly' | 'service';
   pro_provider_id: string;
   home_id: string;
   title: string;
-  scheduled_date: string;
-  scheduled_time: string;
-  status: 'proposed' | 'confirmed' | 'in_progress' | 'completed';
-  service_purpose: string;
+  date: string; // normalized display date
+  time: string;
+  status: string;
+  purpose: string;
+  homeowner_name?: string;
+  homeowner_email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
   time_spent_minutes?: number;
-  completion_notes?: string;
-  completion_photo_url?: string;
-  tasks?: string[];
-  user?: { full_name: string; email: string };
-  home?: { address: string; city: string; state: string };
+  notes?: string;
+  homeowner_notes?: string;
 }
 
-interface LineItem {
-  id: string;
-  description: string;
-  isCompleted: boolean;
+interface AssignedClient {
+  id: string; // profile id (homeowner_id)
+  home_id: string;
+  full_name: string;
+  email: string;
+  address: string;
+  city: string;
+  state: string;
+  zip_code: string;
 }
 
 export default function ProVisitSchedule() {
   const navigate = useNavigate();
   const { user } = useStore();
   const isAdmin = user?.role === 'admin';
-  const [visits, setVisits] = useState<ProMonthlyVisit[]>([]);
+  const [visits, setVisits] = useState<CalendarVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [providerId, setProviderId] = useState<string | null>(null);
+  const [providerZips, setProviderZips] = useState<string[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showProposeForm, setShowProposeForm] = useState(false);
   const [completeFormId, setCompleteFormId] = useState<string | null>(null);
+  const [clients, setClients] = useState<AssignedClient[]>([]);
 
   // Propose form state
   const [proposeForm, setProposeForm] = useState({
-    clientId: '',
+    clientId: '', // homeowner profile id
+    homeId: '',
     visitDate: '',
     visitTime: '09:00',
-    tasks: [] as string[],
+    visitEndTime: '12:00',
   });
+  const [conflictWarning, setConflictWarning] = useState('');
 
   // Complete form state
   const [completeForm, setCompleteForm] = useState({
     timeSpent: '',
     notes: '',
-    photoUrl: '',
-    tasks: [] as LineItem[],
   });
 
   useEffect(() => {
@@ -66,21 +77,22 @@ export default function ProVisitSchedule() {
         return;
       }
 
-      // Admin sees all visits
       if (isAdmin) {
-        await loadVisits(null);
+        await loadVisits(null, []);
         return;
       }
 
       const { data: provider } = await supabase
         .from('pro_providers')
-        .select('id')
+        .select('id, zip_codes')
         .eq('user_id', authUser.user.id)
         .single();
 
       if (provider) {
         setProviderId(provider.id);
-        await loadVisits(provider.id);
+        setProviderZips(provider.zip_codes || []);
+        await loadVisits(provider.id, provider.zip_codes || []);
+        await loadClients(provider.zip_codes || []);
       }
     } catch (err) {
       console.error('Error loading provider:', err);
@@ -89,29 +101,222 @@ export default function ProVisitSchedule() {
     }
   };
 
-  const loadVisits = async (provId: string | null) => {
+  const loadClients = async (zips: string[]) => {
+    try {
+      const { data: proClients } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, subscription_tier')
+        .in('subscription_tier', ['pro', 'pro_plus']);
+
+      const clientList: AssignedClient[] = [];
+      for (const c of (proClients || [])) {
+        const { data: homeData } = await supabase
+          .from('homes')
+          .select('id, address, city, state, zip_code')
+          .eq('user_id', c.id)
+          .single();
+
+        if (!homeData) continue;
+
+        // Filter by provider's zip codes if set
+        if (zips.length > 0 && homeData.zip_code) {
+          if (!zips.includes(homeData.zip_code)) continue;
+        }
+
+        clientList.push({
+          id: c.id,
+          home_id: homeData.id,
+          full_name: c.full_name || c.email,
+          email: c.email,
+          address: homeData.address,
+          city: homeData.city,
+          state: homeData.state,
+          zip_code: homeData.zip_code,
+        });
+      }
+
+      setClients(clientList);
+    } catch (err) {
+      console.error('Error loading clients:', err);
+    }
+  };
+
+  const loadVisits = async (provId: string | null, _zips: string[]) => {
     try {
       const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString().split('T')[0];
       const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).toISOString().split('T')[0];
 
-      let query = supabase
+      // 1) Load bimonthly visits from pro_monthly_visits
+      let bimonthlyQuery = supabase
+        .from('pro_monthly_visits')
+        .select('*, homeowner:homeowner_id(full_name, email), home:home_id(address, city, state)')
+        .or(`proposed_date.gte.${monthStart},confirmed_date.gte.${monthStart}`)
+        .or(`proposed_date.lte.${monthEnd},confirmed_date.lte.${monthEnd}`)
+        .order('proposed_date', { ascending: true });
+
+      if (provId) {
+        bimonthlyQuery = bimonthlyQuery.eq('pro_provider_id', provId);
+      }
+
+      const { data: bimonthlyData } = await bimonthlyQuery;
+
+      // 2) Load ad-hoc service appointments from pro_service_appointments
+      let serviceQuery = supabase
         .from('pro_service_appointments')
-        .select('*, user:user_id(full_name, email), home:home_id(address, city, state)')
+        .select('*, home:home_id(address, city, state)')
         .gte('scheduled_date', monthStart)
         .lte('scheduled_date', monthEnd)
         .order('scheduled_date', { ascending: true });
 
       if (provId) {
-        query = query.eq('pro_provider_id', provId);
+        serviceQuery = serviceQuery.eq('pro_provider_id', provId);
       }
 
-      const { data: visitsData } = await query;
-      setVisits(visitsData || []);
+      const { data: serviceData } = await serviceQuery;
+
+      // 3) Merge into unified format
+      const merged: CalendarVisit[] = [];
+
+      for (const v of (bimonthlyData || [])) {
+        const displayDate = v.confirmed_date || v.proposed_date || '';
+        // Filter to actual month range
+        if (displayDate < monthStart || displayDate > monthEnd) continue;
+
+        merged.push({
+          id: v.id,
+          type: 'bimonthly',
+          pro_provider_id: v.pro_provider_id,
+          home_id: v.home_id,
+          title: 'Bimonthly Home Visit',
+          date: displayDate,
+          time: v.confirmed_start_time || v.proposed_time_slot || '',
+          status: v.status,
+          purpose: v.selected_task_ids?.length
+            ? `${v.selected_task_ids.length} task${v.selected_task_ids.length !== 1 ? 's' : ''} selected`
+            : 'Routine maintenance visit',
+          homeowner_name: (v.homeowner as any)?.full_name,
+          homeowner_email: (v.homeowner as any)?.email,
+          address: (v.home as any)?.address,
+          city: (v.home as any)?.city,
+          state: (v.home as any)?.state,
+          time_spent_minutes: v.time_spent_minutes,
+          notes: v.pro_notes,
+          homeowner_notes: v.homeowner_notes,
+        });
+      }
+
+      for (const a of (serviceData || [])) {
+        merged.push({
+          id: a.id,
+          type: 'service',
+          pro_provider_id: a.pro_provider_id,
+          home_id: a.home_id,
+          title: a.title || 'Service Appointment',
+          date: a.scheduled_date,
+          time: a.scheduled_time || '',
+          status: a.status,
+          purpose: a.service_purpose || a.description || '',
+          address: (a.home as any)?.address,
+          city: (a.home as any)?.city,
+          state: (a.home as any)?.state,
+          notes: a.notes,
+        });
+      }
+
+      // Sort by date
+      merged.sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''));
+      setVisits(merged);
     } catch (err) {
       console.error('Error loading visits:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Check if provider has a conflicting visit on the same date/time
+  const checkProviderConflict = async (
+    provId: string,
+    date: string,
+    startTime: string,
+    endTime: string,
+    excludeVisitId?: string
+  ): Promise<string | null> => {
+    // Check bimonthly visits on this date
+    let bimonthlyQuery = supabase
+      .from('pro_monthly_visits')
+      .select('id, proposed_date, confirmed_date, proposed_time_slot, confirmed_start_time, confirmed_end_time, homeowner_id')
+      .eq('pro_provider_id', provId)
+      .in('status', ['proposed', 'confirmed', 'in_progress'])
+      .or(`proposed_date.eq.${date},confirmed_date.eq.${date}`);
+
+    if (excludeVisitId) {
+      bimonthlyQuery = bimonthlyQuery.neq('id', excludeVisitId);
+    }
+
+    const { data: bimonthlyConflicts } = await bimonthlyQuery;
+
+    // Check service appointments on this date
+    let serviceQuery = supabase
+      .from('pro_service_appointments')
+      .select('id, scheduled_date, scheduled_time')
+      .eq('pro_provider_id', provId)
+      .eq('scheduled_date', date)
+      .in('status', ['proposed', 'confirmed', 'scheduled', 'in_progress']);
+
+    if (excludeVisitId) {
+      serviceQuery = serviceQuery.neq('id', excludeVisitId);
+    }
+
+    const { data: serviceConflicts } = await serviceQuery;
+
+    // Check time overlap for bimonthly visits
+    for (const v of (bimonthlyConflicts || [])) {
+      const existingStart = v.confirmed_start_time || v.proposed_time_slot || '08:00';
+      const existingEnd = v.confirmed_end_time || addHours(existingStart, 3); // default 3hr block
+      if (timesOverlap(startTime, endTime, existingStart, existingEnd)) {
+        return `Provider already has a bimonthly visit on ${date} from ${formatTime(existingStart)} to ${formatTime(existingEnd)}.`;
+      }
+    }
+
+    // Check time overlap for service appointments
+    for (const a of (serviceConflicts || [])) {
+      const existingStart = a.scheduled_time || '08:00';
+      const existingEnd = addHours(existingStart, 2); // default 2hr block for service
+      if (timesOverlap(startTime, endTime, existingStart, existingEnd)) {
+        return `Provider already has a service appointment on ${date} at ${formatTime(existingStart)}.`;
+      }
+    }
+
+    return null; // No conflict
+  };
+
+  // Helper: check if two time ranges overlap (times as HH:MM strings)
+  const timesOverlap = (start1: string, end1: string, start2: string, end2: string): boolean => {
+    const toMinutes = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    };
+    const s1 = toMinutes(start1), e1 = toMinutes(end1);
+    const s2 = toMinutes(start2), e2 = toMinutes(end2);
+    return s1 < e2 && s2 < e1;
+  };
+
+  // Helper: add hours to a time string
+  const addHours = (time: string, hours: number): string => {
+    const [h, m] = time.split(':').map(Number);
+    const totalMinutes = (h || 0) * 60 + (m || 0) + hours * 60;
+    const newH = Math.floor(totalMinutes / 60) % 24;
+    const newM = totalMinutes % 60;
+    return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+  };
+
+  // Helper: format HH:MM to readable time
+  const formatTime = (time: string): string => {
+    if (!time) return '';
+    const [h, m] = time.split(':').map(Number);
+    const ampm = (h || 0) >= 12 ? 'PM' : 'AM';
+    const displayH = (h || 0) % 12 || 12;
+    return `${displayH}:${String(m || 0).padStart(2, '0')} ${ampm}`;
   };
 
   const handleProposeVisit = async () => {
@@ -120,70 +325,123 @@ export default function ProVisitSchedule() {
       return;
     }
 
+    if (!proposeForm.visitTime || !proposeForm.visitEndTime) {
+      alert('Please select both start and end times');
+      return;
+    }
+
+    if (proposeForm.visitTime >= proposeForm.visitEndTime) {
+      alert('End time must be after start time');
+      return;
+    }
+
+    const client = clients.find(c => c.id === proposeForm.clientId);
+    if (!client) {
+      alert('Please select a valid client');
+      return;
+    }
+
+    // Check for double-booking
+    const conflict = await checkProviderConflict(
+      providerId,
+      proposeForm.visitDate,
+      proposeForm.visitTime,
+      proposeForm.visitEndTime
+    );
+
+    if (conflict) {
+      setConflictWarning(conflict + ' Please choose a different date or time.');
+      return;
+    }
+
     try {
-      const { error } = await supabase.from('pro_service_appointments').insert({
+      const visitMonth = proposeForm.visitDate.substring(0, 7) + '-01'; // YYYY-MM-01
+      const timeSlotDisplay = `${proposeForm.visitTime}-${proposeForm.visitEndTime}`;
+      const { error } = await supabase.from('pro_monthly_visits').insert({
         pro_provider_id: providerId,
-        home_id: proposeForm.clientId,
-        title: 'Proposed Service Visit',
-        scheduled_date: proposeForm.visitDate,
-        scheduled_time: proposeForm.visitTime,
+        homeowner_id: client.id,
+        home_id: client.home_id,
+        visit_month: visitMonth,
+        proposed_date: proposeForm.visitDate,
+        proposed_time_slot: timeSlotDisplay,
         status: 'proposed',
-        service_purpose: proposeForm.tasks.join(', '),
-        tasks: proposeForm.tasks,
       });
 
       if (error) throw error;
 
-      setProposeForm({ clientId: '', visitDate: '', visitTime: '09:00', tasks: [] });
+      setProposeForm({ clientId: '', homeId: '', visitDate: '', visitTime: '09:00', visitEndTime: '12:00' });
       setShowProposeForm(false);
-      await loadVisits(providerId);
-      alert('Visit proposal created. Awaiting homeowner confirmation.');
-    } catch (err) {
+      setConflictWarning('');
+      await loadVisits(providerId, providerZips);
+      alert('Visit proposal sent. Awaiting homeowner confirmation.');
+    } catch (err: any) {
       console.error('Error proposing visit:', err);
-      alert('Failed to propose visit');
+      alert('Failed to propose visit: ' + (err.message || ''));
     }
   };
 
-  const handleStartVisit = async (visitId: string) => {
-    if (!providerId) return;
-
+  const handleStartVisit = async (visit: CalendarVisit) => {
     try {
+      const table = visit.type === 'bimonthly' ? 'pro_monthly_visits' : 'pro_service_appointments';
+      const updateData = visit.type === 'bimonthly'
+        ? { status: 'in_progress', started_at: new Date().toISOString() }
+        : { status: 'in_progress' };
+
       const { error } = await supabase
-        .from('pro_service_appointments')
-        .update({ status: 'in_progress' })
-        .eq('id', visitId);
+        .from(table)
+        .update(updateData)
+        .eq('id', visit.id);
 
       if (error) throw error;
 
-      await loadVisits(providerId);
+      // For bimonthly visits, navigate to inspection flow
+      if (visit.type === 'bimonthly') {
+        navigate(`/pro-portal/inspection/${visit.id}`);
+        return;
+      }
+
+      await loadVisits(providerId, providerZips);
     } catch (err) {
       console.error('Error starting visit:', err);
       alert('Failed to start visit');
     }
   };
 
-  const handleCompleteVisit = async (visitId: string) => {
-    if (!providerId || !completeForm.timeSpent) {
+  const handleCompleteVisit = async (visit: CalendarVisit) => {
+    if (!completeForm.timeSpent) {
       alert('Please enter time spent');
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from('pro_service_appointments')
-        .update({
-          status: 'completed',
-          time_spent_minutes: parseInt(completeForm.timeSpent),
-          completion_notes: completeForm.notes,
-          completion_photo_url: completeForm.photoUrl,
-        })
-        .eq('id', visitId);
+      const table = visit.type === 'bimonthly' ? 'pro_monthly_visits' : 'pro_service_appointments';
 
-      if (error) throw error;
+      if (visit.type === 'bimonthly') {
+        const { error } = await supabase
+          .from(table)
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+            time_spent_minutes: parseInt(completeForm.timeSpent),
+            pro_notes: completeForm.notes,
+          })
+          .eq('id', visit.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from(table)
+          .update({
+            status: 'completed',
+            notes: completeForm.notes,
+            actual_cost: null,
+          })
+          .eq('id', visit.id);
+        if (error) throw error;
+      }
 
       setCompleteFormId(null);
-      setCompleteForm({ timeSpent: '', notes: '', photoUrl: '', tasks: [] });
-      await loadVisits(providerId);
+      setCompleteForm({ timeSpent: '', notes: '' });
+      await loadVisits(providerId, providerZips);
       alert('Visit completed successfully');
     } catch (err) {
       console.error('Error completing visit:', err);
@@ -193,31 +451,25 @@ export default function ProVisitSchedule() {
 
   const getStatusColor = (status: string): string => {
     switch (status) {
-      case 'proposed':
-        return Colors.warning;
-      case 'confirmed':
-        return Colors.success;
-      case 'in_progress':
-        return Colors.info;
-      case 'completed':
-        return Colors.sage;
-      default:
-        return Colors.medGray;
+      case 'proposed': return Colors.warning;
+      case 'confirmed': return Colors.success;
+      case 'in_progress': return Colors.info;
+      case 'completed': return Colors.sage;
+      case 'scheduled': return Colors.sage;
+      case 'pending': return Colors.warning;
+      default: return Colors.medGray;
     }
   };
 
   const getStatusLabel = (status: string): string => {
     switch (status) {
-      case 'proposed':
-        return 'Waiting for confirmation';
-      case 'confirmed':
-        return 'Confirmed';
-      case 'in_progress':
-        return 'In Progress';
-      case 'completed':
-        return 'Completed';
-      default:
-        return status;
+      case 'proposed': return 'Awaiting Confirmation';
+      case 'confirmed': return 'Confirmed';
+      case 'in_progress': return 'In Progress';
+      case 'completed': return 'Completed';
+      case 'scheduled': return 'Scheduled';
+      case 'pending': return 'Pending';
+      default: return status;
     }
   };
 
@@ -236,14 +488,16 @@ export default function ProVisitSchedule() {
       <div className="page-header">
         <div>
           <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/pro-portal')}>
-            ← Back
+            &larr; Back
           </button>
           <h1>Visit Schedule</h1>
-          <p className="subtitle">{visits.length} visits this month</p>
+          <p className="subtitle">{visits.length} visit{visits.length !== 1 ? 's' : ''} this month</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowProposeForm(!showProposeForm)}>
-          {showProposeForm ? 'Cancel' : 'Propose Visit'}
-        </button>
+        {!isAdmin && (
+          <button className="btn btn-primary" onClick={() => setShowProposeForm(!showProposeForm)}>
+            {showProposeForm ? 'Cancel' : 'Propose Visit'}
+          </button>
+        )}
       </div>
 
       {/* Month Selector */}
@@ -252,7 +506,7 @@ export default function ProVisitSchedule() {
           className="btn btn-ghost btn-sm"
           onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
         >
-          ← Previous
+          &larr; Previous
         </button>
         <span style={{ fontSize: 16, fontWeight: 600, minWidth: 150, textAlign: 'center' }}>
           {monthDisplay}
@@ -261,7 +515,7 @@ export default function ProVisitSchedule() {
           className="btn btn-ghost btn-sm"
           onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
         >
-          Next →
+          Next &rarr;
         </button>
       </div>
 
@@ -277,11 +531,27 @@ export default function ProVisitSchedule() {
               <select
                 className="form-select"
                 value={proposeForm.clientId}
-                onChange={(e) => setProposeForm({ ...proposeForm, clientId: e.target.value })}
+                onChange={(e) => {
+                  const client = clients.find(c => c.id === e.target.value);
+                  setProposeForm({
+                    ...proposeForm,
+                    clientId: e.target.value,
+                    homeId: client?.home_id || '',
+                  });
+                }}
               >
                 <option value="">Select client...</option>
-                {/* In production, load available clients from database */}
+                {clients.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.full_name} — {c.address}, {c.city}
+                  </option>
+                ))}
               </select>
+              {clients.length === 0 && (
+                <p style={{ fontSize: 11, color: Colors.medGray, marginTop: 4 }}>
+                  No Pro/Pro+ clients in your service area.
+                </p>
+              )}
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>
@@ -295,29 +565,44 @@ export default function ProVisitSchedule() {
               />
             </div>
           </div>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>
-              Time
-            </label>
-            <input
-              type="time"
-              className="form-input"
-              value={proposeForm.visitTime}
-              onChange={(e) => setProposeForm({ ...proposeForm, visitTime: e.target.value })}
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>
+                Start Time *
+              </label>
+              <input
+                type="time"
+                className="form-input"
+                value={proposeForm.visitTime}
+                onChange={(e) => {
+                  setProposeForm({ ...proposeForm, visitTime: e.target.value });
+                  setConflictWarning('');
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>
+                End Time *
+              </label>
+              <input
+                type="time"
+                className="form-input"
+                value={proposeForm.visitEndTime}
+                onChange={(e) => {
+                  setProposeForm({ ...proposeForm, visitEndTime: e.target.value });
+                  setConflictWarning('');
+                }}
+              />
+            </div>
           </div>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>
-              Tasks (comma-separated)
-            </label>
-            <textarea
-              className="form-input"
-              placeholder="e.g., HVAC inspection, filter replacement"
-              style={{ resize: 'vertical', minHeight: 80 }}
-              value={proposeForm.tasks.join(', ')}
-              onChange={(e) => setProposeForm({ ...proposeForm, tasks: e.target.value.split(',').map(t => t.trim()) })}
-            />
-          </div>
+          {conflictWarning && (
+            <div style={{
+              padding: '10px 14px', borderRadius: 8, marginBottom: 16,
+              backgroundColor: '#FFF3F3', border: '1px solid #FFCDD2', color: '#C62828', fontSize: 13,
+            }}>
+              {conflictWarning}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-primary" onClick={handleProposeVisit}>
               Send Proposal
@@ -332,19 +617,28 @@ export default function ProVisitSchedule() {
       {/* Visits List */}
       {visits.length === 0 ? (
         <div className="empty-state">
-          <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>📅</div>
-          <h3>No visits scheduled</h3>
-          <p>Propose a visit to get started.</p>
+          <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>&#128197;</div>
+          <h3>No visits this month</h3>
+          <p>{isAdmin ? 'No visits scheduled for any provider.' : 'Propose a visit to get started.'}</p>
         </div>
       ) : (
         <div className="grid-1" style={{ gap: 16 }}>
           {visits.map(visit => (
-            <div key={visit.id} className="card">
+            <div key={`${visit.type}-${visit.id}`} className="card" style={{
+              borderLeft: `4px solid ${visit.type === 'bimonthly' ? Colors.sage : Colors.copper}`,
+            }}>
               {/* Visit Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                 <div>
-                  <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>{visit.title}</h3>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{
+                      padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700,
+                      textTransform: 'uppercase', letterSpacing: '0.5px',
+                      backgroundColor: visit.type === 'bimonthly' ? Colors.sageMuted : Colors.copperMuted,
+                      color: visit.type === 'bimonthly' ? Colors.sage : Colors.copper,
+                    }}>
+                      {visit.type === 'bimonthly' ? 'Bimonthly' : 'Service'}
+                    </span>
                     <span
                       className="badge"
                       style={{
@@ -356,33 +650,46 @@ export default function ProVisitSchedule() {
                       {getStatusLabel(visit.status)}
                     </span>
                     {visit.status === 'completed' && visit.time_spent_minutes && (
-                      <span style={{ fontSize: 13, color: Colors.medGray }}>
-                        {visit.time_spent_minutes} minutes
+                      <span style={{ fontSize: 12, color: Colors.medGray }}>
+                        {visit.time_spent_minutes} min
                       </span>
                     )}
                   </div>
+                  <h3 style={{ margin: '0 0 4px 0', fontSize: 16 }}>{visit.title}</h3>
                 </div>
               </div>
 
               {/* Visit Details */}
               <div style={{ fontSize: 13, color: Colors.medGray, marginBottom: 12, paddingBottom: 12, borderBottom: `1px solid ${Colors.lightGray}` }}>
-                {visit.user?.full_name && (
+                {visit.homeowner_name && (
                   <p style={{ margin: '0 0 4px 0' }}>
-                    <strong>Homeowner:</strong> {visit.user.full_name}
+                    <strong>Homeowner:</strong> {visit.homeowner_name}
                   </p>
                 )}
-                {visit.home && (
+                {visit.address && (
                   <p style={{ margin: '0 0 4px 0' }}>
-                    <strong>Address:</strong> {visit.home.address}, {visit.home.city}, {visit.home.state}
+                    <strong>Address:</strong> {visit.address}, {visit.city}, {visit.state}
                   </p>
                 )}
                 <p style={{ margin: '0 0 4px 0' }}>
-                  <strong>Date & Time:</strong> {new Date(visit.scheduled_date).toLocaleDateString()} at {visit.scheduled_time}
+                  <strong>Date:</strong> {visit.date ? new Date(visit.date + 'T12:00:00').toLocaleDateString() : '—'}
+                  {visit.time ? ` at ${visit.time.includes('-')
+                    ? visit.time.split('-').map(t => formatTime(t.trim())).join(' – ')
+                    : formatTime(visit.time)}` : ''}
                 </p>
-                {visit.service_purpose && (
+                {visit.purpose && (
                   <p style={{ margin: 0 }}>
-                    <strong>Purpose:</strong> {visit.service_purpose}
+                    <strong>Purpose:</strong> {visit.purpose}
                   </p>
+                )}
+                {visit.homeowner_notes && (
+                  <div style={{
+                    marginTop: 8, padding: '8px 12px', borderRadius: 6,
+                    backgroundColor: Colors.copperMuted, border: `1px solid ${Colors.copper}30`,
+                  }}>
+                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: Colors.copper }}>Homeowner Notes:</p>
+                    <p style={{ margin: '4px 0 0', fontSize: 13, color: Colors.charcoal }}>{visit.homeowner_notes}</p>
+                  </div>
                 )}
               </div>
 
@@ -393,10 +700,10 @@ export default function ProVisitSchedule() {
                 </div>
               )}
 
-              {visit.status === 'completed' && visit.completion_notes && (
+              {visit.status === 'completed' && visit.notes && (
                 <div style={{ backgroundColor: Colors.warmWhite, padding: 12, borderRadius: 6, marginBottom: 12 }}>
-                  <p style={{ margin: '0 0 8px 0', fontSize: 13, fontWeight: 600 }}>Completion Notes:</p>
-                  <p style={{ margin: 0, fontSize: 13, whiteSpace: 'pre-wrap' }}>{visit.completion_notes}</p>
+                  <p style={{ margin: '0 0 4px 0', fontSize: 13, fontWeight: 600 }}>Completion Notes:</p>
+                  <p style={{ margin: 0, fontSize: 13, whiteSpace: 'pre-wrap' }}>{visit.notes}</p>
                 </div>
               )}
 
@@ -405,14 +712,24 @@ export default function ProVisitSchedule() {
                 {visit.status === 'confirmed' && (
                   <button
                     className="btn btn-primary"
-                    onClick={() => handleStartVisit(visit.id)}
+                    onClick={() => handleStartVisit(visit)}
                     style={{ flex: 1 }}
                   >
-                    Start Visit
+                    {visit.type === 'bimonthly' ? 'Start Inspection' : 'Start Visit'}
                   </button>
                 )}
 
-                {visit.status === 'in_progress' && (
+                {visit.status === 'in_progress' && visit.type === 'bimonthly' && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => navigate(`/pro-portal/inspection/${visit.id}`)}
+                    style={{ flex: 1 }}
+                  >
+                    Continue Inspection
+                  </button>
+                )}
+
+                {visit.status === 'in_progress' && visit.type === 'service' && (
                   <button
                     className="btn btn-primary"
                     onClick={() => setCompleteFormId(completeFormId === visit.id ? null : visit.id)}
@@ -421,9 +738,19 @@ export default function ProVisitSchedule() {
                     Complete Visit
                   </button>
                 )}
+
+                {visit.status === 'scheduled' && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => handleStartVisit(visit)}
+                    style={{ flex: 1 }}
+                  >
+                    Start Visit
+                  </button>
+                )}
               </div>
 
-              {/* Complete Visit Form */}
+              {/* Complete Visit Form (service appointments only) */}
               {completeFormId === visit.id && visit.status === 'in_progress' && (
                 <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${Colors.lightGray}` }}>
                   <h4 style={{ margin: '0 0 12px 0' }}>Complete Visit</h4>
@@ -455,45 +782,13 @@ export default function ProVisitSchedule() {
                     />
                   </div>
 
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>
-                      Photo URL
-                    </label>
-                    <input
-                      type="url"
-                      className="form-input"
-                      placeholder="https://..."
-                      value={completeForm.photoUrl}
-                      onChange={(e) => setCompleteForm({ ...completeForm, photoUrl: e.target.value })}
-                    />
-                  </div>
-
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600 }}>
-                      Task Checklist
-                    </label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {/* Task checklist would be populated from visit.tasks */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <input
-                          type="checkbox"
-                          id="task-0"
-                          style={{ cursor: 'pointer' }}
-                        />
-                        <label htmlFor="task-0" style={{ cursor: 'pointer', fontSize: 13 }}>
-                          Sample task
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       className="btn btn-primary"
-                      onClick={() => handleCompleteVisit(visit.id)}
+                      onClick={() => handleCompleteVisit(visit)}
                       style={{ flex: 1 }}
                     >
-                      Save & Complete
+                      Save &amp; Complete
                     </button>
                     <button
                       className="btn btn-secondary"

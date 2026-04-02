@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { redeemGiftCode, insertProInterest, supabase } from '@/services/supabase';
 import { PLANS, loadServiceAreas, isProAvailableInArea } from '@/services/subscriptionGate';
+import { enrollProSubscriber } from '@/services/proEnrollment';
 import { Colors } from '@/constants/theme';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import ServiceAreaMap from '@/components/ServiceAreaMap';
@@ -24,6 +25,9 @@ export default function Subscription() {
   const [waitlistMessage, setWaitlistMessage] = useState('');
   const tier = user?.subscription_tier || 'free';
 
+  const [enrolling, setEnrolling] = useState(false);
+  const [enrollmentResult, setEnrollmentResult] = useState<{ provider: { business_name: string } | null; visitCreated: boolean } | null>(null);
+
   // Handle Stripe redirect success/cancel
   useEffect(() => {
     if (searchParams.get('success') === 'true') {
@@ -32,13 +36,32 @@ export default function Subscription() {
       // Refresh user profile to pick up new tier
       if (user?.id) {
         supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }) => {
-          if (data) setUser({ ...user, ...data });
+          if (data) {
+            setUser({ ...user, ...data });
+            // Auto-enroll if upgrading to a Pro tier
+            if ((plan === 'pro' || plan === 'pro_plus') && tier !== 'pro' && tier !== 'pro_plus') {
+              handleProEnrollment(user.id);
+            }
+          }
         });
       }
     } else if (searchParams.get('canceled') === 'true') {
       setMessage('Checkout was canceled. No charges were made.');
     }
   }, [searchParams]);
+
+  // Pro enrollment: auto-assign provider, create first visit, notify
+  const handleProEnrollment = async (userId: string) => {
+    setEnrolling(true);
+    try {
+      const result = await enrollProSubscriber(userId);
+      setEnrollmentResult(result);
+    } catch (err) {
+      console.warn('Pro enrollment automation failed (non-blocking):', err);
+    } finally {
+      setEnrolling(false);
+    }
+  };
 
   const handleStripeCheckout = async (plan: string) => {
     if (!user || !SUPABASE_URL) {
@@ -97,6 +120,10 @@ export default function Subscription() {
       if (r.agent) setAgent(r.agent);
       setMessage(`Upgraded to ${PLANS.find(p => p.value === r.tier)?.name}!`);
       setGiftCode('');
+      // Auto-enroll if upgrading to Pro via gift code
+      if ((r.tier === 'pro' || r.tier === 'pro_plus') && tier !== 'pro' && tier !== 'pro_plus') {
+        handleProEnrollment(user.id);
+      }
     } catch (e: any) { setMessage(e.message); }
     finally { setRedeeming(false); setTimeout(() => setMessage(''), 5000); }
   };
@@ -133,6 +160,41 @@ export default function Subscription() {
       </div>
 
       {message && <div style={{ padding: '10px 16px', borderRadius: 8, background: message.includes('Failed') || message.includes('Invalid') || message.includes('expired') || message.includes('redeemed') ? '#E5393520' : '#4CAF5020', color: message.includes('Failed') || message.includes('Invalid') || message.includes('expired') || message.includes('redeemed') ? '#C62828' : '#2E7D32', fontSize: 14, marginBottom: 16 }}>{message}</div>}
+
+      {/* Pro Enrollment Progress */}
+      {enrolling && (
+        <div className="card mb-lg" style={{ background: Colors.sageMuted, padding: '20px 24px', textAlign: 'center' }}>
+          <div className="spinner" style={{ margin: '0 auto 12px' }} />
+          <p style={{ fontWeight: 600, fontSize: 16, color: Colors.sage, margin: '0 0 4px' }}>Setting up your Pro experience...</p>
+          <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>Finding your local Canopy pro and scheduling your first visit.</p>
+        </div>
+      )}
+
+      {/* Pro Enrollment Result */}
+      {enrollmentResult && !enrolling && (
+        <div className="card mb-lg" style={{ background: Colors.sageMuted, padding: '20px 24px' }}>
+          <p style={{ fontWeight: 700, fontSize: 18, color: Colors.sage, margin: '0 0 8px' }}>Welcome to Canopy Pro!</p>
+          {enrollmentResult.provider ? (
+            <>
+              <p style={{ fontSize: 14, color: Colors.charcoal, margin: '0 0 4px' }}>
+                Your Canopy pro is <strong>{enrollmentResult.provider.business_name}</strong>.
+              </p>
+              {enrollmentResult.visitCreated && (
+                <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 12px' }}>
+                  Your first bimonthly home visit has been proposed. Head to Pro Services to review the date and add notes for your technician.
+                </p>
+              )}
+            </>
+          ) : (
+            <p style={{ fontSize: 14, color: Colors.charcoal, margin: '0 0 12px' }}>
+              We're finding the perfect Canopy pro for your area. You'll be notified as soon as your provider is assigned and your first visit is scheduled.
+            </p>
+          )}
+          <button className="btn btn-primary btn-sm" onClick={() => navigate('/pro-services')}>
+            Go to Pro Services
+          </button>
+        </div>
+      )}
 
       {/* Current Plan */}
       <div className="card mb-lg" style={{ background: Colors.copperMuted }}>

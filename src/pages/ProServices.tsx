@@ -22,8 +22,17 @@ interface NextVisit {
   visit_month: string;
   proposed_date: string | null;
   confirmed_date: string | null;
+  proposed_time_slot: string | null;
+  confirmed_start_time: string | null;
+  confirmed_end_time: string | null;
   status: string;
   homeowner_notes: string;
+  is_first_visit?: boolean;
+}
+
+interface VisitProgress {
+  completed: number;
+  total: number;
 }
 
 interface ServiceItem {
@@ -142,6 +151,7 @@ export default function ProServices() {
   const [visitNotes, setVisitNotes] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
   const [notesSaved, setNotesSaved] = useState(false);
+  const [visitProgress, setVisitProgress] = useState<VisitProgress | null>(null);
 
   // Service requests state (ad-hoc requests from pro_requests + pro_service_appointments)
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
@@ -183,13 +193,30 @@ export default function ProServices() {
           visit_month: visit.visit_month,
           proposed_date: visit.proposed_date,
           confirmed_date: visit.confirmed_date,
+          proposed_time_slot: visit.proposed_time_slot || null,
+          confirmed_start_time: visit.confirmed_start_time || null,
+          confirmed_end_time: visit.confirmed_end_time || null,
           status: visit.status,
           homeowner_notes: visit.homeowner_notes || '',
+          is_first_visit: visit.is_first_visit || false,
         });
         setVisitNotes(visit.homeowner_notes || '');
       } else {
         setNextVisit(null);
       }
+
+      // Fetch visit progress for this year (completed + upcoming)
+      const yearStart = `${new Date().getFullYear()}-01-01`;
+      const yearEnd = `${new Date().getFullYear()}-12-31`;
+      const { data: yearVisits } = await supabase
+        .from('pro_monthly_visits')
+        .select('status')
+        .eq('homeowner_id', user.id)
+        .gte('visit_month', yearStart)
+        .lte('visit_month', yearEnd);
+
+      const completed = (yearVisits || []).filter(v => v.status === 'completed').length;
+      setVisitProgress({ completed, total: 6 }); // 6 bimonthly visits per year
     } catch (err) {
       console.warn('Failed to fetch next visit:', err);
     }
@@ -395,6 +422,26 @@ export default function ProServices() {
 
           {nextVisit ? (
             <div className="card" style={{ padding: '20px 24px' }}>
+              {/* First Visit Orientation Banner */}
+              {(nextVisit as any).is_first_visit && (
+                <div style={{
+                  padding: '14px 18px', borderRadius: 8, marginBottom: 16,
+                  background: `linear-gradient(135deg, ${Colors.copperMuted}, ${Colors.sageMuted})`,
+                  border: `1px solid ${Colors.copper}30`,
+                }}>
+                  <p style={{ fontWeight: 700, fontSize: 15, color: Colors.copper, margin: '0 0 6px' }}>
+                    Your First Home Visit
+                  </p>
+                  <p style={{ fontSize: 13, color: Colors.charcoal, margin: '0 0 4px', lineHeight: 1.5 }}>
+                    This orientation visit is a full walkthrough of your home. Your Canopy pro will inspect all major systems,
+                    document equipment details, and create a personalized maintenance baseline. Expect it to take 60-90 minutes.
+                  </p>
+                  <p style={{ fontSize: 12, color: Colors.medGray, margin: 0, lineHeight: 1.5 }}>
+                    After this visit, future bimonthly visits will be shorter (30-45 min) and focused on seasonal maintenance tasks.
+                  </p>
+                </div>
+              )}
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                 <div>
                   <p style={{ fontWeight: 700, fontSize: 16, color: Colors.charcoal, margin: '0 0 4px' }}>
@@ -402,7 +449,22 @@ export default function ProServices() {
                   </p>
                   <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>
                     {visitDate
-                      ? `${nextVisit.status === 'confirmed' ? 'Confirmed' : 'Proposed'}: ${new Date(visitDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
+                      ? `${nextVisit.status === 'confirmed' ? 'Confirmed' : 'Proposed'}: ${new Date(visitDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}${(() => {
+                          const timeSlot = nextVisit.confirmed_start_time
+                            ? `${nextVisit.confirmed_start_time}${nextVisit.confirmed_end_time ? ' – ' + nextVisit.confirmed_end_time : ''}`
+                            : nextVisit.proposed_time_slot || '';
+                          if (!timeSlot) return '';
+                          // Format HH:MM times to 12h
+                          const fmt = (t: string) => {
+                            const [h, m] = t.split(':').map(Number);
+                            const ampm = (h || 0) >= 12 ? 'PM' : 'AM';
+                            return `${(h || 0) % 12 || 12}:${String(m || 0).padStart(2, '0')} ${ampm}`;
+                          };
+                          if (timeSlot.includes('-')) {
+                            return ', ' + timeSlot.split('-').map(t => fmt(t.trim())).join(' – ');
+                          }
+                          return ', ' + fmt(timeSlot);
+                        })()}`
                       : 'Date pending — your Canopy team will propose a date soon.'}
                   </p>
                 </div>
@@ -412,6 +474,33 @@ export default function ProServices() {
                   color: STATUS_COLORS[nextVisit.status] || Colors.medGray,
                 }}>{STATUS_LABELS[nextVisit.status] || nextVisit.status}</span>
               </div>
+
+              {/* Visit Progress Tracker */}
+              {visitProgress && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 14px', borderRadius: 8, backgroundColor: Colors.cream, marginBottom: 16,
+                }}>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: Colors.sage }}>{visitProgress.completed}</div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal, margin: '0 0 2px' }}>
+                      Visit {visitProgress.completed + 1} of {visitProgress.total} this year
+                    </p>
+                    <div style={{
+                      height: 6, borderRadius: 3, backgroundColor: Colors.lightGray, overflow: 'hidden',
+                    }}>
+                      <div style={{
+                        height: '100%', borderRadius: 3, backgroundColor: Colors.sage,
+                        width: `${Math.round((visitProgress.completed / visitProgress.total) * 100)}%`,
+                        transition: 'width 0.3s',
+                      }} />
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
+                    {visitProgress.total - visitProgress.completed} remaining
+                  </p>
+                </div>
+              )}
 
               {/* Homeowner notes for the tech */}
               <div style={{ borderTop: `1px solid ${Colors.cream}`, paddingTop: 16 }}>

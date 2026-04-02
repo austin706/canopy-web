@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { signIn, getProfile, getHome, getEquipment, getTasks, getAgent } from '@/services/supabase';
+import { signIn, getProfile, getHome, getEquipment, getTasks, getAgent, supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
 
@@ -17,6 +17,13 @@ export default function Login() {
   const [passwordError, setPasswordError] = useState('');
   const isNewSignup = searchParams.get('signup') === 'success';
 
+  // OTP verification state
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState('');
+
   const validateForm = (): boolean => {
     setEmailError('');
     setPasswordError('');
@@ -25,19 +32,13 @@ export default function Login() {
     if (!email.trim()) {
       setEmailError('Email is required');
       isValid = false;
-    } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
-        setEmailError('Please enter a valid email address');
-        isValid = false;
-      }
     }
 
     if (!password) {
       setPasswordError('Password is required');
       isValid = false;
-    } else if (password.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
+    } else if (password.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
       isValid = false;
     }
 
@@ -47,6 +48,8 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setShowOtpInput(false);
+    setVerifyMessage('');
 
     if (!validateForm()) {
       return;
@@ -96,9 +99,67 @@ export default function Login() {
       else if (!userData.onboarding_complete && !homeData) navigate('/onboarding');
       else navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      const msg = err.message || 'Login failed';
+      if (msg.toLowerCase().includes('email not confirmed')) {
+        setShowOtpInput(true);
+        setError('');
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode.trim()) return;
+    setVerifying(true);
+    setVerifyMessage('');
+    try {
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: otpCode.trim(),
+        type: 'email',
+      });
+      if (verifyError) throw verifyError;
+      setVerifyMessage('Email verified! Signing you in...');
+      // Now sign in normally
+      setTimeout(() => {
+        setShowOtpInput(false);
+        setOtpCode('');
+        // Trigger login again
+        const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+        handleLogin(fakeEvent);
+      }, 1000);
+    } catch (err: any) {
+      setVerifyMessage(err.message || 'Invalid code. Please try again.');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email.trim()) {
+      setVerifyMessage('Enter your email address above first.');
+      return;
+    }
+    setResending(true);
+    setVerifyMessage('');
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/login?verified=true`,
+        },
+      });
+      if (error) throw error;
+      setVerifyMessage('Verification email sent! Check your inbox.');
+    } catch (err: any) {
+      setVerifyMessage(err.message || 'Failed to resend. Please try again.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -114,12 +175,12 @@ export default function Login() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {['AI-powered maintenance schedules', 'Equipment lifecycle tracking', 'Weather-triggered task alerts', 'Pro service coordination'].map(f => (
               <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.9)', fontSize: 14 }}>
-                <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>✓</span>
+                <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>&#10003;</span>
                 {f}
               </div>
             ))}
           </div>
-          <p style={{ marginTop: 40, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Powered by Oak & Sage Realty</p>
+          <p style={{ marginTop: 40, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Powered by Oak &amp; Sage Realty</p>
         </div>
       </div>
 
@@ -132,11 +193,57 @@ export default function Login() {
             <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Canopy</h1>
             <p className="subtitle">Sign in to your account</p>
           </div>
-          {isNewSignup && (
+          {isNewSignup && !showOtpInput && (
             <div style={{ background: '#4CAF5020', color: '#2E7D32', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-              <strong>Account created!</strong> Sign in to get started. Check your email for a verification link — you can verify anytime, but it's not required to use Canopy.
+              <strong>Account created!</strong> Check your email for a verification link — verify your email to sign in.
             </div>
           )}
+
+          {/* OTP Verification Panel */}
+          {showOtpInput && (
+            <div style={{ background: '#FFF8E1', border: '1px solid #FFE082', padding: '16px 20px', borderRadius: 10, marginBottom: 16 }}>
+              <p style={{ fontWeight: 600, fontSize: 14, color: '#F57F17', margin: '0 0 8px' }}>Email verification required</p>
+              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.5, margin: '0 0 12px' }}>
+                Check your email for a verification link, or enter the code from the email below.
+              </p>
+              <form onSubmit={handleVerifyOtp}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    className="form-input"
+                    type="text"
+                    value={otpCode}
+                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                    placeholder="Enter code from email"
+                    style={{ flex: 1, fontWeight: 600, letterSpacing: 2, textAlign: 'center', fontSize: 16 }}
+                    maxLength={8}
+                    autoFocus
+                  />
+                  <button className="btn btn-primary" type="submit" disabled={verifying || !otpCode.trim()}>
+                    {verifying ? 'Verifying...' : 'Verify'}
+                  </button>
+                </div>
+              </form>
+              {verifyMessage && (
+                <p style={{
+                  fontSize: 13, marginTop: 8, marginBottom: 0,
+                  color: verifyMessage.includes('verified') || verifyMessage.includes('sent') ? '#2E7D32' : '#C62828',
+                }}>
+                  {verifyMessage}
+                </p>
+              )}
+              <button
+                onClick={handleResendVerification}
+                disabled={resending}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 13, color: '#C4844E', fontWeight: 500, padding: '8px 0 0', textDecoration: 'underline',
+                }}
+              >
+                {resending ? 'Sending...' : 'Resend verification email'}
+              </button>
+            </div>
+          )}
+
           {error && <div style={{ background: '#E5393520', color: '#C62828', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 20 }}>{error}</div>}
           <form onSubmit={handleLogin}>
             <div className="form-group">

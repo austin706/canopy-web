@@ -247,7 +247,7 @@ export async function enrollProSubscriber(userId: string): Promise<{
     }).catch(() => {});
 
     // Mark welcome email as sent so the daily cron doesn't send a duplicate
-    supabase.from('profiles').update({ pro_welcome_sent: true }).eq('id', userId).then(() => {}).catch(() => {});
+    Promise.resolve(supabase.from('profiles').update({ pro_welcome_sent: true }).eq('id', userId)).catch(() => {});
 
   } catch (error) {
     console.error('Pro enrollment error:', error);

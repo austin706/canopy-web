@@ -1,12 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { createProRequest, getProRequests, supabase, sendNotification } from '@/services/supabase';
 import { isProOrHigher } from '@/services/subscriptionGate';
 import { Colors, StatusColors } from '@/constants/theme';
-import type { ProRequest } from '@/types';
+import type { ProRequest as ProRequestType } from '@/types';
 
 const SERVICE_TYPES = ['HVAC Maintenance', 'Filter Change', 'Gutter Cleaning', 'Plumbing Repair', 'Electrical Inspection', 'Roof Inspection', 'Pool Service', 'Deck Maintenance', 'Lawn Care', 'General Handyman', 'Custom/Other'];
+
+const STATUS_STEPS = ['pending', 'matched', 'scheduled', 'completed'];
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Submitted',
+  matched: 'Provider Matched',
+  scheduled: 'Scheduled',
+  completed: 'Completed',
+};
 
 export default function ProRequest() {
   const navigate = useNavigate();
@@ -17,31 +25,40 @@ export default function ProRequest() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [tab, setTab] = useState<'new' | 'history'>('new');
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tier = user?.subscription_tier || 'free';
   const hasPro = isProOrHigher(tier);
 
   useEffect(() => {
     if (user) {
-      getProRequests(user.id).then(async (data) => {
-        setRequests(data);
-        // Enrich requests with provider information
-        const enriched = await Promise.all(data.map(async (req) => {
-          if (req.assigned_provider) {
-            try {
-              const { data: provider } = await supabase.from('pro_providers').select('*').eq('id', req.assigned_provider).single();
-              return { ...req, provider };
-            } catch {
-              return req;
-            }
-          }
-          return req;
-        }));
-        setRequestsWithProviders(enriched);
-      }).catch(() => {});
+      loadRequests();
     }
   }, [user]);
+
+  const loadRequests = async () => {
+    if (!user) return;
+    try {
+      const data = await getProRequests(user.id);
+      setRequests(data);
+      const enriched = await Promise.all(data.map(async (req: any) => {
+        if (req.assigned_provider || req.provider_id) {
+          try {
+            const pid = req.assigned_provider || req.provider_id;
+            const { data: provider } = await supabase.from('pro_providers').select('*').eq('id', pid).single();
+            return { ...req, provider };
+          } catch {
+            return req;
+          }
+        }
+        return req;
+      }));
+      setRequestsWithProviders(enriched);
+    } catch {}
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,8 +67,8 @@ export default function ProRequest() {
     try {
       const r = await createProRequest({ id: crypto.randomUUID(), user_id: user.id, home_id: home.id, ...form, status: 'pending', created_at: new Date().toISOString() });
       setRequests(prev => [r, ...prev]);
+      setRequestsWithProviders(prev => [r, ...prev]);
 
-      // Notify admins about the new pro service request
       try {
         const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin');
         for (const admin of (admins || [])) {
@@ -72,6 +89,62 @@ export default function ProRequest() {
     finally { setSubmitting(false); }
   };
 
+  const handleUploadPhoto = async (file: File) => {
+    if (!selectedRequest) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${selectedRequest.id}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('pro-request-photos')
+        .upload(fileName, file, { contentType: file.type });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('pro-request-photos')
+        .getPublicUrl(fileName);
+
+      const currentPhotos = selectedRequest.photos || [];
+      const newPhotos = [...currentPhotos, urlData.publicUrl];
+
+      const { error: updateError } = await supabase
+        .from('pro_requests')
+        .update({ photos: newPhotos })
+        .eq('id', selectedRequest.id);
+
+      if (updateError) throw updateError;
+
+      setSelectedRequest({ ...selectedRequest, photos: newPhotos });
+      setRequestsWithProviders(prev => prev.map(r => r.id === selectedRequest.id ? { ...r, photos: newPhotos } : r));
+    } catch (err: any) {
+      setMessage('Upload failed: ' + (err.message || 'Unknown error'));
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!selectedRequest || !confirm('Cancel this service request?')) return;
+    setCancelling(true);
+    try {
+      const { error } = await supabase
+        .from('pro_requests')
+        .update({ status: 'cancelled' })
+        .eq('id', selectedRequest.id);
+      if (error) throw error;
+      setSelectedRequest({ ...selectedRequest, status: 'cancelled' });
+      setRequestsWithProviders(prev => prev.map(r => r.id === selectedRequest.id ? { ...r, status: 'cancelled' } : r));
+    } catch {
+      setMessage('Failed to cancel request');
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (!hasPro) {
     return (
       <div className="page" style={{ maxWidth: 600 }}>
@@ -86,6 +159,162 @@ export default function ProRequest() {
     );
   }
 
+  // Detail View
+  if (selectedRequest) {
+    const currentStepIndex = STATUS_STEPS.indexOf(selectedRequest.status);
+    const isCancelled = selectedRequest.status === 'cancelled';
+
+    return (
+      <div className="page" style={{ maxWidth: 800 }}>
+        <div className="page-header">
+          <button className="btn btn-ghost" onClick={() => setSelectedRequest(null)} style={{ marginRight: 12 }}>
+            &larr; Back
+          </button>
+          <h1>Request Details</h1>
+          <span className="badge" style={{ marginLeft: 'auto', background: (StatusColors[selectedRequest.status] || '#ccc') + '20', color: StatusColors[selectedRequest.status] || '#666' }}>
+            {isCancelled ? 'Cancelled' : selectedRequest.status?.charAt(0).toUpperCase() + selectedRequest.status?.slice(1)}
+          </span>
+        </div>
+
+        {message && <div style={{ padding: '10px 16px', borderRadius: 8, background: message.includes('Failed') || message.includes('failed') ? '#E5393520' : '#4CAF5020', color: message.includes('Failed') || message.includes('failed') ? '#C62828' : '#2E7D32', fontSize: 14, marginBottom: 16 }}>{message}</div>}
+
+        {/* Progress Tracker */}
+        {!isCancelled && (
+          <div className="card" style={{ marginBottom: 16 }}>
+            <p style={{ fontWeight: 600, marginBottom: 12, fontSize: 14, color: Colors.charcoal }}>Progress</p>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0 }}>
+              {STATUS_STEPS.map((step, index) => {
+                const isActive = index <= currentStepIndex;
+                const isCurrent = index === currentStepIndex;
+                return (
+                  <div key={step} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'center', marginBottom: 8 }}>
+                      {index > 0 && <div style={{ flex: 1, height: 2, background: isActive ? Colors.copper : '#E8E2D8' }} />}
+                      <div style={{
+                        width: 28, height: 28, borderRadius: 14,
+                        background: isActive ? Colors.copper : '#E8E2D8',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: isCurrent ? `3px solid ${Colors.copperLight}` : 'none',
+                        color: 'white', fontSize: 14,
+                      }}>
+                        {isActive ? '✓' : ''}
+                      </div>
+                      {index < STATUS_STEPS.length - 1 && <div style={{ flex: 1, height: 2, background: (index < currentStepIndex) ? Colors.copper : '#E8E2D8' }} />}
+                    </div>
+                    <span style={{ fontSize: 11, color: isActive ? Colors.charcoal : '#B8B8B8', fontWeight: isCurrent ? 700 : 400, textAlign: 'center' }}>
+                      {STATUS_LABELS[step]}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Service Info */}
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="flex items-center justify-between mb-sm">
+            <p style={{ fontWeight: 600, fontSize: 16 }}>{selectedRequest.service_type || selectedRequest.category}</p>
+            {selectedRequest.urgency && (
+              <span className="badge" style={{ background: '#FF980020', color: '#FF9800', fontSize: 12 }}>
+                {selectedRequest.urgency.charAt(0).toUpperCase() + selectedRequest.urgency.slice(1)}
+              </span>
+            )}
+          </div>
+          <p style={{ color: '#4A4A4A', fontSize: 14, lineHeight: 1.6 }}>{selectedRequest.description}</p>
+          <p style={{ color: '#B8B8B8', fontSize: 12, marginTop: 8 }}>
+            Submitted {new Date(selectedRequest.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+          </p>
+          {selectedRequest.preferred_date && (
+            <p style={{ color: '#B8B8B8', fontSize: 12, marginTop: 4 }}>
+              Preferred: {new Date(selectedRequest.preferred_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
+          )}
+        </div>
+
+        {/* Provider Card */}
+        {selectedRequest.provider && (
+          <div className="card" style={{ marginBottom: 16, borderLeft: `3px solid ${Colors.copper}` }}>
+            <p style={{ fontWeight: 600, fontSize: 12, color: Colors.copper, marginBottom: 8, textTransform: 'uppercase' }}>Assigned Provider</p>
+            <p style={{ fontWeight: 600, fontSize: 15 }}>{selectedRequest.provider.business_name}</p>
+            <p style={{ color: '#7A7A7A', fontSize: 13, marginTop: 2 }}>
+              {selectedRequest.provider.contact_name}
+              {selectedRequest.provider.phone && ` · ${selectedRequest.provider.phone}`}
+            </p>
+            {selectedRequest.provider.rating && (
+              <p style={{ color: Colors.warning, fontSize: 13, marginTop: 4 }}>★ {selectedRequest.provider.rating.toFixed(1)}</p>
+            )}
+          </div>
+        )}
+
+        {/* Scheduled Date */}
+        {selectedRequest.scheduled_date && (
+          <div className="card" style={{ marginBottom: 16 }}>
+            <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Scheduled</p>
+            <p style={{ fontSize: 15, fontWeight: 600 }}>
+              {new Date(selectedRequest.scheduled_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+            </p>
+          </div>
+        )}
+
+        {/* Completion Details */}
+        {selectedRequest.status === 'completed' && (
+          <div className="card" style={{ marginBottom: 16, background: '#8B9E7E10' }}>
+            <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Completion Details</p>
+            {selectedRequest.completion_notes && <p style={{ fontSize: 14, color: '#4A4A4A' }}>{selectedRequest.completion_notes}</p>}
+            {selectedRequest.cost != null && <p style={{ fontSize: 16, fontWeight: 700, color: Colors.sage, marginTop: 8 }}>Cost: ${selectedRequest.cost.toFixed(2)}</p>}
+          </div>
+        )}
+
+        {/* Photos Section */}
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="flex items-center justify-between mb-sm">
+            <p style={{ fontWeight: 600, fontSize: 14 }}>Photos</p>
+            {!isCancelled && selectedRequest.status !== 'completed' && (
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                style={{ color: Colors.copper, fontSize: 13 }}
+              >
+                {uploading ? 'Uploading...' : '+ Add Photo'}
+              </button>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => { if (e.target.files?.[0]) handleUploadPhoto(e.target.files[0]); e.target.value = ''; }}
+          />
+          {(selectedRequest.photos && selectedRequest.photos.length > 0) ? (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {selectedRequest.photos.map((url: string, i: number) => (
+                <img key={i} src={url} alt={`Photo ${i + 1}`} style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover', background: '#E8E2D8' }} />
+              ))}
+            </div>
+          ) : (
+            <p style={{ color: '#B8B8B8', fontSize: 13 }}>No photos yet. Add photos to help your provider.</p>
+          )}
+        </div>
+
+        {/* Cancel Button */}
+        {!isCancelled && selectedRequest.status !== 'completed' && (
+          <button
+            className="btn btn-outline btn-lg"
+            onClick={handleCancelRequest}
+            disabled={cancelling}
+            style={{ width: '100%', borderColor: '#E53935', color: '#E53935' }}
+          >
+            {cancelling ? 'Cancelling...' : 'Cancel Request'}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // Main list/form view
   return (
     <div className="page" style={{ maxWidth: 800 }}>
       <div className="page-header">
@@ -124,10 +353,17 @@ export default function ProRequest() {
           {requestsWithProviders.length === 0 ? (
             <div className="empty-state"><div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>--</div><h3>No requests yet</h3><p>Submit a request to get started.</p></div>
           ) : requestsWithProviders.map(r => (
-            <div key={r.id} className="card">
+            <div
+              key={r.id}
+              className="card"
+              style={{ cursor: 'pointer', transition: 'box-shadow 0.2s' }}
+              onClick={() => setSelectedRequest(r)}
+              onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)')}
+              onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '')}
+            >
               <div className="flex items-center justify-between mb-sm">
                 <div>
-                  <p style={{ fontWeight: 600 }}>{r.service_type}</p>
+                  <p style={{ fontWeight: 600 }}>{r.service_type || r.category}</p>
                   <p className="text-xs text-gray mt-xs">Submitted: {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                 </div>
                 <span className="badge" style={{ background: (StatusColors[r.status] || '#ccc') + '20', color: StatusColors[r.status] }}>{r.status}</span>
@@ -148,6 +384,7 @@ export default function ProRequest() {
               {r.cost && (
                 <p className="text-xs text-gray mt-xs">Cost: ${r.cost}</p>
               )}
+              <p style={{ fontSize: 11, color: Colors.copper, marginTop: 8, fontWeight: 600 }}>View Details →</p>
             </div>
           ))}
         </div>

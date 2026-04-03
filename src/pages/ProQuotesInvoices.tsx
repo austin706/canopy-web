@@ -49,6 +49,16 @@ interface AssignedClient {
   address: string;
 }
 
+interface QuoteTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  category: string;
+  line_items: { description: string; amount: number }[];
+  default_tax_rate: number;
+  is_active: boolean;
+}
+
 type TabType = 'quotes' | 'invoices';
 
 export default function ProQuotesInvoices() {
@@ -62,6 +72,18 @@ export default function ProQuotesInvoices() {
   const [providerId, setProviderId] = useState<string | null>(null);
   const [clients, setClients] = useState<AssignedClient[]>([]);
   const [showForm, setShowForm] = useState(false);
+
+  // Quote templates
+  const [templates, setTemplates] = useState<QuoteTemplate[]>([]);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
+  const [templateForm, setTemplateForm] = useState({
+    name: '',
+    description: '',
+    category: 'general',
+    lineItems: [{ id: '1', description: '', quantity: 1, unitPrice: 0 }] as LineItem[],
+    taxRate: 0,
+  });
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -103,6 +125,7 @@ export default function ProQuotesInvoices() {
           loadQuotes(provider.id),
           loadInvoices(provider.id),
           loadAssignedClients(provider.zip_codes || []),
+          loadTemplates(provider.id),
         ]);
       }
     } catch (err) {
@@ -209,6 +232,136 @@ export default function ProQuotesInvoices() {
     } catch (err) {
       console.error('Error loading invoices:', err);
     }
+  };
+
+  // ─── Quote Template Functions ───
+
+  const loadTemplates = async (provId: string) => {
+    try {
+      const { data } = await supabase
+        .from('quote_templates')
+        .select('*')
+        .eq('provider_id', provId)
+        .eq('is_active', true)
+        .order('name');
+      setTemplates(data || []);
+    } catch (err) {
+      console.error('Error loading templates:', err);
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!providerId || !templateForm.name.trim()) {
+      alert('Please enter a template name');
+      return;
+    }
+
+    const lineItems = templateForm.lineItems.map(item => ({
+      description: item.description,
+      amount: item.quantity * item.unitPrice,
+    }));
+
+    try {
+      if (editingTemplateId) {
+        const { error } = await supabase
+          .from('quote_templates')
+          .update({
+            name: templateForm.name,
+            description: templateForm.description,
+            category: templateForm.category,
+            line_items: lineItems,
+            default_tax_rate: templateForm.taxRate / 100,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', editingTemplateId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('quote_templates')
+          .insert({
+            provider_id: providerId,
+            name: templateForm.name,
+            description: templateForm.description,
+            category: templateForm.category,
+            line_items: lineItems,
+            default_tax_rate: templateForm.taxRate / 100,
+          });
+        if (error) throw error;
+      }
+
+      await loadTemplates(providerId);
+      setEditingTemplateId(null);
+      setTemplateForm({ name: '', description: '', category: 'general', lineItems: [{ id: '1', description: '', quantity: 1, unitPrice: 0 }], taxRate: 0 });
+      alert(editingTemplateId ? 'Template updated' : 'Template saved');
+    } catch (err) {
+      console.error('Error saving template:', err);
+      alert('Failed to save template');
+    }
+  };
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (!confirm('Delete this template?')) return;
+    try {
+      const { error } = await supabase
+        .from('quote_templates')
+        .update({ is_active: false })
+        .eq('id', templateId);
+      if (error) throw error;
+      setTemplates(prev => prev.filter(t => t.id !== templateId));
+    } catch {
+      alert('Failed to delete template');
+    }
+  };
+
+  const handleEditTemplate = (template: QuoteTemplate) => {
+    setEditingTemplateId(template.id);
+    const lineItems = (template.line_items || []).map((item: any, i: number) => ({
+      id: String(i + 1),
+      description: item.description || '',
+      quantity: 1,
+      unitPrice: item.amount || 0,
+    }));
+    setTemplateForm({
+      name: template.name,
+      description: template.description || '',
+      category: template.category,
+      lineItems: lineItems.length > 0 ? lineItems : [{ id: '1', description: '', quantity: 1, unitPrice: 0 }],
+      taxRate: (template.default_tax_rate || 0) * 100,
+    });
+    setShowTemplateManager(true);
+  };
+
+  const handleApplyTemplate = (template: QuoteTemplate) => {
+    const lineItems = (template.line_items || []).map((item: any, i: number) => ({
+      id: String(i + 1),
+      description: item.description || '',
+      quantity: 1,
+      unitPrice: item.amount || 0,
+    }));
+    setFormData({
+      ...formData,
+      title: template.name,
+      description: template.description || '',
+      lineItems: lineItems.length > 0 ? lineItems : formData.lineItems,
+      taxRate: (template.default_tax_rate || 0) * 100,
+    });
+    alert(`Template "${template.name}" applied. Adjust details and select a client.`);
+  };
+
+  const handleSaveCurrentAsTemplate = () => {
+    if (!formData.title) {
+      alert('Add a title first before saving as template');
+      return;
+    }
+    setTemplateForm({
+      name: formData.title,
+      description: formData.description,
+      category: 'general',
+      lineItems: formData.lineItems,
+      taxRate: formData.taxRate,
+    });
+    setEditingTemplateId(null);
+    setShowTemplateManager(true);
   };
 
   const calculateLineItemTotal = (): number => {
@@ -502,9 +655,48 @@ export default function ProQuotesInvoices() {
       {/* Create Form */}
       {showForm && (
         <div className="card mb-lg" style={{ backgroundColor: Colors.warmWhite, borderLeft: `4px solid ${Colors.copper}` }}>
-          <h3 style={{ marginTop: 0 }}>
-            Create {activeTab === 'quotes' ? 'Quote' : 'Invoice'}
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ margin: 0 }}>
+              Create {activeTab === 'quotes' ? 'Quote' : 'Invoice'}
+            </h3>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {templates.length > 0 && activeTab === 'quotes' && (
+                <select
+                  className="form-select"
+                  style={{ width: 'auto', padding: '4px 10px', fontSize: 12 }}
+                  defaultValue=""
+                  onChange={(e) => {
+                    const t = templates.find(t => t.id === e.target.value);
+                    if (t) handleApplyTemplate(t);
+                    e.target.value = '';
+                  }}
+                >
+                  <option value="" disabled>Use Template...</option>
+                  {templates.map(t => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.category})</option>
+                  ))}
+                </select>
+              )}
+              {activeTab === 'quotes' && (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: 11, whiteSpace: 'nowrap' }}
+                  onClick={handleSaveCurrentAsTemplate}
+                >
+                  Save as Template
+                </button>
+              )}
+              {activeTab === 'quotes' && (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: 11, whiteSpace: 'nowrap' }}
+                  onClick={() => { setShowTemplateManager(!showTemplateManager); setEditingTemplateId(null); }}
+                >
+                  Manage Templates
+                </button>
+              )}
+            </div>
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
             <div>
@@ -685,6 +877,90 @@ export default function ProQuotesInvoices() {
               Cancel
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Template Manager */}
+      {showTemplateManager && activeTab === 'quotes' && (
+        <div className="card mb-lg" style={{ borderLeft: `4px solid ${Colors.sage}` }}>
+          <h3 style={{ marginTop: 0 }}>{editingTemplateId ? 'Edit Template' : 'Save Quote Template'}</h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>Template Name *</label>
+              <input type="text" className="form-input" placeholder="e.g., Standard HVAC Service" value={templateForm.name} onChange={e => setTemplateForm({ ...templateForm, name: e.target.value })} />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>Category</label>
+              <select className="form-select" value={templateForm.category} onChange={e => setTemplateForm({ ...templateForm, category: e.target.value })}>
+                <option value="general">General</option>
+                <option value="hvac">HVAC</option>
+                <option value="plumbing">Plumbing</option>
+                <option value="electrical">Electrical</option>
+                <option value="roof">Roof</option>
+                <option value="pool">Pool</option>
+                <option value="deck">Deck</option>
+                <option value="lawn">Lawn</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>Description</label>
+            <textarea className="form-input" style={{ resize: 'vertical', minHeight: 40 }} placeholder="Template description..." value={templateForm.description} onChange={e => setTemplateForm({ ...templateForm, description: e.target.value })} />
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>Default Line Items</label>
+            {templateForm.lineItems.map((item, idx) => (
+              <div key={item.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                <input type="text" className="form-input" style={{ flex: 1 }} placeholder="Description" value={item.description} onChange={e => setTemplateForm({ ...templateForm, lineItems: templateForm.lineItems.map(li => li.id === item.id ? { ...li, description: e.target.value } : li) })} />
+                <input type="number" className="form-input" style={{ width: 80 }} placeholder="Qty" value={item.quantity} onChange={e => setTemplateForm({ ...templateForm, lineItems: templateForm.lineItems.map(li => li.id === item.id ? { ...li, quantity: Number(e.target.value) } : li) })} />
+                <input type="number" className="form-input" style={{ width: 100 }} placeholder="Price" value={item.unitPrice} onChange={e => setTemplateForm({ ...templateForm, lineItems: templateForm.lineItems.map(li => li.id === item.id ? { ...li, unitPrice: Number(e.target.value) } : li) })} />
+                {templateForm.lineItems.length > 1 && (
+                  <button className="btn btn-ghost btn-sm" onClick={() => setTemplateForm({ ...templateForm, lineItems: templateForm.lineItems.filter(li => li.id !== item.id) })} style={{ color: Colors.error }}>×</button>
+                )}
+              </div>
+            ))}
+            <button className="btn btn-ghost btn-sm" onClick={() => {
+              const newId = String(Math.max(...templateForm.lineItems.map(i => parseInt(i.id, 10)), 0) + 1);
+              setTemplateForm({ ...templateForm, lineItems: [...templateForm.lineItems, { id: newId, description: '', quantity: 1, unitPrice: 0 }] });
+            }}>+ Add Line Item</button>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>Default Tax Rate (%)</label>
+              <input type="number" className="form-input" style={{ width: 100 }} value={templateForm.taxRate} onChange={e => setTemplateForm({ ...templateForm, taxRate: Number(e.target.value) })} />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-primary" onClick={handleSaveTemplate}>{editingTemplateId ? 'Update Template' : 'Save Template'}</button>
+            <button className="btn btn-ghost" onClick={() => { setShowTemplateManager(false); setEditingTemplateId(null); }}>Cancel</button>
+          </div>
+
+          {/* Existing Templates List */}
+          {templates.length > 0 && (
+            <div style={{ marginTop: 24, borderTop: `1px solid ${Colors.lightGray}`, paddingTop: 16 }}>
+              <h4 style={{ margin: '0 0 12px', fontSize: 14 }}>Saved Templates ({templates.length})</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {templates.map(t => (
+                  <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: Colors.cream, borderRadius: 8 }}>
+                    <div>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>{t.name}</span>
+                      <span style={{ fontSize: 11, color: Colors.medGray, marginLeft: 8 }}>{t.category} · {t.line_items?.length || 0} items</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={() => handleApplyTemplate(t)}>Use</button>
+                      <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={() => handleEditTemplate(t)}>Edit</button>
+                      <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, color: Colors.error }} onClick={() => handleDeleteTemplate(t.id)}>Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

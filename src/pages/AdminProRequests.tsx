@@ -8,7 +8,10 @@ interface Provider {
   business_name: string;
   contact_name: string;
   service_categories: string[];
+  zip_codes?: string[];
   is_available: boolean;
+  max_jobs_per_day?: number;
+  active_job_count?: number;
 }
 
 export default function AdminProRequests() {
@@ -20,8 +23,35 @@ export default function AdminProRequests() {
 
   useEffect(() => {
     Promise.all([
-      getAllProRequests().then(setRequests).catch(() => {}),
-      getAllProProviders().then(setProviders).catch(() => {}),
+      getAllProRequests().then(async (reqs) => {
+        // Enrich with home zip_code for ZIP matching
+        const enriched = await Promise.all(reqs.map(async (r: any) => {
+          if (r.home_id && !r.home) {
+            try {
+              const { data: home } = await supabase.from('homes').select('zip_code').eq('id', r.home_id).single();
+              return { ...r, home };
+            } catch { return r; }
+          }
+          return r;
+        }));
+        setRequests(enriched);
+        return enriched;
+      }).catch(() => {}),
+      getAllProProviders().then(async (provs: any[]) => {
+        // Enrich providers with active job counts for availability
+        const enriched = await Promise.all(provs.map(async (p: any) => {
+          try {
+            const { count } = await supabase
+              .from('pro_requests')
+              .select('*', { count: 'exact', head: true })
+              .eq('provider_id', p.id)
+              .in('status', ['matched', 'scheduled']);
+            return { ...p, active_job_count: count || 0 };
+          } catch { return { ...p, active_job_count: 0 }; }
+        }));
+        setProviders(enriched);
+        return enriched;
+      }).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -121,10 +151,43 @@ export default function AdminProRequests() {
     } catch (e: any) { alert(e.message); }
   };
 
-  const getMatchingProviders = (category: string) => {
-    return providers.filter(p =>
+  const getMatchingProviders = (category: string, homeZip?: string) => {
+    const categoryMatches = providers.filter(p =>
       p.is_available && p.service_categories?.includes(category)
     );
+    if (!homeZip) return categoryMatches;
+    // Prefer providers whose zip_codes array includes the home's ZIP
+    const zipMatches = categoryMatches.filter(p =>
+      p.zip_codes?.includes(homeZip)
+    );
+    return zipMatches.length > 0 ? zipMatches : categoryMatches;
+  };
+
+  // Check if there are ANY providers matching both category + ZIP for a request
+  const checkProviderCoverage = async (request: any) => {
+    const homeZip = request.home?.zip_code;
+    const category = request.category || request.service_type;
+    const matching = providers.filter(p =>
+      p.is_available &&
+      p.service_categories?.includes(category) &&
+      (!homeZip || p.zip_codes?.includes(homeZip))
+    );
+    if (matching.length === 0 && homeZip) {
+      // Alert admins — no provider covers this ZIP + category combo
+      try {
+        const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin');
+        for (const admin of (admins || [])) {
+          await sendNotification({
+            user_id: admin.id,
+            title: `No Provider Coverage: ${category}`,
+            body: `No available provider covers ZIP ${homeZip} for ${category} service. Request from ${request.user?.full_name || request.user?.email || 'a homeowner'} needs manual assignment.`,
+            category: 'admin',
+            action_url: '/admin/pro-requests',
+          });
+        }
+      } catch { /* Non-blocking */ }
+    }
+    return matching.length;
   };
 
   const getProviderName = (providerId: string) => {
@@ -153,8 +216,10 @@ export default function AdminProRequests() {
       {loading ? <div className="text-center"><div className="spinner" /></div> : (
         <div className="flex-col gap-md">
           {filtered.map(r => {
-            const matching = getMatchingProviders(r.category || r.service_type);
+            const homeZip = r.home?.zip_code;
+            const matching = getMatchingProviders(r.category || r.service_type, homeZip);
             const allProvidersList = providers.filter(p => p.is_available);
+            const noZipCoverage = homeZip && matching.length === 0;
 
             return (
               <div key={r.id} className="card">
@@ -197,8 +262,13 @@ export default function AdminProRequests() {
                   ) : (
                     <div>
                       <label className="text-xs text-gray" style={{ display: 'block', marginBottom: 4 }}>
-                        Assign Provider {matching.length > 0 && `(${matching.length} match${matching.length !== 1 ? 'es' : ''} for ${r.category || r.service_type})`}
+                        Assign Provider {matching.length > 0 && `(${matching.length} match${matching.length !== 1 ? 'es' : ''} for ${r.category || r.service_type}${homeZip ? ` in ${homeZip}` : ''})`}
                       </label>
+                      {noZipCoverage && (
+                        <div style={{ padding: '6px 10px', borderRadius: 6, background: '#FF980015', color: '#E65100', fontSize: 12, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          ⚠️ No provider covers ZIP {homeZip} for {r.category || r.service_type}. Manual assignment required.
+                        </div>
+                      )}
                       <select
                         className="form-select"
                         style={{ width: '100%', padding: '6px 8px', fontSize: 13 }}
@@ -207,17 +277,31 @@ export default function AdminProRequests() {
                       >
                         <option value="" disabled>Select a provider...</option>
                         {matching.length > 0 && (
-                          <optgroup label="Matching Category">
-                            {matching.map(p => (
-                              <option key={p.id} value={p.id}>{p.business_name || p.contact_name} ({p.service_categories?.join(', ')})</option>
-                            ))}
+                          <optgroup label={`Matching Category${homeZip ? ' & ZIP' : ''}`}>
+                            {matching.map(p => {
+                              const atCapacity = p.max_jobs_per_day && p.active_job_count != null && p.active_job_count >= p.max_jobs_per_day;
+                              return (
+                                <option key={p.id} value={p.id} disabled={!!atCapacity}>
+                                  {p.business_name || p.contact_name} ({p.service_categories?.join(', ')})
+                                  {p.active_job_count != null ? ` [${p.active_job_count}${p.max_jobs_per_day ? `/${p.max_jobs_per_day}` : ''} jobs]` : ''}
+                                  {atCapacity ? ' — AT CAPACITY' : ''}
+                                </option>
+                              );
+                            })}
                           </optgroup>
                         )}
                         {allProvidersList.filter(p => !matching.find(m => m.id === p.id)).length > 0 && (
                           <optgroup label="Other Providers">
-                            {allProvidersList.filter(p => !matching.find(m => m.id === p.id)).map(p => (
-                              <option key={p.id} value={p.id}>{p.business_name || p.contact_name} ({p.service_categories?.join(', ')})</option>
-                            ))}
+                            {allProvidersList.filter(p => !matching.find(m => m.id === p.id)).map(p => {
+                              const atCapacity = p.max_jobs_per_day && p.active_job_count != null && p.active_job_count >= p.max_jobs_per_day;
+                              return (
+                                <option key={p.id} value={p.id} disabled={!!atCapacity}>
+                                  {p.business_name || p.contact_name} ({p.service_categories?.join(', ')})
+                                  {p.active_job_count != null ? ` [${p.active_job_count}${p.max_jobs_per_day ? `/${p.max_jobs_per_day}` : ''} jobs]` : ''}
+                                  {atCapacity ? ' — AT CAPACITY' : ''}
+                                </option>
+                              );
+                            })}
                           </optgroup>
                         )}
                       </select>

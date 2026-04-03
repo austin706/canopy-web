@@ -67,10 +67,18 @@
 | # | Trigger | Recipient | Channels | Title | File | Artwork |
 |---|---------|-----------|----------|-------|------|---------|
 | 21 | Invoice payment successful (Stripe) | Homeowner | In-app + Email | "Payment Confirmed" | `stripe-webhook` → `notifyUser()` | Done |
-| 22 | Subscription canceled (Stripe) | Homeowner | In-app + Email | "Subscription Canceled" | `stripe-webhook` | Done |
-| 23 | Payment failed (Stripe) | Homeowner | In-app + Email | "Payment Failed" | `stripe-webhook` | Done |
+| 22 | Subscription canceled (Stripe webhook) | Homeowner | In-app + Email | "Subscription Canceled" | `stripe-webhook` → `notifyUser()` | Done |
+| 23 | Payment failed (Stripe) | Homeowner | In-app + Email | "Payment Failed" | `stripe-webhook` → `notifyUser()` | Done |
 | 24 | Provider sends invoice | Homeowner | In-app + Email + Push | "New Invoice Received" | `quotesInvoices.ts` → `sendInvoice()` + `ProQuotesInvoices.tsx` | Needed |
 | 25 | Subscription renewal in 3 days (cron) | Homeowner | In-app + Email | "Subscription Renewal Coming Up" | `pro-visit-lifecycle` → `runRenewal()` | Needed |
+| 26a | Plan upgraded (paid→paid) | Homeowner | In-app + Email | "Welcome to {NewPlan}!" | `update-subscription` → `notifySubscriptionChange()` | Done |
+| 26h | New subscription via checkout (free→paid) | Homeowner | In-app + Email | "Welcome to {Plan}!" | `stripe-webhook` → `notifyUser()` | Done |
+| 26b | Plan downgraded (paid→paid) | Homeowner | In-app + Email | "Plan Changed to {NewPlan}" | `update-subscription` → `notifySubscriptionChange()` | Done |
+| 26c | Plan downgraded to Free (no Stripe sub) | Homeowner | In-app + Email | "Plan Changed to Free" | `update-subscription` → `notifySubscriptionChange()` | Done |
+| 26d | Cancellation scheduled (paid→free at period end) | Homeowner | In-app + Email | "Subscription Cancellation Scheduled" | `update-subscription` → `notifySubscriptionChange()` | Done |
+| 26e | Cancellation scheduled (Stripe webhook) | Homeowner | In-app + Email | "Subscription Cancellation Scheduled" | `stripe-webhook` → `notifyUser()` | Done |
+| 26f | Subscription reactivated (un-cancel) | Homeowner | In-app + Email | "Subscription Reactivated" | `stripe-webhook` → `notifyUser()` | Done |
+| 26g | Payment recovered (past_due→active) | Homeowner | In-app + Email | "Payment Successful" | `stripe-webhook` → `notifyUser()` | Done |
 
 ### Home Transfer
 

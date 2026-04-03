@@ -183,8 +183,18 @@ export default function Subscription() {
 
   // Handle Stripe redirect success/cancel
   useEffect(() => {
+    const isMobile = searchParams.get('mobile') === 'true';
+
     if (searchParams.get('success') === 'true') {
       const plan = searchParams.get('plan');
+
+      // If this was a mobile checkout, redirect back to the app via deep link
+      if (isMobile) {
+        const returnPath = searchParams.get('return_path') || '/subscription';
+        window.location.href = `canopy://${returnPath}?success=true&plan=${plan}`;
+        return;
+      }
+
       // Clean URL and replace history so back button doesn't go to Stripe
       window.history.replaceState({}, '', '/subscription');
       setMessage(`Successfully upgraded to ${PLANS.find(p => p.value === plan)?.name || plan}! Your subscription is now active.`);
@@ -201,6 +211,11 @@ export default function Subscription() {
         });
       }
     } else if (searchParams.get('canceled') === 'true') {
+      // If mobile, redirect back to app
+      if (isMobile) {
+        window.location.href = 'canopy://subscription?canceled=true';
+        return;
+      }
       window.history.replaceState({}, '', '/subscription');
       setMessage('Checkout was canceled. No charges were made.');
     }
@@ -257,7 +272,7 @@ export default function Subscription() {
             'apikey': SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
-            tier: plan,
+            plan: plan,
             success_url: `${window.location.origin}/subscription?success=true&plan=${plan}`,
             cancel_url: `${window.location.origin}/subscription?canceled=true`,
           }),
@@ -295,7 +310,7 @@ export default function Subscription() {
           'apikey': SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
-          tier: plan,
+          plan: plan,
           ui_mode: 'embedded',
           return_url: `${window.location.origin}/subscription?success=true&plan=${plan}&session_id={CHECKOUT_SESSION_ID}`,
         }),

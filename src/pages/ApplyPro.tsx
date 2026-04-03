@@ -97,27 +97,45 @@ export default function ApplyPro() {
 
       if (dbError) throw dbError;
 
-      // Send notification email to support
-      await supabase.functions.invoke('send-email', {
-        body: {
-          to: 'support@canopyhome.app',
-          subject: `New Pro Provider Application: ${formData.businessName}`,
-          html: `
-            <h2>New Pro Provider Application</h2>
-            <p><strong>Business Name:</strong> ${formData.businessName}</p>
-            <p><strong>Contact Name:</strong> ${formData.contactName}</p>
-            <p><strong>Email:</strong> ${formData.email}</p>
-            <p><strong>Phone:</strong> ${formData.phone}</p>
-            <p><strong>Years of Experience:</strong> ${formData.yearsExperience}</p>
-            <p><strong>License State:</strong> ${formData.licenseState}</p>
-            <p><strong>Service Categories:</strong> ${formData.serviceCategories.map((c) => SERVICE_CATEGORIES[c]).join(', ')}</p>
-            <p><strong>Service Area ZIPs:</strong> ${formData.serviceAreaZips}</p>
-            <hr />
-            <h3>Bio/Description:</h3>
-            <p>${formData.bio.replace(/\n/g, '<br>')}</p>
-          `,
-        },
-      });
+      // Send branded confirmation email to applicant
+      try {
+        await supabase.functions.invoke('support-email', {
+          body: {
+            mode: 'provider-application-received',
+            email: formData.email,
+            contact_name: formData.contactName,
+            business_name: formData.businessName,
+          },
+        });
+      } catch (emailErr) {
+        console.error('Applicant confirmation email error:', emailErr);
+      }
+
+      // Send admin notification email
+      try {
+        await supabase.functions.invoke('send-email', {
+          body: {
+            to: 'support@canopyhome.app',
+            subject: `New Pro Provider Application: ${formData.businessName}`,
+            html: `
+              <h2>New Pro Provider Application</h2>
+              <p><strong>Business Name:</strong> ${formData.businessName}</p>
+              <p><strong>Contact Name:</strong> ${formData.contactName}</p>
+              <p><strong>Email:</strong> ${formData.email}</p>
+              <p><strong>Phone:</strong> ${formData.phone}</p>
+              <p><strong>Years of Experience:</strong> ${formData.yearsExperience}</p>
+              <p><strong>License State:</strong> ${formData.licenseState}</p>
+              <p><strong>Service Categories:</strong> ${formData.serviceCategories.map((c) => SERVICE_CATEGORIES[c]).join(', ')}</p>
+              <p><strong>Service Area ZIPs:</strong> ${formData.serviceAreaZips}</p>
+              <hr />
+              <h3>Bio/Description:</h3>
+              <p>${formData.bio.replace(/\n/g, '<br>')}</p>
+            `,
+          },
+        });
+      } catch (adminEmailErr) {
+        console.error('Admin notification email error:', adminEmailErr);
+      }
 
       setSubmitted(true);
       setTimeout(() => {

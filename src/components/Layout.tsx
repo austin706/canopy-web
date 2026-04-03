@@ -54,7 +54,7 @@ export default function Layout() {
 
   const isPro = tier === 'pro' || tier === 'pro_plus';
   const navItems: { to: string; icon: React.FC<{ size?: number; color?: string }>; label: string }[] = [
-    { to: '/', icon: NavDashboard, label: 'Dashboard' },
+    { to: '/dashboard', icon: NavDashboard, label: 'Dashboard' },
     { to: '/calendar', icon: NavCalendar, label: 'Calendar' },
     { to: '/weather', icon: NavWeather, label: 'Weather' },
     { to: '/equipment', icon: NavEquipment, label: 'Equipment' },
@@ -153,7 +153,7 @@ export default function Layout() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
+              end={item.to === '/dashboard'}
               className={({ isActive }) => isActive ? 'active' : ''}
             >
               <item.icon size={18} />

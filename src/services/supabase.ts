@@ -371,6 +371,16 @@ export const getAgent = async (agentId: string) => {
 export const createProRequest = async (request: any) => {
   const { data, error } = await supabase.from('pro_requests').insert(request).select().single();
   if (error) throw error;
+
+  // Auto-match to a provider (fire-and-forget — doesn't block request creation)
+  try {
+    await supabase.functions.invoke('match-provider', {
+      body: { request_id: data.id },
+    });
+  } catch (matchErr) {
+    console.error('Auto-match provider error (non-blocking):', matchErr);
+  }
+
   return data;
 };
 

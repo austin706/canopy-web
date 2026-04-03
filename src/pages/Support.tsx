@@ -42,26 +42,58 @@ export default function Support() {
         return;
       }
 
-      // Call Supabase edge function to send email
-      const response = await supabase.functions.invoke('send-email', {
-        body: {
-          to: 'support@canopyhome.app',
-          subject: `[Canopy Support] ${categoryLabels[formData.category]}: ${formData.subject}`,
-          html: `
-            <h2>New Support Request</h2>
-            <p><strong>From:</strong> ${formData.name}</p>
-            <p><strong>Email:</strong> ${formData.email}</p>
-            <p><strong>Category:</strong> ${categoryLabels[formData.category]}</p>
-            <p><strong>Subject:</strong> ${formData.subject}</p>
-            <hr />
-            <h3>Message:</h3>
-            <p>${formData.message.replace(/\n/g, '<br>')}</p>
-          `,
-        },
-      });
+      // Step 1: Insert support ticket into database
+      const { data: ticket, error: insertError } = await supabase
+        .from('support_tickets')
+        .insert([{
+          name: formData.name,
+          email: formData.email,
+          category: formData.category,
+          subject: formData.subject,
+          message: formData.message,
+        }])
+        .select()
+        .single();
 
-      if (response.error) {
-        throw new Error(response.error.message);
+      if (insertError) throw insertError;
+
+      // Step 2: Send branded auto-reply via support-email edge function
+      try {
+        await supabase.functions.invoke('support-email', {
+          body: {
+            mode: 'support-auto-reply',
+            name: formData.name,
+            email: formData.email,
+            subject: formData.subject,
+            ticket_id: ticket.id,
+          },
+        });
+      } catch (emailErr) {
+        // Log but don't fail — ticket is already saved
+        console.error('Auto-reply email error:', emailErr);
+      }
+
+      // Step 3: Notify admin via send-email (internal notification)
+      try {
+        await supabase.functions.invoke('send-email', {
+          body: {
+            to: 'support@canopyhome.app',
+            subject: `[Canopy Support] ${categoryLabels[formData.category]}: ${formData.subject}`,
+            html: `
+              <h2>New Support Request</h2>
+              <p><strong>Ticket ID:</strong> ${ticket.id}</p>
+              <p><strong>From:</strong> ${formData.name}</p>
+              <p><strong>Email:</strong> ${formData.email}</p>
+              <p><strong>Category:</strong> ${categoryLabels[formData.category]}</p>
+              <p><strong>Subject:</strong> ${formData.subject}</p>
+              <hr />
+              <h3>Message:</h3>
+              <p>${formData.message.replace(/\n/g, '<br>')}</p>
+            `,
+          },
+        });
+      } catch (adminEmailErr) {
+        console.error('Admin notification email error:', adminEmailErr);
       }
 
       setSubmitted(true);

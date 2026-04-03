@@ -989,10 +989,14 @@ export default function Landing() {
               Product
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              {['Features', 'Pricing', 'Download App'].map((item) => (
-                <li key={item} style={{ marginBottom: '8px' }}>
+              {[
+                { label: 'Features', href: '#features' },
+                { label: 'Pricing', href: '#pricing' },
+                { label: 'Download App', href: '/signup' },
+              ].map((item) => (
+                <li key={item.label} style={{ marginBottom: '8px' }}>
                   <a
-                    href="#"
+                    href={item.href}
                     style={{
                       color: '#CCCCCC',
                       textDecoration: 'none',
@@ -1006,7 +1010,7 @@ export default function Landing() {
                       (e.target as HTMLElement).style.color = '#CCCCCC';
                     }}
                   >
-                    {item}
+                    {item.label}
                   </a>
                 </li>
               ))}
@@ -1019,10 +1023,14 @@ export default function Landing() {
               Company
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              {['About', 'Support', 'Careers'].map((item) => (
-                <li key={item} style={{ marginBottom: '8px' }}>
+              {[
+                { label: 'About', href: '#features' },
+                { label: 'Support', href: '/support' },
+                { label: 'Become a Pro', href: '/apply-pro' },
+              ].map((item) => (
+                <li key={item.label} style={{ marginBottom: '8px' }}>
                   <a
-                    href="#"
+                    href={item.href}
                     style={{
                       color: '#CCCCCC',
                       textDecoration: 'none',
@@ -1036,7 +1044,7 @@ export default function Landing() {
                       (e.target as HTMLElement).style.color = '#CCCCCC';
                     }}
                   >
-                    {item}
+                    {item.label}
                   </a>
                 </li>
               ))}

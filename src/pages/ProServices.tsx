@@ -547,9 +547,10 @@ export default function ProServices() {
               </div>
             </div>
           ) : (
-            <div className="card" style={{ padding: '24px', textAlign: 'center', color: Colors.medGray }}>
-              <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 500 }}>No upcoming visit scheduled yet.</p>
-              <p style={{ margin: 0, fontSize: 13 }}>Your Canopy team will coordinate your next bimonthly visit. Check the Visits tab for full history.</p>
+            <div className="empty-state">
+              <div className="icon" style={{ fontSize: 32, fontWeight: 700, color: Colors.copper }}>🔧</div>
+              <h3>No Upcoming Visit</h3>
+              <p>Your next bimonthly maintenance visit will be scheduled automatically based on your plan.</p>
             </div>
           )}
         </div>

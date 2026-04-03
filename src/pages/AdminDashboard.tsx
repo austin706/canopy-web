@@ -48,7 +48,7 @@ export default function AdminDashboard() {
   return (
     <div className="page-wide">
       <div className="flex items-center justify-between mb-lg">
-        <div><h1 style={{ fontSize: 28 }}>Admin Dashboard</h1><p className="text-sm text-copper fw-500">Oak &amp; Sage &middot; Canopy</p></div>
+        <div><h1 style={{ fontSize: 28 }}>Admin Dashboard</h1><p className="text-sm text-copper fw-500">Canopy Home</p></div>
         <div className="flex gap-sm">
           <button className="btn btn-secondary btn-sm" onClick={() => navigate('/')}>&#8592; Back to App</button>
           <button className="btn btn-danger btn-sm" onClick={handleLogout}>Sign Out</button>

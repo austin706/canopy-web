@@ -168,7 +168,6 @@ export default function Login() {
       {/* Hero Panel - left side */}
       <div className="auth-hero">
         <div className="auth-hero-content">
-          {/* TODO: Replace with final branded logo when ready */}
           <div style={{ marginBottom: 16 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 56, width: 'auto', objectFit: 'contain' }} /></div>
           <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Canopy</h1>
           <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 32 }}>Smart home maintenance, powered by AI</p>
@@ -180,7 +179,7 @@ export default function Login() {
               </div>
             ))}
           </div>
-          <p style={{ marginTop: 40, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Powered by Oak &amp; Sage Realty</p>
+          <p style={{ marginTop: 40, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Powered by Canopy</p>
         </div>
       </div>
 
@@ -188,7 +187,6 @@ export default function Login() {
       <div className="auth-form-panel">
         <div className="auth-card">
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            {/* TODO: Replace with final branded logo when ready */}
             <div style={{ marginBottom: 12 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 48, width: 'auto', objectFit: 'contain' }} /></div>
             <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Canopy</h1>
             <p className="subtitle">Sign in to your account</p>

@@ -94,7 +94,7 @@ export default function Layout() {
             <img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 40, width: 'auto', objectFit: 'contain' }} />
             <h2 style={{ margin: 0 }}>Canopy</h2>
           </div>
-          <span>Oak &amp; Sage Realty</span>
+          <span>Canopy</span>
         </div>
         {/* Property Switcher */}
         {homes.length > 0 && (

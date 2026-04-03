@@ -166,6 +166,15 @@ export default function HomeTransfer() {
         </div>
       )}
 
+      {/* Empty state — no incoming transfers */}
+      {incomingTransfers.length === 0 && !activeTransfer && (
+        <div className="empty-state" style={{ marginBottom: 32 }}>
+          <div className="icon" style={{ fontSize: 48, fontWeight: 700, color: Colors.copper }}>🔑</div>
+          <h3>No Home Transfers</h3>
+          <p>Transfer your home's digital record to a new owner. All maintenance history, equipment details, and documents transfer seamlessly.</p>
+        </div>
+      )}
+
       {/* Active outgoing transfer */}
       {activeTransfer && (
         <div style={{ marginBottom: 32 }}>

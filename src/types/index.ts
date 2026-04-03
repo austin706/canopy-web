@@ -69,6 +69,8 @@ export interface Home {
   longitude?: number;
   /** USPS-standardized canonical address for reliable dedup (e.g. "123 N MAIN ST APT 1") */
   normalized_address?: string;
+  /** USPS ZIP+4 code (e.g. "74103-1234") for enhanced dedup accuracy */
+  zip_plus4?: string;
   year_built?: number;
   square_footage?: number;
   lot_size_sqft?: number;
@@ -518,7 +520,7 @@ export interface InvoicePayment {
 
 export type NotificationCategory = 'task' | 'weather' | 'equipment' | 'pro_visit' | 'pro_quote' | 'pro_invoice' | 'payment' | 'subscription' | 'general';
 
-export type NotificationChannel = 'push' | 'email' | 'in_app';
+export type NotificationChannel = 'push' | 'email' | 'sms' | 'in_app';
 
 export type DigestFrequency = 'instant' | 'daily_summary' | 'weekly_summary';
 
@@ -538,6 +540,7 @@ export interface NotificationItem {
 export interface CategoryChannelPrefs {
   push: boolean;
   email: boolean;
+  sms: boolean;
   in_app: boolean;
 }
 
@@ -559,16 +562,20 @@ export interface NotificationPreferences {
   quiet_hours_start: string;  // "22:00"
   quiet_hours_end: string;    // "07:00"
 
+  // ── SMS & Timezone ──
+  phone?: string;
+  timezone: string;           // IANA timezone string, e.g. "America/Chicago"
+
   // ── Summary ──
   weekly_summary: boolean;
 }
 
 export const DEFAULT_NOTIFICATION_PREFS: NotificationPreferences = {
-  home_maintenance: { push: true, email: true, in_app: true },
-  weather_safety: { push: true, email: false, in_app: true },
-  equipment_lifecycle: { push: false, email: true, in_app: true },
-  pro_services: { push: true, email: true, in_app: true },
-  account_billing: { push: false, email: true, in_app: true },
+  home_maintenance: { push: true, email: true, sms: false, in_app: true },
+  weather_safety: { push: true, email: false, sms: true, in_app: true },
+  equipment_lifecycle: { push: false, email: true, sms: false, in_app: true },
+  pro_services: { push: true, email: true, sms: false, in_app: true },
+  account_billing: { push: false, email: true, sms: false, in_app: true },
 
   digest_frequency: 'instant',
   reminder_lead_time: '1_day_before',
@@ -577,6 +584,9 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPreferences = {
   quiet_hours_enabled: true,
   quiet_hours_start: '22:00',
   quiet_hours_end: '07:00',
+
+  phone: undefined,
+  timezone: 'America/Chicago',
 
   weekly_summary: true,
 };

@@ -411,6 +411,7 @@ export default function Onboarding() {
       created_at: new Date().toISOString(),
       // Store verified data when available
       ...(verified?.normalizedAddress && { normalized_address: verified.normalizedAddress }),
+      ...(verified?.zipCode && verified.zipCode.includes('-') && { zip_plus4: verified.zipCode }),
       ...(verified?.latitude && { latitude: verified.latitude }),
       ...(verified?.longitude && { longitude: verified.longitude }),
     };

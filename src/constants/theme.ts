@@ -124,7 +124,7 @@ export const EmailBrand = {
 
   // Footer
   footer: {
-    company: 'Canopy Home by Oak & Sage',
+    company: 'Canopy Home',
     url: 'https://canopyhome.app',
     unsubscribeText: 'Manage notification preferences',
     unsubscribeUrl: 'https://canopyhome.app/profile#notifications',

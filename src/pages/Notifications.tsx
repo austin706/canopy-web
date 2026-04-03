@@ -54,6 +54,15 @@ const CATEGORY_INFO: Record<string, { label: string; desc: string }> = {
   },
 };
 
+const US_TIMEZONES = [
+  { value: 'America/New_York', label: 'Eastern (ET)' },
+  { value: 'America/Chicago', label: 'Central (CT)' },
+  { value: 'America/Denver', label: 'Mountain (MT)' },
+  { value: 'America/Los_Angeles', label: 'Pacific (PT)' },
+  { value: 'America/Anchorage', label: 'Alaska (AKT)' },
+  { value: 'Pacific/Honolulu', label: 'Hawaii (HT)' },
+];
+
 const timeAgo = (dateStr: string): string => {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -255,6 +264,7 @@ export default function Notifications() {
                     <th style={{ textAlign: 'left', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>Category</th>
                     <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>Push</th>
                     <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>Email</th>
+                    <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>SMS</th>
                     <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>In-App</th>
                   </tr>
                 </thead>
@@ -301,6 +311,16 @@ export default function Notifications() {
                           <td style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 14 }}>
                             <input
                               type="checkbox"
+                              checked={categoryPrefs?.sms || false}
+                              onChange={(e) => !cat.locked && updateCategoryChannels(cat.key, 'sms', e.target.checked)}
+                              disabled={cat.locked || !prefs.phone}
+                              title={!prefs.phone ? 'Add a phone number below to enable SMS' : ''}
+                              style={{ width: 18, height: 18, cursor: (cat.locked || !prefs.phone) ? 'not-allowed' : 'pointer', opacity: prefs.phone ? 1 : 0.4 }}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 14 }}>
+                            <input
+                              type="checkbox"
                               checked={categoryPrefs?.in_app || false}
                               onChange={(e) => !cat.locked && updateCategoryChannels(cat.key, 'in_app', e.target.checked)}
                               disabled={cat.locked}
@@ -315,7 +335,51 @@ export default function Notifications() {
               </table>
             </div>
 
-            {/* Section 2: Delivery & Timing */}
+            {/* Section 2: Phone & Timezone */}
+            <div className="card mb-lg">
+              <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 6, color: Colors.charcoal }}>Phone & Timezone</p>
+              <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>Add your phone number to receive SMS alerts for critical notifications</p>
+
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: Colors.charcoal }}>Phone number</label>
+                <input
+                  type="tel"
+                  placeholder="(555) 555-1234"
+                  value={prefs.phone || ''}
+                  onChange={(e) => setPrefs(prev => ({ ...prev, phone: e.target.value || undefined }))}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: 6,
+                    border: `1.5px solid ${Colors.lightGray}`, fontSize: 14,
+                    background: Colors.cream, boxSizing: 'border-box',
+                  }}
+                />
+                <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 6, margin: '6px 0 0 0' }}>
+                  SMS is used for critical alerts only (weather, pro visits, security). Standard message rates apply.
+                </p>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: Colors.charcoal }}>Timezone</label>
+                <select
+                  value={prefs.timezone || 'America/Chicago'}
+                  onChange={(e) => setPrefs(prev => ({ ...prev, timezone: e.target.value }))}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: 6,
+                    border: `1.5px solid ${Colors.lightGray}`, fontSize: 14,
+                    background: Colors.cream, boxSizing: 'border-box', cursor: 'pointer',
+                  }}
+                >
+                  {US_TIMEZONES.map(tz => (
+                    <option key={tz.value} value={tz.value}>{tz.label}</option>
+                  ))}
+                </select>
+                <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 6, margin: '6px 0 0 0' }}>
+                  Used for quiet hours and delivery timing
+                </p>
+              </div>
+            </div>
+
+            {/* Section 3: Delivery & Timing */}
             <div className="card mb-lg">
               <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 16, color: Colors.charcoal }}>Delivery & Timing</p>
 
@@ -453,7 +517,7 @@ export default function Notifications() {
                     </div>
                   </div>
                   <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 12, margin: '12px 0 0 0' }}>
-                    Push notifications are silenced during quiet hours. Emails and in-app are unaffected.
+                    Push and SMS notifications are silenced during quiet hours (based on your timezone). Emails and in-app are unaffected.
                   </p>
                 </div>
               )}

@@ -61,7 +61,7 @@ export default function ResetPassword() {
               </div>
             ))}
           </div>
-          <p style={{ marginTop: 40, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Powered by Oak & Sage Realty</p>
+          <p style={{ marginTop: 40, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Powered by Canopy</p>
         </div>
       </div>
 

@@ -118,14 +118,13 @@ export default function SalePrep() {
     return (
       <div className="page" style={{ maxWidth: 600 }}>
         <div className="page-header"><h1>Preparing to Sell?</h1></div>
+        <div className="empty-state" style={{ marginBottom: 24 }}>
+          <div className="icon" style={{ fontSize: 48, fontWeight: 700, color: Colors.copper }}>🏡</div>
+          <h3 style={{ fontSize: 22, color: Colors.charcoal }}>No Active Sale Prep</h3>
+          <p style={{ lineHeight: 1.6 }}>When you're ready to sell, activate sale prep to get a 26-item checklist that guides you through preparing your home for market.</p>
+        </div>
         <div className="card" style={{ padding: 32, textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🏡</div>
-          <h2 style={{ fontSize: 22, marginBottom: 8, color: Colors.charcoal }}>Home Sale Prep Checklist</h2>
-          <p style={{ color: Colors.medGray, marginBottom: 24, lineHeight: 1.6 }}>
-            Get your home market-ready with our comprehensive checklist. We'll guide you through
-            exterior, interior, systems, documentation, and staging — everything buyers and
-            inspectors look for.
-          </p>
+          <h2 style={{ fontSize: 18, marginBottom: 24, color: Colors.charcoal }}>Get Started</h2>
 
           {user?.agent_id && (
             <div style={{

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Colors } from '@/constants/theme';
 import { MailIcon, PhoneIcon, ChevronDownIcon, ChevronUpIcon, ExternalLinkIcon } from '@/components/icons/Icons';
+import packageJson from '../../package.json';
 
 const FAQ_SECTIONS = [
   {
@@ -10,7 +11,7 @@ const FAQ_SECTIONS = [
       {
         id: 'what-is-canopy',
         question: 'What is Canopy?',
-        answer: 'Canopy is a home maintenance app by Oak & Sage Realty that helps you keep track of your home\'s equipment, schedule maintenance tasks, receive weather alerts, and connect with professional service providers \u2014 all in one place.',
+        answer: 'Canopy is a home maintenance app that helps you keep track of your home\'s equipment, schedule maintenance tasks, receive weather alerts, and connect with professional service providers \u2014 all in one place.',
       },
       {
         id: 'setup-home',
@@ -99,7 +100,8 @@ const FAQ_SECTIONS = [
 export default function Help() {
   const navigate = useNavigate();
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const appVersion = '1.0.0';
+  // App version is dynamically imported from package.json at build time
+  const appVersion = packageJson.version;
 
   return (
     <div className="page">

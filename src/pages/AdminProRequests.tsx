@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllProRequests, updateProRequest, getAllProProviders, sendNotification, supabase } from '@/services/supabase';
+import { logAdminAction } from '@/services/auditLog';
 import { StatusColors, Colors } from '@/constants/theme';
 
 interface Provider {
@@ -20,6 +21,8 @@ export default function AdminProRequests() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'matched' | 'in_progress' | 'completed' | 'cancelled'>('all');
 
   useEffect(() => {
     Promise.all([
@@ -57,11 +60,16 @@ export default function AdminProRequests() {
 
   const handleStatusChange = async (id: string, status: string) => {
     try {
+      const request = requests.find(r => r.id === id);
+      const oldStatus = request?.status;
+
       await updateProRequest(id, { status });
       setRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
 
+      // Log status change
+      logAdminAction('request.status_change', 'pro_request', id, { old_status: oldStatus, new_status: status }).catch(() => {});
+
       // Notify homeowner about meaningful status changes
-      const request = requests.find(r => r.id === id);
       if (request?.user_id && (status === 'scheduled' || status === 'completed')) {
         const messages: Record<string, { title: string; body: string }> = {
           scheduled: {
@@ -90,11 +98,17 @@ export default function AdminProRequests() {
   const handleAssignProvider = async (requestId: string, providerId: string) => {
     if (!providerId) return;
     try {
+      const provider = providers.find(p => p.id === providerId);
+      const request = requests.find(r => r.id === requestId);
+      const category = request?.category || request?.service_type;
+
       await updateProRequest(requestId, { provider_id: providerId, status: 'matched' });
       setRequests(prev => prev.map(r => r.id === requestId ? { ...r, provider_id: providerId, status: 'matched' } : r));
 
+      // Log provider assignment
+      logAdminAction('request.assign', 'pro_request', requestId, { provider_name: provider?.business_name || provider?.contact_name, category }).catch(() => {});
+
       // Create linked pro_service_appointment so it shows in the provider portal
-      const request = requests.find(r => r.id === requestId);
       if (request) {
         const appointmentDate = request.preferred_date || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
         await supabase
@@ -195,7 +209,26 @@ export default function AdminProRequests() {
     return p ? p.business_name || p.contact_name : 'Unknown Provider';
   };
 
-  const filtered = filter === 'all' ? requests : requests.filter(r => r.status === filter);
+  // Apply search and status filters
+  const filtered = requests.filter(r => {
+    // Status filter
+    const statusMatch = statusFilter === 'all' || r.status === statusFilter;
+
+    // Search filter: match homeowner email, service category, or provider business name
+    let searchMatch = true;
+    if (search.trim()) {
+      const searchLower = search.toLowerCase();
+      const homeownerEmail = r.user?.email?.toLowerCase() || '';
+      const category = (r.category || r.service_type || '').toLowerCase();
+      const providerName = r.provider_id ? (getProviderName(r.provider_id) || '').toLowerCase() : '';
+
+      searchMatch = homeownerEmail.includes(searchLower) ||
+                    category.includes(searchLower) ||
+                    providerName.includes(searchLower);
+    }
+
+    return statusMatch && searchMatch;
+  });
 
   return (
     <div className="page-wide">
@@ -203,6 +236,37 @@ export default function AdminProRequests() {
         <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/admin')}>&larr; Back</button>
         <h1>Pro Service Requests</h1>
         <p className="subtitle">{requests.length} total requests &bull; {providers.length} providers</p>
+      </div>
+
+      {/* Search and Filter Controls */}
+      <div className="flex gap-md mb-lg" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <label className="text-xs text-gray" style={{ display: 'block', marginBottom: 4 }}>Search</label>
+          <input
+            type="text"
+            className="form-input"
+            placeholder="Email, category, or provider..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ width: '100%', padding: '6px 8px', fontSize: 13 }}
+          />
+        </div>
+        <div style={{ minWidth: 150 }}>
+          <label className="text-xs text-gray" style={{ display: 'block', marginBottom: 4 }}>Status</label>
+          <select
+            className="form-select"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value as any)}
+            style={{ width: '100%', padding: '6px 8px', fontSize: 13 }}
+          >
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="matched">Matched</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
       </div>
 
       <div className="tabs mb-lg">

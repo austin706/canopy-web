@@ -29,6 +29,8 @@ import AdminProProviders from '@/pages/AdminProProviders';
 import AdminServiceAreas from '@/pages/AdminServiceAreas';
 import AdminNotifications from '@/pages/AdminNotifications';
 import AdminEmails from '@/pages/AdminEmails';
+import AdminAnalytics from '@/pages/AdminAnalytics';
+import AdminAuditLog from '@/pages/AdminAuditLog';
 import AgentPortal from '@/pages/AgentPortal';
 import AgentProfile from '@/pages/AgentProfile';
 import AgentClientHome from '@/pages/AgentClientHome';
@@ -202,6 +204,8 @@ export default function App() {
             <Route path="/admin/service-areas" element={<RoleRoute roles={['admin']}><AdminServiceAreas /></RoleRoute>} />
             <Route path="/admin/notifications" element={<RoleRoute roles={['admin']}><AdminNotifications /></RoleRoute>} />
             <Route path="/admin/emails" element={<RoleRoute roles={['admin']}><AdminEmails /></RoleRoute>} />
+            <Route path="/admin/analytics" element={<RoleRoute roles={['admin']}><AdminAnalytics /></RoleRoute>} />
+            <Route path="/admin/audit-log" element={<RoleRoute roles={['admin']}><AdminAuditLog /></RoleRoute>} />
           </Route>
 
           {/* Catch-all */}

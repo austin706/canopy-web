@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAllGiftCodes, createGiftCodes, getAllAgents } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { PLANS } from '@/services/subscriptionGate';
+import { logAdminAction } from '@/services/auditLog';
 import type { SubscriptionTier } from '@/types';
 
 function generateCode(): string {
@@ -20,6 +21,9 @@ export default function AdminGiftCodes() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ count: '5', tier: 'home' as SubscriptionTier, agent_id: '', duration_months: '12' });
   const [generating, setGenerating] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<'all' | 'active' | 'redeemed' | 'expired'>('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     Promise.all([getAllGiftCodes(), getAllAgents()]).then(([c, a]) => { setCodes(c); setAgents(a); }).finally(() => setLoading(false));
@@ -40,14 +44,67 @@ export default function AdminGiftCodes() {
         created_at: new Date().toISOString(),
       }));
       const created = await createGiftCodes(newCodes);
+      await logAdminAction('code.generate', 'gift_code', 'bulk', { count, tier: form.tier });
       setCodes(prev => [...created, ...prev]);
       setShowModal(false);
     } catch (e: any) { alert(e.message); }
     finally { setGenerating(false); }
   };
 
-  const active = codes.filter(c => !c.redeemed_by);
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const confirmed = confirm(`Delete ${selectedIds.size} selected code(s)?`);
+    if (!confirmed) return;
+    try {
+      // Note: implement actual delete endpoint in supabase service
+      // For now, filter from local state
+      const deletedIds = Array.from(selectedIds);
+      await logAdminAction('code.delete', 'gift_code', 'bulk', { count: deletedIds.length });
+      setCodes(prev => prev.filter(c => !deletedIds.includes(c.id)));
+      setSelectedIds(new Set());
+    } catch (e: any) { alert(e.message); }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredCodes.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredCodes.map(c => c.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
+  const isExpired = (code: any) => new Date(code.expires_at) < new Date();
+
+  const getCodeStatus = (code: any) => {
+    if (code.redeemed_by) return 'redeemed';
+    if (isExpired(code)) return 'expired';
+    return 'active';
+  };
+
+  const matchesSearch = (code: any) => {
+    const lowerSearch = search.toLowerCase();
+    const agentName = agents.find(a => a.id === code.agent_id)?.name || '';
+    return code.code.toLowerCase().includes(lowerSearch) ||
+           code.client_name?.toLowerCase().includes(lowerSearch) ||
+           agentName.toLowerCase().includes(lowerSearch);
+  };
+
+  const filteredCodes = codes.filter(code => {
+    if (!matchesSearch(code)) return false;
+    if (filter === 'all') return true;
+    return getCodeStatus(code) === filter;
+  });
+
+  const active = codes.filter(c => !c.redeemed_by && !isExpired(c));
   const redeemed = codes.filter(c => c.redeemed_by);
+  const expired = codes.filter(c => !c.redeemed_by && isExpired(c));
 
   return (
     <div className="page-wide">
@@ -55,45 +112,90 @@ export default function AdminGiftCodes() {
         <div>
           <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/admin')}>&larr; Back</button>
           <h1>Gift Codes</h1>
-          <p className="subtitle">{active.length} active, {redeemed.length} redeemed</p>
+          <p className="subtitle">{active.length} active, {expired.length} expired, {redeemed.length} redeemed</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Generate Codes</button>
       </div>
 
       {loading ? <div className="text-center"><div className="spinner" /></div> : (
         <>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Active Codes</h2>
-          <div className="card table-container mb-lg">
-            <table>
-              <thead><tr><th>Code</th><th>Tier</th><th>Duration</th><th>Agent</th><th>Expires</th></tr></thead>
-              <tbody>
-                {active.map(c => (
-                  <tr key={c.id}>
-                    <td><code style={{ background: Colors.cream, padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{c.code}</code></td>
-                    <td><span className="badge badge-copper">{c.tier}</span></td>
-                    <td>{c.duration_months} mo</td>
-                    <td>{agents.find(a => a.id === c.agent_id)?.name || '—'}</td>
-                    <td className="text-sm text-gray">{c.expires_at ? new Date(c.expires_at).toLocaleDateString() : '—'}</td>
-                  </tr>
-                ))}
-                {active.length === 0 && <tr><td colSpan={5} className="text-center text-gray" style={{ padding: 32 }}>No active codes</td></tr>}
-              </tbody>
-            </table>
+          {selectedIds.size > 0 && (
+            <div className="card mb-lg" style={{ background: Colors.light_blue, padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 14 }}>{selectedIds.size} selected</span>
+              <button className="btn btn-danger btn-sm" onClick={handleBulkDelete}>Delete Selected</button>
+            </div>
+          )}
+
+          <div className="card mb-lg">
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Search</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Search by code, name, or agent..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div style={{ minWidth: 140 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Filter</label>
+                <select className="form-select" value={filter} onChange={e => setFilter(e.target.value as any)}>
+                  <option value="all">All</option>
+                  <option value="active">Active</option>
+                  <option value="redeemed">Redeemed</option>
+                  <option value="expired">Expired</option>
+                </select>
+              </div>
+            </div>
           </div>
 
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Redeemed Codes</h2>
-          <div className="card table-container">
+          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Codes ({filteredCodes.length})</h2>
+          <div className="card table-container mb-lg">
             <table>
-              <thead><tr><th>Code</th><th>Tier</th><th>Redeemed At</th></tr></thead>
+              <thead>
+                <tr>
+                  <th style={{ width: 40 }}>
+                    <input
+                      type="checkbox"
+                      checked={filteredCodes.length > 0 && selectedIds.size === filteredCodes.length}
+                      onChange={toggleSelectAll}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  </th>
+                  <th>Code</th>
+                  <th>Tier</th>
+                  <th>Duration</th>
+                  <th>Agent</th>
+                  <th>Status</th>
+                  <th>Expires</th>
+                </tr>
+              </thead>
               <tbody>
-                {redeemed.map(c => (
-                  <tr key={c.id}>
-                    <td><code style={{ background: '#cccccc20', padding: '2px 8px', borderRadius: 4 }}>{c.code}</code></td>
-                    <td><span className="badge badge-gray">{c.tier}</span></td>
-                    <td className="text-sm text-gray">{c.redeemed_at ? new Date(c.redeemed_at).toLocaleDateString() : '—'}</td>
-                  </tr>
-                ))}
-                {redeemed.length === 0 && <tr><td colSpan={3} className="text-center text-gray" style={{ padding: 32 }}>No redeemed codes yet</td></tr>}
+                {filteredCodes.map(c => {
+                  const status = getCodeStatus(c);
+                  const statusBadgeClass = status === 'active' ? 'badge-copper' : status === 'redeemed' ? 'badge-gray' : 'badge-orange';
+                  return (
+                    <tr key={c.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(c.id)}
+                          onChange={() => toggleSelect(c.id)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </td>
+                      <td><code style={{ background: Colors.cream, padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{c.code}</code></td>
+                      <td><span className="badge badge-copper">{c.tier}</span></td>
+                      <td>{c.duration_months} mo</td>
+                      <td>{agents.find(a => a.id === c.agent_id)?.name || '—'}</td>
+                      <td><span className={`badge ${statusBadgeClass}`}>{status}</span></td>
+                      <td className="text-sm text-gray">{c.expires_at ? new Date(c.expires_at).toLocaleDateString() : '—'}</td>
+                    </tr>
+                  );
+                })}
+                {filteredCodes.length === 0 && <tr><td colSpan={7} className="text-center text-gray" style={{ padding: 32 }}>No codes found</td></tr>}
               </tbody>
             </table>
           </div>

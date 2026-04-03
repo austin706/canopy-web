@@ -23,13 +23,19 @@ interface ClientData {
 export default function AgentPortal() {
   const navigate = useNavigate();
   const { user } = useStore();
-  const [tab, setTab] = useState<'clients' | 'new-client' | 'codes' | 'notifications'>('clients');
+  const [tab, setTab] = useState<'clients' | 'new-client' | 'codes' | 'notifications' | 'analytics'>('clients');
   const [clients, setClients] = useState<ClientData[]>([]);
   const [codes, setCodes] = useState<any[]>([]);
   const [agentNotifications, setAgentNotifications] = useState<any[]>([]);
   const [agentId, setAgentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
+
+  // Client notes
+  const [clientNotes, setClientNotes] = useState<Record<string, any[]>>({});
+  const [newNote, setNewNote] = useState('');
+  const [noteCategory, setNoteCategory] = useState('general');
+  const [savingNote, setSavingNote] = useState(false);
 
   // New client setup form
   const [setupStep, setSetupStep] = useState<1 | 2 | 3>(1);
@@ -85,8 +91,84 @@ export default function AgentPortal() {
   const activeCodes = codes.filter(c => !c.redeemed_by);
   const redeemedCodes = codes.filter(c => c.redeemed_by);
 
-  const toggleClient = (id: string) => {
-    setExpandedClient(prev => prev === id ? null : id);
+  const toggleClient = async (id: string) => {
+    const newExpanded = expandedClient === id ? null : id;
+    setExpandedClient(newExpanded);
+    // Load notes when expanding a client
+    if (newExpanded && agentId && !clientNotes[id]) {
+      try {
+        const { data } = await supabase
+          .from('agent_client_notes')
+          .select('*')
+          .eq('agent_id', agentId)
+          .eq('client_id', id)
+          .order('created_at', { ascending: false });
+        setClientNotes(prev => ({ ...prev, [id]: data || [] }));
+      } catch {}
+    }
+  };
+
+  const handleAddNote = async (clientId: string) => {
+    if (!agentId || !newNote.trim()) return;
+    setSavingNote(true);
+    try {
+      const { data, error } = await supabase
+        .from('agent_client_notes')
+        .insert({ agent_id: agentId, client_id: clientId, note: newNote.trim(), category: noteCategory })
+        .select()
+        .single();
+      if (error) throw error;
+      setClientNotes(prev => ({ ...prev, [clientId]: [data, ...(prev[clientId] || [])] }));
+      setNewNote('');
+      setNoteCategory('general');
+    } catch (err: any) {
+      alert('Failed to save note: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  const handleDeleteNote = async (clientId: string, noteId: string) => {
+    if (!confirm('Delete this note?')) return;
+    try {
+      await supabase.from('agent_client_notes').delete().eq('id', noteId);
+      setClientNotes(prev => ({ ...prev, [clientId]: (prev[clientId] || []).filter(n => n.id !== noteId) }));
+    } catch { alert('Failed to delete note'); }
+  };
+
+  // Expiration helpers
+  const getDaysUntilExpiry = (expiresAt: string): number => {
+    return Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  };
+
+  const getExpiryBadge = (expiresAt: string) => {
+    const days = getDaysUntilExpiry(expiresAt);
+    if (days < 0) return { text: 'Expired', color: '#C62828', bg: '#E5393520' };
+    if (days <= 7) return { text: `${days}d left`, color: '#C62828', bg: '#E5393520' };
+    if (days <= 30) return { text: `${days}d left`, color: '#E65100', bg: '#FF980020' };
+    return { text: new Date(expiresAt).toLocaleDateString(), color: Colors.medGray, bg: 'transparent' };
+  };
+
+  // Analytics calculations
+  const conversionRate = codes.length > 0 ? Math.round((redeemedCodes.length / codes.length) * 100) : 0;
+  const avgDaysToRedeem = (() => {
+    const redeemed = codes.filter(c => c.redeemed_at && c.created_at);
+    if (redeemed.length === 0) return 0;
+    const totalDays = redeemed.reduce((sum: number, c: any) => {
+      return sum + (new Date(c.redeemed_at).getTime() - new Date(c.created_at).getTime()) / (1000 * 60 * 60 * 24);
+    }, 0);
+    return Math.round(totalDays / redeemed.length);
+  })();
+  const expiringSoon = activeCodes.filter(c => c.expires_at && getDaysUntilExpiry(c.expires_at) <= 30 && getDaysUntilExpiry(c.expires_at) >= 0);
+  const tierBreakdown = {
+    home: codes.filter(c => c.tier === 'home').length,
+    pro: codes.filter(c => c.tier === 'pro').length,
+    pro_plus: codes.filter(c => c.tier === 'pro_plus').length,
+  };
+  const tierRedeemed = {
+    home: codes.filter(c => c.tier === 'home' && c.redeemed_by).length,
+    pro: codes.filter(c => c.tier === 'pro' && c.redeemed_by).length,
+    pro_plus: codes.filter(c => c.tier === 'pro_plus' && c.redeemed_by).length,
   };
 
   // ─── New Client Setup ───
@@ -187,6 +269,7 @@ export default function AgentPortal() {
         <button className={`tab ${tab === 'clients' ? 'active' : ''}`} onClick={() => setTab('clients')}>Clients ({clients.length})</button>
         <button className={`tab ${tab === 'new-client' ? 'active' : ''}`} onClick={() => { setTab('new-client'); resetSetupForm(); }}>+ New Client</button>
         <button className={`tab ${tab === 'codes' ? 'active' : ''}`} onClick={() => setTab('codes')}>Gift Codes ({codes.length})</button>
+        <button className={`tab ${tab === 'analytics' ? 'active' : ''}`} onClick={() => setTab('analytics')}>Analytics</button>
         <button className={`tab ${tab === 'notifications' ? 'active' : ''}`} onClick={() => setTab('notifications')} style={{ position: 'relative' }}>
           Alerts
           {agentNotifications.filter(n => !n.read).length > 0 && (
@@ -272,6 +355,87 @@ export default function AgentPortal() {
                         </div>
                       )}
                       <p className="text-xs text-gray mt-md">Joined: {c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</p>
+
+                      {/* Sale Prep Status */}
+                      {c.home?.sale_prep_active && (
+                        <div style={{ marginTop: 16, borderTop: `1px solid ${Colors.lightGray}`, paddingTop: 16 }}>
+                          <div className="flex items-center gap-sm mb-sm">
+                            <span style={{ padding: '2px 8px', borderRadius: 4, background: '#FF980020', color: '#E65100', fontSize: 11, fontWeight: 600 }}>SALE PREP</span>
+                            <p style={{ fontWeight: 600, fontSize: 14 }}>Preparing Home for Sale</p>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {[
+                              { key: 'declutter', label: 'Declutter' },
+                              { key: 'deep_clean', label: 'Deep Clean' },
+                              { key: 'repairs', label: 'Repairs' },
+                              { key: 'staging', label: 'Staging' },
+                              { key: 'photos', label: 'Photos' },
+                              { key: 'listing', label: 'Listing' },
+                            ].map(step => {
+                              const done = c.home?.sale_prep_checklist?.[step.key];
+                              return (
+                                <span key={step.key} style={{
+                                  padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+                                  background: done ? `${Colors.success}20` : Colors.lightGray,
+                                  color: done ? Colors.success : Colors.medGray,
+                                }}>
+                                  {done ? '✓ ' : ''}{step.label}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Client Notes */}
+                      <div style={{ marginTop: 16, borderTop: `1px solid ${Colors.lightGray}`, paddingTop: 16 }}>
+                        <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Notes</p>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                          <input
+                            type="text"
+                            className="form-input"
+                            style={{ flex: 1, padding: '6px 10px', fontSize: 13 }}
+                            placeholder="Add a note about this client..."
+                            value={expandedClient === c.id ? newNote : ''}
+                            onChange={e => setNewNote(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter' && newNote.trim()) handleAddNote(c.id); }}
+                          />
+                          <select
+                            className="form-select"
+                            style={{ width: 110, padding: '6px 8px', fontSize: 12 }}
+                            value={noteCategory}
+                            onChange={e => setNoteCategory(e.target.value)}
+                          >
+                            <option value="general">General</option>
+                            <option value="sale_prep">Sale Prep</option>
+                            <option value="follow_up">Follow Up</option>
+                            <option value="property">Property</option>
+                            <option value="closing">Closing</option>
+                          </select>
+                          <button
+                            className="btn btn-primary btn-sm"
+                            disabled={savingNote || !newNote.trim()}
+                            onClick={() => handleAddNote(c.id)}
+                            style={{ whiteSpace: 'nowrap' }}
+                          >
+                            {savingNote ? '...' : 'Add'}
+                          </button>
+                        </div>
+                        {(clientNotes[c.id] || []).length === 0 ? (
+                          <p className="text-xs text-gray" style={{ fontStyle: 'italic' }}>No notes yet.</p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
+                            {(clientNotes[c.id] || []).map((note: any) => (
+                              <div key={note.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 10px', background: Colors.warmWhite, borderRadius: 6, fontSize: 13 }}>
+                                <span style={{ padding: '1px 6px', borderRadius: 4, background: Colors.copperMuted, color: Colors.copper, fontSize: 10, fontWeight: 600, textTransform: 'uppercase', flexShrink: 0, marginTop: 2 }}>{note.category}</span>
+                                <span style={{ flex: 1, color: Colors.charcoal }}>{note.note}</span>
+                                <span className="text-xs text-gray" style={{ flexShrink: 0 }}>{new Date(note.created_at).toLocaleDateString()}</span>
+                                <button className="btn btn-ghost" style={{ padding: 0, fontSize: 12, color: Colors.error, lineHeight: 1 }} onClick={() => handleDeleteNote(c.id, note.id)}>×</button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -522,7 +686,7 @@ export default function AgentPortal() {
       // ═══ Gift Codes Tab ═══
       tab === 'codes' ? (
         <>
-          <div className="grid-2 mb-lg">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }} className="mb-lg">
             <div className="card stat-card">
               <div className="stat-value" style={{ color: Colors.copper }}>{activeCodes.length}</div>
               <div className="stat-label">Available Codes</div>
@@ -530,6 +694,10 @@ export default function AgentPortal() {
             <div className="card stat-card">
               <div className="stat-value" style={{ color: Colors.success }}>{redeemedCodes.length}</div>
               <div className="stat-label">Redeemed Codes</div>
+            </div>
+            <div className="card stat-card">
+              <div className="stat-value" style={{ color: expiringSoon.length > 0 ? '#C62828' : Colors.medGray }}>{expiringSoon.length}</div>
+              <div className="stat-label">Expiring Soon (30d)</div>
             </div>
           </div>
 
@@ -546,7 +714,7 @@ export default function AgentPortal() {
                         <td><span className="badge badge-copper">{c.tier}</span></td>
                         <td className="text-sm">{c.client_name || '—'}</td>
                         <td>{c.duration_months} months</td>
-                        <td className="text-sm text-gray">{c.expires_at ? new Date(c.expires_at).toLocaleDateString() : '—'}</td>
+                        <td>{c.expires_at ? (() => { const badge = getExpiryBadge(c.expires_at); return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: badge.color, background: badge.bg }}>{badge.text}</span>; })() : '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -570,6 +738,98 @@ export default function AgentPortal() {
                         <td className="text-sm text-gray">{c.redeemed_at ? new Date(c.redeemed_at).toLocaleDateString() : '—'}</td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </>
+      ) :
+
+      // ═══ Analytics Tab ═══
+      tab === 'analytics' ? (
+        <>
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Code Performance</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }} className="mb-lg">
+            <div className="card stat-card">
+              <div className="stat-value" style={{ color: Colors.copper }}>{codes.length}</div>
+              <div className="stat-label">Total Codes</div>
+            </div>
+            <div className="card stat-card">
+              <div className="stat-value" style={{ color: Colors.success }}>{conversionRate}%</div>
+              <div className="stat-label">Conversion Rate</div>
+            </div>
+            <div className="card stat-card">
+              <div className="stat-value" style={{ color: Colors.sage }}>{avgDaysToRedeem}</div>
+              <div className="stat-label">Avg Days to Redeem</div>
+            </div>
+            <div className="card stat-card">
+              <div className="stat-value" style={{ color: expiringSoon.length > 0 ? '#C62828' : Colors.medGray }}>{expiringSoon.length}</div>
+              <div className="stat-label">Expiring Soon</div>
+            </div>
+          </div>
+
+          {/* Tier Breakdown */}
+          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Tier Breakdown</h2>
+          <div className="card mb-lg" style={{ padding: 20 }}>
+            {Object.entries(tierBreakdown).map(([tier, total]) => {
+              const redeemed = tierRedeemed[tier as keyof typeof tierRedeemed] || 0;
+              const pct = total > 0 ? Math.round((redeemed / total) * 100) : 0;
+              const tierLabel = tier === 'pro_plus' ? 'Pro+' : tier.charAt(0).toUpperCase() + tier.slice(1);
+              return (
+                <div key={tier} style={{ marginBottom: tier !== 'pro_plus' ? 16 : 0 }}>
+                  <div className="flex items-center justify-between mb-xs">
+                    <span className="fw-600 text-sm">{tierLabel}</span>
+                    <span className="text-sm text-gray">{redeemed} / {total} redeemed ({pct}%)</span>
+                  </div>
+                  <div style={{ height: 8, borderRadius: 4, background: Colors.lightGray, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, borderRadius: 4, background: tier === 'home' ? Colors.copper : tier === 'pro' ? Colors.sage : Colors.charcoal, transition: 'width 0.3s' }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Client Subscription Mix */}
+          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Client Subscription Mix</h2>
+          <div className="card mb-lg" style={{ padding: 20 }}>
+            {clients.length === 0 ? (
+              <p className="text-sm text-gray">No clients yet.</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                {['free', 'home', 'pro', 'pro_plus'].map(tier => {
+                  const count = clients.filter(c => (c.subscription_tier || 'free') === tier).length;
+                  const tierLabel = tier === 'pro_plus' ? 'Pro+' : tier === 'free' ? 'Free' : tier.charAt(0).toUpperCase() + tier.slice(1);
+                  return (
+                    <div key={tier} style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 24, fontWeight: 700, color: tier === 'free' ? Colors.medGray : tier === 'home' ? Colors.copper : tier === 'pro' ? Colors.sage : Colors.charcoal }}>{count}</div>
+                      <div className="text-xs text-gray">{tierLabel}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Expiring Codes Detail */}
+          {expiringSoon.length > 0 && (
+            <>
+              <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: '#C62828' }}>Codes Expiring Within 30 Days</h2>
+              <div className="card table-container mb-lg">
+                <table>
+                  <thead><tr><th>Code</th><th>Tier</th><th>Client</th><th>Expires</th></tr></thead>
+                  <tbody>
+                    {expiringSoon.map(c => {
+                      const badge = getExpiryBadge(c.expires_at);
+                      return (
+                        <tr key={c.id}>
+                          <td><code style={{ background: Colors.cream, padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{c.code}</code></td>
+                          <td><span className="badge badge-copper">{c.tier}</span></td>
+                          <td className="text-sm">{c.client_name || '—'}</td>
+                          <td><span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: badge.color, background: badge.bg }}>{badge.text}</span></td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

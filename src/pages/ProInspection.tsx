@@ -359,7 +359,7 @@ export default function ProInspection() {
       try {
         const { nextVisitId } = await proposeNextVisit(visitId!);
         if (nextVisitId) {
-          console.log('Next bimonthly visit auto-proposed:', nextVisitId);
+          // Next bimonthly visit auto-proposed
         }
       } catch (nextErr) {
         console.warn('Auto-propose next visit failed (non-blocking):', nextErr);

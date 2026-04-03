@@ -1,5 +1,5 @@
 // ===============================================================
-// Canopy Web — Design Tokens (Oak & Sage brand)
+// Canopy Web — Design Tokens (Canopy Home brand)
 // ===============================================================
 
 export const Colors = {

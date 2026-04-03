@@ -14,6 +14,107 @@ export default function Landing() {
   const fontStack = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
   // ═══════════════════════════════════════════════════════════════════════════════
+  // STICKY NAV HEADER
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const NavHeader = () => (
+    <header
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        background: 'rgba(255,255,255,0.95)',
+        backdropFilter: 'blur(8px)',
+        borderBottom: '1px solid #eee',
+        padding: '0 24px',
+        fontFamily: fontStack,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 64,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+          <span style={{ fontSize: 20, fontWeight: FontWeight.bold, color: Colors.charcoal }}>Canopy</span>
+        </div>
+
+        <nav style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+          <a
+            href="#features"
+            onClick={(e) => { e.preventDefault(); scrollToSection('features'); }}
+            style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none', transition: 'color 0.2s' }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.charcoal; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.color = Colors.medGray; }}
+          >
+            Features
+          </a>
+          <a
+            href="#pricing"
+            onClick={(e) => { e.preventDefault(); scrollToSection('pricing'); }}
+            style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none', transition: 'color 0.2s' }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.charcoal; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.color = Colors.medGray; }}
+          >
+            Pricing
+          </a>
+          <a
+            href="/support"
+            style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none', transition: 'color 0.2s' }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.charcoal; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.color = Colors.medGray; }}
+          >
+            Support
+          </a>
+          <button
+            onClick={() => navigate('/login')}
+            style={{
+              padding: '8px 20px',
+              fontSize: 14,
+              fontWeight: FontWeight.medium,
+              background: 'transparent',
+              color: Colors.charcoal,
+              border: `1px solid ${Colors.lightGray}`,
+              borderRadius: BorderRadius.md,
+              cursor: 'pointer',
+              fontFamily: fontStack,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.borderColor = Colors.copper; (e.target as HTMLElement).style.color = Colors.copper; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.borderColor = Colors.lightGray; (e.target as HTMLElement).style.color = Colors.charcoal; }}
+          >
+            Log In
+          </button>
+          <button
+            onClick={() => navigate('/signup')}
+            style={{
+              padding: '8px 20px',
+              fontSize: 14,
+              fontWeight: FontWeight.semibold,
+              background: Colors.copper,
+              color: Colors.white,
+              border: 'none',
+              borderRadius: BorderRadius.md,
+              cursor: 'pointer',
+              fontFamily: fontStack,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.background = '#A66B3A'; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.background = Colors.copper; }}
+          >
+            Get Started
+          </button>
+        </nav>
+      </div>
+    </header>
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════════
   // HERO SECTION
   // ═══════════════════════════════════════════════════════════════════════════════
   const HeroSection = () => (
@@ -1116,6 +1217,7 @@ export default function Landing() {
 
   return (
     <div style={{ fontFamily: fontStack }}>
+      <NavHeader />
       <HeroSection />
       <ProblemsSection />
       <FeaturesSection />

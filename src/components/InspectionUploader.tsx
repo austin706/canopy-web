@@ -548,7 +548,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
             throw new Error('AI could not extract any maintenance tasks from this report. The pages may contain only photos or non-inspection content.');
           }
 
-          console.log(`Total tasks before dedup: ${allTasks.length} (from ${NUM_PASSES} passes × ${batches.length} batches)`);
+          // Total tasks before dedup: allTasks.length (from NUM_PASSES passes × batches.length batches)
 
           // Deduplicate tasks — exact key match + fuzzy title similarity
           const normalizeKey = (t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, '');

@@ -1,7 +1,7 @@
 {
   "name": "Canopy Home",
   "short_name": "Canopy",
-  "description": "Smart home maintenance by Oak & Sage",
+  "description": "Smart home maintenance by Canopy Home",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F1EBDD",

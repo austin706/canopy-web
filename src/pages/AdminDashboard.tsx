@@ -96,6 +96,8 @@ export default function AdminDashboard() {
           { label: 'Service Areas', route: '/admin/service-areas', badge: undefined },
           { label: 'Notifications', route: '/admin/notifications', badge: undefined },
           { label: 'Email Templates', route: '/admin/emails', badge: undefined },
+          { label: 'Provider Applications', route: '/admin/provider-applications', badge: undefined },
+          { label: 'Support Tickets', route: '/admin/support-tickets', badge: undefined },
           { label: 'Analytics', route: '/admin/analytics', badge: undefined },
           { label: 'Audit Log', route: '/admin/audit-log', badge: undefined },
           { label: 'Agent Portal (View as Agent)', route: '/agent-portal', badge: undefined },

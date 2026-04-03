@@ -48,6 +48,7 @@ export default function Subscription() {
   const [enrolling, setEnrolling] = useState(false);
   const [enrollmentResult, setEnrollmentResult] = useState<{ provider: { business_name: string } | null; visitCreated: boolean } | null>(null);
   const [requestingProPlus, setRequestingProPlus] = useState(false);
+  const [proPlusMessage, setProPlusMessage] = useState('');
   const [notifyMeSubmitted, setNotifyMeSubmitted] = useState<Record<string, boolean>>({});
   const [notifyMeLoading, setNotifyMeLoading] = useState<string | null>(null);
 
@@ -80,8 +81,8 @@ export default function Subscription() {
   // Handle Pro+ consultation request
   const handleProPlusRequest = async () => {
     if (!user || !home) {
-      setMessage('Please complete your home profile before requesting Pro+.');
-      setTimeout(() => setMessage(''), 5000);
+      setProPlusMessage('Please complete your home profile before requesting Pro+.');
+      setTimeout(() => setProPlusMessage(''), 5000);
       return;
     }
     setRequestingProPlus(true);
@@ -89,20 +90,20 @@ export default function Subscription() {
       // Find a provider for their zip
       const provider = home.zip_code ? await findProviderForZip(home.zip_code) : null;
       if (!provider) {
-        setMessage('No Pro+ providers are available in your area yet. Join the waitlist below to be notified!');
-        setTimeout(() => setMessage(''), 5000);
+        setProPlusMessage('No Pro+ providers are available in your area yet. Join the waitlist to be notified!');
+        setTimeout(() => setProPlusMessage(''), 5000);
         return;
       }
       await requestConsultation(home.id, provider.id);
-      setMessage('Consultation requested! Your Canopy pro will reach out to schedule an in-home assessment. Check your notifications for updates.');
-      setTimeout(() => setMessage(''), 8000);
+      setProPlusMessage('Consultation requested! Your Canopy pro will reach out to schedule an in-home assessment. Check your notifications for updates.');
+      setTimeout(() => setProPlusMessage(''), 10000);
     } catch (e: any) {
       if (e.message?.includes('duplicate') || e.code === '23505') {
-        setMessage('You already have a Pro+ consultation request. Check your Pro+ page for status updates.');
+        setProPlusMessage('You already have a Pro+ consultation request. Check your Pro+ page for status updates.');
       } else {
-        setMessage(e.message || 'Failed to request consultation');
+        setProPlusMessage(e.message || 'Failed to request consultation');
       }
-      setTimeout(() => setMessage(''), 5000);
+      setTimeout(() => setProPlusMessage(''), 5000);
     } finally {
       setRequestingProPlus(false);
     }
@@ -426,13 +427,30 @@ export default function Subscription() {
                   )}
                 </div>
               ) : isInquiry ? (
-                <button
-                  className="btn btn-secondary btn-full mt-md"
-                  onClick={handleProPlusRequest}
-                  disabled={requestingProPlus}
-                >
-                  {requestingProPlus ? 'Requesting...' : 'Request Consultation'}
-                </button>
+                <>
+                  <button
+                    className="btn btn-secondary btn-full mt-md"
+                    onClick={handleProPlusRequest}
+                    disabled={requestingProPlus}
+                  >
+                    {requestingProPlus ? 'Requesting...' : 'Request Consultation'}
+                  </button>
+                  {proPlusMessage && (
+                    <div style={{
+                      marginTop: 10,
+                      padding: '10px 14px',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      lineHeight: 1.4,
+                      background: proPlusMessage.includes('Failed') || proPlusMessage.includes('No Pro+') || proPlusMessage.includes('complete your')
+                        ? '#E5393520' : '#4CAF5020',
+                      color: proPlusMessage.includes('Failed') || proPlusMessage.includes('No Pro+') || proPlusMessage.includes('complete your')
+                        ? '#C62828' : '#2E7D32',
+                    }}>
+                      {proPlusMessage}
+                    </div>
+                  )}
+                </>
               ) : (
                 <button
                   className="btn btn-primary btn-full mt-md"

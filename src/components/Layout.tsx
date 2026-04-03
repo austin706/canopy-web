@@ -5,6 +5,7 @@ import { signOut, resendVerificationEmail, supabase, getUserHomes } from '@/serv
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { PLANS } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 import {
   CanopyLogo,
   NavDashboard, NavCalendar, NavWeather, NavEquipment, NavDocuments,
@@ -74,15 +75,18 @@ export default function Layout() {
           <img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
           <span style={{ fontWeight: 700, fontSize: 18 }}>Canopy</span>
         </div>
-        <button
-          className="hamburger-btn"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label="Toggle navigation menu"
-        >
-          <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`} />
-          <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`} />
-          <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ThemeToggleIcon />
+          <button
+            className="hamburger-btn"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle navigation menu"
+          >
+            <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`} />
+            <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`} />
+            <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`} />
+          </button>
+        </div>
       </header>
 
       {/* Mobile overlay */}
@@ -183,8 +187,9 @@ export default function Layout() {
               <div className="user-tier">{PLANS.find(p => p.value === tier)?.name || 'Free'}</div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
             <NavLink to="/profile" className="btn btn-ghost btn-sm" style={{ flex: 1, textDecoration: 'none', fontSize: 12 }}>Settings</NavLink>
+            <ThemeToggleIcon />
             <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 12, color: '#E53935' }} onClick={handleLogout}>Sign Out</button>
           </div>
           <div style={{ display: 'flex', gap: 12, marginTop: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -248,5 +253,34 @@ export default function Layout() {
         </ErrorBoundary>
       </main>
     </div>
+  );
+}
+
+/** Simple sun/moon toggle button */
+function ThemeToggleIcon() {
+  const { resolvedMode, setMode } = useTheme();
+  const isDark = resolvedMode === 'dark';
+  return (
+    <button
+      onClick={() => setMode(isDark ? 'light' : 'dark')}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={isDark ? 'Light mode' : 'Dark mode'}
+      style={{
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        padding: 6,
+        borderRadius: 8,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 18,
+        transition: 'background 0.2s',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--cream)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+    >
+      {isDark ? '\u2600\uFE0F' : '\uD83C\uDF19'}
+    </button>
   );
 }

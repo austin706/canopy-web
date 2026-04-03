@@ -45,6 +45,78 @@ export default function Subscription() {
   const [waitlistMessage, setWaitlistMessage] = useState('');
   const tier = user?.subscription_tier || 'free';
 
+  // Plan change modal state
+  const [planChangeModal, setPlanChangeModal] = useState<{
+    visible: boolean;
+    loading: boolean;
+    confirming: boolean;
+    preview: any | null;
+    targetTier: string | null;
+  }>({ visible: false, loading: false, confirming: false, preview: null, targetTier: null });
+
+  const previewPlanChange = async (newTier: string) => {
+    if (!user) return;
+    setPlanChangeModal({ visible: true, loading: true, confirming: false, preview: null, targetTier: newTier });
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) throw new Error('Not authenticated');
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/update-subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'apikey': SUPABASE_ANON_KEY },
+        body: JSON.stringify({ action: 'preview', new_tier: newTier }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to preview plan change');
+      // If requires_checkout, redirect to checkout flow instead
+      if (data.requires_checkout) {
+        setPlanChangeModal(prev => ({ ...prev, visible: false }));
+        handleStripeCheckout(newTier);
+        return;
+      }
+      setPlanChangeModal(prev => ({ ...prev, loading: false, preview: data }));
+    } catch (e: any) {
+      setPlanChangeModal(prev => ({ ...prev, visible: false }));
+      setMessage(e.message || 'Failed to preview plan change');
+      setTimeout(() => setMessage(''), 5000);
+    }
+  };
+
+  const confirmPlanChange = async () => {
+    if (!planChangeModal.targetTier || !user) return;
+    setPlanChangeModal(prev => ({ ...prev, confirming: true }));
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) throw new Error('Not authenticated');
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/update-subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'apikey': SUPABASE_ANON_KEY },
+        body: JSON.stringify({ action: 'confirm', new_tier: planChangeModal.targetTier }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to change plan');
+      // Update local state
+      const { setUser } = useStore.getState();
+      if (user) {
+        setUser({ ...user, subscription_tier: data.new_tier });
+      }
+      setPlanChangeModal({ visible: false, loading: false, confirming: false, preview: null, targetTier: null });
+      let successMsg = data.message || `Plan changed to ${data.new_name}!`;
+      if (data.pro_services_note) successMsg += ' ' + data.pro_services_note;
+      setMessage(successMsg);
+      setTimeout(() => setMessage(''), 8000);
+    } catch (e: any) {
+      setPlanChangeModal(prev => ({ ...prev, confirming: false }));
+      setMessage(e.message || 'Failed to change plan');
+      setTimeout(() => setMessage(''), 5000);
+    }
+  };
+
+  const closePlanChangeModal = () => {
+    setPlanChangeModal({ visible: false, loading: false, confirming: false, preview: null, targetTier: null });
+  };
+
   const [enrolling, setEnrolling] = useState(false);
   const [enrollmentResult, setEnrollmentResult] = useState<{ provider: { business_name: string } | null; visitCreated: boolean } | null>(null);
   const [requestingProPlus, setRequestingProPlus] = useState(false);
@@ -454,11 +526,11 @@ export default function Subscription() {
               ) : (
                 <button
                   className="btn btn-primary btn-full mt-md"
-                  onClick={() => handleStripeCheckout(plan.value)}
-                  disabled={checkoutLoading === plan.value}
+                  onClick={() => tier === 'free' ? handleStripeCheckout(plan.value) : previewPlanChange(plan.value)}
+                  disabled={checkoutLoading === plan.value || planChangeModal.loading}
                 >
-                  {checkoutLoading === plan.value
-                    ? 'Loading checkout...'
+                  {checkoutLoading === plan.value || (planChangeModal.loading && planChangeModal.targetTier === plan.value)
+                    ? 'Loading...'
                     : (plan.price || 0) > (PLANS.find(p => p.value === tier)?.price || 0)
                       ? 'Upgrade'
                       : 'Change Plan'}
@@ -466,8 +538,12 @@ export default function Subscription() {
               )
             )}
             {tier !== plan.value && plan.value === 'free' && tier !== 'free' && (
-              <button className="btn btn-ghost btn-full mt-md" onClick={() => setMessage('To downgrade, cancel your subscription from your Stripe billing portal.')}>
-                Downgrade
+              <button
+                className="btn btn-ghost btn-full mt-md"
+                onClick={() => previewPlanChange('free')}
+                disabled={planChangeModal.loading}
+              >
+                {planChangeModal.loading && planChangeModal.targetTier === 'free' ? 'Loading...' : 'Downgrade to Free'}
               </button>
             )}
           </div>
@@ -534,6 +610,128 @@ export default function Subscription() {
               {submittingWaitlist ? 'Joining...' : 'Join Waitlist'}
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Plan Change Confirmation Modal */}
+      {planChangeModal.visible && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9998,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget && !planChangeModal.confirming) closePlanChangeModal(); }}
+        >
+          <div style={{
+            background: '#fff', borderRadius: 16, width: '100%', maxWidth: 460,
+            maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '20px 24px 16px',
+              borderBottom: `1px solid ${Colors.lightGray}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: Colors.charcoal }}>
+                {planChangeModal.loading ? 'Loading...' : planChangeModal.preview?.change_type === 'upgrade' ? 'Confirm Upgrade' : planChangeModal.preview?.change_type === 'cancel' ? 'Cancel Subscription' : 'Confirm Plan Change'}
+              </p>
+              <button
+                onClick={closePlanChangeModal}
+                disabled={planChangeModal.confirming}
+                style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: Colors.medGray, padding: '4px 8px', lineHeight: 1 }}
+                aria-label="Close"
+              >&times;</button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '20px 24px' }}>
+              {planChangeModal.loading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 0' }}>
+                  <div className="spinner" style={{ marginBottom: 12 }} />
+                  <p style={{ fontSize: 14, color: Colors.medGray, margin: 0 }}>Calculating your plan change...</p>
+                </div>
+              ) : planChangeModal.preview ? (
+                <>
+                  {/* Plan change direction */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 20 }}>
+                    <div style={{ textAlign: 'center', padding: '10px 16px', background: Colors.cream, borderRadius: 8, flex: 1 }}>
+                      <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 2px' }}>Current</p>
+                      <p style={{ fontSize: 16, fontWeight: 700, color: Colors.charcoal, margin: 0 }}>{planChangeModal.preview.current_name}</p>
+                    </div>
+                    <span style={{ fontSize: 20, color: Colors.copper }}>&rarr;</span>
+                    <div style={{ textAlign: 'center', padding: '10px 16px', background: Colors.copperMuted, borderRadius: 8, flex: 1 }}>
+                      <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 2px' }}>New Plan</p>
+                      <p style={{ fontSize: 16, fontWeight: 700, color: Colors.copper, margin: 0 }}>{planChangeModal.preview.new_name}</p>
+                    </div>
+                  </div>
+
+                  {/* Pricing details */}
+                  {planChangeModal.preview.amount_due_now > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${Colors.lightGray}`, fontSize: 14 }}>
+                      <span style={{ color: Colors.darkGray }}>Due now (prorated)</span>
+                      <span style={{ fontWeight: 700, color: Colors.charcoal }}>${planChangeModal.preview.amount_due_now.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {planChangeModal.preview.proration_credit > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${Colors.lightGray}`, fontSize: 14 }}>
+                      <span style={{ color: Colors.darkGray }}>Prorated credit</span>
+                      <span style={{ fontWeight: 700, color: Colors.sage }}>-${planChangeModal.preview.proration_credit.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {planChangeModal.preview.new_price_monthly !== undefined && planChangeModal.preview.new_price_monthly !== null && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${Colors.lightGray}`, fontSize: 14 }}>
+                      <span style={{ color: Colors.darkGray }}>New monthly rate</span>
+                      <span style={{ fontWeight: 700, color: Colors.charcoal }}>
+                        {planChangeModal.preview.new_price_monthly === 0 ? 'Free' : `$${planChangeModal.preview.new_price_monthly.toFixed(2)}/mo`}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Message */}
+                  <p style={{ fontSize: 14, color: Colors.darkGray, lineHeight: 1.6, margin: '16px 0 0' }}>
+                    {planChangeModal.preview.message}
+                  </p>
+
+                  {/* Pro services note */}
+                  {planChangeModal.preview.pro_services_note && (
+                    <div style={{
+                      marginTop: 12, padding: '10px 14px', borderRadius: 8,
+                      background: '#FFF3E0', border: '1px solid #FFE0B2', fontSize: 13, color: '#E65100', lineHeight: 1.5,
+                    }}>
+                      {planChangeModal.preview.pro_services_note}
+                    </div>
+                  )}
+
+                  {/* Confirm / Cancel buttons */}
+                  <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                    <button
+                      className="btn btn-ghost"
+                      onClick={closePlanChangeModal}
+                      disabled={planChangeModal.confirming}
+                      style={{ flex: 1 }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className={`btn ${planChangeModal.preview.change_type === 'upgrade' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={confirmPlanChange}
+                      disabled={planChangeModal.confirming}
+                      style={{ flex: 1 }}
+                    >
+                      {planChangeModal.confirming
+                        ? 'Processing...'
+                        : planChangeModal.preview.change_type === 'upgrade'
+                          ? 'Confirm Upgrade'
+                          : planChangeModal.preview.change_type === 'cancel'
+                            ? 'Confirm Cancellation'
+                            : 'Confirm Downgrade'}
+                    </button>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
         </div>
       )}
 

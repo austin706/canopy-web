@@ -187,6 +187,12 @@ export default function Layout() {
             <NavLink to="/profile" className="btn btn-ghost btn-sm" style={{ flex: 1, textDecoration: 'none', fontSize: 12 }}>Settings</NavLink>
             <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 12, color: '#E53935' }} onClick={handleLogout}>Sign Out</button>
           </div>
+          <div style={{ display: 'flex', gap: 12, marginTop: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a href="/terms" style={{ fontSize: 10, color: '#999', textDecoration: 'none' }}>Terms</a>
+            <a href="/privacy" style={{ fontSize: 10, color: '#999', textDecoration: 'none' }}>Privacy</a>
+            <a href="/cancellation" style={{ fontSize: 10, color: '#999', textDecoration: 'none' }}>Cancellation</a>
+            <a href="/ai-disclaimer" style={{ fontSize: 10, color: '#999', textDecoration: 'none' }}>AI Disclaimer</a>
+          </div>
         </div>
       </nav>
       <main className="main-content">

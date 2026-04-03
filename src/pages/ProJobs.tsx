@@ -111,6 +111,32 @@ export default function ProJobs() {
 
   const handleAcceptJob = async (jobId: string) => {
     if (!providerId) return;
+
+    try {
+      // Check capacity before accepting
+      const today = new Date().toISOString().split('T')[0];
+      const { count } = await supabase
+        .from('pro_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('provider_id', providerId)
+        .in('status', ['matched', 'scheduled'])
+        .gte('scheduled_date', today)
+        .lte('scheduled_date', today);
+
+      const { data: provider } = await supabase
+        .from('pro_providers')
+        .select('max_jobs_per_day')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
+        .single();
+
+      if (provider && provider.max_jobs_per_day && (count || 0) >= provider.max_jobs_per_day) {
+        alert(`You've reached your maximum jobs for today (${provider.max_jobs_per_day}). Update your capacity in settings to accept more.`);
+        return;
+      }
+    } catch (err) {
+      console.error('Error checking capacity:', err);
+    }
+
     if (!window.confirm('Accept this service request?')) return;
 
     try {

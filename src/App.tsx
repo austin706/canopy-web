@@ -10,6 +10,7 @@ import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
+import Landing from '@/pages/Landing';
 import Dashboard from '@/pages/Dashboard';
 import Calendar from '@/pages/Calendar';
 import Weather from '@/pages/Weather';
@@ -63,6 +64,12 @@ import HomeReport from '@/pages/HomeReport';
 import HomeTransfer from '@/pages/HomeTransfer';
 import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
+import ContractorTerms from '@/pages/ContractorTerms';
+import AIDisclaimer from '@/pages/AIDisclaimer';
+import CancellationPolicy from '@/pages/CancellationPolicy';
+import PCICompliance from '@/pages/PCICompliance';
+import Support from '@/pages/Support';
+import ApplyPro from '@/pages/ApplyPro';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useStore();
@@ -74,6 +81,11 @@ function RoleRoute({ children, roles }: { children: React.ReactNode; roles: stri
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!user?.role || !roles.includes(user.role)) return <Navigate to="/" replace />;
   return <>{children}</>;
+}
+
+function HomeRoute() {
+  const { isAuthenticated } = useStore();
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Landing />;
 }
 
 export default function App() {
@@ -125,6 +137,9 @@ export default function App() {
     <BrowserRouter>
       <ErrorBoundary>
         <Routes>
+          {/* Landing/Home — shows Landing for unauthenticated, Dashboard for authenticated */}
+          <Route path="/" element={<HomeRoute />} />
+
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -133,6 +148,12 @@ export default function App() {
           <Route path="/pro-login" element={<ProLogin />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/contractor-terms" element={<ContractorTerms />} />
+          <Route path="/ai-disclaimer" element={<AIDisclaimer />} />
+          <Route path="/cancellation" element={<CancellationPolicy />} />
+          <Route path="/pci-compliance" element={<PCICompliance />} />
+          <Route path="/support" element={<Support />} />
+          <Route path="/apply-pro" element={<ApplyPro />} />
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
           {/* ═══════════════════════════════════════════════════════
@@ -167,7 +188,7 @@ export default function App() {
               Admin can access everything; regular users see homeowner nav
           ═══════════════════════════════════════════════════════ */}
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/weather" element={<Weather />} />
             <Route path="/task/:id" element={<TaskDetail />} />

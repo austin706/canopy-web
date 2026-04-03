@@ -28,6 +28,43 @@ export const Colors = {
   inputBackground: '#F5F0E8',
 };
 
+// ===============================================================
+// Dark Mode Tokens
+// ===============================================================
+
+export const DarkColors: typeof Colors = {
+  copper: '#D4A373',
+  copperLight: '#E0BC94',
+  copperDark: '#C4844E',
+  copperMuted: '#D4A37320',
+  sage: '#A8B89C',
+  sageLight: '#BCC9B2',
+  sageDark: '#8B9E7E',
+  sageMuted: '#A8B89C15',
+  charcoal: '#E8E2D8',       // text flips to light
+  darkGray: '#C0BAB0',
+  medGray: '#9E9890',
+  silver: '#6A6460',
+  lightGray: '#3A3530',       // borders darken
+  warmWhite: '#1A1816',
+  cream: '#252220',
+  white: '#1E1C1A',           // surfaces flip to dark
+  success: '#66BB6A',
+  warning: '#FFB74D',
+  error: '#EF5350',
+  info: '#42A5F5',
+  background: '#141210',
+  cardBackground: '#1E1C1A',
+  inputBackground: '#252220',
+};
+
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+/** Get the correct color set for a given mode */
+export function getThemeColors(mode: 'light' | 'dark'): typeof Colors {
+  return mode === 'dark' ? DarkColors : Colors;
+}
+
 export const PriorityColors: Record<string, string> = {
   urgent: Colors.error,
   high: Colors.copper,

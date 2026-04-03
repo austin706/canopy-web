@@ -31,6 +31,33 @@
   --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
 }
 
+/* Dark Mode overrides */
+[data-theme="dark"] {
+  --copper: #D4A373;
+  --copper-light: #E0BC94;
+  --copper-dark: #C4844E;
+  --copper-muted: #D4A37320;
+  --sage: #A8B89C;
+  --sage-light: #BCC9B2;
+  --sage-dark: #8B9E7E;
+  --sage-muted: #A8B89C15;
+  --charcoal: #E8E2D8;
+  --dark-gray: #C0BAB0;
+  --med-gray: #9E9890;
+  --silver: #6A6460;
+  --light-gray: #3A3530;
+  --warm-white: #1A1816;
+  --cream: #252220;
+  --white: #1E1C1A;
+  --success: #66BB6A;
+  --warning: #FFB74D;
+  --error: #EF5350;
+  --info: #42A5F5;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.5);
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
@@ -39,6 +66,7 @@ body {
   color: var(--charcoal);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s, color 0.3s;
 }
 
 /* Layout */

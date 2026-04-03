@@ -4,6 +4,8 @@ import { useStore } from '@/store/useStore';
 import { signOut, updateProfile, redeemGiftCode, deleteUserAccount, lookupAgentByCode, linkAgent } from '@/services/supabase';
 import { PLANS } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { ThemeMode } from '@/constants/theme';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -186,6 +188,9 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* Appearance / Dark Mode */}
+      <ThemeToggle />
+
       <button className="btn btn-danger btn-full" onClick={handleLogout}>Sign Out</button>
 
       {/* Delete Account */}
@@ -193,6 +198,44 @@ export default function Profile() {
         <h3 style={{ fontSize: 16, marginBottom: 8, color: '#C62828' }}>Danger Zone</h3>
         <p className="text-sm text-gray mb-md">Permanently delete your account and all associated data. This action cannot be undone.</p>
         <button className="btn btn-danger btn-sm" onClick={handleDeleteAccount}>Delete My Account</button>
+      </div>
+    </div>
+  );
+}
+
+function ThemeToggle() {
+  const { mode, setMode, colors } = useTheme();
+  const options: { value: ThemeMode; label: string; icon: string }[] = [
+    { value: 'light', label: 'Light', icon: '☀️' },
+    { value: 'dark', label: 'Dark', icon: '🌙' },
+    { value: 'system', label: 'System', icon: '💻' },
+  ];
+  return (
+    <div className="card mb-lg">
+      <h3 style={{ fontSize: 16, marginBottom: 12 }}>Appearance</h3>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {options.map(opt => (
+          <button
+            key={opt.value}
+            onClick={() => setMode(opt.value)}
+            style={{
+              flex: 1,
+              padding: '10px 0',
+              borderRadius: 8,
+              border: `2px solid ${mode === opt.value ? colors.sage : colors.lightGray}`,
+              background: mode === opt.value ? colors.sageMuted : 'transparent',
+              cursor: 'pointer',
+              textAlign: 'center',
+              fontSize: 13,
+              fontWeight: mode === opt.value ? 600 : 400,
+              color: colors.charcoal,
+              transition: 'all 0.2s',
+            }}
+          >
+            <span style={{ display: 'block', fontSize: 20, marginBottom: 4 }}>{opt.icon}</span>
+            {opt.label}
+          </button>
+        ))}
       </div>
     </div>
   );

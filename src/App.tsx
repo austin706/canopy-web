@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import Layout from '@/components/Layout';
 import AgentLayout from '@/components/AgentLayout';
 import ProLayout from '@/components/ProLayout';
@@ -136,6 +137,7 @@ export default function App() {
   }, []);
 
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <ErrorBoundary>
         <Routes>
@@ -238,5 +240,6 @@ export default function App() {
         </Routes>
       </ErrorBoundary>
     </BrowserRouter>
+    </ThemeProvider>
   );
 }

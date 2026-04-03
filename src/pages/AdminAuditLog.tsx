@@ -305,7 +305,7 @@ export default function AdminAuditLog() {
               </thead>
               <tbody>
                 {filteredLogs.map((log) => (
-                  <tr key={log.id} style={{ borderBottom: '1px solid #eee', '&:hover': { backgroundColor: '#fafafa' } }}>
+                  <tr key={log.id} style={{ borderBottom: '1px solid #eee' }}>
                     <td style={{ padding: '12px', color: '#333' }}>{formatTimestamp(log.created_at)}</td>
                     <td style={{ padding: '12px', color: '#333' }}>{log.admin_email}</td>
                     <td style={{ padding: '12px' }}>

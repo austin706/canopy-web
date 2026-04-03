@@ -434,6 +434,11 @@ export const updateAgent = async (agentId: string, updates: any) => {
   return data;
 };
 
+export const deleteAgent = async (agentId: string) => {
+  const { error } = await supabase.from('agents').delete().eq('id', agentId);
+  if (error) throw error;
+};
+
 export const getAllUsers = async () => {
   const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
   if (error) throw error;

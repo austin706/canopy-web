@@ -98,7 +98,7 @@ export default function AdminProRequests() {
   const handleAssignProvider = async (requestId: string, providerId: string) => {
     if (!providerId) return;
     try {
-      const provider = providers.find(p => p.id === providerId);
+      const assignedProvider = providers.find(p => p.id === providerId);
       const request = requests.find(r => r.id === requestId);
       const category = request?.category || request?.service_type;
 
@@ -106,7 +106,7 @@ export default function AdminProRequests() {
       setRequests(prev => prev.map(r => r.id === requestId ? { ...r, provider_id: providerId, status: 'matched' } : r));
 
       // Log provider assignment
-      logAdminAction('request.assign', 'pro_request', requestId, { provider_name: provider?.business_name || provider?.contact_name, category }).catch(() => {});
+      logAdminAction('request.assign', 'pro_request', requestId, { provider_name: assignedProvider?.business_name || assignedProvider?.contact_name, category }).catch(() => {});
 
       // Create linked pro_service_appointment so it shows in the provider portal
       if (request) {
@@ -130,19 +130,18 @@ export default function AdminProRequests() {
       }
 
       // Notify the homeowner that a provider has been assigned
-      const provider = providers.find(p => p.id === providerId);
       if (request?.user_id) {
         sendNotification({
           user_id: request.user_id,
           title: 'Pro Provider Assigned',
-          body: `${provider?.business_name || provider?.contact_name || 'A pro provider'} has been assigned to your ${request.category || request.service_type} request. They will be in touch to schedule service.`,
+          body: `${assignedProvider?.business_name || assignedProvider?.contact_name || 'A pro provider'} has been assigned to your ${request.category || request.service_type} request. They will be in touch to schedule service.`,
           category: 'pro_service',
           action_url: '/pro-request',
         }).catch(() => {});
       }
 
       // Notify the provider about the new assignment
-      if (provider) {
+      if (assignedProvider) {
         const { data: providerProfile } = await supabase
           .from('pro_providers').select('user_id').eq('id', providerId).single();
         if (providerProfile?.user_id) {

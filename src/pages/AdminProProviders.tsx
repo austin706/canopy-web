@@ -4,7 +4,7 @@ import {
   getAllProProviders, createProProvider, updateProProvider, deleteProProvider,
 } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
-import { supabase } from '@/services/supabaseClient';
+import { supabase } from '@/services/supabase';
 import { logAdminAction } from '@/services/auditLog';
 
 const SERVICE_CATEGORIES = [
@@ -254,7 +254,7 @@ export default function AdminProProviders() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
             <div>
               <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 4px 0' }}>Total Jobs Assigned</p>
-              <p style={{ fontSize: 24, fontWeight: 600, margin: 0, color: Colors.text }}>{platformMetrics.totalJobs}</p>
+              <p style={{ fontSize: 24, fontWeight: 600, margin: 0, color: Colors.charcoal }}>{platformMetrics.totalJobs}</p>
             </div>
             <div>
               <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 4px 0' }}>Platform Completion Rate</p>
@@ -267,7 +267,7 @@ export default function AdminProProviders() {
             </div>
             <div>
               <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 4px 0' }}>Average Rating</p>
-              <p style={{ fontSize: 16, fontWeight: 600, margin: 0, color: Colors.text }}>
+              <p style={{ fontSize: 16, fontWeight: 600, margin: 0, color: Colors.charcoal }}>
                 {platformAvgRating ? `${platformAvgRating} ★` : 'N/A'}
               </p>
             </div>
@@ -342,7 +342,7 @@ export default function AdminProProviders() {
                         </span>
                       </td>
                       <td>
-                        <span style={{ fontSize: 12, color: Colors.text }}>
+                        <span style={{ fontSize: 12, color: Colors.charcoal }}>
                           {metrics[p.id] ? renderStars(parseFloat(metrics[p.id].avgRating || 0)) : '—'}
                         </span>
                       </td>

@@ -120,7 +120,7 @@ export default function AdminGiftCodes() {
       {loading ? <div className="text-center"><div className="spinner" /></div> : (
         <>
           {selectedIds.size > 0 && (
-            <div className="card mb-lg" style={{ background: Colors.light_blue, padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="card mb-lg" style={{ background: Colors.info + '20', padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 14 }}>{selectedIds.size} selected</span>
               <button className="btn btn-danger btn-sm" onClick={handleBulkDelete}>Delete Selected</button>
             </div>

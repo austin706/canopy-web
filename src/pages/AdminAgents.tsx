@@ -111,7 +111,7 @@ export default function AdminAgents() {
       <input className="form-input mb-lg" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search agents..." style={{ maxWidth: 400 }} />
 
       {selectedIds.size > 0 && (
-        <div style={{ marginBottom: 16, padding: 12, backgroundColor: Colors.lightestGray, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ marginBottom: 16, padding: 12, backgroundColor: Colors.cream, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ color: Colors.darkGray, fontSize: 14 }}>{selectedIds.size} agent(s) selected</span>
           <button
             className="btn btn-danger btn-sm"

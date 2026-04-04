@@ -101,6 +101,22 @@ export default function Landing() {
             >
               Support
             </a>
+            <a
+              href="/for-agents"
+              style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.charcoal; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.color = Colors.medGray; }}
+            >
+              For Agents
+            </a>
+            <a
+              href="/for-pros"
+              style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.charcoal; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.color = Colors.medGray; }}
+            >
+              For Pros
+            </a>
             <button
               onClick={() => navigate('/login')}
               style={{
@@ -162,6 +178,14 @@ export default function Landing() {
           <a href="/support"
             style={{ padding: '12px 0', fontSize: 16, color: Colors.charcoal, textDecoration: 'none', fontWeight: FontWeight.medium }}>
             Support
+          </a>
+          <a href="/for-agents"
+            style={{ padding: '12px 0', fontSize: 16, color: Colors.charcoal, textDecoration: 'none', fontWeight: FontWeight.medium }}>
+            For Agents
+          </a>
+          <a href="/for-pros"
+            style={{ padding: '12px 0', fontSize: 16, color: Colors.charcoal, textDecoration: 'none', fontWeight: FontWeight.medium }}>
+            For Pros
           </a>
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
             <button onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
@@ -970,151 +994,64 @@ export default function Landing() {
   );
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // FOR REAL ESTATE AGENTS SECTION
+  // SLIM CTA — AGENTS & PROS
   // ═══════════════════════════════════════════════════════════════════════════════
-  const AgentsSection = () => (
+  const ProsCta = () => (
     <section
       style={{
-        background: Colors.warmWhite,
-        padding: isMobile ? '48px 16px' : '80px 24px',
+        background: '#F5F4F0',
+        padding: isMobile ? '32px 16px' : '48px 24px',
         fontFamily: fontStack,
       }}
     >
-      <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
-        <h2
-          style={{
-            fontSize: isMobile ? 28 : 42,
-            fontWeight: FontWeight.bold,
-            color: Colors.charcoal,
-            margin: '0 0 24px 0',
-          }}
-        >
-          The perfect closing gift
-        </h2>
-
-        <p
-          style={{
-            fontSize: 18,
-            color: Colors.medGray,
-            lineHeight: 1.6,
-            margin: '0 0 48px 0',
-          }}
-        >
-          Give your clients a subscription to Canopy as a closing gift. Stay connected, build loyalty, and stand out from other agents.
+      <div
+        style={{
+          maxWidth: '900px',
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: isMobile ? 16 : 32,
+          textAlign: 'center',
+        }}
+      >
+        <p style={{ fontSize: 16, color: Colors.medGray, margin: 0 }}>
+          Are you a home service professional or real estate agent?
         </p>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '32px',
-            marginBottom: '48px',
-          }}
-        >
-          {['Purchase gift codes in bulk', 'Track client engagement', 'Branded agent portal', 'Client home management visibility'].map(
-            (item) => (
-              <div key={item} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 24, marginBottom: '12px' }}>✓</div>
-                <p style={{ fontSize: 15, color: Colors.medGray, margin: 0 }}>
-                  {item}
-                </p>
-              </div>
-            )
-          )}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <a
+            href="/for-pros"
+            style={{
+              padding: '10px 24px',
+              fontSize: 14,
+              fontWeight: FontWeight.semibold,
+              background: Colors.copper,
+              color: Colors.white,
+              borderRadius: BorderRadius.md,
+              textDecoration: 'none',
+              transition: 'all 0.2s',
+            }}
+          >
+            Canopy for Pros
+          </a>
+          <a
+            href="/for-agents"
+            style={{
+              padding: '10px 24px',
+              fontSize: 14,
+              fontWeight: FontWeight.semibold,
+              background: 'transparent',
+              color: Colors.copper,
+              border: `1px solid ${Colors.copper}`,
+              borderRadius: BorderRadius.md,
+              textDecoration: 'none',
+              transition: 'all 0.2s',
+            }}
+          >
+            Canopy for Agents
+          </a>
         </div>
-
-        <button
-          onClick={() => {
-            window.location.href = 'mailto:agents@canopyhome.app';
-          }}
-          style={{
-            padding: '14px 40px',
-            fontSize: 16,
-            fontWeight: FontWeight.semibold,
-            background: Colors.copper,
-            color: Colors.white,
-            border: 'none',
-            borderRadius: BorderRadius.lg,
-            cursor: 'pointer',
-            fontFamily: fontStack,
-          }}
-        >
-          Learn More About Agent Partnership
-        </button>
-      </div>
-    </section>
-  );
-
-  // ═══════════════════════════════════════════════════════════════════════════════
-  // FOR PRO PROVIDERS SECTION
-  // ═══════════════════════════════════════════════════════════════════════════════
-  const ProProvidersSection = () => (
-    <section
-      style={{
-        background: Colors.white,
-        padding: isMobile ? '48px 16px' : '80px 24px',
-        fontFamily: fontStack,
-      }}
-    >
-      <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
-        <h2
-          style={{
-            fontSize: isMobile ? 28 : 42,
-            fontWeight: FontWeight.bold,
-            color: Colors.charcoal,
-            margin: '0 0 24px 0',
-          }}
-        >
-          Grow your business with Canopy
-        </h2>
-
-        <p
-          style={{
-            fontSize: 18,
-            color: Colors.medGray,
-            lineHeight: 1.6,
-            margin: '0 0 48px 0',
-          }}
-        >
-          Join our network of trusted home maintenance professionals. Get matched with homeowners in your area.
-        </p>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '32px',
-            marginBottom: '48px',
-          }}
-        >
-          {['Steady job pipeline', 'Flexible scheduling', 'Simple quoting & invoicing', 'Build your reputation with ratings'].map(
-            (item) => (
-              <div key={item} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 24, marginBottom: '12px' }}>✓</div>
-                <p style={{ fontSize: 15, color: Colors.medGray, margin: 0 }}>
-                  {item}
-                </p>
-              </div>
-            )
-          )}
-        </div>
-
-        <button
-          onClick={() => navigate('/apply-pro')}
-          style={{
-            padding: '14px 40px',
-            fontSize: 16,
-            fontWeight: FontWeight.semibold,
-            background: Colors.copper,
-            color: Colors.white,
-            border: 'none',
-            borderRadius: BorderRadius.lg,
-            cursor: 'pointer',
-            fontFamily: fontStack,
-          }}
-        >
-          Apply to Join
-        </button>
       </div>
     </section>
   );
@@ -1290,8 +1227,7 @@ export default function Landing() {
       <ProblemsSection />
       <FeaturesSection />
       <PricingSection />
-      <AgentsSection />
-      <ProProvidersSection />
+      <ProsCta />
       <Footer />
     </div>
   );

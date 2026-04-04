@@ -76,6 +76,8 @@ const CancellationPolicy = lazy(() => import('@/pages/CancellationPolicy'));
 const PCICompliance = lazy(() => import('@/pages/PCICompliance'));
 const Support = lazy(() => import('@/pages/Support'));
 const ApplyPro = lazy(() => import('@/pages/ApplyPro'));
+const AgentLanding = lazy(() => import('@/pages/AgentLanding'));
+const ProLanding = lazy(() => import('@/pages/ProLanding'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useStore();
@@ -162,6 +164,8 @@ export default function App() {
           <Route path="/pci-compliance" element={<PCICompliance />} />
           <Route path="/support" element={<Support />} />
           <Route path="/apply-pro" element={<ApplyPro />} />
+          <Route path="/for-agents" element={<AgentLanding />} />
+          <Route path="/for-pros" element={<ProLanding />} />
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
           {/* ═══════════════════════════════════════════════════════

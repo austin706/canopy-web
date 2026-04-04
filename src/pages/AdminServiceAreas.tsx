@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { invalidateServiceAreaCache } from '@/services/subscriptionGate';
 import { logAdminAction } from '@/services/auditLog';
+import { getMessageVariant, messageColors } from '@/utils/messageType';
 import { Colors } from '@/constants/theme';
 
 interface ServiceArea {
@@ -379,8 +380,9 @@ export default function AdminServiceAreas() {
           {/* Coverage Gaps Alert */}
           {gapZips.size > 0 && (
             <div className="card mb-lg" style={{
-              background: '#FFE5E5',
-              borderLeft: `4px solid ${Colors.error}`,
+              background: 'var(--color-error)',
+              opacity: 0.1,
+              borderLeft: `4px solid var(--color-error)`,
               padding: 16,
             }}>
               <h4 style={{ margin: '0 0 8px 0', color: Colors.charcoal, fontSize: 14, fontWeight: 600 }}>
@@ -394,7 +396,7 @@ export default function AdminServiceAreas() {
                   <span key={zip} style={{
                     padding: '4px 8px',
                     borderRadius: 4,
-                    background: Colors.error,
+                    background: 'var(--color-error)',
                     color: 'white',
                     fontSize: 12,
                     fontWeight: 600,
@@ -628,8 +630,8 @@ export default function AdminServiceAreas() {
             <div style={{
               padding: '8px 12px',
               borderRadius: 8,
-              background: message.includes('Added') || message.includes('updated') ? '#4CAF5020' : '#E5393520',
-              color: message.includes('Added') || message.includes('updated') ? '#2E7D32' : '#C62828',
+              background: messageColors(getMessageVariant(message)).bg,
+              color: messageColors(getMessageVariant(message)).fg,
               fontSize: 13,
               marginBottom: 12,
             }}>

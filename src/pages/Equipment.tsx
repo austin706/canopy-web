@@ -238,7 +238,7 @@ export default function Equipment() {
               background: Colors.copperMuted,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 16px', fontSize: 32,
-            }}>📋</div>
+            }} role="img" aria-label="Clipboard">📋</div>
             <h3 style={{ marginBottom: 8, fontSize: 20 }}>Your Equipment Registry</h3>
             <p style={{ color: Colors.medGray, fontSize: 14, lineHeight: 1.6, maxWidth: 420, margin: '0 auto' }}>
               Scan your equipment labels and Canopy handles the rest — maintenance reminders, warranty tracking, and lifecycle alerts all personalized to your home.
@@ -247,13 +247,13 @@ export default function Equipment() {
 
           {/* What happens when you scan — 1-2-3 flow */}
           <div style={{
-            background: Colors.cardBackground,
+            background: 'var(--color-card-background)',
             borderRadius: 12,
             padding: 20,
             marginBottom: 20,
-            border: `1px solid ${Colors.lightGray}`,
+            border: `1px solid var(--color-border)`,
           }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: Colors.charcoal, margin: '0 0 14px 0' }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-charcoal)', margin: '0 0 14px 0' }}>
               What happens when you scan
             </p>
             {[
@@ -264,15 +264,15 @@ export default function Equipment() {
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: i < 2 ? 14 : 0 }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: '50%',
-                  background: Colors.copper, color: '#fff',
+                  background: 'var(--color-copper)', color: '#fff',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 13, fontWeight: 700, flexShrink: 0,
                 }}>
                   {item.step}
                 </div>
                 <div style={{ paddingTop: 4 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{item.title} </span>
-                  <span style={{ fontSize: 14, color: Colors.medGray }}>{item.desc}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-charcoal)' }}>{item.title} </span>
+                  <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>{item.desc}</span>
                 </div>
               </div>
             ))}
@@ -289,15 +289,15 @@ export default function Equipment() {
 
           {/* Where to look checklist */}
           <div style={{
-            backgroundColor: Colors.cream,
+            backgroundColor: 'var(--color-cream)',
             borderRadius: 12,
             padding: 20,
             marginBottom: 20,
           }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-charcoal)', marginBottom: 4 }}>
               Not sure what to scan?
             </p>
-            <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 14, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 14, lineHeight: 1.5 }}>
               Start with these — each scan gives Canopy more data to protect your home.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -305,8 +305,8 @@ export default function Equipment() {
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                   <span style={{ fontSize: 18, lineHeight: '24px', flexShrink: 0 }}>{item.icon}</span>
                   <div>
-                    <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: Colors.charcoal }}>{item.label}</p>
-                    <p style={{ margin: '2px 0 0 0', fontSize: 12, color: Colors.medGray }}>{item.hint}</p>
+                    <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: 'var(--color-charcoal)' }}>{item.label}</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: 12, color: 'var(--color-text-secondary)' }}>{item.hint}</p>
                   </div>
                 </div>
               ))}
@@ -324,19 +324,19 @@ export default function Equipment() {
           if (alerts.length === 0) return null;
           return (
             <div style={{
-              background: '#FFF3E0',
-              border: `1px solid ${Colors.warning}`,
+              background: 'var(--color-copper-muted, #FFF3E0)',
+              border: `1px solid var(--color-warning)`,
               borderRadius: 12,
               padding: 16,
               marginBottom: 20,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <span style={{ fontSize: 20 }}>&#9888;</span>
-                <span style={{ fontWeight: 700, fontSize: 15, color: Colors.charcoal }}>
+                <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--color-charcoal)' }}>
                   {alerts.length} item{alerts.length > 1 ? 's' : ''} nearing end of life
                 </span>
               </div>
-              <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 12px 0', lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 12px 0', lineHeight: 1.5 }}>
                 {alerts.map(a => a.name).join(', ')} — tap an item below for details and to request a pro quote.
               </p>
             </div>
@@ -349,10 +349,10 @@ export default function Equipment() {
             const isReplacement = pct !== null && pct >= 95;
             const isInspect = pct !== null && pct >= 80 && pct < 95;
             return (
-            <div key={item.id} className="card" onClick={() => navigate(`/equipment/${item.id}`)} style={{ cursor: 'pointer', position: 'relative', borderLeft: isReplacement ? `4px solid ${Colors.error}` : isInspect ? `4px solid ${Colors.warning}` : undefined }}>
+            <div key={item.id} className="card" onClick={() => navigate(`/equipment/${item.id}`)} style={{ cursor: 'pointer', position: 'relative', borderLeft: isReplacement ? `4px solid var(--color-error)` : isInspect ? `4px solid var(--color-warning)` : undefined }}>
               {isReplacement && (
                 <div style={{
-                  background: Colors.error,
+                  background: 'var(--color-error)',
                   color: '#fff',
                   fontSize: 11,
                   fontWeight: 700,
@@ -365,7 +365,7 @@ export default function Equipment() {
               )}
               {isInspect && !isReplacement && (
                 <div style={{
-                  background: Colors.warning,
+                  background: 'var(--color-warning)',
                   color: '#fff',
                   fontSize: 11,
                   fontWeight: 700,
@@ -377,14 +377,14 @@ export default function Equipment() {
                 }}>SCHEDULE INSPECTION</div>
               )}
               <div className="equip-card" style={{ paddingTop: isReplacement || isInspect ? 24 : undefined }}>
-                <div className="equip-icon" style={{ background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="equip-icon" style={{ background: 'var(--color-copper-muted, #FFF3E0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {catIcon(item.category)
                     ? <img src={catIcon(item.category)} alt={item.category} style={{ width: 28, height: 28, objectFit: 'contain' }} />
-                    : <span style={{ fontSize: 11, fontWeight: 700, color: Colors.copper }}>{catAbbr(item.category)}</span>
+                    : <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-copper)' }}>{catAbbr(item.category)}</span>
                   }
                 </div>
                 <div className="equip-info">
-                  <div style={{ fontSize: 11, fontWeight: 600, color: Colors.sage, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>{catLabel(item.category)}</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-sage)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>{catLabel(item.category)}</div>
                   <div className="equip-name">{item.name}</div>
                   <div className="equip-detail">{item.make} {item.model}</div>
                   {item.install_date && <div className="equip-detail">Installed: {new Date(item.install_date).toLocaleDateString()}</div>}
@@ -397,9 +397,9 @@ export default function Equipment() {
                       <div className="mt-sm">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-gray">Lifespan: {rounded}%</span>
-                          <span className="text-xs" style={{ color: rounded > 80 ? Colors.error : rounded > 60 ? Colors.warning : Colors.sage }}>{ageYrs}yr / {lifespan}yr</span>
+                          <span className="text-xs" style={{ color: rounded > 80 ? 'var(--color-error)' : rounded > 60 ? 'var(--color-warning)' : 'var(--color-sage)' }}>{ageYrs}yr / {lifespan}yr</span>
                         </div>
-                        <div className="progress-bar mt-sm"><div className="progress-fill" style={{ width: `${rounded}%`, background: rounded > 80 ? Colors.error : rounded > 60 ? Colors.warning : Colors.sage }} /></div>
+                        <div className="progress-bar mt-sm"><div className="progress-fill" style={{ width: `${rounded}%`, background: rounded > 80 ? 'var(--color-error)' : rounded > 60 ? 'var(--color-warning)' : 'var(--color-sage)' }} /></div>
                       </div>
                     );
                   })()}
@@ -438,7 +438,7 @@ export default function Equipment() {
             <div className="form-group">
               <label>Name *</label>
               <input className="form-input" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. Central AC Unit" />
-              {formErrors.name && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{formErrors.name}</p>}
+              {formErrors.name && <p style={{ color: 'var(--color-error)', fontSize: 13, marginTop: 4 }}>{formErrors.name}</p>}
             </div>
             <div className="form-group">
               <label>Category</label>

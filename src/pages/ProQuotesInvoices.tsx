@@ -968,7 +968,7 @@ export default function ProQuotesInvoices() {
       {activeTab === 'quotes' && (
         quotes.length === 0 ? (
           <div className="empty-state">
-            <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>📋</div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }} role="img" aria-label="Clipboard">📋</div>
             <h3>No quotes yet</h3>
             <p>Create your first quote to send to clients.</p>
           </div>

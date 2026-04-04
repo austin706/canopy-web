@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { signIn, getProfile, getHome, getEquipment, getTasks, getAgent, supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
+import { getMessageVariant, messageColors } from '@/utils/messageType';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -192,15 +193,15 @@ export default function Login() {
             <p className="subtitle">Sign in to your account</p>
           </div>
           {isNewSignup && !showOtpInput && (
-            <div style={{ background: '#4CAF5020', color: '#2E7D32', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+            <div style={{ background: 'var(--color-success-muted, #4CAF5020)', color: 'var(--color-success)', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
               <strong>Account created!</strong> Check your email for a verification link — verify your email to sign in.
             </div>
           )}
 
           {/* OTP Verification Panel */}
           {showOtpInput && (
-            <div style={{ background: '#FFF8E1', border: '1px solid #FFE082', padding: '16px 20px', borderRadius: 10, marginBottom: 16 }}>
-              <p style={{ fontWeight: 600, fontSize: 14, color: '#F57F17', margin: '0 0 8px' }}>Email verification required</p>
+            <div style={{ background: 'var(--color-warning-muted, #FFF8E1)', border: '1px solid var(--color-warning)', padding: '16px 20px', borderRadius: 10, marginBottom: 16 }}>
+              <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-warning)', margin: '0 0 8px' }}>Email verification required</p>
               <p style={{ fontSize: 13, color: '#555', lineHeight: 1.5, margin: '0 0 12px' }}>
                 Check your email for a verification link, or enter the code from the email below.
               </p>
@@ -224,7 +225,7 @@ export default function Login() {
               {verifyMessage && (
                 <p style={{
                   fontSize: 13, marginTop: 8, marginBottom: 0,
-                  color: verifyMessage.includes('verified') || verifyMessage.includes('sent') ? '#2E7D32' : '#C62828',
+                  color: messageColors(getMessageVariant(verifyMessage)).fg,
                 }}>
                   {verifyMessage}
                 </p>
@@ -234,7 +235,7 @@ export default function Login() {
                 disabled={resending}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: 13, color: '#C4844E', fontWeight: 500, padding: '8px 0 0', textDecoration: 'underline',
+                  fontSize: 13, color: 'var(--color-copper)', fontWeight: 500, padding: '8px 0 0', textDecoration: 'underline',
                 }}
               >
                 {resending ? 'Sending...' : 'Resend verification email'}
@@ -242,12 +243,12 @@ export default function Login() {
             </div>
           )}
 
-          {error && <div style={{ background: '#E5393520', color: '#C62828', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 20 }}>{error}</div>}
+          {error && <div style={{ background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 20 }}>{error}</div>}
           <form onSubmit={handleLogin}>
             <div className="form-group">
               <label>Email</label>
               <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" required />
-              {emailError && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{emailError}</p>}
+              {emailError && <p style={{ color: 'var(--color-error)', fontSize: 13, marginTop: 4 }}>{emailError}</p>}
             </div>
             <div className="form-group">
               <label>Password</label>
@@ -264,23 +265,23 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#7A7A7A', padding: '4px 8px' }}
+                  style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--color-text-secondary)', padding: '4px 8px' }}
                   title={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
-              {passwordError && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{passwordError}</p>}
+              {passwordError && <p style={{ color: 'var(--color-error)', fontSize: 13, marginTop: 4 }}>{passwordError}</p>}
             </div>
             <div style={{ textAlign: 'right', marginBottom: 20, marginTop: -8 }}>
-              <Link to="/forgot-password" style={{ fontSize: 13, color: '#C4844E', textDecoration: 'none', fontWeight: 500 }}>Forgot password?</Link>
+              <Link to="/forgot-password" style={{ fontSize: 13, color: 'var(--color-copper)', textDecoration: 'none', fontWeight: 500 }}>Forgot password?</Link>
             </div>
             <button className="btn btn-primary btn-lg btn-full" type="submit" disabled={loading}>
               {loading ? <span className="spinner" /> : 'Sign In'}
             </button>
           </form>
-          <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: '#7A7A7A' }}>
-            Don't have an account? <Link to="/signup" style={{ color: '#C4844E', fontWeight: 600, textDecoration: 'none' }}>Sign Up</Link>
+          <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: 'var(--color-text-secondary)' }}>
+            Don't have an account? <Link to="/signup" style={{ color: 'var(--color-copper)', fontWeight: 600, textDecoration: 'none' }}>Sign Up</Link>
           </p>
         </div>
       </div>

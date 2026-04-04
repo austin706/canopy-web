@@ -182,8 +182,8 @@ export default function ApplyPro() {
 
       {/* Requirements section */}
       <div style={{
-        backgroundColor: Colors.cream,
-        border: `1px solid ${Colors.lightGray}`,
+        backgroundColor: 'var(--color-copper-muted, #FFF3E0)',
+        border: `1px solid var(--color-border)`,
         borderRadius: 8,
         padding: 24,
         marginBottom: 48,
@@ -202,8 +202,9 @@ export default function ApplyPro() {
       <form onSubmit={handleSubmit}>
         {error && (
           <div style={{
-            backgroundColor: '#ffebee',
-            color: Colors.error,
+            backgroundColor: 'var(--color-error)',
+            opacity: 0.15,
+            color: 'var(--color-error)',
             padding: 16,
             borderRadius: 6,
             marginBottom: 24,
@@ -228,7 +229,7 @@ export default function ApplyPro() {
               width: '100%',
               padding: '10px 12px',
               borderRadius: 6,
-              border: `1px solid ${Colors.lightGray}`,
+              border: `1px solid var(--color-border)`,
               backgroundColor: Colors.inputBackground,
               fontSize: 14,
               fontFamily: 'inherit',
@@ -251,7 +252,7 @@ export default function ApplyPro() {
               width: '100%',
               padding: '10px 12px',
               borderRadius: 6,
-              border: `1px solid ${Colors.lightGray}`,
+              border: `1px solid var(--color-border)`,
               backgroundColor: Colors.inputBackground,
               fontSize: 14,
               fontFamily: 'inherit',
@@ -274,7 +275,7 @@ export default function ApplyPro() {
               width: '100%',
               padding: '10px 12px',
               borderRadius: 6,
-              border: `1px solid ${Colors.lightGray}`,
+              border: `1px solid var(--color-border)`,
               backgroundColor: Colors.inputBackground,
               fontSize: 14,
               fontFamily: 'inherit',
@@ -297,7 +298,7 @@ export default function ApplyPro() {
               width: '100%',
               padding: '10px 12px',
               borderRadius: 6,
-              border: `1px solid ${Colors.lightGray}`,
+              border: `1px solid var(--color-border)`,
               backgroundColor: Colors.inputBackground,
               fontSize: 14,
               fontFamily: 'inherit',
@@ -323,7 +324,7 @@ export default function ApplyPro() {
               width: '100%',
               padding: '10px 12px',
               borderRadius: 6,
-              border: `1px solid ${Colors.lightGray}`,
+              border: `1px solid var(--color-border)`,
               backgroundColor: Colors.inputBackground,
               fontSize: 14,
               fontFamily: 'inherit',
@@ -346,7 +347,7 @@ export default function ApplyPro() {
               width: '100%',
               padding: '10px 12px',
               borderRadius: 6,
-              border: `1px solid ${Colors.lightGray}`,
+              border: `1px solid var(--color-border)`,
               backgroundColor: Colors.inputBackground,
               fontSize: 14,
               fontFamily: 'inherit',
@@ -368,7 +369,7 @@ export default function ApplyPro() {
               width: '100%',
               padding: '10px 12px',
               borderRadius: 6,
-              border: `1px solid ${Colors.lightGray}`,
+              border: `1px solid var(--color-border)`,
               backgroundColor: Colors.inputBackground,
               fontSize: 14,
               fontFamily: 'inherit',
@@ -395,7 +396,7 @@ export default function ApplyPro() {
               width: '100%',
               padding: '10px 12px',
               borderRadius: 6,
-              border: `1px solid ${Colors.lightGray}`,
+              border: `1px solid var(--color-border)`,
               backgroundColor: Colors.inputBackground,
               fontSize: 14,
               fontFamily: 'inherit',
@@ -418,7 +419,7 @@ export default function ApplyPro() {
               width: '100%',
               padding: '10px 12px',
               borderRadius: 6,
-              border: `1px solid ${Colors.lightGray}`,
+              border: `1px solid var(--color-border)`,
               backgroundColor: Colors.inputBackground,
               fontSize: 14,
               fontFamily: 'inherit',
@@ -441,7 +442,7 @@ export default function ApplyPro() {
               width: '100%',
               padding: '10px 12px',
               borderRadius: 6,
-              border: `1px solid ${Colors.lightGray}`,
+              border: `1px solid var(--color-border)`,
               backgroundColor: Colors.inputBackground,
               fontSize: 14,
               fontFamily: 'inherit',
@@ -494,7 +495,7 @@ export default function ApplyPro() {
               width: '100%',
               padding: '10px 12px',
               borderRadius: 6,
-              border: `1px solid ${Colors.lightGray}`,
+              border: `1px solid var(--color-border)`,
               backgroundColor: Colors.inputBackground,
               fontSize: 14,
               fontFamily: 'inherit',
@@ -578,7 +579,7 @@ export default function ApplyPro() {
         </button>
       </form>
 
-      <div style={{ borderTop: `1px solid ${Colors.lightGray}`, marginTop: 48, paddingTop: 24, color: '#999', fontSize: 14, textAlign: 'center' }}>
+      <div style={{ borderTop: `1px solid var(--color-border)`, marginTop: 48, paddingTop: 24, color: 'var(--color-text-secondary)', fontSize: 14, textAlign: 'center' }}>
         © {new Date().getFullYear()} Canopy. All rights reserved.
       </div>
     </div>

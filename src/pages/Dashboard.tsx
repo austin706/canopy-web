@@ -170,7 +170,7 @@ export default function Dashboard() {
         <div style={{ marginBottom: 20 }}>
           {joinRequests.map((req) => (
             <div key={req.id} style={{
-              background: Colors.cream, border: `1px solid ${Colors.copper}40`,
+              background: 'var(--color-cream)', border: `1px solid var(--color-copper)40`,
               borderRadius: 12, padding: '14px 18px', marginBottom: 8,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               flexWrap: 'wrap', gap: 10,
@@ -179,7 +179,7 @@ export default function Dashboard() {
                 <div style={{ fontSize: 14, fontWeight: 600 }}>
                   {req.requester?.full_name || req.requester?.email || 'Someone'} wants to join your home
                 </div>
-                <div style={{ fontSize: 12, color: Colors.medGray, marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
                   {req.homes?.address}, {req.homes?.city}, {req.homes?.state}
                   {req.message && <span> &mdash; "{req.message}"</span>}
                 </div>
@@ -187,7 +187,7 @@ export default function Dashboard() {
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   className="btn btn-sm"
-                  style={{ background: Colors.sage, color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  style={{ background: 'var(--color-sage)', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                   disabled={processingRequest === req.id}
                   onClick={async () => {
                     setProcessingRequest(req.id);
@@ -205,7 +205,7 @@ export default function Dashboard() {
                 </button>
                 <button
                   className="btn btn-sm btn-ghost"
-                  style={{ fontSize: 12, color: Colors.error }}
+                  style={{ fontSize: 12, color: 'var(--color-error)' }}
                   disabled={processingRequest === req.id}
                   onClick={async () => {
                     setProcessingRequest(req.id);
@@ -233,7 +233,7 @@ export default function Dashboard() {
           {hasWeather ? (
             <div
               className="card"
-              style={{ background: `linear-gradient(135deg, ${Colors.sage}20, ${Colors.cream})`, cursor: 'pointer' }}
+              style={{ background: `linear-gradient(135deg, var(--color-sage)20, var(--color-cream))`, cursor: 'pointer' }}
               onClick={() => navigate('/weather')}
             >
               {weatherLoading ? (
@@ -245,7 +245,7 @@ export default function Dashboard() {
               ) : weatherError ? (
                 <div style={{ textAlign: 'center', padding: '20px 0' }}>
                   <p className="text-sm text-gray">{weatherError}</p>
-                  <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 8 }}>Please add home coordinates in settings</p>
+                  <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 8 }}>Please add home coordinates in settings</p>
                 </div>
               ) : (
                 <>
@@ -270,7 +270,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   {displayWeather.alerts.length > 0 && (
-                    <div style={{ marginTop: 12, padding: '10px 14px', background: '#E5393520', borderRadius: 8, fontSize: 13, color: '#C62828' }}>
+                    <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--color-error)20', borderRadius: 8, fontSize: 13, color: 'var(--color-error)' }}>
                       Warning: {displayWeather.alerts.length} active weather alert{displayWeather.alerts.length > 1 ? 's' : ''}
                     </div>
                   )}
@@ -278,9 +278,9 @@ export default function Dashboard() {
               )}
             </div>
           ) : (
-            <div className="card" style={{ background: Colors.copperMuted, borderLeft: `4px solid ${Colors.copper}` }}>
+            <div className="card" style={{ background: 'var(--color-copper-muted, #FFF3E0)', borderLeft: `4px solid var(--color-copper)` }}>
               <div className="flex items-center gap-md">
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: Colors.white, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><NavWeather size={24} /></div>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--color-card-background)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><NavWeather size={24} /></div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontWeight: 600 }}>Weather Alerts</p>
                   <p className="text-sm text-gray">Upgrade to get actionable weather alerts</p>
@@ -344,12 +344,12 @@ export default function Dashboard() {
                 <div style={{ textAlign: 'center', padding: '32px 20px' }}>
                   <div style={{
                     width: 72, height: 72, borderRadius: '50%',
-                    background: `linear-gradient(135deg, ${Colors.sage} 0%, ${Colors.copper} 100%)`,
+                    background: `linear-gradient(135deg, var(--color-sage) 0%, var(--color-copper) 100%)`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     margin: '0 auto 16px', fontSize: 36, color: '#fff',
                   }}>&#127881;</div>
-                  <h3 style={{ fontSize: 20, fontWeight: 700, color: Colors.charcoal, marginBottom: 8 }}>All tasks complete!</h3>
-                  <p style={{ fontSize: 14, color: Colors.medGray, lineHeight: 1.6, maxWidth: 320, margin: '0 auto' }}>
+                  <h3 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: 8 }}>All tasks complete!</h3>
+                  <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.6, maxWidth: 320, margin: '0 auto' }}>
                     You've finished every task for this month. Your home is in great shape — enjoy the peace of mind!
                   </p>
                 </div>
@@ -384,10 +384,10 @@ export default function Dashboard() {
           {canAccess(tier, 'ai_chat') ? (
             <DashboardChat />
           ) : (
-            <div className="card" style={{ background: Colors.sageMuted, borderLeft: `4px solid ${Colors.sage}` }}>
+            <div className="card" style={{ background: 'var(--color-sage-muted, #f0f4f0)', borderLeft: `4px solid var(--color-sage)` }}>
               <div className="flex items-center gap-md">
                 <div style={{
-                  width: 40, height: 40, borderRadius: '50%', background: '#fff',
+                  width: 40, height: 40, borderRadius: '50%', background: 'var(--color-card-background)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
                 }}>&#127807;</div>
                 <div style={{ flex: 1 }}>
@@ -425,7 +425,7 @@ export default function Dashboard() {
                     }}
                     onClick={() => locked ? navigate('/subscription') : navigate(a.route)}
                   >
-                    {a.label} {locked ? <span style={{ fontSize: 11, color: Colors.copper, marginLeft: 'auto' }}>Upgrade</span> : <span style={{ marginLeft: 'auto' }}>&rarr;</span>}
+                    {a.label} {locked ? <span style={{ fontSize: 11, color: 'var(--color-copper)', marginLeft: 'auto' }}>Upgrade</span> : <span style={{ marginLeft: 'auto' }}>&rarr;</span>}
                   </button>
                 );
               })}
@@ -433,7 +433,7 @@ export default function Dashboard() {
           </div>
 
           {/* Subscription */}
-          <div className="card" style={{ background: Colors.copperMuted }}>
+          <div className="card" style={{ background: 'var(--color-copper-muted, #FFF3E0)' }}>
             <p className="text-xs fw-600 text-copper mb-sm">YOUR PLAN</p>
             <p style={{ fontWeight: 700 }}>{PLANS.find(p => p.value === tier)?.name || 'Free'}</p>
             <p className="text-sm text-gray">{(PLANS.find(p => p.value === tier) as any)?.inquireForPricing ? 'Concierge Plan' : `$${PLANS.find(p => p.value === tier)?.price || 0}${PLANS.find(p => p.value === tier)?.period}`}</p>
@@ -452,20 +452,20 @@ export default function Dashboard() {
 
           {/* Cost Forecast */}
           {costForecast.items.length > 0 && (
-            <div className="card" style={{ borderLeft: `4px solid ${costForecast.urgentCount > 0 ? Colors.warning : Colors.sage}` }}>
+            <div className="card" style={{ borderLeft: `4px solid ${costForecast.urgentCount > 0 ? 'var(--color-warning)' : 'var(--color-sage)'}` }}>
               <p style={{ fontWeight: 600, marginBottom: 4 }}>Replacement Forecast</p>
-              <p style={{ fontSize: 11, color: Colors.silver, marginBottom: 12, lineHeight: 1.4 }}>
+              <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 12, lineHeight: 1.4 }}>
                 Based on national averages &amp; equipment age
               </p>
               <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
                 <div>
-                  <p style={{ fontSize: 22, fontWeight: 700, color: costForecast.totalNextYear > 0 ? Colors.warning : Colors.sage }}>
+                  <p style={{ fontSize: 22, fontWeight: 700, color: costForecast.totalNextYear > 0 ? 'var(--color-warning)' : 'var(--color-sage)' }}>
                     ${costForecast.totalNextYear.toLocaleString()}
                   </p>
                   <p className="text-xs text-gray">Next 12 months</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: 22, fontWeight: 700, color: Colors.charcoal }}>
+                  <p style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-charcoal)' }}>
                     ${costForecast.totalNext5Years.toLocaleString()}
                   </p>
                   <p className="text-xs text-gray">Next 5 years</p>
@@ -476,7 +476,7 @@ export default function Dashboard() {
                   : item.urgency === 'replace_soon' ? Colors.warning
                   : item.urgency === 'plan_ahead' ? Colors.info : Colors.sage;
                 return (
-                  <div key={item.equipment.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderTop: '1px solid #f3f4f6' }}>
+                  <div key={item.equipment.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderTop: '1px solid var(--color-background)' }}>
                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: urgencyColor, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -485,7 +485,7 @@ export default function Dashboard() {
                         </p>
                         {item.isProQuote && (
                           <span style={{
-                            fontSize: 9, fontWeight: 700, color: Colors.sage, background: Colors.sageMuted,
+                            fontSize: 9, fontWeight: 700, color: 'var(--color-sage)', background: 'var(--color-sage-muted, #f0f4f0)',
                             padding: '1px 5px', borderRadius: 4, textTransform: 'uppercase', whiteSpace: 'nowrap',
                           }}>Pro Quote</span>
                         )}
@@ -509,14 +509,14 @@ export default function Dashboard() {
                   View all {costForecast.items.length} items &rarr;
                 </button>
               )}
-              <p style={{ fontSize: 10, color: Colors.silver, marginTop: 10, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 10, lineHeight: 1.5 }}>
                 {FORECAST_DISCLAIMER}
               </p>
             </div>
           )}
 
           {/* Emergency Info Quick Access */}
-          <div className="card" style={{ borderLeft: `4px solid ${Colors.error}` }}>
+          <div className="card" style={{ borderLeft: `4px solid var(--color-error)` }}>
             <div className="flex items-center justify-between mb-sm">
               <p style={{ fontWeight: 600 }}>Emergency Info</p>
               <button className="btn btn-ghost btn-sm" onClick={() => navigate('/home?edit=emergency')}>Edit &rarr;</button>
@@ -525,7 +525,7 @@ export default function Dashboard() {
               <div className="flex-col gap-sm">
                 {home.water_shutoff_location && (
                   <div className="flex items-center gap-sm">
-                    <span style={{ fontSize: 14 }}>💧</span>
+                    <span style={{ fontSize: 14 }} role="img" aria-label="Humidity">💧</span>
                     <div>
                       <p className="text-xs text-gray">Water Shutoff</p>
                       <p style={{ fontSize: 13, fontWeight: 500 }}>{home.water_shutoff_location}</p>
@@ -543,7 +543,7 @@ export default function Dashboard() {
                 )}
                 {home.gas_meter_location && (
                   <div className="flex items-center gap-sm">
-                    <span style={{ fontSize: 14 }}>🔥</span>
+                    <span style={{ fontSize: 14 }} role="img" aria-label="Heat index">🔥</span>
                     <div>
                       <p className="text-xs text-gray">Gas Meter</p>
                       <p style={{ fontSize: 13, fontWeight: 500 }}>{home.gas_meter_location}</p>
@@ -554,7 +554,7 @@ export default function Dashboard() {
             ) : (
               <div style={{ textAlign: 'center', padding: '12px 0' }}>
                 <p className="text-sm text-gray">Know where your shutoffs are in an emergency</p>
-                <button className="btn btn-ghost btn-sm mt-sm" style={{ color: Colors.copper }} onClick={() => navigate('/home?edit=emergency')}>
+                <button className="btn btn-ghost btn-sm mt-sm" style={{ color: 'var(--color-copper)' }} onClick={() => navigate('/home?edit=emergency')}>
                   Add Locations
                 </button>
               </div>

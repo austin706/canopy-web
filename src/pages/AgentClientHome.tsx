@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getClientHome, upsertClientHome, getProfile, updateProfile } from '@/services/supabase';
 import { attestHomeRecord, calculateCompletenessScore } from '@/services/homeTransfer';
 import { Colors } from '@/constants/theme';
+import MessageBanner from '@/components/MessageBanner';
 
 export default function AgentClientHome() {
   const navigate = useNavigate();
@@ -101,9 +102,7 @@ export default function AgentClientHome() {
       </div>
 
       {message && (
-        <div style={{ padding: '10px 16px', borderRadius: 8, background: message.includes('Failed') ? '#E5393520' : '#4CAF5020', color: message.includes('Failed') ? '#C62828' : '#2E7D32', fontSize: 14, marginBottom: 16 }}>
-          {message}
-        </div>
+        <MessageBanner message={message} />
       )}
 
       <div className="card">
@@ -181,14 +180,14 @@ export default function AgentClientHome() {
 
           {/* Completeness Score */}
           {completenessScore !== null && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, padding: 16, background: Colors.cream, borderRadius: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, padding: 16, background: 'var(--color-copper-muted, #FFF3E0)', borderRadius: 8 }}>
               <div style={{
                 width: 60, height: 60, borderRadius: 30,
-                background: `conic-gradient(${completenessScore >= 70 ? Colors.sage : completenessScore >= 40 ? Colors.warning : Colors.error} ${completenessScore * 3.6}deg, ${Colors.lightGray} 0deg)`,
+                background: `conic-gradient(${completenessScore >= 70 ? Colors.sage : completenessScore >= 40 ? Colors.warning : Colors.error} ${completenessScore * 3.6}deg, var(--color-border) 0deg)`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <div style={{
-                  width: 48, height: 48, borderRadius: 24, background: Colors.cream,
+                  width: 48, height: 48, borderRadius: 24, background: 'var(--color-copper-muted, #FFF3E0)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <span style={{ fontSize: 16, fontWeight: 700, color: Colors.charcoal }}>{completenessScore}</span>
@@ -205,7 +204,7 @@ export default function AgentClientHome() {
 
           {/* Current attestation status */}
           {home.agent_attested_at ? (
-            <div style={{ padding: 14, background: Colors.sage + '15', borderRadius: 8, border: `1px solid ${Colors.sage}40`, marginBottom: 16 }}>
+            <div style={{ padding: 14, background: 'var(--color-sage)', opacity: 0.15, borderRadius: 8, border: `1px solid var(--color-sage)`, marginBottom: 16 }}>
               <p style={{ fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
                 ✓ You attested to this record on {new Date(home.agent_attested_at).toLocaleDateString()}
               </p>

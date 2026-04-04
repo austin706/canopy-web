@@ -79,7 +79,7 @@ export default function HomeReport() {
         </button>
       </div>
 
-      {error && <div className="no-print" style={{ padding: '10px 16px', borderRadius: 8, background: '#E5393520', color: '#C62828', fontSize: 14, marginBottom: 16 }}>{error}</div>}
+      {error && <div className="no-print" style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', fontSize: 14, marginBottom: 16 }}>{error}</div>}
 
       {/* Report content — printable */}
       <div ref={reportRef} id="home-report">
@@ -97,7 +97,7 @@ export default function HomeReport() {
 
         {/* Report Header */}
         <div style={{
-          background: `linear-gradient(135deg, ${Colors.sage}, ${Colors.sageDark})`,
+          background: `linear-gradient(135deg, var(--color-sage), var(--color-sage-dark, #7a8f73))`,
           color: 'white', borderRadius: 12, padding: 32, marginBottom: 24,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -128,7 +128,7 @@ export default function HomeReport() {
                   }}>
                     <div style={{
                       width: 44, height: 44, borderRadius: 22,
-                      background: Colors.sageDark || Colors.sage,
+                      background: 'var(--color-sage-dark, var(--color-sage))',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       <span style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{completenessScore}</span>
@@ -266,7 +266,7 @@ export default function HomeReport() {
                               <td style={{ padding: '8px 14px', color: Colors.medGray }}>{log.category.replace(/_/g, ' ')}</td>
                               <td style={{ padding: '8px 14px' }}>{log.completed_by}</td>
                               <td style={{ padding: '8px 14px' }}>
-                                <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 8, background: srcColor + '20', color: srcColor }}>{srcLabel}</span>
+                                <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 8, background: 'var(--color-' + (src === 'pro_visit' ? 'sage' : src === 'agent' ? 'copper' : 'text-secondary') + '-muted, rgba(' + (src === 'pro_visit' ? '139,158,126' : src === 'agent' ? '196,132,78' : '107,114,128') + ',0.125))', color: srcColor }}>{srcLabel}</span>
                               </td>
                               <td style={{ padding: '8px 14px', textAlign: 'right' }}>{log.cost ? fmt(log.cost) : '—'}</td>
                             </tr>
@@ -309,8 +309,8 @@ export default function HomeReport() {
                       <td style={{ padding: '8px 14px' }}>
                         <span style={{
                           padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
-                          background: v.overall_condition === 'good' ? Colors.success + '20' : v.overall_condition === 'fair' ? Colors.warning + '20' : Colors.error + '20',
-                          color: v.overall_condition === 'good' ? Colors.success : v.overall_condition === 'fair' ? Colors.warning : Colors.error,
+                          background: v.overall_condition === 'good' ? 'var(--color-success-muted, rgba(22,163,74,0.125))' : v.overall_condition === 'fair' ? 'var(--color-warning-muted, rgba(245,158,11,0.125))' : 'var(--color-error-muted, rgba(220,38,38,0.125))',
+                          color: v.overall_condition === 'good' ? 'var(--color-success)' : v.overall_condition === 'fair' ? 'var(--color-warning)' : 'var(--color-error)',
                         }}>
                           {v.overall_condition?.replace(/_/g, ' ') || 'N/A'}
                         </span>

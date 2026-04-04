@@ -1,10 +1,10 @@
 export default function PCICompliance() {
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: '#1a1a1a', lineHeight: 1.7 }}>
-      <a href="/" style={{ color: '#8B9E7E', textDecoration: 'none', fontSize: 14 }}>← Back to Canopy</a>
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--color-text)', lineHeight: 1.7 }}>
+      <a href="/" style={{ color: 'var(--color-sage)', textDecoration: 'none', fontSize: 14 }}>← Back to Canopy</a>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>PCI DSS Compliance</h1>
-      <p style={{ color: '#666', fontSize: 14, marginBottom: 32 }}>SAQ-A Self-Assessment Questionnaire — Last updated April 3, 2026</p>
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginBottom: 32 }}>SAQ-A Self-Assessment Questionnaire — Last updated April 3, 2026</p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>PCI DSS Compliance Overview</h2>
       <p>
@@ -25,35 +25,35 @@ export default function PCICompliance() {
       </ul>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>SAQ-A Eligibility Confirmation</h2>
-      <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #dcfce7', borderRadius: 8, padding: 20, marginBottom: 24 }}>
-        <p style={{ marginBottom: 16, fontWeight: 600, color: '#15803d' }}>Canopy meets all requirements for PCI DSS SAQ-A:</p>
+      <div style={{ backgroundColor: 'var(--color-success)15', border: '1px solid var(--color-success)30', borderRadius: 8, padding: 20, marginBottom: 24 }}>
+        <p style={{ marginBottom: 16, fontWeight: 600, color: 'var(--color-success)' }}>Canopy meets all requirements for PCI DSS SAQ-A:</p>
         <ul style={{ listStyle: 'none', padding: 0 }}>
           <li style={{ marginBottom: 12, display: 'flex', alignItems: 'flex-start' }}>
-            <span style={{ color: '#22c55e', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
+            <span style={{ color: 'var(--color-success)', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
             <span>All payment processing fully outsourced to PCI DSS validated third-party (Stripe Level 1 Service Provider)</span>
           </li>
           <li style={{ marginBottom: 12, display: 'flex', alignItems: 'flex-start' }}>
-            <span style={{ color: '#22c55e', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
+            <span style={{ color: 'var(--color-success)', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
             <span>No electronic storage of cardholder data on any Canopy system</span>
           </li>
           <li style={{ marginBottom: 12, display: 'flex', alignItems: 'flex-start' }}>
-            <span style={{ color: '#22c55e', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
+            <span style={{ color: 'var(--color-success)', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
             <span>No processing of cardholder data on any Canopy system</span>
           </li>
           <li style={{ marginBottom: 12, display: 'flex', alignItems: 'flex-start' }}>
-            <span style={{ color: '#22c55e', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
+            <span style={{ color: 'var(--color-success)', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
             <span>No transmission of cardholder data through Canopy systems</span>
           </li>
           <li style={{ marginBottom: 12, display: 'flex', alignItems: 'flex-start' }}>
-            <span style={{ color: '#22c55e', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
+            <span style={{ color: 'var(--color-success)', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
             <span>All payment pages served directly by Stripe (Checkout hosted pages)</span>
           </li>
           <li style={{ marginBottom: 12, display: 'flex', alignItems: 'flex-start' }}>
-            <span style={{ color: '#22c55e', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
+            <span style={{ color: 'var(--color-success)', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
             <span>Company does not store cardholder data in paper records</span>
           </li>
           <li style={{ marginBottom: 0, display: 'flex', alignItems: 'flex-start' }}>
-            <span style={{ color: '#22c55e', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
+            <span style={{ color: 'var(--color-success)', fontSize: 18, marginRight: 12, fontWeight: 700 }}>✓</span>
             <span>Confirmed with Stripe that they are PCI DSS compliant (Level 1 Service Provider)</span>
           </li>
         </ul>
@@ -106,13 +106,13 @@ export default function PCICompliance() {
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Contact & Resources</h2>
       <p>
-        For questions regarding PCI compliance: <a href="mailto:support@canopyhome.app" style={{ color: '#8B9E7E', textDecoration: 'none' }}>support@canopyhome.app</a>
+        For questions regarding PCI compliance: <a href="mailto:support@canopyhome.app" style={{ color: 'var(--color-sage)', textDecoration: 'none' }}>support@canopyhome.app</a>
       </p>
       <p style={{ marginTop: 12 }}>
-        For Stripe's PCI compliance documentation, visit: <a href="https://stripe.com/docs/security" target="_blank" rel="noopener noreferrer" style={{ color: '#8B9E7E', textDecoration: 'none' }}>stripe.com/docs/security</a>
+        For Stripe's PCI compliance documentation, visit: <a href="https://stripe.com/docs/security" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-sage)', textDecoration: 'none' }}>stripe.com/docs/security</a>
       </p>
 
-      <div style={{ borderTop: '1px solid #e5e7eb', marginTop: 48, paddingTop: 24, color: '#999', fontSize: 14, textAlign: 'center' as const }}>© {new Date().getFullYear()} Canopy. All rights reserved.</div>
+      <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 48, paddingTop: 24, color: 'var(--color-text-secondary)', fontSize: 14, textAlign: 'center' as const }}>© {new Date().getFullYear()} Canopy. All rights reserved.</div>
     </div>
   );
 }

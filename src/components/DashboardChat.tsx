@@ -288,8 +288,8 @@ export default function DashboardChat() {
             )}
             {error && (
               <div style={{
-                padding: '8px 12px', borderRadius: 8, backgroundColor: '#FFF3F3',
-                border: '1px solid #FFCDD2', color: '#C62828', fontSize: 12, marginBottom: 8,
+                padding: '8px 12px', borderRadius: 8, backgroundColor: 'var(--color-copper-muted, #FFF3F3)',
+                border: '1px solid #FFCDD2', color: 'var(--color-error)', fontSize: 12, marginBottom: 8,
               }}>
                 {error}
               </div>

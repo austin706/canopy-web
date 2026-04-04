@@ -525,8 +525,8 @@ export default function ProPortal() {
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <span style={{
                       padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                      backgroundColor: p.is_available ? '#e8f5e9' : '#fce4ec',
-                      color: p.is_available ? Colors.success : Colors.error || '#d32f2f',
+                      backgroundColor: p.is_available ? 'var(--color-success-muted, #e8f5e9)' : 'var(--color-error-muted, #fce4ec)',
+                      color: p.is_available ? 'var(--color-success)' : 'var(--color-error)',
                     }}>
                       {p.is_available ? 'Active' : 'Inactive'}
                     </span>
@@ -560,7 +560,7 @@ export default function ProPortal() {
                       {availableZips.length > 0 ? (
                         <div style={{
                           maxHeight: 200, overflowY: 'auto', border: `1px solid ${Colors.lightGray}`,
-                          borderRadius: 8, padding: '8px 12px', marginBottom: 8, background: '#fff',
+                          borderRadius: 8, padding: '8px 12px', marginBottom: 8, background: 'var(--color-card-background)',
                         }}>
                           {availableZips.map(z => (
                             <label key={z.zip} style={{
@@ -680,8 +680,8 @@ export default function ProPortal() {
                         <td>
                           <span style={{
                             padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
-                            backgroundColor: c.subscription_tier === 'pro_plus' ? '#EDE7F6' : Colors.sageMuted,
-                            color: c.subscription_tier === 'pro_plus' ? '#7B1FA2' : Colors.sage,
+                            backgroundColor: c.subscription_tier === 'pro_plus' ? 'var(--color-copper-muted, #EDE7F6)' : Colors.sageMuted,
+                            color: c.subscription_tier === 'pro_plus' ? 'var(--color-copper, #7B1FA2)' : Colors.sage,
                           }}>
                             {c.subscription_tier === 'pro_plus' ? 'Pro+' : 'Pro'}
                           </span>
@@ -712,8 +712,8 @@ export default function ProPortal() {
             className="btn btn-sm"
             onClick={toggleAvailability}
             style={{
-              backgroundColor: provider?.is_available ? Colors.success : Colors.error || '#d32f2f',
-              color: 'white', border: 'none', fontWeight: 600,
+              backgroundColor: provider?.is_available ? 'var(--color-success)' : 'var(--color-error)',
+              color: 'var(--color-card-background)', border: 'none', fontWeight: 600,
             }}
           >
             {provider?.is_available ? 'Active' : 'Inactive'}
@@ -821,8 +821,8 @@ export default function ProPortal() {
                     {v.title}
                     <span style={{
                       marginLeft: 8, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
-                      backgroundColor: v.status === 'confirmed' ? '#e8f5e9' : '#FFF3CD',
-                      color: v.status === 'confirmed' ? Colors.success : '#856404',
+                      backgroundColor: v.status === 'confirmed' ? 'var(--color-success-muted, #e8f5e9)' : 'var(--color-copper-muted, #FFF3CD)',
+                      color: v.status === 'confirmed' ? 'var(--color-success)' : 'var(--color-warning)',
                     }}>
                       {v.status === 'proposed' ? 'Pending' : v.status}
                     </span>
@@ -925,8 +925,8 @@ export default function ProPortal() {
                     {c.full_name || 'Unknown'}
                     <span style={{
                       marginLeft: 8, padding: '2px 6px', borderRadius: 4, fontSize: 10, fontWeight: 600,
-                      backgroundColor: c.subscription_tier === 'pro_plus' ? '#EDE7F6' : Colors.sageMuted,
-                      color: c.subscription_tier === 'pro_plus' ? '#7B1FA2' : Colors.sage,
+                      backgroundColor: c.subscription_tier === 'pro_plus' ? 'var(--color-copper-muted, #EDE7F6)' : Colors.sageMuted,
+                      color: c.subscription_tier === 'pro_plus' ? 'var(--color-copper, #7B1FA2)' : Colors.sage,
                     }}>
                       {c.subscription_tier === 'pro_plus' ? 'Pro+' : 'Pro'}
                     </span>

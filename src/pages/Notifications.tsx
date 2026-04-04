@@ -180,8 +180,8 @@ export default function Notifications() {
 
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
         {error && (
-          <div className="card" style={{ backgroundColor: '#ffebee', borderLeft: `4px solid ${Colors.error || '#d32f2f'}`, marginBottom: 16 }}>
-            <p style={{ color: '#d32f2f', fontSize: 14 }}>{error}</p>
+          <div className="card" style={{ backgroundColor: 'var(--color-error)20', borderLeft: `4px solid var(--color-error)`, marginBottom: 16 }}>
+            <p style={{ color: 'var(--color-error)', fontSize: 14 }}>{error}</p>
           </div>
         )}
 
@@ -200,7 +200,7 @@ export default function Notifications() {
             {/* Mark All Read */}
             {unreadCount > 0 && (
               <div style={{ textAlign: 'right', marginBottom: 12 }}>
-                <button className="btn btn-ghost btn-sm" onClick={handleMarkAllRead} style={{ fontSize: 12, color: Colors.sage }}>
+                <button className="btn btn-ghost btn-sm" onClick={handleMarkAllRead} style={{ fontSize: 12, color: 'var(--color-sage)' }}>
                   Mark all as read
                 </button>
               </div>
@@ -209,7 +209,7 @@ export default function Notifications() {
             {/* Notification Feed */}
             {notifications.length === 0 ? (
               <div className="empty-state" style={{ padding: 48 }}>
-                <div style={{ marginBottom: 12 }}><BellIcon size={40} color={Colors.medGray} /></div>
+                <div style={{ marginBottom: 12 }}><BellIcon size={40} color={'var(--color-text-secondary)'} /></div>
                 <h3 style={{ marginBottom: 6 }}>No Notifications Yet</h3>
                 <p className="text-gray">Notifications about maintenance, weather, equipment, and billing will appear here.</p>
               </div>
@@ -226,21 +226,21 @@ export default function Notifications() {
                         padding: '14px 16px',
                         cursor: n.read ? 'default' : 'pointer',
                         opacity: n.read ? 0.7 : 1,
-                        borderLeft: n.read ? 'none' : `3px solid ${Colors.sage}`,
+                        borderLeft: n.read ? 'none' : `3px solid var(--color-sage)`,
                         transition: 'opacity 0.2s',
                       }}
                     >
                       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                        <span style={{ flexShrink: 0, display: 'flex' }}><IconComponent size={20} color={Colors.copper} /></span>
+                        <span style={{ flexShrink: 0, display: 'flex' }}><IconComponent size={20} color={'var(--color-copper)'} /></span>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                            <p style={{ fontWeight: n.read ? 500 : 600, fontSize: 14, color: Colors.charcoal }}>{n.title}</p>
+                            <p style={{ fontWeight: n.read ? 500 : 600, fontSize: 14, color: 'var(--color-charcoal)' }}>{n.title}</p>
                             <span className="text-xs text-gray">{timeAgo(n.created_at)}</span>
                           </div>
                           {n.body && <p className="text-sm text-gray" style={{ margin: 0 }}>{n.body}</p>}
                         </div>
                         {!n.read && (
-                          <span style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.sage, flexShrink: 0, marginTop: 6 }} />
+                          <span style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: 'var(--color-sage)', flexShrink: 0, marginTop: 6 }} />
                         )}
                       </div>
                     </div>
@@ -255,17 +255,17 @@ export default function Notifications() {
           <>
             {/* Section 1: Notification Categories */}
             <div className="card mb-lg">
-              <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 6, color: Colors.charcoal }}>Notification Categories</p>
-              <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>Choose how you receive each type of notification</p>
+              <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 6, color: 'var(--color-charcoal)' }}>Notification Categories</p>
+              <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 16 }}>Choose how you receive each type of notification</p>
 
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: `1px solid ${Colors.lightGray}` }}>
-                    <th style={{ textAlign: 'left', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>Category</th>
-                    <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>Push</th>
-                    <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>Email</th>
-                    <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>SMS</th>
-                    <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: Colors.medGray }}>In-App</th>
+                  <tr style={{ borderBottom: `1px solid var(--color-border)` }}>
+                    <th style={{ textAlign: 'left', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: 'var(--color-text-secondary)' }}>Category</th>
+                    <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: 'var(--color-text-secondary)' }}>Push</th>
+                    <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: 'var(--color-text-secondary)' }}>Email</th>
+                    <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: 'var(--color-text-secondary)' }}>SMS</th>
+                    <th style={{ textAlign: 'center', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: 'var(--color-text-secondary)' }}>In-App</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -281,11 +281,11 @@ export default function Notifications() {
                     return categories.map((cat, idx) => {
                       const categoryPrefs = prefs[cat.key as keyof NotificationPreferences] as CategoryChannelPrefs;
                       return (
-                        <tr key={cat.key} style={{ borderBottom: idx < categories.length - 1 ? `1px solid ${Colors.lightGray}` : 'none', opacity: cat.locked ? 0.5 : 1 }}>
+                        <tr key={cat.key} style={{ borderBottom: idx < categories.length - 1 ? `1px solid var(--color-border)` : 'none', opacity: cat.locked ? 0.5 : 1 }}>
                           <td style={{ paddingTop: 14, paddingBottom: 14 }}>
                             <div>
-                              <p style={{ fontWeight: 500, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px 0' }}>{CATEGORY_INFO[cat.key].label}</p>
-                              <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
+                              <p style={{ fontWeight: 500, fontSize: 14, color: 'var(--color-charcoal)', margin: '0 0 4px 0' }}>{CATEGORY_INFO[cat.key].label}</p>
+                              <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0 }}>
                                 {cat.locked ? cat.lockReason : CATEGORY_INFO[cat.key].desc}
                               </p>
                             </div>
@@ -337,11 +337,11 @@ export default function Notifications() {
 
             {/* Section 2: Phone & Timezone */}
             <div className="card mb-lg">
-              <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 6, color: Colors.charcoal }}>Phone & Timezone</p>
-              <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>Add your phone number to receive SMS alerts for critical notifications</p>
+              <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 6, color: 'var(--color-charcoal)' }}>Phone & Timezone</p>
+              <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 16 }}>Add your phone number to receive SMS alerts for critical notifications</p>
 
               <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: Colors.charcoal }}>Phone number</label>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: 'var(--color-charcoal)' }}>Phone number</label>
                 <input
                   type="tel"
                   placeholder="(555) 555-1234"
@@ -349,31 +349,31 @@ export default function Notifications() {
                   onChange={(e) => setPrefs(prev => ({ ...prev, phone: e.target.value || undefined }))}
                   style={{
                     width: '100%', padding: '10px 14px', borderRadius: 6,
-                    border: `1.5px solid ${Colors.lightGray}`, fontSize: 14,
-                    background: Colors.cream, boxSizing: 'border-box',
+                    border: `1.5px solid var(--color-border)`, fontSize: 14,
+                    background: 'var(--color-cream)', boxSizing: 'border-box',
                   }}
                 />
-                <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 6, margin: '6px 0 0 0' }}>
+                <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6, margin: '6px 0 0 0' }}>
                   SMS is used for critical alerts only (weather, pro visits, security). Standard message rates apply.
                 </p>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: Colors.charcoal }}>Timezone</label>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: 'var(--color-charcoal)' }}>Timezone</label>
                 <select
                   value={prefs.timezone || 'America/Chicago'}
                   onChange={(e) => setPrefs(prev => ({ ...prev, timezone: e.target.value }))}
                   style={{
                     width: '100%', padding: '10px 14px', borderRadius: 6,
-                    border: `1.5px solid ${Colors.lightGray}`, fontSize: 14,
-                    background: Colors.cream, boxSizing: 'border-box', cursor: 'pointer',
+                    border: `1.5px solid var(--color-border)`, fontSize: 14,
+                    background: 'var(--color-cream)', boxSizing: 'border-box', cursor: 'pointer',
                   }}
                 >
                   {US_TIMEZONES.map(tz => (
                     <option key={tz.value} value={tz.value}>{tz.label}</option>
                   ))}
                 </select>
-                <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 6, margin: '6px 0 0 0' }}>
+                <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6, margin: '6px 0 0 0' }}>
                   Used for quiet hours and delivery timing
                 </p>
               </div>
@@ -381,11 +381,11 @@ export default function Notifications() {
 
             {/* Section 3: Delivery & Timing */}
             <div className="card mb-lg">
-              <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 16, color: Colors.charcoal }}>Delivery & Timing</p>
+              <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 16, color: 'var(--color-charcoal)' }}>Delivery & Timing</p>
 
               {/* How often */}
               <div style={{ marginBottom: 24 }}>
-                <p style={{ fontWeight: 500, fontSize: 13, marginBottom: 12, color: Colors.charcoal }}>How often</p>
+                <p style={{ fontWeight: 500, fontSize: 13, marginBottom: 12, color: 'var(--color-charcoal)' }}>How often</p>
                 <div className="flex-col gap-sm">
                   {[
                     { value: 'instant' as DigestFrequency, label: 'Instant' },
@@ -394,8 +394,8 @@ export default function Notifications() {
                   ].map(option => (
                     <label key={option.value} style={{
                       padding: '12px 16px', borderRadius: 4,
-                      border: `1.5px solid ${prefs.digest_frequency === option.value ? Colors.copper : Colors.lightGray}`,
-                      background: prefs.digest_frequency === option.value ? Colors.copperMuted : Colors.cream,
+                      border: `1.5px solid ${prefs.digest_frequency === option.value ? 'var(--color-copper)' : 'var(--color-border)'}`,
+                      background: prefs.digest_frequency === option.value ? 'var(--color-copper-muted, #FFF3E0)' : 'var(--color-cream)',
                       cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
                     }}>
                       <input
@@ -406,7 +406,7 @@ export default function Notifications() {
                         onChange={(e) => setPrefs(prev => ({ ...prev, digest_frequency: e.target.value as DigestFrequency }))}
                         style={{ cursor: 'pointer' }}
                       />
-                      <span style={{ color: Colors.charcoal, fontWeight: 500 }}>{option.label}</span>
+                      <span style={{ color: 'var(--color-charcoal)', fontWeight: 500 }}>{option.label}</span>
                     </label>
                   ))}
                 </div>
@@ -414,7 +414,7 @@ export default function Notifications() {
 
               {/* Reminder lead time */}
               <div style={{ marginBottom: 24 }}>
-                <p style={{ fontWeight: 500, fontSize: 13, marginBottom: 12, color: Colors.charcoal }}>Reminder lead time</p>
+                <p style={{ fontWeight: 500, fontSize: 13, marginBottom: 12, color: 'var(--color-charcoal)' }}>Reminder lead time</p>
                 <div className="flex-col gap-sm">
                   {[
                     { value: 'day_of', label: 'Day of' },
@@ -424,8 +424,8 @@ export default function Notifications() {
                   ].map(option => (
                     <label key={option.value} style={{
                       padding: '12px 16px', borderRadius: 4,
-                      border: `1.5px solid ${prefs.reminder_lead_time === option.value ? Colors.copper : Colors.lightGray}`,
-                      background: prefs.reminder_lead_time === option.value ? Colors.copperMuted : Colors.cream,
+                      border: `1.5px solid ${prefs.reminder_lead_time === option.value ? 'var(--color-copper)' : 'var(--color-border)'}`,
+                      background: prefs.reminder_lead_time === option.value ? 'var(--color-copper-muted, #FFF3E0)' : 'var(--color-cream)',
                       cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
                     }}>
                       <input
@@ -436,7 +436,7 @@ export default function Notifications() {
                         onChange={(e) => setPrefs(prev => ({ ...prev, reminder_lead_time: e.target.value as any }))}
                         style={{ cursor: 'pointer' }}
                       />
-                      <span style={{ color: Colors.charcoal, fontWeight: 500 }}>{option.label}</span>
+                      <span style={{ color: 'var(--color-charcoal)', fontWeight: 500 }}>{option.label}</span>
                     </label>
                   ))}
                 </div>
@@ -444,7 +444,7 @@ export default function Notifications() {
 
               {/* Preferred time */}
               <div>
-                <p style={{ fontWeight: 500, fontSize: 13, marginBottom: 12, color: Colors.charcoal }}>Preferred time</p>
+                <p style={{ fontWeight: 500, fontSize: 13, marginBottom: 12, color: 'var(--color-charcoal)' }}>Preferred time</p>
                 <div className="flex-col gap-sm">
                   {[
                     { value: 'morning', label: 'Morning (8 AM)' },
@@ -453,8 +453,8 @@ export default function Notifications() {
                   ].map(option => (
                     <label key={option.value} style={{
                       padding: '12px 16px', borderRadius: 4,
-                      border: `1.5px solid ${prefs.preferred_time === option.value ? Colors.copper : Colors.lightGray}`,
-                      background: prefs.preferred_time === option.value ? Colors.copperMuted : Colors.cream,
+                      border: `1.5px solid ${prefs.preferred_time === option.value ? 'var(--color-copper)' : 'var(--color-border)'}`,
+                      background: prefs.preferred_time === option.value ? 'var(--color-copper-muted, #FFF3E0)' : 'var(--color-cream)',
                       cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
                     }}>
                       <input
@@ -465,7 +465,7 @@ export default function Notifications() {
                         onChange={(e) => setPrefs(prev => ({ ...prev, preferred_time: e.target.value as any }))}
                         style={{ cursor: 'pointer' }}
                       />
-                      <span style={{ color: Colors.charcoal, fontWeight: 500 }}>{option.label}</span>
+                      <span style={{ color: 'var(--color-charcoal)', fontWeight: 500 }}>{option.label}</span>
                     </label>
                   ))}
                 </div>
@@ -474,7 +474,7 @@ export default function Notifications() {
 
             {/* Section 3: Quiet Hours */}
             <div className="card mb-lg">
-              <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 16, color: Colors.charcoal }}>Quiet Hours</p>
+              <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 16, color: 'var(--color-charcoal)' }}>Quiet Hours</p>
 
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
@@ -484,7 +484,7 @@ export default function Notifications() {
                     onChange={(e) => setPrefs(prev => ({ ...prev, quiet_hours_enabled: e.target.checked }))}
                     style={{ width: 18, height: 18, cursor: 'pointer' }}
                   />
-                  <span style={{ fontWeight: 500, color: Colors.charcoal }}>Enable quiet hours</span>
+                  <span style={{ fontWeight: 500, color: 'var(--color-charcoal)' }}>Enable quiet hours</span>
                 </label>
               </div>
 
@@ -492,31 +492,31 @@ export default function Notifications() {
                 <div style={{ marginTop: 16, marginBottom: 12 }}>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                     <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: Colors.medGray }}>Start time</label>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'var(--color-text-secondary)' }}>Start time</label>
                       <input
                         type="time"
                         value={prefs.quiet_hours_start || '22:00'}
                         onChange={(e) => setPrefs(prev => ({ ...prev, quiet_hours_start: e.target.value }))}
                         style={{
                           width: '100%', padding: '8px 12px', borderRadius: 4,
-                          border: `1px solid ${Colors.lightGray}`, fontSize: 14, fontFamily: 'monospace',
+                          border: `1px solid var(--color-border)`, fontSize: 14, fontFamily: 'monospace',
                         }}
                       />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: Colors.medGray }}>End time</label>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'var(--color-text-secondary)' }}>End time</label>
                       <input
                         type="time"
                         value={prefs.quiet_hours_end || '07:00'}
                         onChange={(e) => setPrefs(prev => ({ ...prev, quiet_hours_end: e.target.value }))}
                         style={{
                           width: '100%', padding: '8px 12px', borderRadius: 4,
-                          border: `1px solid ${Colors.lightGray}`, fontSize: 14, fontFamily: 'monospace',
+                          border: `1px solid var(--color-border)`, fontSize: 14, fontFamily: 'monospace',
                         }}
                       />
                     </div>
                   </div>
-                  <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 12, margin: '12px 0 0 0' }}>
+                  <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 12, margin: '12px 0 0 0' }}>
                     Push and SMS notifications are silenced during quiet hours (based on your timezone). Emails and in-app are unaffected.
                   </p>
                 </div>
@@ -533,8 +533,8 @@ export default function Notifications() {
                   style={{ width: 18, height: 18, cursor: 'pointer', marginTop: 2, flexShrink: 0 }}
                 />
                 <div>
-                  <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px 0' }}>Weekly Home Health Summary</p>
-                  <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>Get a weekly email recap of your home's maintenance status</p>
+                  <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-charcoal)', margin: '0 0 4px 0' }}>Weekly Home Health Summary</p>
+                  <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>Get a weekly email recap of your home's maintenance status</p>
                 </div>
               </label>
             </div>
@@ -544,7 +544,7 @@ export default function Notifications() {
               <button className="btn btn-primary" onClick={handleSave} style={{ width: '100%', marginBottom: 12 }}>
                 Save Preferences
               </button>
-              {saved && <p style={{ textAlign: 'center', fontSize: 12, color: Colors.success, fontWeight: 600 }}><span style={{ display: 'inline-block', marginRight: 4, verticalAlign: 'middle' }}><CheckCircleIcon size={14} color={Colors.success} /></span> Preferences saved</p>}
+              {saved && <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--color-success)', fontWeight: 600 }}><span style={{ display: 'inline-block', marginRight: 4, verticalAlign: 'middle' }}><CheckCircleIcon size={14} color={'var(--color-success)'} /></span> Preferences saved</p>}
             </div>
           </>
         )}

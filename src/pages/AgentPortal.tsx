@@ -143,9 +143,9 @@ export default function AgentPortal() {
 
   const getExpiryBadge = (expiresAt: string) => {
     const days = getDaysUntilExpiry(expiresAt);
-    if (days < 0) return { text: 'Expired', color: '#C62828', bg: '#E5393520' };
-    if (days <= 7) return { text: `${days}d left`, color: '#C62828', bg: '#E5393520' };
-    if (days <= 30) return { text: `${days}d left`, color: '#E65100', bg: '#FF980020' };
+    if (days < 0) return { text: 'Expired', color: 'var(--color-error)', bg: 'var(--color-error)', opacity: 0.15 };
+    if (days <= 7) return { text: `${days}d left`, color: 'var(--color-error)', bg: 'var(--color-error)', opacity: 0.15 };
+    if (days <= 30) return { text: `${days}d left`, color: 'var(--color-warning)', bg: 'var(--color-warning)', opacity: 0.15 };
     return { text: new Date(expiresAt).toLocaleDateString(), color: Colors.medGray, bg: 'transparent' };
   };
 
@@ -322,7 +322,7 @@ export default function AgentPortal() {
                   </div>
 
                   {expandedClient === c.id && (
-                    <div style={{ borderTop: '1px solid var(--light-gray)', padding: '16px 20px', background: Colors.cream + '40' }}>
+                    <div style={{ borderTop: '1px solid var(--color-border)', padding: '16px 20px', background: 'var(--color-copper-muted, #FFF3E0)', opacity: 0.4 }}>
                       {c.home ? (
                         <div>
                           <div className="flex items-center justify-between mb-md">
@@ -358,9 +358,9 @@ export default function AgentPortal() {
 
                       {/* Sale Prep Status */}
                       {c.home?.sale_prep_active && (
-                        <div style={{ marginTop: 16, borderTop: `1px solid ${Colors.lightGray}`, paddingTop: 16 }}>
+                        <div style={{ marginTop: 16, borderTop: `1px solid var(--color-border)`, paddingTop: 16 }}>
                           <div className="flex items-center gap-sm mb-sm">
-                            <span style={{ padding: '2px 8px', borderRadius: 4, background: '#FF980020', color: '#E65100', fontSize: 11, fontWeight: 600 }}>SALE PREP</span>
+                            <span style={{ padding: '2px 8px', borderRadius: 4, background: 'var(--color-warning)', opacity: 0.15, color: 'var(--color-warning)', fontSize: 11, fontWeight: 600 }}>SALE PREP</span>
                             <p style={{ fontWeight: 600, fontSize: 14 }}>Preparing Home for Sale</p>
                           </div>
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -388,7 +388,7 @@ export default function AgentPortal() {
                       )}
 
                       {/* Client Notes */}
-                      <div style={{ marginTop: 16, borderTop: `1px solid ${Colors.lightGray}`, paddingTop: 16 }}>
+                      <div style={{ marginTop: 16, borderTop: `1px solid var(--color-border)`, paddingTop: 16 }}>
                         <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Notes</p>
                         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                           <input
@@ -426,8 +426,8 @@ export default function AgentPortal() {
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
                             {(clientNotes[c.id] || []).map((note: any) => (
-                              <div key={note.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 10px', background: Colors.warmWhite, borderRadius: 6, fontSize: 13 }}>
-                                <span style={{ padding: '1px 6px', borderRadius: 4, background: Colors.copperMuted, color: Colors.copper, fontSize: 10, fontWeight: 600, textTransform: 'uppercase', flexShrink: 0, marginTop: 2 }}>{note.category}</span>
+                              <div key={note.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 10px', background: 'var(--color-background)', borderRadius: 6, fontSize: 13 }}>
+                                <span style={{ padding: '1px 6px', borderRadius: 4, background: 'var(--color-copper-muted, #FFF3E0)', color: 'var(--color-copper)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', flexShrink: 0, marginTop: 2 }}>{note.category}</span>
                                 <span style={{ flex: 1, color: Colors.charcoal }}>{note.note}</span>
                                 <span className="text-xs text-gray" style={{ flexShrink: 0 }}>{new Date(note.created_at).toLocaleDateString()}</span>
                                 <button className="btn btn-ghost" style={{ padding: 0, fontSize: 12, color: Colors.error, lineHeight: 1 }} onClick={() => handleDeleteNote(c.id, note.id)}>×</button>
@@ -456,12 +456,12 @@ export default function AgentPortal() {
                   width: 32, height: 32, borderRadius: '50%',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 14, fontWeight: 600,
-                  backgroundColor: setupStep >= s ? Colors.copper : Colors.lightGray,
-                  color: setupStep >= s ? '#fff' : Colors.medGray,
+                  backgroundColor: setupStep >= s ? Colors.copper : 'var(--color-background)',
+                  color: setupStep >= s ? '#fff' : 'var(--color-text-secondary)',
                 }}>
                   {setupStep > s ? '✓' : s}
                 </div>
-                {s < 3 && <div style={{ width: 40, height: 2, backgroundColor: setupStep > s ? Colors.copper : Colors.lightGray }} />}
+                {s < 3 && <div style={{ width: 40, height: 2, backgroundColor: setupStep > s ? Colors.copper : 'var(--color-background)' }} />}
               </div>
             ))}
           </div>
@@ -643,7 +643,7 @@ export default function AgentPortal() {
           {/* Step 3: Success — show code */}
           {setupStep === 3 && createdCode && (
             <div className="card" style={{ textAlign: 'center' }}>
-              <div style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: `${Colors.success}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 28 }}>
+              <div style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'var(--color-success)', opacity: 0.15, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 28 }}>
                 ✓
               </div>
               <h2 style={{ fontSize: 20, marginBottom: 8 }}>Invite Ready!</h2>
@@ -652,7 +652,7 @@ export default function AgentPortal() {
               </p>
 
               <div style={{
-                backgroundColor: Colors.cream,
+                backgroundColor: 'var(--color-copper-muted, #FFF3E0)',
                 borderRadius: 12,
                 padding: '20px 24px',
                 marginBottom: 24,
@@ -668,7 +668,7 @@ export default function AgentPortal() {
                 </code>
               </div>
 
-              <div style={{ backgroundColor: Colors.sageMuted, borderRadius: 8, padding: 16, marginBottom: 24, textAlign: 'left' }}>
+              <div style={{ backgroundColor: 'var(--color-sage)', opacity: 0.15, borderRadius: 8, padding: 16, marginBottom: 24, textAlign: 'left' }}>
                 <p className="text-sm" style={{ marginBottom: 4 }}><strong>Client:</strong> {clientForm.name}</p>
                 <p className="text-sm" style={{ marginBottom: 4 }}><strong>Home:</strong> {homeForm.address}, {homeForm.city}, {homeForm.state} {homeForm.zip_code}</p>
                 <p className="text-sm"><strong>Tier:</strong> {clientForm.tier}</p>
@@ -696,7 +696,7 @@ export default function AgentPortal() {
               <div className="stat-label">Redeemed Codes</div>
             </div>
             <div className="card stat-card">
-              <div className="stat-value" style={{ color: expiringSoon.length > 0 ? '#C62828' : Colors.medGray }}>{expiringSoon.length}</div>
+              <div className="stat-value" style={{ color: expiringSoon.length > 0 ? 'var(--color-error)' : Colors.medGray }}>{expiringSoon.length}</div>
               <div className="stat-label">Expiring Soon (30d)</div>
             </div>
           </div>
@@ -710,7 +710,7 @@ export default function AgentPortal() {
                   <tbody>
                     {activeCodes.map(c => (
                       <tr key={c.id}>
-                        <td><code style={{ background: Colors.cream, padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{c.code}</code></td>
+                        <td><code style={{ background: 'var(--color-copper-muted, #FFF3E0)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{c.code}</code></td>
                         <td><span className="badge badge-copper">{c.tier}</span></td>
                         <td className="text-sm">{c.client_name || '—'}</td>
                         <td>{c.duration_months} months</td>
@@ -764,7 +764,7 @@ export default function AgentPortal() {
               <div className="stat-label">Avg Days to Redeem</div>
             </div>
             <div className="card stat-card">
-              <div className="stat-value" style={{ color: expiringSoon.length > 0 ? '#C62828' : Colors.medGray }}>{expiringSoon.length}</div>
+              <div className="stat-value" style={{ color: expiringSoon.length > 0 ? 'var(--color-error)' : Colors.medGray }}>{expiringSoon.length}</div>
               <div className="stat-label">Expiring Soon</div>
             </div>
           </div>
@@ -814,7 +814,7 @@ export default function AgentPortal() {
           {/* Expiring Codes Detail */}
           {expiringSoon.length > 0 && (
             <>
-              <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: '#C62828' }}>Codes Expiring Within 30 Days</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: 'var(--color-error)' }}>Codes Expiring Within 30 Days</h2>
               <div className="card table-container mb-lg">
                 <table>
                   <thead><tr><th>Code</th><th>Tier</th><th>Client</th><th>Expires</th></tr></thead>
@@ -823,10 +823,10 @@ export default function AgentPortal() {
                       const badge = getExpiryBadge(c.expires_at);
                       return (
                         <tr key={c.id}>
-                          <td><code style={{ background: Colors.cream, padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{c.code}</code></td>
+                          <td><code style={{ background: 'var(--color-copper-muted, #FFF3E0)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{c.code}</code></td>
                           <td><span className="badge badge-copper">{c.tier}</span></td>
                           <td className="text-sm">{c.client_name || '—'}</td>
-                          <td><span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: badge.color, background: badge.bg }}>{badge.text}</span></td>
+                          <td><span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: badge.color, background: badge.bg, opacity: badge.opacity || 1 }}>{badge.text}</span></td>
                         </tr>
                       );
                     })}
@@ -862,9 +862,9 @@ export default function AgentPortal() {
                   className="card"
                   style={{
                     padding: '14px 18px',
-                    borderLeft: `3px solid ${n.read ? Colors.lightGray : Colors.copper}`,
+                    borderLeft: `3px solid ${n.read ? 'var(--color-background)' : Colors.copper}`,
                     opacity: n.read ? 0.7 : 1,
-                    background: n.read ? undefined : `${Colors.copperMuted}40`,
+                    background: n.read ? undefined : `var(--color-copper-muted, #FFF3E0)`,
                   }}
                 >
                   <div className="flex items-center justify-between mb-xs">

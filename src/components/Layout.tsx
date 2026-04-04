@@ -107,20 +107,20 @@ export default function Layout() {
               onClick={() => setShowHomeSwitcher(!showHomeSwitcher)}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 12px', background: home ? Colors.cream : '#f3f4f6',
-                border: '1px solid #e5e7eb', borderRadius: 8, cursor: 'pointer',
-                fontSize: 13, fontWeight: 500, color: '#374151',
+                padding: '8px 12px', background: home ? 'var(--color-cream)' : 'var(--color-background)',
+                border: '1px solid var(--color-border)', borderRadius: 8, cursor: 'pointer',
+                fontSize: 13, fontWeight: 500, color: 'var(--color-text)',
               }}
             >
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>
                 {home ? `${home.address || 'My Home'}` : 'Select Home'}
               </span>
-              <span style={{ fontSize: 10, marginLeft: 8, color: '#9ca3af' }}>{showHomeSwitcher ? '\u25B2' : '\u25BC'}</span>
+              <span style={{ fontSize: 10, marginLeft: 8, color: 'var(--color-text-secondary)' }}>{showHomeSwitcher ? '\u25B2' : '\u25BC'}</span>
             </button>
             {showHomeSwitcher && (
               <div style={{
-                position: 'absolute', left: 16, right: 16, top: '100%', background: '#fff',
-                border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                position: 'absolute', left: 16, right: 16, top: '100%', background: 'var(--color-card-background)',
+                border: '1px solid var(--color-border)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                 zIndex: 50, maxHeight: 200, overflowY: 'auto',
               }}>
                 {homes.map(h => (
@@ -129,13 +129,13 @@ export default function Layout() {
                     onClick={() => { switchHome(h.id); setShowHomeSwitcher(false); }}
                     style={{
                       width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none',
-                      background: h.id === home?.id ? (Colors.cream) : 'transparent',
-                      cursor: 'pointer', fontSize: 13, borderBottom: '1px solid #f3f4f6',
+                      background: h.id === home?.id ? 'var(--color-cream)' : 'transparent',
+                      cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--color-background)',
                       fontWeight: h.id === home?.id ? 600 : 400,
                     }}
                   >
                     <div style={{ fontWeight: 500 }}>{h.address || 'Unnamed Home'}</div>
-                    <div style={{ fontSize: 11, color: '#9ca3af' }}>{h.city}, {h.state} {h.zip_code}</div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{h.city}, {h.state} {h.zip_code}</div>
                   </button>
                 ))}
                 <button
@@ -143,7 +143,7 @@ export default function Layout() {
                   style={{
                     width: '100%', textAlign: 'center', padding: '10px 12px', border: 'none',
                     background: 'transparent', cursor: 'pointer', fontSize: 13,
-                    color: Colors.copper, fontWeight: 600,
+                    color: 'var(--color-copper)', fontWeight: 600,
                   }}
                 >
                   + Add Another Property
@@ -190,27 +190,27 @@ export default function Layout() {
           <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
             <NavLink to="/profile" className="btn btn-ghost btn-sm" style={{ flex: 1, textDecoration: 'none', fontSize: 12 }}>Settings</NavLink>
             <ThemeToggleIcon />
-            <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 12, color: '#E53935' }} onClick={handleLogout}>Sign Out</button>
+            <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 12, color: 'var(--color-error)' }} onClick={handleLogout}>Sign Out</button>
           </div>
           <div style={{ display: 'flex', gap: 12, marginTop: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/terms" style={{ fontSize: 10, color: '#999', textDecoration: 'none' }}>Terms</a>
-            <a href="/privacy" style={{ fontSize: 10, color: '#999', textDecoration: 'none' }}>Privacy</a>
-            <a href="/cancellation" style={{ fontSize: 10, color: '#999', textDecoration: 'none' }}>Cancellation</a>
-            <a href="/ai-disclaimer" style={{ fontSize: 10, color: '#999', textDecoration: 'none' }}>AI Disclaimer</a>
+            <a href="/terms" style={{ fontSize: 10, color: 'var(--color-text-secondary)', textDecoration: 'none' }}>Terms</a>
+            <a href="/privacy" style={{ fontSize: 10, color: 'var(--color-text-secondary)', textDecoration: 'none' }}>Privacy</a>
+            <a href="/cancellation" style={{ fontSize: 10, color: 'var(--color-text-secondary)', textDecoration: 'none' }}>Cancellation</a>
+            <a href="/ai-disclaimer" style={{ fontSize: 10, color: 'var(--color-text-secondary)', textDecoration: 'none' }}>AI Disclaimer</a>
           </div>
         </div>
       </nav>
       <main className="main-content">
         {user && !user.email_confirmed && (
           <div style={{
-            background: '#FFF3CD',
-            borderBottom: '1px solid #FFE082',
+            background: 'var(--color-warning)20',
+            borderBottom: '1px solid var(--color-warning)',
             padding: '10px 24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             fontSize: 13,
-            color: '#856404',
+            color: 'var(--color-warning)',
           }}>
             <span>Please verify your email address. Check your inbox for a confirmation link.</span>
             <button
@@ -233,10 +233,10 @@ export default function Layout() {
               }}
               style={{
                 background: 'none',
-                border: '1px solid #856404',
+                border: '1px solid var(--color-warning)',
                 borderRadius: 6,
                 padding: '4px 12px',
-                color: '#856404',
+                color: 'var(--color-warning)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -277,7 +277,7 @@ function ThemeToggleIcon() {
         fontSize: 18,
         transition: 'background 0.2s',
       }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'var(--cream)')}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-background)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'none')}
     >
       {isDark ? '\u2600\uFE0F' : '\uD83C\uDF19'}

@@ -209,7 +209,7 @@ export default function Visits() {
       <div className="page" style={{ maxWidth: 600 }}>
         <div className="page-header"><h1>Pro Visits</h1></div>
         <div className="card text-center" style={{ padding: 48 }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 20, color: Colors.copper }}>PRO</div>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-copper-muted, #FFF3E0)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 20, color: 'var(--color-copper)' }}>PRO</div>
           <h2 style={{ fontSize: 20, marginBottom: 8 }}>Pro Visits Locked</h2>
           <p className="text-gray mb-lg">Upgrade to a Pro plan to book monthly maintenance visits with qualified professionals.</p>
           <button className="btn btn-primary" onClick={() => window.location.href = '/subscription'}>View Plans</button>
@@ -233,7 +233,7 @@ export default function Visits() {
         <h1>Pro Monthly Visits</h1>
       </div>
 
-      {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: '#E5393520', color: '#C62828', fontSize: 14, marginBottom: 16 }}>{error}</div>}
+      {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', fontSize: 14, marginBottom: 16 }}>{error}</div>}
 
       {/* Upcoming Visit Section */}
       <div style={{ marginBottom: 32 }}>
@@ -243,8 +243,8 @@ export default function Visits() {
           <div
             className="card"
             style={{
-              background: Colors.copperMuted,
-              borderLeft: `4px solid ${Colors.copper}`,
+              background: 'var(--color-copper-muted, #FFF3E0)',
+              borderLeft: `4px solid var(--color-copper)`,
               marginBottom: 16,
               padding: 16,
             }}
@@ -663,7 +663,7 @@ export default function Visits() {
           </div>
         ) : trends.length === 0 ? (
           <div className="empty-state">
-            <div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>📊</div>
+            <div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }} role="img" aria-label="Chart">📊</div>
             <h3>No trend data yet</h3>
             <p>Equipment trends will appear after your first completed visit with inspections.</p>
           </div>

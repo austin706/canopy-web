@@ -249,8 +249,8 @@ export default function HomeAssistant() {
                 borderRadius: 16,
                 borderTopRightRadius: msg.role === 'user' ? 4 : 16,
                 borderTopLeftRadius: msg.role === 'assistant' ? 4 : 16,
-                backgroundColor: msg.role === 'user' ? Colors.sage : '#f5f5f5',
-                color: msg.role === 'user' ? '#fff' : Colors.charcoal,
+                backgroundColor: msg.role === 'user' ? Colors.sage : 'var(--color-background)',
+                color: msg.role === 'user' ? 'var(--color-card-background)' : Colors.charcoal,
                 fontSize: 14,
                 lineHeight: 1.6,
                 whiteSpace: 'pre-wrap',
@@ -264,7 +264,7 @@ export default function HomeAssistant() {
           <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 16 }}>
             <div style={{
               padding: '12px 16px', borderRadius: 16, borderTopLeftRadius: 4,
-              backgroundColor: '#f5f5f5', color: Colors.medGray, fontSize: 14,
+              backgroundColor: 'var(--color-background)', color: Colors.medGray, fontSize: 14,
             }}>
               <span style={{ display: 'inline-block', animation: 'pulse 1.5s infinite' }}>Thinking...</span>
             </div>
@@ -272,8 +272,8 @@ export default function HomeAssistant() {
         )}
         {error && (
           <div style={{
-            padding: '12px 16px', borderRadius: 8, backgroundColor: '#FFF3F3',
-            border: '1px solid #FFCDD2', color: '#C62828', fontSize: 13, marginBottom: 16,
+            padding: '12px 16px', borderRadius: 8, backgroundColor: 'var(--color-error-muted, #FFF3F3)',
+            border: '1px solid var(--color-error-muted, #FFCDD2)', color: 'var(--color-error)', fontSize: 13, marginBottom: 16,
           }}>
             {error}
           </div>
@@ -285,7 +285,7 @@ export default function HomeAssistant() {
       <div style={{
         padding: '12px 24px 20px',
         borderTop: `1px solid ${Colors.cream}`,
-        backgroundColor: '#fff',
+        backgroundColor: 'var(--color-card-background)',
       }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea

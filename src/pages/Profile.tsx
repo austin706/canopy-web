@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { signOut, updateProfile, redeemGiftCode, deleteUserAccount, lookupAgentByCode, linkAgent } from '@/services/supabase';
 import { PLANS } from '@/services/subscriptionGate';
+import MessageBanner from '@/components/MessageBanner';
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { ThemeMode } from '@/constants/theme';
@@ -92,12 +93,12 @@ export default function Profile() {
         <h1>Profile & Settings</h1>
       </div>
 
-      {message && <div style={{ padding: '10px 16px', borderRadius: 8, background: message.includes('Failed') || message.includes('Invalid') ? '#E5393520' : '#4CAF5020', color: message.includes('Failed') || message.includes('Invalid') ? '#C62828' : '#2E7D32', fontSize: 14, marginBottom: 16 }}>{message}</div>}
+      {message && <MessageBanner message={message} />}
 
       {/* Profile Card */}
       <div className="card mb-lg">
         <div className="flex items-center gap-lg mb-lg">
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: Colors.copper, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 24, fontWeight: 700 }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-copper)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 24, fontWeight: 700 }}>
             {user?.full_name?.charAt(0) || '?'}
           </div>
           <div style={{ flex: 1 }}>
@@ -117,7 +118,7 @@ export default function Profile() {
       </div>
 
       {/* Subscription */}
-      <div className="card mb-lg" style={{ background: Colors.copperMuted }}>
+      <div className="card mb-lg" style={{ background: 'var(--color-copper-muted, #FFF3E0)' }}>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs fw-600 text-copper mb-sm">SUBSCRIPTION</p>
@@ -194,8 +195,8 @@ export default function Profile() {
       <button className="btn btn-danger btn-full" onClick={handleLogout}>Sign Out</button>
 
       {/* Delete Account */}
-      <div className="card mt-lg" style={{ border: '1px solid #E5393540' }}>
-        <h3 style={{ fontSize: 16, marginBottom: 8, color: '#C62828' }}>Danger Zone</h3>
+      <div className="card mt-lg" style={{ border: '1px solid var(--color-error)40' }}>
+        <h3 style={{ fontSize: 16, marginBottom: 8, color: 'var(--color-error)' }}>Danger Zone</h3>
         <p className="text-sm text-gray mb-md">Permanently delete your account and all associated data. This action cannot be undone.</p>
         <button className="btn btn-danger btn-sm" onClick={handleDeleteAccount}>Delete My Account</button>
       </div>
@@ -221,13 +222,13 @@ function ThemeToggle() {
               flex: 1,
               padding: '10px 0',
               borderRadius: 8,
-              border: `2px solid ${mode === opt.value ? colors.sage : colors.lightGray}`,
-              background: mode === opt.value ? colors.sageMuted : 'transparent',
+              border: `2px solid ${mode === opt.value ? 'var(--color-sage)' : 'var(--color-border)'}`,
+              background: mode === opt.value ? 'var(--color-sage-muted, #f0f4f0)' : 'transparent',
               cursor: 'pointer',
               textAlign: 'center',
               fontSize: 13,
               fontWeight: mode === opt.value ? 600 : 400,
-              color: colors.charcoal,
+              color: 'var(--color-charcoal)',
               transition: 'all 0.2s',
             }}
           >

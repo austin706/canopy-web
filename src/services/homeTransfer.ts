@@ -66,7 +66,7 @@ export async function initiateTransfer(
 
 /** Accept a transfer — re-parent the home and all data to the new owner */
 export async function acceptTransfer(transferId: string, newOwnerId: string): Promise<void> {
-  // 1. Get the transfer record
+  // Fetch transfer details before the atomic operation (for notifications)
   const { data: transfer, error: fetchErr } = await supabase
     .from('home_transfers')
     .select('*')
@@ -78,52 +78,23 @@ export async function acceptTransfer(transferId: string, newOwnerId: string): Pr
     throw new Error('This transfer is no longer active');
   }
 
-  const homeId = transfer.home_id;
-
-  // 2. Re-parent the home record
-  const { error: homeErr } = await supabase
-    .from('homes')
-    .update({
-      user_id: newOwnerId,
-      agent_attested_at: null,       // Clear seller's agent attestation
-      agent_attestation_note: null,
-    })
-    .eq('id', homeId);
-  if (homeErr) throw homeErr;
-
-  // 3. Clear secure notes (alarm codes, wifi passwords) — don't transfer these
-  // This is a privacy-critical operation: failing to delete means the new owner
-  // could see the previous owner's alarm codes, wifi passwords, etc.
-  const { error: notesErr } = await supabase
-    .from('secure_notes')
-    .delete()
-    .eq('home_id', homeId);
-  if (notesErr) {
-    console.error('CRITICAL: Failed to clear secure notes during home transfer:', notesErr);
-    throw new Error('Home transfer blocked: could not clear previous owner\'s secure notes. Please try again or contact support.');
+  // Use atomic database function — re-parents home, clears secure notes,
+  // clears vault PIN, and marks transfer accepted in a single transaction.
+  const { error: rpcErr } = await supabase.rpc('accept_home_transfer', {
+    p_transfer_id: transferId,
+    p_new_owner_id: newOwnerId,
+  });
+  if (rpcErr) {
+    console.error('Atomic transfer failed:', rpcErr);
+    throw new Error(rpcErr.message || 'Home transfer failed. Please try again or contact support.');
   }
 
-  // 4. Update the profile — remove agent linkage for new owner's home
-  // (The new owner keeps their own agent if any — we don't touch profiles)
-
-  // 5. Mark the transfer as accepted
-  const { error: updateErr } = await supabase
-    .from('home_transfers')
-    .update({
-      status: 'accepted',
-      to_user_id: newOwnerId,
-      accepted_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', transferId);
-  if (updateErr) throw updateErr;
-
-  // 6. Notify the seller that the transfer was accepted
+  // Notify the seller (non-critical — runs after the atomic transfer succeeds)
   try {
     const fromUserId = transfer.from_user_id;
     if (fromUserId) {
       const { data: buyer } = await supabase.from('profiles').select('full_name, email').eq('id', newOwnerId).single();
-      const { data: home } = await supabase.from('homes').select('address, city').eq('id', homeId).single();
+      const { data: home } = await supabase.from('homes').select('address, city').eq('id', transfer.home_id).single();
       const buyerName = buyer?.full_name || buyer?.email || 'The new owner';
       const addr = home ? `${home.address}, ${home.city}` : 'your home';
       sendNotification({

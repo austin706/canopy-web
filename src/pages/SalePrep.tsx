@@ -119,7 +119,7 @@ export default function SalePrep() {
       <div className="page" style={{ maxWidth: 600 }}>
         <div className="page-header"><h1>Preparing to Sell?</h1></div>
         <div className="empty-state" style={{ marginBottom: 24 }}>
-          <div className="icon" style={{ fontSize: 48, fontWeight: 700, color: Colors.copper }}>🏡</div>
+          <div className="icon" style={{ fontSize: 48, fontWeight: 700, color: Colors.copper }} role="img" aria-label="Home">🏡</div>
           <h3 style={{ fontSize: 22, color: Colors.charcoal }}>No Active Sale Prep</h3>
           <p style={{ lineHeight: 1.6 }}>When you're ready to sell, activate sale prep to get a 26-item checklist that guides you through preparing your home for market.</p>
         </div>
@@ -182,7 +182,7 @@ export default function SalePrep() {
         </button>
       </div>
 
-      {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: '#E5393520', color: '#C62828', fontSize: 14, marginBottom: 16 }}>{error}</div>}
+      {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', fontSize: 14, marginBottom: 16 }}>{error}</div>}
       {activationMessage && (
         <div style={{ padding: '10px 16px', borderRadius: 8, background: Colors.sageMuted, color: Colors.charcoal, fontSize: 14, marginBottom: 16, borderLeft: `4px solid ${Colors.sage}` }}>
           {activationMessage}
@@ -390,7 +390,7 @@ export default function SalePrep() {
               <button className="btn btn-secondary" onClick={() => setShowConfirmCancel(false)} style={{ flex: 1 }}>
                 Keep Going
               </button>
-              <button className="btn" style={{ flex: 1, background: Colors.error, color: 'white' }} onClick={() => handleClose('cancelled')}>
+              <button className="btn" style={{ flex: 1, background: 'var(--color-error)', color: 'white' }} onClick={() => handleClose('cancelled')}>
                 End Sale Prep
               </button>
             </div>

@@ -240,8 +240,8 @@ async function compressInspectionImageFromFile(file: File, maxWidth = 1600, maxH
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  urgent: '#C62828',
-  high: '#E65100',
+  urgent: 'var(--color-error)',
+  high: 'var(--color-warning)',
   medium: Colors.copper,
   low: Colors.sage,
 };

@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { redeemGiftCode, insertProInterest, supabase } from '@/services/supabase';
 import { PLANS, loadServiceAreas, isProAvailableInArea } from '@/services/subscriptionGate';
+import MessageBanner from '@/components/MessageBanner';
+import { getMessageVariant, messageColors } from '@/utils/messageType';
 import { enrollProSubscriber, findProviderForZip } from '@/services/proEnrollment';
 import { requestConsultation } from '@/services/proPlus';
 import { Colors } from '@/constants/theme';
@@ -398,7 +400,7 @@ export default function Subscription() {
         </div>
       </div>
 
-      {message && <div style={{ padding: '10px 16px', borderRadius: 8, background: message.includes('Failed') || message.includes('Invalid') || message.includes('expired') || message.includes('redeemed') ? '#E5393520' : '#4CAF5020', color: message.includes('Failed') || message.includes('Invalid') || message.includes('expired') || message.includes('redeemed') ? '#C62828' : '#2E7D32', fontSize: 14, marginBottom: 16 }}>{message}</div>}
+      {message && <MessageBanner message={message} />}
 
       {/* Pro Enrollment Progress */}
       {enrolling && (
@@ -529,10 +531,8 @@ export default function Subscription() {
                       borderRadius: 8,
                       fontSize: 13,
                       lineHeight: 1.4,
-                      background: proPlusMessage.includes('Failed') || proPlusMessage.includes('No Pro+') || proPlusMessage.includes('complete your')
-                        ? '#E5393520' : '#4CAF5020',
-                      color: proPlusMessage.includes('Failed') || proPlusMessage.includes('No Pro+') || proPlusMessage.includes('complete your')
-                        ? '#C62828' : '#2E7D32',
+                      background: messageColors(getMessageVariant(proPlusMessage)).bg,
+                      color: messageColors(getMessageVariant(proPlusMessage)).fg,
                     }}>
                       {proPlusMessage}
                     </div>

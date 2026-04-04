@@ -118,7 +118,7 @@ export default function Quotes() {
         <h1>Quotes</h1>
       </div>
 
-      {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: '#E5393520', color: '#C62828', fontSize: 14, marginBottom: 16 }}>{error}</div>}
+      {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', fontSize: 14, marginBottom: 16 }}>{error}</div>}
 
       {/* Filter Tabs */}
       <div className="tabs mb-lg">

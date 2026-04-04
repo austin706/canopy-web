@@ -294,8 +294,8 @@ export default function ServiceAreaMap({ userZip, compact = false }: ServiceArea
           marginBottom: compact ? 12 : 16,
           padding: '8px 12px',
           borderRadius: 8,
-          background: userZipAvailable ? `${Colors.sage}15` : '#FFF3E0',
-          color: userZipAvailable ? '#2E7D32' : '#E65100',
+          background: userZipAvailable ? `${Colors.sage}15` : 'var(--color-copper-muted, #FFF3E0)',
+          color: userZipAvailable ? 'var(--color-success)' : 'var(--color-warning)',
           fontSize: 13,
           fontWeight: 500,
         }}>
@@ -308,7 +308,7 @@ export default function ServiceAreaMap({ userZip, compact = false }: ServiceArea
 
       {/* Zip code checker */}
       <div style={{
-        background: '#f9f9f7',
+        background: 'var(--color-background)',
         borderRadius: 12,
         padding: compact ? 14 : 18,
       }}>
@@ -344,7 +344,7 @@ export default function ServiceAreaMap({ userZip, compact = false }: ServiceArea
             padding: '8px 12px',
             borderRadius: 8,
             background: `${Colors.sage}20`,
-            color: '#2E7D32',
+            color: 'var(--color-success)',
             fontSize: 13,
             fontWeight: 500,
           }}>
@@ -357,8 +357,8 @@ export default function ServiceAreaMap({ userZip, compact = false }: ServiceArea
             marginTop: 10,
             padding: '8px 12px',
             borderRadius: 8,
-            background: '#FFF3E0',
-            color: '#E65100',
+            background: 'var(--color-copper-muted, #FFF3E0)',
+            color: 'var(--color-warning)',
             fontSize: 13,
             fontWeight: 500,
           }}>

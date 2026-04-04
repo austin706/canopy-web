@@ -297,7 +297,7 @@ export default function AdminSupportTickets() {
               {expandedId === ticket.id && (
                 <div style={{ paddingTop: 12 }}>
                   {/* Full Message */}
-                  <div style={{ marginBottom: 16, padding: '10px 12px', backgroundColor: Colors.cream, borderRadius: 6, borderLeft: `3px solid ${Colors.medGray}` }}>
+                  <div style={{ marginBottom: 16, padding: '10px 12px', backgroundColor: 'var(--color-copper-muted, #FFF3E0)', borderRadius: 6, borderLeft: `3px solid var(--color-text-secondary)` }}>
                     <p className="text-xs text-gray" style={{ marginBottom: 4, fontWeight: 600 }}>Message</p>
                     <p style={{ fontSize: 13, lineHeight: 1.5, color: Colors.charcoal, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                       {ticket.message}
@@ -305,7 +305,7 @@ export default function AdminSupportTickets() {
                   </div>
 
                   {/* Metadata */}
-                  <div style={{ marginBottom: 16, padding: '10px 12px', backgroundColor: Colors.warmWhite, borderRadius: 6 }}>
+                  <div style={{ marginBottom: 16, padding: '10px 12px', backgroundColor: 'var(--color-background)', borderRadius: 6 }}>
                     <div className="flex gap-lg" style={{ fontSize: 12, flexWrap: 'wrap' }}>
                       <div>
                         <p className="text-xs text-gray" style={{ fontWeight: 600 }}>Created</p>
@@ -323,7 +323,7 @@ export default function AdminSupportTickets() {
                   </div>
 
                   {/* Admin Actions */}
-                  <div style={{ borderTop: `1px solid ${Colors.lightGray}`, paddingTop: 12 }}>
+                  <div style={{ borderTop: `1px solid var(--color-border)`, paddingTop: 12 }}>
                     <p className="text-xs text-gray" style={{ fontWeight: 600, marginBottom: 8 }}>Admin Actions</p>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <label className="text-xs text-gray" style={{ fontWeight: 600 }}>Change Status:</label>

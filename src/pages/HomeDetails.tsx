@@ -163,19 +163,19 @@ export default function HomeDetails() {
             <div className="form-group">
               <label>Zip</label>
               <input className="form-input" value={form.zip_code} onChange={e => setForm({...form, zip_code: e.target.value})} />
-              {errors.zip_code && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{errors.zip_code}</p>}
+              {errors.zip_code && <p style={{ color: 'var(--color-error)', fontSize: 13, marginTop: 4 }}>{errors.zip_code}</p>}
             </div>
           </div>
           <div className="grid-2">
             <div className="form-group">
               <label>Year Built</label>
               <input className="form-input" type="number" value={form.year_built} onChange={e => setForm({...form, year_built: e.target.value})} />
-              {errors.year_built && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{errors.year_built}</p>}
+              {errors.year_built && <p style={{ color: 'var(--color-error)', fontSize: 13, marginTop: 4 }}>{errors.year_built}</p>}
             </div>
             <div className="form-group">
               <label>Sq Ft</label>
               <input className="form-input" type="number" value={form.square_footage} onChange={e => setForm({...form, square_footage: e.target.value})} />
-              {errors.square_footage && <p style={{ color: '#C62828', fontSize: 13, marginTop: 4 }}>{errors.square_footage}</p>}
+              {errors.square_footage && <p style={{ color: 'var(--color-error)', fontSize: 13, marginTop: 4 }}>{errors.square_footage}</p>}
             </div>
           </div>
           <div className="grid-4">
@@ -342,7 +342,7 @@ export default function HomeDetails() {
               style={{ textAlign: 'center', padding: 32, border: '2px dashed var(--light-gray)', borderRadius: 8, marginBottom: 20, cursor: 'pointer' }}
               onClick={() => fileInputRef.current?.click()}
             >
-              <p style={{ fontWeight: 600, color: Colors.copper, marginBottom: 4 }}>{uploadingPhoto ? 'Uploading...' : 'Add a photo of your home'}</p>
+              <p style={{ fontWeight: 600, color: 'var(--color-copper)', marginBottom: 4 }}>{uploadingPhoto ? 'Uploading...' : 'Add a photo of your home'}</p>
               <p className="text-xs text-gray">Click to upload a photo</p>
             </div>
           )}

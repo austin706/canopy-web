@@ -492,7 +492,7 @@ export default function ProInspection() {
         {(visit as any).is_first_visit && (
           <div style={{
             padding: '12px 16px', borderRadius: 8, marginBottom: Spacing.md,
-            background: `linear-gradient(135deg, #E8F5E9, ${Colors.sageMuted})`,
+            background: `linear-gradient(135deg, var(--color-success)15, ${Colors.sageMuted})`,
             border: `1px solid ${Colors.sage}40`,
           }}>
             <p style={{ fontWeight: 700, fontSize: FontSize.sm, color: Colors.sage, margin: '0 0 4px' }}>

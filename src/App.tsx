@@ -1,78 +1,81 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+// Layout shells stay eager — they wrap every route
 import Layout from '@/components/Layout';
 import AgentLayout from '@/components/AgentLayout';
 import ProLayout from '@/components/ProLayout';
-import Login from '@/pages/Login';
-import Signup from '@/pages/Signup';
-import ForgotPassword from '@/pages/ForgotPassword';
-import ResetPassword from '@/pages/ResetPassword';
-import Landing from '@/pages/Landing';
-import Dashboard from '@/pages/Dashboard';
-import Calendar from '@/pages/Calendar';
-import Weather from '@/pages/Weather';
-import Equipment from '@/pages/Equipment';
-import Profile from '@/pages/Profile';
-import Subscription from '@/pages/Subscription';
-import ProRequest from '@/pages/ProRequest';
-import AgentView from '@/pages/AgentView';
-import MaintenanceLogs from '@/pages/MaintenanceLogs';
-import HomeDetails from '@/pages/HomeDetails';
-import AdminDashboard from '@/pages/AdminDashboard';
-import AdminAgents from '@/pages/AdminAgents';
-import AdminUsers from '@/pages/AdminUsers';
-import AdminGiftCodes from '@/pages/AdminGiftCodes';
-import AdminProRequests from '@/pages/AdminProRequests';
-import AdminProProviders from '@/pages/AdminProProviders';
-import AdminServiceAreas from '@/pages/AdminServiceAreas';
-import AdminNotifications from '@/pages/AdminNotifications';
-import AdminEmails from '@/pages/AdminEmails';
-import AdminAnalytics from '@/pages/AdminAnalytics';
-import AdminAuditLog from '@/pages/AdminAuditLog';
-import AdminProviderApplications from '@/pages/AdminProviderApplications';
-import AdminSupportTickets from '@/pages/AdminSupportTickets';
-import AgentPortal from '@/pages/AgentPortal';
-import AgentProfile from '@/pages/AgentProfile';
-import AgentClientHome from '@/pages/AgentClientHome';
-import AgentPurchaseCodes from '@/pages/AgentPurchaseCodes';
-import AgentLinkClient from '@/pages/AgentLinkClient';
-import TaskDetail from '@/pages/TaskDetail';
-import EquipmentDetail from '@/pages/EquipmentDetail';
-import Notifications from '@/pages/Notifications';
-import Documents from '@/pages/Documents';
-import Help from '@/pages/Help';
-import Onboarding from '@/pages/Onboarding';
-import ProPortal from '@/pages/ProPortal';
-import ProLogin from '@/pages/ProLogin';
+
+// ─── Lazy-loaded pages (code-split per route) ───────────────
+const Login = lazy(() => import('@/pages/Login'));
+const Signup = lazy(() => import('@/pages/Signup'));
+const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+const Landing = lazy(() => import('@/pages/Landing'));
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const Calendar = lazy(() => import('@/pages/Calendar'));
+const Weather = lazy(() => import('@/pages/Weather'));
+const Equipment = lazy(() => import('@/pages/Equipment'));
+const Profile = lazy(() => import('@/pages/Profile'));
+const Subscription = lazy(() => import('@/pages/Subscription'));
+const ProRequest = lazy(() => import('@/pages/ProRequest'));
+const AgentView = lazy(() => import('@/pages/AgentView'));
+const MaintenanceLogs = lazy(() => import('@/pages/MaintenanceLogs'));
+const HomeDetails = lazy(() => import('@/pages/HomeDetails'));
+const AdminDashboard = lazy(() => import('@/pages/AdminDashboard'));
+const AdminAgents = lazy(() => import('@/pages/AdminAgents'));
+const AdminUsers = lazy(() => import('@/pages/AdminUsers'));
+const AdminGiftCodes = lazy(() => import('@/pages/AdminGiftCodes'));
+const AdminProRequests = lazy(() => import('@/pages/AdminProRequests'));
+const AdminProProviders = lazy(() => import('@/pages/AdminProProviders'));
+const AdminServiceAreas = lazy(() => import('@/pages/AdminServiceAreas'));
+const AdminNotifications = lazy(() => import('@/pages/AdminNotifications'));
+const AdminEmails = lazy(() => import('@/pages/AdminEmails'));
+const AdminAnalytics = lazy(() => import('@/pages/AdminAnalytics'));
+const AdminAuditLog = lazy(() => import('@/pages/AdminAuditLog'));
+const AdminProviderApplications = lazy(() => import('@/pages/AdminProviderApplications'));
+const AdminSupportTickets = lazy(() => import('@/pages/AdminSupportTickets'));
+const AgentPortal = lazy(() => import('@/pages/AgentPortal'));
+const AgentProfile = lazy(() => import('@/pages/AgentProfile'));
+const AgentClientHome = lazy(() => import('@/pages/AgentClientHome'));
+const AgentPurchaseCodes = lazy(() => import('@/pages/AgentPurchaseCodes'));
+const AgentLinkClient = lazy(() => import('@/pages/AgentLinkClient'));
+const TaskDetail = lazy(() => import('@/pages/TaskDetail'));
+const EquipmentDetail = lazy(() => import('@/pages/EquipmentDetail'));
+const Notifications = lazy(() => import('@/pages/Notifications'));
+const Documents = lazy(() => import('@/pages/Documents'));
+const Help = lazy(() => import('@/pages/Help'));
+const Onboarding = lazy(() => import('@/pages/Onboarding'));
+const ProPortal = lazy(() => import('@/pages/ProPortal'));
+const ProLogin = lazy(() => import('@/pages/ProLogin'));
 // ProJobs removed — obsolete marketplace page, redirects to job-queue
-import ProAvailability from '@/pages/ProAvailability';
-import ProProfile from '@/pages/ProProfile';
-import CreateTask from '@/pages/CreateTask';
-import ProServices from '@/pages/ProServices';
-import Visits from '@/pages/Visits';
-import ProPlusManage from '@/pages/ProPlusManage';
-import Quotes from '@/pages/Quotes';
-import Invoices from '@/pages/Invoices';
-import ProVisitSchedule from '@/pages/ProVisitSchedule';
-import ProQuotesInvoices from '@/pages/ProQuotesInvoices';
-import ProJobQueue from '@/pages/ProJobQueue';
-import ProInspection from '@/pages/ProInspection';
-import HomeAssistant from '@/pages/HomeAssistant';
-import SalePrep from '@/pages/SalePrep';
-import HomeReport from '@/pages/HomeReport';
-import HomeTransfer from '@/pages/HomeTransfer';
-import Terms from '@/pages/Terms';
-import Privacy from '@/pages/Privacy';
-import ContractorTerms from '@/pages/ContractorTerms';
-import AIDisclaimer from '@/pages/AIDisclaimer';
-import CancellationPolicy from '@/pages/CancellationPolicy';
-import PCICompliance from '@/pages/PCICompliance';
-import Support from '@/pages/Support';
-import ApplyPro from '@/pages/ApplyPro';
+const ProAvailability = lazy(() => import('@/pages/ProAvailability'));
+const ProProfile = lazy(() => import('@/pages/ProProfile'));
+const CreateTask = lazy(() => import('@/pages/CreateTask'));
+const ProServices = lazy(() => import('@/pages/ProServices'));
+const Visits = lazy(() => import('@/pages/Visits'));
+const ProPlusManage = lazy(() => import('@/pages/ProPlusManage'));
+const Quotes = lazy(() => import('@/pages/Quotes'));
+const Invoices = lazy(() => import('@/pages/Invoices'));
+const ProVisitSchedule = lazy(() => import('@/pages/ProVisitSchedule'));
+const ProQuotesInvoices = lazy(() => import('@/pages/ProQuotesInvoices'));
+const ProJobQueue = lazy(() => import('@/pages/ProJobQueue'));
+const ProInspection = lazy(() => import('@/pages/ProInspection'));
+const HomeAssistant = lazy(() => import('@/pages/HomeAssistant'));
+const SalePrep = lazy(() => import('@/pages/SalePrep'));
+const HomeReport = lazy(() => import('@/pages/HomeReport'));
+const HomeTransfer = lazy(() => import('@/pages/HomeTransfer'));
+const Terms = lazy(() => import('@/pages/Terms'));
+const Privacy = lazy(() => import('@/pages/Privacy'));
+const ContractorTerms = lazy(() => import('@/pages/ContractorTerms'));
+const AIDisclaimer = lazy(() => import('@/pages/AIDisclaimer'));
+const CancellationPolicy = lazy(() => import('@/pages/CancellationPolicy'));
+const PCICompliance = lazy(() => import('@/pages/PCICompliance'));
+const Support = lazy(() => import('@/pages/Support'));
+const ApplyPro = lazy(() => import('@/pages/ApplyPro'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useStore();
@@ -140,6 +143,7 @@ export default function App() {
     <ThemeProvider>
     <BrowserRouter>
       <ErrorBoundary>
+        <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--color-text-secondary, #888)' }}>Loading…</div>}>
         <Routes>
           {/* Landing/Home — shows Landing for unauthenticated, Dashboard for authenticated */}
           <Route path="/" element={<HomeRoute />} />
@@ -238,6 +242,7 @@ export default function App() {
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </ErrorBoundary>
     </BrowserRouter>
     </ThemeProvider>

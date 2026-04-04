@@ -905,7 +905,7 @@ export default function Onboarding() {
           }}>
             {VALUE_PROPS.map((prop, i) => (
               <div key={i} style={{
-                padding: 16, backgroundColor: '#faf9f7', borderRadius: 12,
+                padding: 16, backgroundColor: 'var(--color-background)', borderRadius: 12,
                 borderLeft: `3px solid ${Colors.sage}`,
               }}>
                 <span style={{ fontSize: 24, display: 'block', marginBottom: 8 }}>{prop.icon}</span>
@@ -1025,7 +1025,7 @@ export default function Onboarding() {
           justifyContent: 'center', zIndex: 9999, padding: 20,
         }}>
           <div style={{
-            background: '#fff', borderRadius: 16, padding: 32, maxWidth: 440, width: '100%',
+            background: 'var(--color-card-background)', borderRadius: 16, padding: 32, maxWidth: 440, width: '100%',
             boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
           }}>
             {joinRequestSent ? (
@@ -1109,7 +1109,7 @@ export default function Onboarding() {
           justifyContent: 'center', zIndex: 9999, padding: 20,
         }}>
           <div style={{
-            background: '#fff', borderRadius: 16, padding: 32, maxWidth: 440, width: '100%',
+            background: 'var(--color-card-background)', borderRadius: 16, padding: 32, maxWidth: 440, width: '100%',
             boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
           }}>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
@@ -1124,7 +1124,7 @@ export default function Onboarding() {
 
             <div style={{ marginBottom: 20 }}>
               <div style={{
-                padding: 14, backgroundColor: '#f0fdf4', borderRadius: 10,
+                padding: 14, backgroundColor: 'var(--color-success)15', borderRadius: 10,
                 border: `1px solid ${Colors.sage}40`, marginBottom: 10,
               }}>
                 <p style={{ fontSize: 11, color: Colors.sage, fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase' }}>USPS Standardized</p>
@@ -1278,7 +1278,7 @@ export default function Onboarding() {
 
           {/* Per-fireplace details */}
           {systemsForm.has_fireplace && (
-            <div style={{ backgroundColor: '#faf9f7', borderRadius: 12, padding: 16, marginTop: 16 }}>
+            <div style={{ backgroundColor: 'var(--color-background)', borderRadius: 12, padding: 16, marginTop: 16 }}>
               <div className="form-group" style={{ marginBottom: 12 }}>
                 <label>Number of Fireplaces</label>
                 <input className="form-input" type="number" min="1" max="10"
@@ -1305,7 +1305,7 @@ export default function Onboarding() {
 
           {/* HVAC filter details — show if heating or cooling is set */}
           {(systemsForm.heating_type || systemsForm.cooling_type) && (
-            <div style={{ backgroundColor: '#faf9f7', borderRadius: 12, padding: 16, marginTop: 16 }}>
+            <div style={{ backgroundColor: 'var(--color-background)', borderRadius: 12, padding: 16, marginTop: 16 }}>
               <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: Colors.charcoal }}>HVAC Filters</p>
               <div className="form-group" style={{ marginBottom: 12 }}>
                 <label>Number of HVAC Filters/Returns</label>
@@ -1329,7 +1329,7 @@ export default function Onboarding() {
           )}
 
           {/* Hose bibs */}
-          <div style={{ backgroundColor: '#faf9f7', borderRadius: 12, padding: 16, marginTop: 16 }}>
+          <div style={{ backgroundColor: 'var(--color-background)', borderRadius: 12, padding: 16, marginTop: 16 }}>
             <div className="grid-2">
               <div className="form-group">
                 <label>Outdoor Hose Bibs</label>
@@ -1380,8 +1380,8 @@ export default function Onboarding() {
           {planMessage && (
             <div style={{
               padding: '10px 16px', borderRadius: 8,
-              background: planMessageType === 'success' ? '#4CAF5020' : '#E5393520',
-              color: planMessageType === 'success' ? '#2E7D32' : '#C62828',
+              background: planMessageType === 'success' ? 'var(--color-success)20' : 'var(--color-error)20',
+              color: planMessageType === 'success' ? 'var(--color-success)' : 'var(--color-error)',
               fontSize: 14, marginBottom: 16,
             }}>
               {planMessage}
@@ -1476,7 +1476,7 @@ export default function Onboarding() {
           </div>
 
           {/* Agent / Gift Code */}
-          <div style={{ background: '#f9f9f7', borderRadius: 12, padding: 20, marginBottom: 24 }}>
+          <div style={{ background: 'var(--color-background)', borderRadius: 12, padding: 20, marginBottom: 24 }}>
             <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Have an agent or gift code?</h3>
             <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 12 }}>
               Enter a code from your real estate agent to unlock premium features.
@@ -1544,7 +1544,7 @@ export default function Onboarding() {
                   {equipmentList.map((item, i) => (
                     <div key={i} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '12px 16px', backgroundColor: '#f8f8f6', borderRadius: 10,
+                      padding: '12px 16px', backgroundColor: 'var(--color-background)', borderRadius: 10,
                       marginBottom: 8, borderLeft: `3px solid ${Colors.sage}`,
                     }}>
                       <div>
@@ -1577,7 +1577,7 @@ export default function Onboarding() {
                 </>
               ) : (
                 <div style={{
-                  padding: 20, backgroundColor: '#faf9f7', borderRadius: 12,
+                  padding: 20, backgroundColor: 'var(--color-background)', borderRadius: 12,
                   border: `1px dashed ${Colors.copper}40`, marginBottom: 24, textAlign: 'center',
                 }}>
                   <span style={{ fontSize: 28, display: 'block', marginBottom: 8 }}>📸</span>
@@ -1594,7 +1594,7 @@ export default function Onboarding() {
               )}
 
               {/* Equipment suggestions */}
-              <div style={{ backgroundColor: '#faf9f7', borderRadius: 12, padding: 20, marginBottom: 24 }}>
+              <div style={{ backgroundColor: 'var(--color-background)', borderRadius: 12, padding: 20, marginBottom: 24 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
                   {equipmentList.length > 0 ? 'What else can you scan?' : 'What should I scan?'}
                 </p>
@@ -1648,9 +1648,9 @@ export default function Onboarding() {
                   )}
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '12px 0' }}>
-                    <div style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
+                    <div style={{ flex: 1, height: 1, backgroundColor: 'var(--color-border)' }} />
                     <span style={{ fontSize: 11, color: Colors.medGray }}>or fill in manually</span>
-                    <div style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
+                    <div style={{ flex: 1, height: 1, backgroundColor: 'var(--color-border)' }} />
                   </div>
 
                   <div className="form-group">
@@ -1757,7 +1757,7 @@ export default function Onboarding() {
               { label: 'Plan', value: PLANS.find(p => p.value === (user?.subscription_tier || selectedPlan))?.name || 'Free', icon: '⭐' },
             ].map((card, i) => (
               <div key={i} style={{
-                padding: 16, backgroundColor: '#faf9f7', borderRadius: 12, textAlign: 'center',
+                padding: 16, backgroundColor: 'var(--color-background)', borderRadius: 12, textAlign: 'center',
               }}>
                 <span style={{ fontSize: 24, display: 'block', marginBottom: 8 }}>{card.icon}</span>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.charcoal, margin: 0 }}>{card.value}</p>
@@ -1817,7 +1817,7 @@ export default function Onboarding() {
           onClick={(e) => { if (e.target === e.currentTarget) closeCheckoutModal(); }}
         >
           <div style={{
-            background: '#fff',
+            background: 'var(--color-card-background)',
             borderRadius: 16,
             width: '100%',
             maxWidth: 520,

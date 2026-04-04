@@ -51,7 +51,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             padding: '20px',
           }}>
             <div style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--color-card-background)',
               padding: '32px',
               borderRadius: '16px',
               boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)',
@@ -61,15 +61,15 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             }}>
               <div style={{
                 width: 56, height: 56, borderRadius: 28,
-                backgroundColor: '#FFEBEE',
+                backgroundColor: 'var(--color-copper-muted, #FFEBEE)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 margin: '0 auto 16px', fontSize: 24,
               }}>!</div>
-              <h1 style={{ color: '#d32f2f', marginBottom: '8px', fontSize: '20px' }}>
+              <h1 style={{ color: 'var(--color-error)', marginBottom: '8px', fontSize: '20px' }}>
                 Something went wrong
               </h1>
               <p style={{
-                color: '#888',
+                color: 'var(--color-text-secondary)',
                 marginBottom: '20px',
                 fontSize: '14px',
                 lineHeight: '1.5',
@@ -81,7 +81,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
                 <button
                   onClick={this.handleReset}
                   style={{
-                    backgroundColor: '#B87333',
+                    backgroundColor: 'var(--color-copper)',
                     color: 'white',
                     border: 'none',
                     padding: '12px 24px',
@@ -97,8 +97,8 @@ export default class ErrorBoundary extends React.Component<Props, State> {
                   onClick={this.handleGoHome}
                   style={{
                     backgroundColor: 'transparent',
-                    color: '#B87333',
-                    border: '1px solid #B87333',
+                    color: 'var(--color-copper)',
+                    border: '1px solid var(--color-copper)',
                     padding: '12px 24px',
                     borderRadius: '8px',
                     fontSize: '15px',
@@ -123,7 +123,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
                   </button>
                   {this.state.showDetails && (
                     <pre style={{
-                      backgroundColor: '#f5f5f5',
+                      backgroundColor: 'var(--color-background)',
                       padding: '12px',
                       borderRadius: '8px',
                       textAlign: 'left',
@@ -131,7 +131,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
                       overflow: 'auto',
                       marginTop: '8px',
                       maxHeight: '160px',
-                      color: '#666',
+                      color: 'var(--color-text-secondary)',
                       wordBreak: 'break-word',
                       whiteSpace: 'pre-wrap',
                     }}>

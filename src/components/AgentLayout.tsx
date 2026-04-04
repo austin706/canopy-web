@@ -84,7 +84,7 @@ export default function AgentLayout() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 12, color: '#E53935' }} onClick={handleLogout}>Sign Out</button>
+            <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 12, color: 'var(--color-error)' }} onClick={handleLogout}>Sign Out</button>
           </div>
         </div>
       </nav>

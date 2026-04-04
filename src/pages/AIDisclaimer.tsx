@@ -1,12 +1,12 @@
 export default function AIDisclaimer() {
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: '#1a1a1a', lineHeight: 1.7 }}>
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--color-text)', lineHeight: 1.7 }}>
       <div style={{ marginBottom: 32 }}>
-        <a href="/" style={{ color: '#8B9E7E', textDecoration: 'none', fontSize: 14 }}>← Back to Canopy</a>
+        <a href="/" style={{ color: 'var(--color-sage)', textDecoration: 'none', fontSize: 14 }}>← Back to Canopy</a>
       </div>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>AI Recommendations Disclaimer</h1>
-      <p style={{ color: '#666', marginBottom: 32 }}>Last updated: April 3, 2026</p>
+      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>Last updated: April 3, 2026</p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Overview</h2>
       <p>Canopy uses artificial intelligence to provide personalized home maintenance recommendations, equipment scanning, task scheduling suggestions, inspection summaries, and a conversational home assistant. This page explains the role of AI in our platform and important limitations.</p>
@@ -53,7 +53,7 @@ export default function AIDisclaimer() {
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Contact</h2>
       <p>If you have concerns about AI recommendations or questions about how AI is used in Canopy, please contact us at support@canopyhome.app. Report concerning or potentially dangerous recommendations immediately.</p>
 
-      <div style={{ borderTop: '1px solid #e5e7eb', marginTop: 48, paddingTop: 24, color: '#999', fontSize: 14, textAlign: 'center' as const }}>
+      <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 48, paddingTop: 24, color: 'var(--color-text-secondary)', fontSize: 14, textAlign: 'center' as const }}>
         © {new Date().getFullYear()} Canopy. All rights reserved.
       </div>
     </div>

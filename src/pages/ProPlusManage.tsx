@@ -135,12 +135,12 @@ export default function ProPlusManage() {
         <h1>Pro+ Subscription</h1>
       </div>
 
-      {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: '#E5393520', color: '#C62828', fontSize: 14, marginBottom: 16 }}>{error}</div>}
+      {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--color-error)', opacity: 0.15, color: 'var(--color-error)', fontSize: 14, marginBottom: 16 }}>{error}</div>}
 
       {/* No Subscription State */}
       {!subscription ? (
         <div className="card" style={{ padding: 32, textAlign: 'center' }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 20, color: Colors.copper }}>+</div>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-copper-muted, #FFF3E0)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 20, color: 'var(--color-copper)' }}>+</div>
           <h2 style={{ fontSize: 20, marginBottom: 8 }}>Pro+ Maintenance</h2>
           <p className="text-gray mb-lg">
             Get unlimited routine maintenance visits and priority scheduling. Our Pro+ team handles filter changes, gutter cleaning, seasonal inspections, and more—all included in one monthly rate.
@@ -170,7 +170,7 @@ export default function ProPlusManage() {
             <span className="badge" style={{ background: StatusColors.pending + '20', color: StatusColors.pending }}>Review Needed</span>
           </div>
 
-          <div style={{ padding: 16, background: Colors.cream, borderRadius: 8, marginBottom: 20 }}>
+          <div style={{ padding: 16, background: 'var(--color-copper-muted, #FFF3E0)', borderRadius: 8, marginBottom: 20 }}>
             <p className="text-xs fw-600 text-copper mb-sm">Monthly Rate</p>
             <p style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>{formatCurrency(subscription.quoted_monthly_rate ?? 0)}</p>
             <p className="text-xs text-gray">Valid until {formatDate(subscription.quote_valid_until ?? '')}</p>
@@ -184,9 +184,9 @@ export default function ProPlusManage() {
           )}
 
           {subscription.scope_exclusions && (
-            <div style={{ padding: 12, background: '#FFF3CD', borderRadius: 8, marginBottom: 20, borderLeft: `4px solid #FFC107` }}>
+            <div style={{ padding: 12, background: 'var(--color-warning)', opacity: 0.15, borderRadius: 8, marginBottom: 20, borderLeft: `4px solid var(--color-warning)` }}>
               <p className="text-xs fw-600 mb-sm">Scope Note</p>
-              <p className="text-sm" style={{ margin: 0, color: '#856404' }}>
+              <p className="text-sm" style={{ margin: 0, color: 'var(--color-warning)' }}>
                 Your Pro+ subscription covers routine ongoing maintenance. Larger projects (repairs, renovations, etc.) will be quoted separately.
               </p>
             </div>
@@ -208,7 +208,7 @@ export default function ProPlusManage() {
             <span className="badge" style={{ background: Colors.sage + '20', color: Colors.sage }}>Active</span>
           </div>
 
-          <div style={{ padding: 16, background: Colors.cream, borderRadius: 8, marginBottom: 20 }}>
+          <div style={{ padding: 16, background: 'var(--color-copper-muted, #FFF3E0)', borderRadius: 8, marginBottom: 20 }}>
             <p className="text-xs fw-600 text-copper mb-sm">Monthly Rate</p>
             <p style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{formatCurrency(subscription.current_monthly_rate ?? 0)}</p>
             <p className="text-xs text-gray">Started: {formatDate(subscription.started_at ?? '')}</p>
@@ -228,8 +228,8 @@ export default function ProPlusManage() {
             </div>
           )}
 
-          <div style={{ padding: 12, background: '#FFF3CD', borderRadius: 8, marginBottom: 20, borderLeft: `4px solid #FFC107` }}>
-            <p className="text-sm" style={{ margin: 0, color: '#856404' }}>
+          <div style={{ padding: 12, background: 'var(--color-warning)', opacity: 0.15, borderRadius: 8, marginBottom: 20, borderLeft: `4px solid var(--color-warning)` }}>
+            <p className="text-sm" style={{ margin: 0, color: 'var(--color-warning)' }}>
               Your Pro+ subscription covers routine ongoing maintenance. Larger projects (repairs, renovations, etc.) will be quoted separately.
             </p>
           </div>
@@ -238,7 +238,7 @@ export default function ProPlusManage() {
             <button className="btn btn-secondary" onClick={handlePause} disabled={actionInProgress} style={{ flex: 1 }}>
               {actionInProgress ? 'Processing...' : 'Pause'}
             </button>
-            <button className="btn" style={{ flex: 1, background: '#dc3545', color: 'white' }} onClick={handleCancel} disabled={actionInProgress}>
+            <button className="btn" style={{ flex: 1, background: 'var(--color-error)', color: 'white' }} onClick={handleCancel} disabled={actionInProgress}>
               {actionInProgress ? 'Processing...' : 'Cancel'}
             </button>
           </div>

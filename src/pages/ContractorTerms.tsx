@@ -1,10 +1,10 @@
 export default function ContractorTerms() {
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: '#1a1a1a', lineHeight: 1.7 }}>
-      <a href="/" style={{ color: '#8B9E7E', textDecoration: 'none', fontSize: 14 }}>← Back to Canopy</a>
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--color-text)', lineHeight: 1.7 }}>
+      <a href="/" style={{ color: 'var(--color-sage)', textDecoration: 'none', fontSize: 14 }}>← Back to Canopy</a>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Pro Provider Terms of Service</h1>
-      <p style={{ color: '#666', fontSize: 14, marginBottom: 32 }}>Effective April 3, 2026</p>
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginBottom: 32 }}>Effective April 3, 2026</p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>1. Purpose & Scope</h2>
       <p>
@@ -171,7 +171,7 @@ export default function ContractorTerms() {
         <strong>support@canopyhome.app</strong>
       </p>
 
-      <div style={{ borderTop: '1px solid #e5e7eb', marginTop: 48, paddingTop: 24, color: '#999', fontSize: 14, textAlign: 'center' as const }}>
+      <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 48, paddingTop: 24, color: 'var(--color-text-secondary)', fontSize: 14, textAlign: 'center' as const }}>
         © {new Date().getFullYear()} Canopy. All rights reserved.
         <p style={{ marginTop: 8 }}>Last updated: April 3, 2026. Governing law: State of Oklahoma.</p>
       </div>

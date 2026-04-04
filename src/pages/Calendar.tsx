@@ -237,7 +237,7 @@ export default function Calendar() {
             + New Task
           </button>
         </div>
-        <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${Colors.cream || '#f5f0eb'}`, marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid var(--color-cream)`, marginBottom: 24 }}>
           {calendarTabs.map(t => (
             <button
               key={t.key}
@@ -246,12 +246,12 @@ export default function Calendar() {
                 padding: '10px 20px',
                 fontSize: 14,
                 fontWeight: activeTab === t.key ? 700 : 500,
-                color: activeTab === t.key ? Colors.sage : Colors.medGray,
+                color: activeTab === t.key ? 'var(--color-sage)' : 'var(--color-text-secondary)',
                 background: 'none',
                 border: 'none',
                 borderBottomWidth: 3,
                 borderBottomStyle: 'solid',
-                borderBottomColor: activeTab === t.key ? Colors.sage : 'transparent',
+                borderBottomColor: activeTab === t.key ? 'var(--color-sage)' : 'transparent',
                 cursor: 'pointer',
                 marginBottom: -2,
               }}
@@ -260,7 +260,7 @@ export default function Calendar() {
             </button>
           ))}
         </div>
-        <Suspense fallback={<p style={{ color: Colors.medGray }}>Loading...</p>}>
+        <Suspense fallback={<p style={{ color: 'var(--color-text-secondary)' }}>Loading...</p>}>
           <MaintenanceLogs />
         </Suspense>
       </div>
@@ -288,7 +288,7 @@ export default function Calendar() {
       </div>
 
       {/* Sub-tab navigation */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${Colors.cream || '#f5f0eb'}`, marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid var(--color-cream)`, marginBottom: 24 }}>
         {calendarTabs.map(t => (
           <button
             key={t.key}
@@ -369,7 +369,7 @@ export default function Calendar() {
                   key={day.key}
                   className={`calendar-day ${isToday ? 'today' : ''} ${isOther ? 'other-month' : ''} ${hasEvents ? 'has-tasks' : ''}`}
                   style={{
-                    ...(isSelected ? { background: Colors.copper + '30', fontWeight: 700 } : undefined),
+                    ...(isSelected ? { background: 'var(--color-copper)30', fontWeight: 700 } : undefined),
                     position: 'relative',
                   }}
                   onClick={() => handleDayClick(key)}
@@ -381,7 +381,7 @@ export default function Calendar() {
                       {dayVisits.length > 0 && (
                         <div style={{
                           width: 7, height: 7, borderRadius: 1,
-                          background: Colors.sage,
+                          background: 'var(--color-sage)',
                           transform: 'rotate(45deg)',
                         }} />
                       )}
@@ -389,13 +389,13 @@ export default function Calendar() {
                       {dayTasks.slice(0, dayVisits.length > 0 ? 2 : 3).map((t, i) => (
                         <div key={i} style={{
                           width: 5, height: 5, borderRadius: '50%',
-                          background: t.status === 'completed' ? Colors.success :
-                                     t.status === 'overdue' ? Colors.error :
-                                     PriorityColors[t.priority] || Colors.copper,
+                          background: t.status === 'completed' ? 'var(--color-success)' :
+                                     t.status === 'overdue' ? 'var(--color-error)' :
+                                     PriorityColors[t.priority] || 'var(--color-copper)',
                         }} />
                       ))}
                       {dayEvents.length > 3 && (
-                        <span style={{ fontSize: 8, color: Colors.medGray, lineHeight: '5px' }}>+{dayEvents.length - 3}</span>
+                        <span style={{ fontSize: 8, color: 'var(--color-text-secondary)', lineHeight: '5px' }}>+{dayEvents.length - 3}</span>
                       )}
                     </div>
                   )}
@@ -453,10 +453,10 @@ export default function Calendar() {
                 return (
                   <div key={visit.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--light-gray)' }}>
                     <div className="flex items-center gap-md">
-                      <div style={{ width: 4, height: 40, borderRadius: 2, background: Colors.sage }} />
+                      <div style={{ width: 4, height: 40, borderRadius: 2, background: 'var(--color-sage)' }} />
                       <div style={{
                         width: 28, height: 28, borderRadius: 6,
-                        background: Colors.sage + '20', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'var(--color-sage)20', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 14, flexShrink: 0,
                       }}>
                         &#128736;
@@ -471,7 +471,7 @@ export default function Calendar() {
                           {visit.proposed_time_slot && <span> &middot; {visit.proposed_time_slot}</span>}
                         </p>
                       </div>
-                      <span className="badge" style={{ background: visitStatusColor + '20', color: visitStatusColor }}>
+                      <span className="badge" style={{ background: `${visitStatusColor}20`, color: visitStatusColor }}>
                         {visit.status === 'proposed' ? 'proposed' : visit.status}
                       </span>
                     </div>
@@ -511,16 +511,16 @@ export default function Calendar() {
                           )}
                         </p>
                       </div>
-                      <span className="badge" style={{ background: (StatusColors[task.status] || '#ccc') + '20', color: StatusColors[task.status] }}>{task.status}</span>
+                      <span className="badge" style={{ background: `${StatusColors[task.status] || '#ccc'}20`, color: StatusColors[task.status] }}>{task.status}</span>
                     </div>
                     {task.status !== 'completed' && task.status !== 'skipped' && !isDemo && (
                       <div className="flex gap-sm mt-sm" style={{ marginLeft: 20, position: 'relative' }}>
-                        <button className="btn btn-sage btn-sm" onClick={() => quickCompleteTask(task)}>Complete</button>
+                        <button className="btn btn-sm" style={{ background: 'var(--color-sage)', color: '#fff', border: 'none' }} onClick={() => quickCompleteTask(task)}>Complete</button>
                         <button className="btn btn-ghost btn-sm" onClick={() => setSnoozeMenuId(snoozeMenuId === task.id ? null : task.id)}>Snooze</button>
                         {snoozeMenuId === task.id && (
                           <div style={{
                             position: 'absolute', top: '100%', left: 60, zIndex: 20,
-                            background: 'white', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                            background: 'var(--color-card-background)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
                             padding: '4px 0', marginTop: 4, minWidth: 140,
                           }}>
                             {[
@@ -531,8 +531,8 @@ export default function Calendar() {
                             ].map(opt => (
                               <button key={opt.days} onClick={() => { quickSnoozeTask(task, opt.days); setSnoozeMenuId(null); }}
                                 style={{ display: 'block', width: '100%', padding: '8px 16px', border: 'none', background: 'none',
-                                  textAlign: 'left', fontSize: 13, cursor: 'pointer', color: Colors.charcoal }}
-                                onMouseOver={e => (e.currentTarget.style.background = '#f5f5f5')}
+                                  textAlign: 'left', fontSize: 13, cursor: 'pointer', color: 'var(--color-charcoal)' }}
+                                onMouseOver={e => (e.currentTarget.style.background = 'var(--color-background)')}
                                 onMouseOut={e => (e.currentTarget.style.background = 'none')}
                               >
                                 {opt.label}
@@ -545,14 +545,14 @@ export default function Calendar() {
                     )}
                     {task.status === 'completed' && !isDemo && (
                       <div className="flex gap-sm mt-sm" style={{ marginLeft: 20 }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => handleQuickReopen(task)} style={{ borderColor: Colors.copper, color: Colors.copper }}>Reopen</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => handleQuickReopen(task)} style={{ borderColor: 'var(--color-copper)', color: 'var(--color-copper)' }}>Reopen</button>
                       </div>
                     )}
                   </div>
                 );
               })}
               {filteredTasks.length === 0 && displayVisits.length === 0 && (
-                <p className="text-sm text-gray text-center" style={{ padding: 24 }}>
+                <p className="text-center" style={{ padding: 24, color: 'var(--color-text-secondary)', fontSize: 14 }}>
                   {selectedDate ? 'No tasks or visits for this date' : `No ${filter === 'all' ? '' : filter + ' '}tasks this month`}
                 </p>
               )}

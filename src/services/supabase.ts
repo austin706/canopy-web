@@ -2,6 +2,7 @@
 // Canopy Web — Supabase Client & API (web version)
 // ===============================================================
 import { createClient } from '@supabase/supabase-js';
+import type { Home, Equipment, MaintenanceTask, MaintenanceLog, ProProvider } from '@/types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -90,7 +91,7 @@ export const getHome = async (userId: string) => {
 // createHome is deprecated — use upsertHome instead
 // export const createHome = async (home: any) => { ... };
 
-export const upsertHome = async (home: any) => {
+export const upsertHome = async (home: Partial<Home>) => {
   const { data, error } = await supabase.from('homes').upsert(home).select().single();
   if (error) throw error;
   return data;
@@ -216,7 +217,7 @@ export const getEquipment = async (homeId: string) => {
   return data || [];
 };
 
-export const upsertEquipment = async (equipment: any) => {
+export const upsertEquipment = async (equipment: Partial<Equipment>) => {
   const { data, error } = await supabase.from('equipment').upsert(equipment).select().single();
   if (error) throw error;
   return data;
@@ -250,13 +251,13 @@ export const reopenTask = async (taskId: string) => {
   return data;
 };
 
-export const createTask = async (task: any) => {
+export const createTask = async (task: Partial<MaintenanceTask>) => {
   const { data, error } = await supabase.from('maintenance_tasks').insert(task).select().single();
   if (error) throw error;
   return data;
 };
 
-export const createTasks = async (tasks: any[]) => {
+export const createTasks = async (tasks: Partial<MaintenanceTask>[]) => {
   const { data, error } = await supabase.from('maintenance_tasks').insert(tasks).select();
   if (error) throw error;
   return data || [];
@@ -276,13 +277,13 @@ export const getMaintenanceLogs = async (homeId: string) => {
   return data || [];
 };
 
-export const addMaintenanceLog = async (log: any) => {
+export const addMaintenanceLog = async (log: Partial<MaintenanceLog>) => {
   const { data, error } = await supabase.from('maintenance_logs').insert(log).select().single();
   if (error) throw error;
   return data;
 };
 
-export const updateMaintenanceLog = async (logId: string, updates: Record<string, any>) => {
+export const updateMaintenanceLog = async (logId: string, updates: Record<string, unknown>) => {
   const { data, error } = await supabase.from('maintenance_logs').update(updates).eq('id', logId).select().single();
   if (error) throw error;
   return data;
@@ -297,7 +298,7 @@ export const uploadPhoto = async (bucket: string, path: string, file: File) => {
 };
 
 // --- Profile Management ---
-export const updateProfile = async (userId: string, updates: any) => {
+export const updateProfile = async (userId: string, updates: Record<string, unknown>) => {
   const { data, error } = await supabase.from('profiles').update(updates).eq('id', userId).select().single();
   if (error) throw error;
   return data;
@@ -336,7 +337,7 @@ export const redeemGiftCode = async (code: string, userId: string) => {
   const newExpiry = new Date();
   newExpiry.setMonth(newExpiry.getMonth() + (gc.duration_months || 12));
   await supabase.from('gift_codes').update({ redeemed_by: userId, redeemed_at: new Date().toISOString() }).eq('id', gc.id);
-  const profileUpdate: Record<string, any> = { subscription_tier: gc.tier, subscription_expires_at: newExpiry.toISOString(), agent_id: gc.agent_id };
+  const profileUpdate: Record<string, unknown> = { subscription_tier: gc.tier, subscription_expires_at: newExpiry.toISOString(), agent_id: gc.agent_id };
   if (gc.client_name) profileUpdate.full_name = gc.client_name;
   await supabase.from('profiles').update(profileUpdate).eq('id', userId);
 
@@ -368,7 +369,7 @@ export const getAgent = async (agentId: string) => {
 };
 
 // --- Pro Requests ---
-export const createProRequest = async (request: any) => {
+export const createProRequest = async (request: Record<string, unknown>) => {
   const { data, error } = await supabase.from('pro_requests').insert(request).select().single();
   if (error) throw error;
 
@@ -396,7 +397,7 @@ export const getAllProRequests = async () => {
   return data || [];
 };
 
-export const updateProRequest = async (id: string, updates: any) => {
+export const updateProRequest = async (id: string, updates: Record<string, unknown>) => {
   const { data, error } = await supabase.from('pro_requests').update(updates).eq('id', id).select().single();
   if (error) throw error;
   return data;
@@ -408,13 +409,13 @@ export const getAllProProviders = async () => {
   return data || [];
 };
 
-export const createProProvider = async (provider: any) => {
+export const createProProvider = async (provider: Partial<ProProvider>) => {
   const { data, error } = await supabase.from('pro_providers').insert(provider).select().single();
   if (error) throw error;
   return data;
 };
 
-export const updateProProvider = async (id: string, updates: any) => {
+export const updateProProvider = async (id: string, updates: Partial<ProProvider>) => {
   const { data, error } = await supabase.from('pro_providers').update(updates).eq('id', id).select().single();
   if (error) throw error;
   return data;
@@ -432,13 +433,13 @@ export const getAllAgents = async () => {
   return data || [];
 };
 
-export const createAgentRecord = async (agent: any) => {
+export const createAgentRecord = async (agent: Record<string, unknown>) => {
   const { data, error } = await supabase.from('agents').insert(agent).select().single();
   if (error) throw error;
   return data;
 };
 
-export const updateAgent = async (agentId: string, updates: any) => {
+export const updateAgent = async (agentId: string, updates: Record<string, unknown>) => {
   const { data, error } = await supabase.from('agents').update(updates).eq('id', agentId).select().single();
   if (error) throw error;
   return data;
@@ -461,7 +462,7 @@ export const getAllGiftCodes = async () => {
   return data || [];
 };
 
-export const createGiftCodes = async (codes: any[]) => {
+export const createGiftCodes = async (codes: Record<string, unknown>[]) => {
   const { data, error } = await supabase.from('gift_codes').insert(codes).select();
   if (error) throw error;
   return data || [];
@@ -478,7 +479,7 @@ export const getClientHome = async (clientUserId: string) => {
 // export const getClientEquipment = async (homeId: string) => { ... };
 // export const getClientTasks = async (homeId: string) => { ... };
 
-export const upsertClientHome = async (home: any) => {
+export const upsertClientHome = async (home: Partial<Home>) => {
   const { data, error } = await supabase.from('homes').upsert(home).select().single();
   if (error) throw error;
   return data;
@@ -547,7 +548,7 @@ export const sendNotification = async (params: {
   body: string;
   category?: string;
   action_url?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }): Promise<{ saved: boolean }> => {
   const { error } = await supabase.from('notifications').insert({
     user_id: params.user_id,
@@ -609,7 +610,7 @@ export const getNotificationPreferences = async (userId: string) => {
   return data?.notification_preferences || null;
 };
 
-export const updateNotificationPreferences = async (userId: string, preferences: any) => {
+export const updateNotificationPreferences = async (userId: string, preferences: Record<string, unknown>) => {
   const { data, error } = await supabase.from('profiles')
     .update({ notification_preferences: preferences })
     .eq('id', userId)

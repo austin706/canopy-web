@@ -194,7 +194,7 @@ export default function ProJobQueue() {
       case 'confirmed':
         return {
           ...baseStyle,
-          backgroundColor: '#e3f2fd',
+          backgroundColor: 'var(--color-info)15',
           color: Colors.info,
         };
       case 'in_progress':
@@ -206,7 +206,7 @@ export default function ProJobQueue() {
       case 'completed':
         return {
           ...baseStyle,
-          backgroundColor: '#e8f5e9',
+          backgroundColor: 'var(--color-success)15',
           color: Colors.success,
         };
       default:

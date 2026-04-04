@@ -55,13 +55,13 @@ export default function ForgotPassword() {
           </div>
 
           {success && (
-            <div style={{ background: '#E8F5E920', color: '#2E7D32', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 20 }}>
+            <div style={{ background: 'var(--color-success-muted, #E8F5E920)', color: 'var(--color-success)', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 20 }}>
               Check your email for a password reset link. The link will expire in 1 hour.
             </div>
           )}
 
           {error && (
-            <div style={{ background: '#E5393520', color: '#C62828', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 20 }}>
+            <div style={{ background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 20 }}>
               {error}
             </div>
           )}
@@ -92,8 +92,8 @@ export default function ForgotPassword() {
             </div>
           )}
 
-          <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: '#7A7A7A' }}>
-            <Link to="/login" style={{ color: '#C4844E', fontWeight: 600, textDecoration: 'none' }}>Back to Login</Link>
+          <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: 'var(--color-text-secondary)' }}>
+            <Link to="/login" style={{ color: 'var(--color-copper)', fontWeight: 600, textDecoration: 'none' }}>Back to Login</Link>
           </p>
         </div>
       </div>

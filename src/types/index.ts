@@ -51,7 +51,7 @@ export interface ProProvider {
   service_area_zips?: string[];
   max_jobs_per_day: number;
   is_available: boolean;
-  schedule?: any;
+  schedule?: Record<string, boolean[]>;
   rating?: number;
   total_reviews: number;
   created_at: string;
@@ -341,7 +341,7 @@ export interface GiftCode {
   client_email?: string;
   client_name?: string;
   delivery_method?: 'code' | 'direct';
-  pending_home?: any;
+  pending_home?: Partial<Home>;
   created_at: string;
 }
 

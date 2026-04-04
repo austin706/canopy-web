@@ -268,6 +268,8 @@ export default function Landing() {
                 fontSize: 48,
                 marginBottom: '20px',
               }}
+              role="img"
+              aria-label="Clipboard"
             >
               📋
             </div>
@@ -340,6 +342,8 @@ export default function Landing() {
                 fontSize: 48,
                 marginBottom: '20px',
               }}
+              role="img"
+              aria-label="Wrench"
             >
               🔧
             </div>

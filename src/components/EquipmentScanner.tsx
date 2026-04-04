@@ -448,7 +448,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
               margin: '0 auto 24px',
             }}
           >
-            <span style={{ fontSize: 28, color: Colors.warning }}>⚠️</span>
+            <span style={{ fontSize: 28, color: Colors.warning }} role="img" aria-label="Warning">⚠️</span>
           </div>
 
           <h3
@@ -733,7 +733,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <div style={{
                     width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                    backgroundColor: tip.good ? '#4CAF5020' : '#E5393520',
+                    backgroundColor: tip.good ? 'var(--color-success)20' : 'var(--color-error)20',
                     color: tip.good ? Colors.success : Colors.error,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 12, fontWeight: 700, marginTop: 1,
@@ -774,19 +774,19 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
               <div style={{ display: 'flex', gap: 12 }}>
                 <div style={{ flex: 1, borderRadius: 8, overflow: 'hidden', border: `2px solid ${Colors.success}` }}>
                   <div style={{ background: Colors.lightGray, height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-                    <span style={{ fontSize: 24 }}>🏷️</span>
+                    <span style={{ fontSize: 24 }} role="img" aria-label="Label tag">🏷️</span>
                     <span style={{ fontSize: 10, color: Colors.medGray, marginTop: 2 }}>Close-up of label</span>
                   </div>
-                  <div style={{ background: '#4CAF5015', padding: '5px 8px', textAlign: 'center' }}>
+                  <div style={{ background: 'var(--color-success)15', padding: '5px 8px', textAlign: 'center' }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: Colors.success }}>Good</span>
                   </div>
                 </div>
                 <div style={{ flex: 1, borderRadius: 8, overflow: 'hidden', border: `2px solid ${Colors.error}` }}>
                   <div style={{ background: Colors.lightGray, height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-                    <span style={{ fontSize: 24 }}>🏠</span>
+                    <span style={{ fontSize: 24 }} role="img" aria-label="Home">🏠</span>
                     <span style={{ fontSize: 10, color: Colors.medGray, marginTop: 2 }}>Full unit, far away</span>
                   </div>
-                  <div style={{ background: '#E5393515', padding: '5px 8px', textAlign: 'center' }}>
+                  <div style={{ background: 'var(--color-error)15', padding: '5px 8px', textAlign: 'center' }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: Colors.error }}>Too far</span>
                   </div>
                 </div>
@@ -882,7 +882,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
                   key={i}
                   style={{
                     padding: 12,
-                    backgroundColor: '#FFF3E0',
+                    backgroundColor: 'var(--color-copper-muted, #FFF3E0)',
                     borderLeft: `4px solid ${Colors.warning}`,
                     borderRadius: 8,
                     marginBottom: 8,
@@ -1062,7 +1062,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
           style={{
             marginTop: 16,
             padding: 12,
-            backgroundColor: '#FFEBEE',
+            backgroundColor: 'var(--color-copper-muted, #FFEBEE)',
             borderLeft: `4px solid ${Colors.error}`,
             borderRadius: 8,
           }}

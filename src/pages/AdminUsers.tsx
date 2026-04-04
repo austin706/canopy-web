@@ -144,7 +144,7 @@ export default function AdminUsers() {
       </div>
 
       {selectedIds.size > 0 && (
-        <div style={{ background: '#E3F2FD', padding: 16, borderRadius: 8, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'space-between' }}>
+        <div style={{ background: 'var(--color-background)', padding: 16, borderRadius: 8, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'space-between' }}>
           <span style={{ fontWeight: 600 }}>{selectedIds.size} user(s) selected</span>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <select className="form-select" value={bulkTierAction || ''} onChange={e => setBulkTierAction(e.target.value)} style={{ width: 120, padding: '4px 8px', fontSize: 12 }}>
@@ -182,9 +182,9 @@ export default function AdminUsers() {
                   </td>
                   <td>
                     {u.admin_override ? (
-                      <span style={{ fontSize: 11, background: '#FFF3CD', color: '#856404', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>Admin Set</span>
+                      <span style={{ fontSize: 11, background: 'var(--color-copper-muted, #FFF3E0)', color: 'var(--color-copper)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>Admin Set</span>
                     ) : (
-                      <span style={{ fontSize: 11, color: '#999' }}>Stripe</span>
+                      <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Stripe</span>
                     )}
                   </td>
                   <td className="text-sm text-gray">{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>

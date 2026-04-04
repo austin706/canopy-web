@@ -203,8 +203,8 @@ export default function Support() {
       <form onSubmit={handleSubmit} style={{ marginBottom: 48 }}>
         {error && (
           <div style={{
-            backgroundColor: '#ffebee',
-            color: Colors.error,
+            backgroundColor: 'var(--color-error-muted, #ffebee)',
+            color: 'var(--color-error)',
             padding: 16,
             borderRadius: 6,
             marginBottom: 24,
@@ -362,7 +362,7 @@ export default function Support() {
         </p>
       </div>
 
-      <div style={{ borderTop: `1px solid ${Colors.lightGray}`, paddingTop: 24, color: '#999', fontSize: 14, textAlign: 'center' }}>
+      <div style={{ borderTop: `1px solid ${Colors.lightGray}`, paddingTop: 24, color: 'var(--color-text-secondary)', fontSize: 14, textAlign: 'center' }}>
         © {new Date().getFullYear()} Canopy. All rights reserved.
       </div>
     </div>

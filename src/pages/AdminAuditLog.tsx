@@ -139,7 +139,7 @@ export default function AdminAuditLog() {
   const filteredLogs = filterLogs();
 
   return (
-    <div style={{ padding: '20px', backgroundColor: '#fafafa', minHeight: '100vh' }}>
+    <div style={{ padding: '20px', backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
       {/* Header */}
       <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600' }}>Admin Audit Log</h1>
@@ -162,7 +162,7 @@ export default function AdminAuditLog() {
       {/* Controls */}
       <div
         style={{
-          backgroundColor: 'white',
+          backgroundColor: 'var(--color-card-background)',
           padding: '16px',
           borderRadius: '8px',
           marginBottom: '20px',
@@ -172,7 +172,7 @@ export default function AdminAuditLog() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
           {/* Search */}
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: '500', color: '#666' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: '500', color: 'var(--color-text-secondary)' }}>
               Search
             </label>
             <input
@@ -183,7 +183,7 @@ export default function AdminAuditLog() {
               style={{
                 width: '100%',
                 padding: '8px 12px',
-                border: '1px solid #ddd',
+                border: '1px solid var(--color-border)',
                 borderRadius: '4px',
                 fontSize: '14px',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -193,7 +193,7 @@ export default function AdminAuditLog() {
 
           {/* Date Range */}
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: '500', color: '#666' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: '500', color: 'var(--color-text-secondary)' }}>
               Date Range
             </label>
             <select
@@ -205,7 +205,7 @@ export default function AdminAuditLog() {
               style={{
                 width: '100%',
                 padding: '8px 12px',
-                border: '1px solid #ddd',
+                border: '1px solid var(--color-border)',
                 borderRadius: '4px',
                 fontSize: '14px',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -219,19 +219,19 @@ export default function AdminAuditLog() {
           </div>
         </div>
 
-        <div style={{ fontSize: '12px', color: '#999' }}>
+        <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
           Showing {filteredLogs.length} of {logs.length} logs
         </div>
       </div>
 
       {/* Table */}
       {loading && offset === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Loading...</div>
+        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>Loading...</div>
       ) : filteredLogs.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>No audit logs found</div>
+        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>No audit logs found</div>
       ) : (
         <>
-          <div style={{ overflowX: 'auto', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' }}>
+          <div style={{ overflowX: 'auto', backgroundColor: 'var(--color-card-background)', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' }}>
             <table
               style={{
                 width: '100%',
@@ -240,15 +240,15 @@ export default function AdminAuditLog() {
               }}
             >
               <thead>
-                <tr style={{ borderBottom: '1px solid #eee' }}>
+                <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
                   <th
                     style={{
                       padding: '12px',
                       textAlign: 'left',
                       fontWeight: '600',
-                      color: '#666',
-                      backgroundColor: '#f5f5f5',
-                      borderBottom: '2px solid #ddd',
+                      color: 'var(--color-text-secondary)',
+                      backgroundColor: 'var(--color-background)',
+                      borderBottom: '2px solid var(--color-border)',
                     }}
                   >
                     Timestamp
@@ -258,9 +258,9 @@ export default function AdminAuditLog() {
                       padding: '12px',
                       textAlign: 'left',
                       fontWeight: '600',
-                      color: '#666',
-                      backgroundColor: '#f5f5f5',
-                      borderBottom: '2px solid #ddd',
+                      color: 'var(--color-text-secondary)',
+                      backgroundColor: 'var(--color-background)',
+                      borderBottom: '2px solid var(--color-border)',
                     }}
                   >
                     Admin
@@ -270,9 +270,9 @@ export default function AdminAuditLog() {
                       padding: '12px',
                       textAlign: 'left',
                       fontWeight: '600',
-                      color: '#666',
-                      backgroundColor: '#f5f5f5',
-                      borderBottom: '2px solid #ddd',
+                      color: 'var(--color-text-secondary)',
+                      backgroundColor: 'var(--color-background)',
+                      borderBottom: '2px solid var(--color-border)',
                     }}
                   >
                     Action
@@ -282,9 +282,9 @@ export default function AdminAuditLog() {
                       padding: '12px',
                       textAlign: 'left',
                       fontWeight: '600',
-                      color: '#666',
-                      backgroundColor: '#f5f5f5',
-                      borderBottom: '2px solid #ddd',
+                      color: 'var(--color-text-secondary)',
+                      backgroundColor: 'var(--color-background)',
+                      borderBottom: '2px solid var(--color-border)',
                     }}
                   >
                     Entity
@@ -294,9 +294,9 @@ export default function AdminAuditLog() {
                       padding: '12px',
                       textAlign: 'left',
                       fontWeight: '600',
-                      color: '#666',
-                      backgroundColor: '#f5f5f5',
-                      borderBottom: '2px solid #ddd',
+                      color: 'var(--color-text-secondary)',
+                      backgroundColor: 'var(--color-background)',
+                      borderBottom: '2px solid var(--color-border)',
                     }}
                   >
                     Details
@@ -305,9 +305,9 @@ export default function AdminAuditLog() {
               </thead>
               <tbody>
                 {filteredLogs.map((log) => (
-                  <tr key={log.id} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: '12px', color: '#333' }}>{formatTimestamp(log.created_at)}</td>
-                    <td style={{ padding: '12px', color: '#333' }}>{log.admin_email}</td>
+                  <tr key={log.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <td style={{ padding: '12px', color: 'var(--color-text)' }}>{formatTimestamp(log.created_at)}</td>
+                    <td style={{ padding: '12px', color: 'var(--color-text)' }}>{log.admin_email}</td>
                     <td style={{ padding: '12px' }}>
                       <span
                         style={{
@@ -323,10 +323,10 @@ export default function AdminAuditLog() {
                         {log.action}
                       </span>
                     </td>
-                    <td style={{ padding: '12px', color: '#333' }}>
+                    <td style={{ padding: '12px', color: 'var(--color-text)' }}>
                       <div>
                         <div style={{ fontWeight: '500' }}>{log.entity_type}</div>
-                        {log.entity_id && <div style={{ fontSize: '12px', color: '#999', marginTop: '2px' }}>{log.entity_id}</div>}
+                        {log.entity_id && <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>{log.entity_id}</div>}
                       </div>
                     </td>
                     <td style={{ padding: '12px' }}>
@@ -335,8 +335,9 @@ export default function AdminAuditLog() {
                           <span
                             key={key}
                             style={{
-                              backgroundColor: '#e8f5e9',
-                              color: '#2e7d32',
+                              backgroundColor: 'var(--color-success)',
+                              opacity: 0.15,
+                              color: 'var(--color-success)',
                               padding: '2px 6px',
                               borderRadius: '3px',
                               fontSize: '11px',

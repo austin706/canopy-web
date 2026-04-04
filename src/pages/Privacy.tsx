@@ -1,12 +1,12 @@
 export default function Privacy() {
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: '#1a1a1a', lineHeight: 1.7 }}>
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--color-text)', lineHeight: 1.7 }}>
       <div style={{ marginBottom: 32 }}>
-        <a href="/" style={{ color: '#8B9E7E', textDecoration: 'none', fontSize: 14 }}>← Back to Canopy</a>
+        <a href="/" style={{ color: 'var(--color-sage)', textDecoration: 'none', fontSize: 14 }}>← Back to Canopy</a>
       </div>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Privacy Policy</h1>
-      <p style={{ color: '#666', marginBottom: 32 }}>Last updated: March 22, 2026</p>
+      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>Last updated: March 22, 2026</p>
 
       <p>Canopy ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the Canopy mobile application, web platform, and related services (collectively, the "Service").</p>
 
@@ -106,7 +106,7 @@ export default function Privacy() {
         Email: support@canopyhome.app
       </p>
 
-      <div style={{ borderTop: '1px solid #e5e7eb', marginTop: 48, paddingTop: 24, color: '#999', fontSize: 14, textAlign: 'center' as const }}>
+      <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 48, paddingTop: 24, color: 'var(--color-text-secondary)', fontSize: 14, textAlign: 'center' as const }}>
         © {new Date().getFullYear()} Canopy. All rights reserved.
       </div>
     </div>

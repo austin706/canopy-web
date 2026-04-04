@@ -305,11 +305,11 @@ export default function EquipmentDetail() {
         {/* Replacement / Inspection Alert Banner */}
         {isReplacementDue && (
           <div style={{
-            background: 'linear-gradient(135deg, #C62828 0%, #D84315 100%)',
+            background: 'linear-gradient(135deg, var(--color-error) 0%, #D84315 100%)',
             borderRadius: 12,
             padding: 20,
             marginBottom: 20,
-            color: '#fff',
+            color: 'var(--color-card-background)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <span style={{ fontSize: 22 }}>&#9888;</span>
@@ -330,8 +330,8 @@ export default function EquipmentDetail() {
                 onClick={handleGetProQuote}
                 disabled={requestingPro}
                 style={{
-                  background: '#fff',
-                  color: Colors.error,
+                  background: 'var(--color-card-background)',
+                  color: 'var(--color-error)',
                   border: 'none',
                   borderRadius: 8,
                   padding: '12px 24px',
@@ -349,7 +349,7 @@ export default function EquipmentDetail() {
 
         {isInspectionDue && (
           <div style={{
-            background: '#FFF3E0',
+            background: 'var(--color-copper-muted, #FFF3E0)',
             border: `1px solid ${Colors.warning}`,
             borderRadius: 12,
             padding: 16,

@@ -548,7 +548,7 @@ export default function ProServices() {
             </div>
           ) : (
             <div className="empty-state">
-              <div className="icon" style={{ fontSize: 32, fontWeight: 700, color: Colors.copper }}>🔧</div>
+              <div className="icon" style={{ fontSize: 32, fontWeight: 700, color: Colors.copper }} role="img" aria-label="Tools">🔧</div>
               <h3>No Upcoming Visit</h3>
               <p>Your next bimonthly maintenance visit will be scheduled automatically based on your plan.</p>
             </div>
@@ -658,12 +658,12 @@ export default function ProServices() {
             </div>
 
             {error && (
-              <div style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: '#FFF3F3', border: '1px solid #FFCDD2', color: '#C62828', fontSize: 13, marginBottom: 12 }}>
+              <div style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: 'var(--color-error, #FFF3F3)', border: '1px solid var(--color-error-muted, #FFCDD2)', color: 'var(--color-error)', fontSize: 13, marginBottom: 12 }}>
                 {error}
               </div>
             )}
             {success && (
-              <div style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: '#E8F5E9', border: '1px solid #C8E6C9', color: '#2E7D32', fontSize: 13, marginBottom: 12 }}>
+              <div style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: 'var(--color-success-muted, #E8F5E9)', border: '1px solid var(--color-success-muted, #C8E6C9)', color: 'var(--color-success)', fontSize: 13, marginBottom: 12 }}>
                 {success}
               </div>
             )}

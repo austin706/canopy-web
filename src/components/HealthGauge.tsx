@@ -23,9 +23,9 @@ export const HealthGauge: React.FC<HealthGaugeProps> = ({
   const offset = circumference - (normalizedScore / 100) * circumference;
 
   const getColor = (s: number) => {
-    if (s >= 70) return '#8B9E7E';    // sage — healthy
-    if (s >= 40) return '#D4A373';     // copper-light — needs attention
-    return '#E53935';                    // red — critical
+    if (s >= 70) return 'var(--color-sage)';    // sage — healthy
+    if (s >= 40) return 'var(--color-copper)';     // copper-light — needs attention
+    return 'var(--color-error)';                    // red — critical
   };
 
   const getLabel = (s: number) => {
@@ -77,10 +77,10 @@ export const HealthGauge: React.FC<HealthGaugeProps> = ({
           justifyContent: 'center',
         }}
       >
-        <span style={{ fontSize: size * 0.28, fontWeight: 700, color: '#2C2C2C', lineHeight: 1 }}>
+        <span style={{ fontSize: size * 0.28, fontWeight: 700, color: 'var(--color-text)', lineHeight: 1 }}>
           {normalizedScore}
         </span>
-        <span style={{ fontSize: size * 0.1, fontWeight: 500, color: '#7A7A7A', marginTop: 2 }}>
+        <span style={{ fontSize: size * 0.1, fontWeight: 500, color: 'var(--color-text-secondary)', marginTop: 2 }}>
           {getLabel(normalizedScore)}
         </span>
       </div>

@@ -119,7 +119,7 @@ export default function Invoices() {
         <h1>Invoices</h1>
       </div>
 
-      {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: '#E5393520', color: '#C62828', fontSize: 14, marginBottom: 16 }}>{error}</div>}
+      {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', fontSize: 14, marginBottom: 16 }}>{error}</div>}
 
       {/* Filter Tabs */}
       <div className="tabs mb-lg">
@@ -137,7 +137,7 @@ export default function Invoices() {
       {/* Invoices List */}
       {filteredInvoices.length === 0 ? (
         <div className="empty-state">
-          <div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>--</div>
+          <div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--color-copper)' }}>--</div>
           <h3>No {activeTab} invoices</h3>
           <p>Invoices from service providers will appear here.</p>
         </div>
@@ -146,7 +146,7 @@ export default function Invoices() {
           {filteredInvoices.map(invoice => {
             const status = getInvoiceStatus(invoice);
             const invoicePayments = getInvoicePayments(invoice.id);
-            const statusColor = status === 'paid' ? Colors.success : status === 'overdue' ? '#dc3545' : Colors.warning;
+            const statusColor = status === 'paid' ? 'var(--color-success)' : status === 'overdue' ? 'var(--color-error)' : 'var(--color-warning)';
             return (
               <div key={invoice.id}>
                 <div
@@ -186,14 +186,14 @@ export default function Invoices() {
 
                 {/* Expanded Details */}
                 {expandedId === invoice.id && (
-                  <div className="card" style={{ padding: 20, marginTop: -8, borderTop: `1px solid ${Colors.lightGray}`, borderRadius: '0 0 8px 8px' }}>
+                  <div className="card" style={{ padding: 20, marginTop: -8, borderTop: `1px solid var(--color-border)`, borderRadius: '0 0 8px 8px' }}>
                     {invoice.line_items && invoice.line_items.length > 0 && (
                       <div style={{ marginBottom: 20 }}>
                         <p className="text-xs fw-600 mb-sm">Line Items</p>
                         <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
                           <tbody>
                             {invoice.line_items.map((item, idx) => (
-                              <tr key={idx} style={{ borderBottom: `1px solid ${Colors.lightGray}` }}>
+                              <tr key={idx} style={{ borderBottom: `1px solid var(--color-border)` }}>
                                 <td style={{ padding: '8px 0', textAlign: 'left' }}>{item.description}</td>
                                 <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500 }}>{formatCurrency(item.amount)}</td>
                               </tr>
@@ -203,7 +203,7 @@ export default function Invoices() {
                       </div>
                     )}
 
-                    <div style={{ padding: 12, background: Colors.cream, borderRadius: 8, marginBottom: 16 }}>
+                    <div style={{ padding: 12, background: 'var(--color-background)', borderRadius: 8, marginBottom: 16 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                         <p className="text-sm">Subtotal</p>
                         <p style={{ fontWeight: 600 }}>{formatCurrency(invoice.subtotal)}</p>
@@ -214,14 +214,14 @@ export default function Invoices() {
                           <p style={{ fontWeight: 600 }}>{formatCurrency(invoice.tax_amount)}</p>
                         </div>
                       )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${Colors.lightGray}`, paddingTop: 8, marginBottom: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid var(--color-border)`, paddingTop: 8, marginBottom: 8 }}>
                         <p className="text-sm fw-600">Total</p>
                         <p style={{ fontWeight: 700, fontSize: 16 }}>{formatCurrency(invoice.total_amount)}</p>
                       </div>
                       {invoice.amount_paid > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${Colors.lightGray}`, paddingTop: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid var(--color-border)`, paddingTop: 8 }}>
                           <p className="text-sm">Amount Paid</p>
-                          <p style={{ fontWeight: 600, color: Colors.sage }}>{formatCurrency(invoice.amount_paid)}</p>
+                          <p style={{ fontWeight: 600, color: 'var(--color-sage)' }}>{formatCurrency(invoice.amount_paid)}</p>
                         </div>
                       )}
                     </div>
@@ -230,7 +230,7 @@ export default function Invoices() {
                       <div style={{ marginBottom: 16 }}>
                         <p className="text-xs fw-600 mb-sm">Payment History</p>
                         {invoicePayments.map((payment, idx) => (
-                          <div key={idx} style={{ padding: 8, background: '#F5F5F5', borderRadius: 4, marginBottom: 4, fontSize: 13 }}>
+                          <div key={idx} style={{ padding: 8, background: 'var(--color-background)', borderRadius: 4, marginBottom: 4, fontSize: 13 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               <p style={{ margin: 0 }}>{formatDate(payment.paid_at)}</p>
                               <p style={{ margin: 0, fontWeight: 600 }}>{formatCurrency(payment.amount)}</p>

@@ -598,7 +598,7 @@ export default function ProVisitSchedule() {
           {conflictWarning && (
             <div style={{
               padding: '10px 14px', borderRadius: 8, marginBottom: 16,
-              backgroundColor: '#FFF3F3', border: '1px solid #FFCDD2', color: '#C62828', fontSize: 13,
+              backgroundColor: 'var(--color-copper-muted, #FFF3F3)', border: '1px solid #FFCDD2', color: 'var(--color-error)', fontSize: 13,
             }}>
               {conflictWarning}
             </div>

@@ -122,7 +122,7 @@ export default function HomeTransfer() {
     <div className="page" style={{ maxWidth: 600 }}>
       <div className="page-header"><h1>Home Token Transfer</h1></div>
 
-      {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: '#E5393520', color: '#C62828', fontSize: 14, marginBottom: 16 }}>{error}</div>}
+      {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', fontSize: 14, marginBottom: 16 }}>{error}</div>}
       {success && <div style={{ padding: '10px 16px', borderRadius: 8, background: Colors.sageMuted, color: Colors.sageDark, fontSize: 14, marginBottom: 16, border: `1px solid ${Colors.sage}` }}>{success}</div>}
 
       {/* Incoming transfers — shown to buyers */}
@@ -169,7 +169,7 @@ export default function HomeTransfer() {
       {/* Empty state — no incoming transfers */}
       {incomingTransfers.length === 0 && !activeTransfer && (
         <div className="empty-state" style={{ marginBottom: 32 }}>
-          <div className="icon" style={{ fontSize: 48, fontWeight: 700, color: Colors.copper }}>🔑</div>
+          <div className="icon" style={{ fontSize: 48, fontWeight: 700, color: Colors.copper }} role="img" aria-label="Key">🔑</div>
           <h3>No Home Transfers</h3>
           <p>Transfer your home's digital record to a new owner. All maintenance history, equipment details, and documents transfer seamlessly.</p>
         </div>
@@ -187,7 +187,7 @@ export default function HomeTransfer() {
               </div>
               <span style={{
                 padding: '4px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
-                background: Colors.warning + '20', color: Colors.warning,
+                background: 'var(--color-warning-muted, rgba(245, 158, 11, 0.125))', color: 'var(--color-warning)',
               }}>Pending</span>
             </div>
             <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 16 }}>
@@ -207,7 +207,7 @@ export default function HomeTransfer() {
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Transfer Your Home Record</h2>
           <div className="card" style={{ padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-              <div style={{ fontSize: 32 }}>🏡</div>
+              <div style={{ fontSize: 32 }} role="img" aria-label="Home">🏡</div>
               <div>
                 <p style={{ fontWeight: 600, color: Colors.charcoal }}>{home.address}</p>
                 <p style={{ fontSize: 13, color: Colors.medGray }}>{home.city}, {home.state} {home.zip_code}</p>

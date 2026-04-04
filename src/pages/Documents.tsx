@@ -230,12 +230,12 @@ export default function Documents() {
 
         <div style={{ maxWidth: 600, margin: '0 auto' }}>
           <div className="card" style={{
-            background: Colors.copperMuted,
-            border: `2px solid ${Colors.copper}`,
+            background: 'var(--color-copper-muted, #FFF3E0)',
+            border: `2px solid var(--color-copper)`,
             textAlign: 'center',
             padding: 32
           }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 16, color: Colors.copper }}>DV</div>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--color-copper-muted, #FFF3E0)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 16, color: 'var(--color-copper)' }}>DV</div>
             <h3 style={{ color: Colors.charcoal, marginBottom: 8 }}>Document Vault is Locked</h3>
             <p className="text-sm text-gray" style={{ marginBottom: 16, lineHeight: 1.6 }}>
               Store and organize all your home documents in one secure place. Upgrade to Home plan or higher to access this feature.
@@ -274,7 +274,7 @@ export default function Documents() {
 
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
         {/* Home Inspection AI Analysis */}
-        <div className="card mb-lg" style={{ borderLeft: `4px solid ${Colors.copper}` }}>
+        <div className="card mb-lg" style={{ borderLeft: `4px solid var(--color-copper)` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
             <div>
               <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Home Inspection Analysis</h3>
@@ -289,13 +289,13 @@ export default function Documents() {
         {/* Secure Notes PIN Protection */}
         {hasSecureNotesAccess && vaultPinHash && !isPinUnlocked && (
           <div className="card" style={{
-            background: Colors.copperMuted,
-            border: `2px solid ${Colors.copper}`,
+            background: 'var(--color-copper-muted, #FFF3E0)',
+            border: `2px solid var(--color-copper)`,
             marginBottom: 24,
             padding: 32,
             textAlign: 'center'
           }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 16, color: Colors.copper }}>PIN</div>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--color-copper-muted, #FFF3E0)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 16, color: 'var(--color-copper)' }}>PIN</div>
             <h3 style={{ color: Colors.charcoal, marginBottom: 8 }}>Vault Locked</h3>
             <p className="text-sm text-gray" style={{ marginBottom: 16, lineHeight: 1.6 }}>
               Enter your PIN to access secure notes and sensitive information.
@@ -317,13 +317,13 @@ export default function Documents() {
                 fontSize: 20,
                 letterSpacing: 8,
                 textAlign: 'center',
-                border: `1px solid ${Colors.lightGray}`,
+                border: `1px solid var(--color-border)`,
                 borderRadius: 4,
                 fontFamily: 'monospace'
               }}
             />
             {pinError && (
-              <p style={{ color: Colors.warning, fontSize: 12, marginBottom: 16 }}>{pinError}</p>
+              <p style={{ color: 'var(--color-warning)', fontSize: 12, marginBottom: 16 }}>{pinError}</p>
             )}
             <button
               className="btn btn-primary"
@@ -355,7 +355,7 @@ export default function Documents() {
               marginBottom: 16,
               fontSize: 13,
               fontWeight: 600,
-              color: Colors.copper,
+              color: 'var(--color-copper)',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
@@ -389,13 +389,13 @@ export default function Documents() {
                 fontSize: 16,
                 letterSpacing: 6,
                 textAlign: 'center',
-                border: `1px solid ${Colors.lightGray}`,
+                border: `1px solid var(--color-border)`,
                 borderRadius: 4,
                 fontFamily: 'monospace'
               }}
             />
             {pinError && (
-              <p style={{ color: Colors.warning, fontSize: 12, marginBottom: 16 }}>{pinError}</p>
+              <p style={{ color: 'var(--color-warning)', fontSize: 12, marginBottom: 16 }}>{pinError}</p>
             )}
             <div style={{ display: 'flex', gap: 8 }}>
               <button
@@ -448,7 +448,7 @@ export default function Documents() {
         {/* Documents List */}
         {filtered.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: 48 }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: Colors.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 16, color: Colors.copper }}>DOC</div>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--color-background)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 16, color: 'var(--color-copper)' }}>DOC</div>
             <h3 style={{ color: Colors.charcoal, marginBottom: 8 }}>No documents yet</h3>
             <p className="text-sm text-gray" style={{ marginBottom: 16 }}>
               Upload documents to organize warranties, manuals, receipts, and more.
@@ -475,11 +475,11 @@ export default function Documents() {
                     <div style={{
                       fontSize: 12,
                       fontWeight: 700,
-                      color: Colors.copper,
+                      color: 'var(--color-copper)',
                       width: 40,
                       height: 40,
                       borderRadius: 4,
-                      background: Colors.cream,
+                      background: 'var(--color-background)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -617,9 +617,9 @@ export default function Documents() {
                           borderRadius: 20,
                           fontSize: 12,
                           fontWeight: 500,
-                          border: `1px solid ${newNoteCategory === cat.value ? Colors.copper : Colors.lightGray}`,
-                          background: newNoteCategory === cat.value ? Colors.copper : 'transparent',
-                          color: newNoteCategory === cat.value ? Colors.white : Colors.charcoal,
+                          border: `1px solid ${newNoteCategory === cat.value ? 'var(--color-copper)' : 'var(--color-border)'}`,
+                          background: newNoteCategory === cat.value ? 'var(--color-copper)' : 'transparent',
+                          color: newNoteCategory === cat.value ? 'white' : 'var(--color-text)',
                           cursor: 'pointer',
                           transition: 'all 0.2s'
                         }}
@@ -656,7 +656,7 @@ export default function Documents() {
             {/* Notes List */}
             {secureNotes.length === 0 && !showAddNote ? (
               <div className="card" style={{ textAlign: 'center', padding: 32 }}>
-                <div style={{ width: 40, height: 40, borderRadius: '50%', background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontWeight: 700, fontSize: 14, color: Colors.copper }}>SN</div>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--color-copper-muted, #FFF3E0)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontWeight: 700, fontSize: 14, color: 'var(--color-copper)' }}>SN</div>
                 <h3 style={{ color: Colors.charcoal, marginBottom: 8 }}>No secure notes yet</h3>
                 <p className="text-sm text-gray">
                   Add alarm codes, door codes, WiFi passwords, and other sensitive info here.
@@ -683,7 +683,7 @@ export default function Documents() {
                           width: 36,
                           height: 36,
                           borderRadius: 4,
-                          background: Colors.copperMuted,
+                          background: 'var(--color-copper-muted, #FFF3E0)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -704,8 +704,8 @@ export default function Documents() {
                           </p>
                           <div style={{
                             display: 'inline-block',
-                            background: Colors.copperMuted,
-                            color: Colors.copper,
+                            background: 'var(--color-copper-muted, #FFF3E0)',
+                            color: 'var(--color-copper)',
                             padding: '2px 8px',
                             borderRadius: 12,
                             fontSize: 11,
@@ -718,14 +718,14 @@ export default function Documents() {
                       </div>
                       {isExpanded && (
                         <div style={{
-                          background: Colors.cream,
+                          background: 'var(--color-background)',
                           padding: 12,
                           borderRadius: 4,
                           marginBottom: 12,
                           wordBreak: 'break-word',
                           whiteSpace: 'pre-wrap',
                           fontSize: 13,
-                          color: Colors.charcoal,
+                          color: 'var(--color-text)',
                           fontFamily: 'monospace'
                         }}>
                           {note.content}

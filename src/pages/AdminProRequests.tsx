@@ -307,7 +307,7 @@ export default function AdminProRequests() {
                 </div>
 
                 {/* Provider Assignment */}
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${Colors.lightGray}` }}>
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid var(--color-border)` }}>
                   {r.provider_id ? (
                     <div className="flex items-center justify-between">
                       <div>
@@ -328,7 +328,7 @@ export default function AdminProRequests() {
                         Assign Provider {matching.length > 0 && `(${matching.length} match${matching.length !== 1 ? 'es' : ''} for ${r.category || r.service_type}${homeZip ? ` in ${homeZip}` : ''})`}
                       </label>
                       {noZipCoverage && (
-                        <div style={{ padding: '6px 10px', borderRadius: 6, background: '#FF980015', color: '#E65100', fontSize: 12, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ padding: '6px 10px', borderRadius: 6, background: 'var(--color-warning)', opacity: 0.15, color: 'var(--color-warning)', fontSize: 12, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                           ⚠️ No provider covers ZIP {homeZip} for {r.category || r.service_type}. Manual assignment required.
                         </div>
                       )}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
@@ -32,11 +33,19 @@ const WHOLESALE_RATES = {
 const DURATION_PRESETS = [1, 3, 6, 12];
 
 export default function AgentPurchaseCodes() {
+  const navigate = useNavigate();
   const { user } = useStore();
   const [codes, setCodes] = useState<GiftCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'gift' | 'codes'>('gift');
   const [filter, setFilter] = useState<'all' | 'available' | 'redeemed'>('all');
+
+  // Role gate: only agents can access this page
+  useEffect(() => {
+    if (user && user.role !== 'agent') {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   // Gift form state
   const [tier, setTier] = useState<'home' | 'pro'>('home');

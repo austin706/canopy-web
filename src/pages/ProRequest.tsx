@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { createProRequest, getProRequests, supabase, sendNotification } from '@/services/supabase';
 import { isProOrHigher } from '@/services/subscriptionGate';
+import MessageBanner from '@/components/MessageBanner';
 import { Colors, StatusColors } from '@/constants/theme';
 import type { ProRequest as ProRequestType } from '@/types';
 
@@ -176,7 +177,7 @@ export default function ProRequest() {
           </span>
         </div>
 
-        {message && <div style={{ padding: '10px 16px', borderRadius: 8, background: message.includes('Failed') || message.includes('failed') ? '#E5393520' : '#4CAF5020', color: message.includes('Failed') || message.includes('failed') ? '#C62828' : '#2E7D32', fontSize: 14, marginBottom: 16 }}>{message}</div>}
+        {message && <MessageBanner message={message} />}
 
         {/* Progress Tracker */}
         {!isCancelled && (
@@ -321,7 +322,7 @@ export default function ProRequest() {
         <h1>Pro Services</h1>
       </div>
 
-      {message && <div style={{ padding: '10px 16px', borderRadius: 8, background: message.includes('Failed') || message.includes('Error') || message.includes('error') ? '#E5393520' : '#4CAF5020', color: message.includes('Failed') || message.includes('Error') || message.includes('error') ? '#C62828' : '#2E7D32', fontSize: 14, marginBottom: 16 }}>{message}</div>}
+      {message && <MessageBanner message={message} />}
 
       <div className="tabs mb-lg">
         <button className={`tab ${tab === 'new' ? 'active' : ''}`} onClick={() => setTab('new')}>New Request</button>

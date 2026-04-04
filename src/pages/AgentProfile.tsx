@@ -227,7 +227,7 @@ export default function AgentProfile() {
           />
           <div>
             <p style={{ fontSize: 13, color: Colors.medGray }}>Selected Color</p>
-            <code style={{ fontSize: 12, background: Colors.lightGray, padding: '4px 8px', borderRadius: 4 }}>
+            <code style={{ fontSize: 12, background: 'var(--color-background)', padding: '4px 8px', borderRadius: 4 }}>
               {accentColor}
             </code>
           </div>
@@ -239,8 +239,9 @@ export default function AgentProfile() {
         <div
           className="card"
           style={{
-            background: message.includes('success') ? '#E8F5E9' : '#FFF3E0',
-            borderLeft: `4px solid ${message.includes('success') ? Colors.success : Colors.warning}`,
+            background: message.includes('success') ? 'var(--color-success)' : 'var(--color-warning)',
+            opacity: 0.15,
+            borderLeft: `4px solid ${message.includes('success') ? 'var(--color-success)' : 'var(--color-warning)'}`,
           }}
         >
           <p style={{ margin: 0, fontSize: 14 }}>{message}</p>

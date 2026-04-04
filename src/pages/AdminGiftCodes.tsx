@@ -141,7 +141,7 @@ export default function AdminGiftCodes() {
               </div>
               <div style={{ minWidth: 140 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Filter</label>
-                <select className="form-select" value={filter} onChange={e => setFilter(e.target.value as string)}>
+                <select className="form-select" value={filter} onChange={e => setFilter(e.target.value as typeof filter)}>
                   <option value="all">All</option>
                   <option value="active">Active</option>
                   <option value="redeemed">Redeemed</option>

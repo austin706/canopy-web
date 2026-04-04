@@ -499,7 +499,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
               marginBottom: 16,
             }}
           >
-            {['Make/Brand name', 'Model number', 'Serial number', 'Any efficiency ratings'].map((item) => (
+            {['Make/Brand name', 'Model number', 'Serial number', 'Any efficiency ratings'].map((item, i) => (
               <div
                 key={item}
                 style={{

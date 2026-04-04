@@ -219,7 +219,7 @@ export async function sendInvoice(invoiceId: string): Promise<void> {
   } catch (e) { console.warn('Failed to send invoice notification:', e); }
 }
 
-export async function payInvoice(invoiceId: string): Promise<{ clientSecret: string }> {
+export async function payInvoice(invoiceId: string): Promise<{ clientSecret?: string; url?: string }> {
   // Call Edge Function to create Stripe PaymentIntent
   const { data, error } = await supabase.functions.invoke('create-invoice-payment', {
     body: { invoice_id: invoiceId },

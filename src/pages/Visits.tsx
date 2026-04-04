@@ -763,7 +763,7 @@ export default function Visits() {
                   {expandedTrend === trend.equipmentId && (
                     <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${Colors.lightGray}` }}>
                       {trend.snapshots.map((snapshot, idx) => (
-                        <div key={snapshot.date || `snapshot-${idx}`} style={{ padding: 10, background: Colors.cream, borderRadius: 6, marginBottom: 8 }}>
+                        <div key={snapshot.visitDate || `snapshot-${idx}`} style={{ padding: 10, background: Colors.cream, borderRadius: 6, marginBottom: 8 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                             <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal }}>
                               {new Date(snapshot.visitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

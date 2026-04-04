@@ -1543,8 +1543,8 @@ export default function Onboarding() {
                   <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal, marginBottom: 12 }}>
                     {equipmentList.length} item{equipmentList.length !== 1 ? 's' : ''} added{equipmentLimit ? ` (${equipmentLimit - equipmentList.length} remaining on Free plan)` : ''}
                   </p>
-                  {equipmentList.map((item) => (
-                    <div key={item.id || item.name} style={{
+                  {equipmentList.map((item, i) => (
+                    <div key={(item as any).id || item.name} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '12px 16px', backgroundColor: 'var(--color-background)', borderRadius: 10,
                       marginBottom: 8, borderLeft: `3px solid ${Colors.sage}`,

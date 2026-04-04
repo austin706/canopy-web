@@ -255,7 +255,7 @@ export default function AdminProRequests() {
           <select
             className="form-select"
             value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value as string)}
+            onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
             style={{ width: '100%', padding: '6px 8px', fontSize: 13 }}
           >
             <option value="all">All Statuses</option>

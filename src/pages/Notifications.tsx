@@ -433,7 +433,7 @@ export default function Notifications() {
                         name="reminderLeadTime"
                         value={option.value}
                         checked={prefs.reminder_lead_time === option.value}
-                        onChange={(e) => setPrefs(prev => ({ ...prev, reminder_lead_time: e.target.value as string }))}
+                        onChange={(e) => setPrefs(prev => ({ ...prev, reminder_lead_time: e.target.value as typeof prev.reminder_lead_time }))}
                         style={{ cursor: 'pointer' }}
                       />
                       <span style={{ color: 'var(--color-charcoal)', fontWeight: 500 }}>{option.label}</span>
@@ -462,7 +462,7 @@ export default function Notifications() {
                         name="preferredTime"
                         value={option.value}
                         checked={prefs.preferred_time === option.value}
-                        onChange={(e) => setPrefs(prev => ({ ...prev, preferred_time: e.target.value as string }))}
+                        onChange={(e) => setPrefs(prev => ({ ...prev, preferred_time: e.target.value as typeof prev.preferred_time }))}
                         style={{ cursor: 'pointer' }}
                       />
                       <span style={{ color: 'var(--color-charcoal)', fontWeight: 500 }}>{option.label}</span>

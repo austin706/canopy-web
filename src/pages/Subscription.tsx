@@ -8,6 +8,7 @@ import { getMessageVariant, messageColors } from '@/utils/messageType';
 import { enrollProSubscriber, findProviderForZip } from '@/services/proEnrollment';
 import { requestConsultation } from '@/services/proPlus';
 import { Colors } from '@/constants/theme';
+import type { SubscriptionTier } from '@/types';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import ServiceAreaMap from '@/components/ServiceAreaMap';
 

@@ -37,8 +37,8 @@ interface UpcomingVisit {
   scheduled_date: string;
   scheduled_time: string;
   status: string;
-  home?: { address: string; city: string; state: string };
-  user?: { full_name: string };
+  home?: { address?: string; city?: string; state?: string };
+  user?: { full_name?: string };
 }
 
 interface JobStats {
@@ -281,7 +281,7 @@ export default function ProPortal() {
           scheduled_date: a.scheduled_date,
           scheduled_time: a.scheduled_time || '',
           status: a.status,
-          home: a.home as { address?: string; city?: string },
+          home: a.home as { address?: string; city?: string; state?: string },
         });
       }
       for (const v of (bimonthlyData || [])) {
@@ -292,7 +292,7 @@ export default function ProPortal() {
           scheduled_time: v.confirmed_start_time || v.proposed_time_slot || '',
           status: v.status,
           user: v.homeowner as { full_name?: string; email?: string },
-          home: v.home as { address?: string; city?: string },
+          home: v.home as { address?: string; city?: string; state?: string },
         });
       }
       mergedVisits.sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));

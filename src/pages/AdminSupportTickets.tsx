@@ -190,7 +190,7 @@ export default function AdminSupportTickets() {
           <select
             className="form-select"
             value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value as string)}
+            onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
             style={{ width: '100%', padding: '6px 8px', fontSize: 13 }}
           >
             <option value="all">All Statuses</option>
@@ -221,7 +221,7 @@ export default function AdminSupportTickets() {
           <select
             className="form-select"
             value={sortBy}
-            onChange={e => setSortBy(e.target.value as string)}
+            onChange={e => setSortBy(e.target.value as typeof sortBy)}
             style={{ width: '100%', padding: '6px 8px', fontSize: 13 }}
           >
             <option value="created_at">Newest First</option>

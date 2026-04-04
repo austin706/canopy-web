@@ -98,7 +98,7 @@ export default function AgentView() {
     try {
       await supabase.from('profiles').update({ agent_id: null }).eq('id', user.id);
       setAgent(null);
-      if (user) setUser({ ...user, agent_id: null });
+      if (user) setUser({ ...user, agent_id: undefined });
     } catch (e: any) {
       alert('Failed to unlink: ' + e.message);
     } finally {

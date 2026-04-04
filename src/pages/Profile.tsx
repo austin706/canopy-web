@@ -7,6 +7,7 @@ import MessageBanner from '@/components/MessageBanner';
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { ThemeMode } from '@/constants/theme';
+import type { SubscriptionTier } from '@/types';
 
 export default function Profile() {
   const navigate = useNavigate();

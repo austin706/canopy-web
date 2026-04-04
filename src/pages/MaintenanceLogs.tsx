@@ -204,7 +204,7 @@ export default function MaintenanceLogs() {
               </div>
               <div className="form-group">
                 <label>Done By</label>
-                <select className="form-select" value={form.completed_by} onChange={e => setForm({...form, completed_by: e.target.value as string})}>
+                <select className="form-select" value={form.completed_by} onChange={e => setForm({...form, completed_by: e.target.value as typeof form.completed_by})}>
                   <option value="homeowner">Homeowner</option><option value="pro">Professional</option><option value="contractor">Contractor</option>
                 </select>
               </div>

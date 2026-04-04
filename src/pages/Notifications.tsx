@@ -132,7 +132,7 @@ export default function Notifications() {
     if (!user?.id) return;
     try {
       setError(null);
-      await supabaseService.updateNotificationPreferences(user.id, prefs);
+      await supabaseService.updateNotificationPreferences(user.id, prefs as unknown as Record<string, unknown>);
       setSaved(true);
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => setSaved(false), 2000);

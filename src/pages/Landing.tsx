@@ -1,10 +1,22 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Colors, FontSize, FontWeight, BorderRadius } from '@/constants/theme';
 
 export default function Landing() {
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const scrollToSection = (id: string) => {
+    setMobileMenuOpen(false);
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
@@ -44,73 +56,125 @@ export default function Landing() {
           <span style={{ fontSize: 20, fontWeight: FontWeight.bold, color: Colors.charcoal }}>Canopy</span>
         </div>
 
-        <nav style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
-          <a
-            href="#features"
-            onClick={(e) => { e.preventDefault(); scrollToSection('features'); }}
-            style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none', transition: 'color 0.2s' }}
-            onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.charcoal; }}
-            onMouseLeave={(e) => { (e.target as HTMLElement).style.color = Colors.medGray; }}
+        {/* Mobile hamburger */}
+        {isMobile && (
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 8,
+              display: 'flex', flexDirection: 'column', gap: 5,
+            }}
           >
+            <span style={{ display: 'block', width: 24, height: 2, background: Colors.charcoal, borderRadius: 2, transition: 'all 0.3s', transform: mobileMenuOpen ? 'rotate(45deg) translateY(7px)' : 'none' }} />
+            <span style={{ display: 'block', width: 24, height: 2, background: Colors.charcoal, borderRadius: 2, transition: 'all 0.3s', opacity: mobileMenuOpen ? 0 : 1 }} />
+            <span style={{ display: 'block', width: 24, height: 2, background: Colors.charcoal, borderRadius: 2, transition: 'all 0.3s', transform: mobileMenuOpen ? 'rotate(-45deg) translateY(-7px)' : 'none' }} />
+          </button>
+        )}
+
+        {/* Desktop nav */}
+        {!isMobile && (
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+            <a
+              href="#features"
+              onClick={(e) => { e.preventDefault(); scrollToSection('features'); }}
+              style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.charcoal; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.color = Colors.medGray; }}
+            >
+              Features
+            </a>
+            <a
+              href="#pricing"
+              onClick={(e) => { e.preventDefault(); scrollToSection('pricing'); }}
+              style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.charcoal; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.color = Colors.medGray; }}
+            >
+              Pricing
+            </a>
+            <a
+              href="/support"
+              style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.charcoal; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.color = Colors.medGray; }}
+            >
+              Support
+            </a>
+            <button
+              onClick={() => navigate('/login')}
+              style={{
+                padding: '8px 20px',
+                fontSize: 14,
+                fontWeight: FontWeight.medium,
+                background: 'transparent',
+                color: Colors.charcoal,
+                border: `1px solid ${Colors.lightGray}`,
+                borderRadius: BorderRadius.md,
+                cursor: 'pointer',
+                fontFamily: fontStack,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.borderColor = Colors.copper; (e.target as HTMLElement).style.color = Colors.copper; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.borderColor = Colors.lightGray; (e.target as HTMLElement).style.color = Colors.charcoal; }}
+            >
+              Log In
+            </button>
+            <button
+              onClick={() => navigate('/signup')}
+              style={{
+                padding: '8px 20px',
+                fontSize: 14,
+                fontWeight: FontWeight.semibold,
+                background: Colors.copper,
+                color: Colors.white,
+                border: 'none',
+                borderRadius: BorderRadius.md,
+                cursor: 'pointer',
+                fontFamily: fontStack,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.background = '#A66B3A'; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.background = Colors.copper; }}
+            >
+              Get Started
+            </button>
+          </nav>
+        )}
+      </div>
+
+      {/* Mobile dropdown menu */}
+      {isMobile && mobileMenuOpen && (
+        <nav
+          style={{
+            display: 'flex', flexDirection: 'column', gap: 0,
+            padding: '8px 0 16px', borderTop: '1px solid #eee',
+          }}
+        >
+          <a href="#features" onClick={(e) => { e.preventDefault(); scrollToSection('features'); }}
+            style={{ padding: '12px 0', fontSize: 16, color: Colors.charcoal, textDecoration: 'none', fontWeight: FontWeight.medium }}>
             Features
           </a>
-          <a
-            href="#pricing"
-            onClick={(e) => { e.preventDefault(); scrollToSection('pricing'); }}
-            style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none', transition: 'color 0.2s' }}
-            onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.charcoal; }}
-            onMouseLeave={(e) => { (e.target as HTMLElement).style.color = Colors.medGray; }}
-          >
+          <a href="#pricing" onClick={(e) => { e.preventDefault(); scrollToSection('pricing'); }}
+            style={{ padding: '12px 0', fontSize: 16, color: Colors.charcoal, textDecoration: 'none', fontWeight: FontWeight.medium }}>
             Pricing
           </a>
-          <a
-            href="/support"
-            style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none', transition: 'color 0.2s' }}
-            onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.charcoal; }}
-            onMouseLeave={(e) => { (e.target as HTMLElement).style.color = Colors.medGray; }}
-          >
+          <a href="/support"
+            style={{ padding: '12px 0', fontSize: 16, color: Colors.charcoal, textDecoration: 'none', fontWeight: FontWeight.medium }}>
             Support
           </a>
-          <button
-            onClick={() => navigate('/login')}
-            style={{
-              padding: '8px 20px',
-              fontSize: 14,
-              fontWeight: FontWeight.medium,
-              background: 'transparent',
-              color: Colors.charcoal,
-              border: `1px solid ${Colors.lightGray}`,
-              borderRadius: BorderRadius.md,
-              cursor: 'pointer',
-              fontFamily: fontStack,
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => { (e.target as HTMLElement).style.borderColor = Colors.copper; (e.target as HTMLElement).style.color = Colors.copper; }}
-            onMouseLeave={(e) => { (e.target as HTMLElement).style.borderColor = Colors.lightGray; (e.target as HTMLElement).style.color = Colors.charcoal; }}
-          >
-            Log In
-          </button>
-          <button
-            onClick={() => navigate('/signup')}
-            style={{
-              padding: '8px 20px',
-              fontSize: 14,
-              fontWeight: FontWeight.semibold,
-              background: Colors.copper,
-              color: Colors.white,
-              border: 'none',
-              borderRadius: BorderRadius.md,
-              cursor: 'pointer',
-              fontFamily: fontStack,
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => { (e.target as HTMLElement).style.background = '#A66B3A'; }}
-            onMouseLeave={(e) => { (e.target as HTMLElement).style.background = Colors.copper; }}
-          >
-            Get Started
-          </button>
+          <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+            <button onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
+              style={{ flex: 1, padding: '12px', fontSize: 15, fontWeight: FontWeight.medium, background: 'transparent', color: Colors.charcoal, border: `1px solid ${Colors.lightGray}`, borderRadius: BorderRadius.md, cursor: 'pointer', fontFamily: fontStack }}>
+              Log In
+            </button>
+            <button onClick={() => { setMobileMenuOpen(false); navigate('/signup'); }}
+              style={{ flex: 1, padding: '12px', fontSize: 15, fontWeight: FontWeight.semibold, background: Colors.copper, color: Colors.white, border: 'none', borderRadius: BorderRadius.md, cursor: 'pointer', fontFamily: fontStack }}>
+              Get Started
+            </button>
+          </div>
         </nav>
-      </div>
+      )}
     </header>
   );
 
@@ -121,7 +185,7 @@ export default function Landing() {
     <section
       style={{
         background: Colors.warmWhite,
-        padding: '120px 24px',
+        padding: isMobile ? '60px 16px' : '120px 24px',
         textAlign: 'center',
         fontFamily: fontStack,
       }}
@@ -129,7 +193,7 @@ export default function Landing() {
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         <h1
           style={{
-            fontSize: 56,
+            fontSize: isMobile ? 32 : 56,
             fontWeight: FontWeight.bold,
             color: Colors.charcoal,
             margin: '0 0 24px 0',
@@ -141,9 +205,9 @@ export default function Landing() {
 
         <p
           style={{
-            fontSize: 20,
+            fontSize: isMobile ? 17 : 20,
             color: Colors.medGray,
-            margin: '0 0 48px 0',
+            margin: isMobile ? '0 0 32px 0' : '0 0 48px 0',
             lineHeight: 1.6,
             maxWidth: '700px',
             marginLeft: 'auto',
@@ -233,18 +297,18 @@ export default function Landing() {
     <section
       style={{
         background: Colors.white,
-        padding: '80px 24px',
+        padding: isMobile ? '48px 16px' : '80px 24px',
         fontFamily: fontStack,
       }}
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <h2
           style={{
-            fontSize: 42,
+            fontSize: isMobile ? 28 : 42,
             fontWeight: FontWeight.bold,
             color: Colors.charcoal,
             textAlign: 'center',
-            margin: '0 0 64px 0',
+            margin: isMobile ? '0 0 36px 0' : '0 0 64px 0',
           }}
         >
           Homeownership shouldn't be overwhelming
@@ -253,8 +317,8 @@ export default function Landing() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '40px',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: isMobile ? '32px' : '40px',
           }}
         >
           {/* Card 1 */}
@@ -381,18 +445,18 @@ export default function Landing() {
       id="features"
       style={{
         background: '#F5F4F0',
-        padding: '80px 24px',
+        padding: isMobile ? '48px 16px' : '80px 24px',
         fontFamily: fontStack,
       }}
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <h2
           style={{
-            fontSize: 42,
+            fontSize: isMobile ? 28 : 42,
             fontWeight: FontWeight.bold,
             color: Colors.charcoal,
             textAlign: 'center',
-            margin: '0 0 64px 0',
+            margin: isMobile ? '0 0 36px 0' : '0 0 64px 0',
           }}
         >
           Everything you need to protect your home
@@ -401,15 +465,15 @@ export default function Landing() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-            gap: '32px',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(350px, 1fr))',
+            gap: isMobile ? '20px' : '32px',
           }}
         >
           {/* Feature 1 */}
           <div
             style={{
               background: Colors.white,
-              padding: '32px',
+              padding: isMobile ? '24px' : '32px',
               borderRadius: BorderRadius.lg,
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
             }}
@@ -440,7 +504,7 @@ export default function Landing() {
           <div
             style={{
               background: Colors.white,
-              padding: '32px',
+              padding: isMobile ? '24px' : '32px',
               borderRadius: BorderRadius.lg,
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
             }}
@@ -471,7 +535,7 @@ export default function Landing() {
           <div
             style={{
               background: Colors.white,
-              padding: '32px',
+              padding: isMobile ? '24px' : '32px',
               borderRadius: BorderRadius.lg,
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
             }}
@@ -502,7 +566,7 @@ export default function Landing() {
           <div
             style={{
               background: Colors.white,
-              padding: '32px',
+              padding: isMobile ? '24px' : '32px',
               borderRadius: BorderRadius.lg,
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
             }}
@@ -533,7 +597,7 @@ export default function Landing() {
           <div
             style={{
               background: Colors.white,
-              padding: '32px',
+              padding: isMobile ? '24px' : '32px',
               borderRadius: BorderRadius.lg,
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
             }}
@@ -564,7 +628,7 @@ export default function Landing() {
           <div
             style={{
               background: Colors.white,
-              padding: '32px',
+              padding: isMobile ? '24px' : '32px',
               borderRadius: BorderRadius.lg,
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
             }}
@@ -603,18 +667,18 @@ export default function Landing() {
       id="pricing"
       style={{
         background: Colors.white,
-        padding: '80px 24px',
+        padding: isMobile ? '48px 16px' : '80px 24px',
         fontFamily: fontStack,
       }}
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <h2
           style={{
-            fontSize: 42,
+            fontSize: isMobile ? 28 : 42,
             fontWeight: FontWeight.bold,
             color: Colors.charcoal,
             textAlign: 'center',
-            margin: '0 0 64px 0',
+            margin: isMobile ? '0 0 36px 0' : '0 0 64px 0',
           }}
         >
           Simple, transparent pricing
@@ -623,8 +687,8 @@ export default function Landing() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '32px',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: isMobile ? '24px' : '32px',
             marginBottom: '48px',
           }}
         >
@@ -713,7 +777,7 @@ export default function Landing() {
               borderRadius: BorderRadius.lg,
               textAlign: 'center',
               position: 'relative',
-              transform: 'scale(1.05)',
+              transform: isMobile ? 'none' : 'scale(1.05)',
               boxShadow: '0 12px 32px rgba(196, 132, 78, 0.15)',
             }}
           >
@@ -912,14 +976,14 @@ export default function Landing() {
     <section
       style={{
         background: Colors.warmWhite,
-        padding: '80px 24px',
+        padding: isMobile ? '48px 16px' : '80px 24px',
         fontFamily: fontStack,
       }}
     >
       <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
         <h2
           style={{
-            fontSize: 42,
+            fontSize: isMobile ? 28 : 42,
             fontWeight: FontWeight.bold,
             color: Colors.charcoal,
             margin: '0 0 24px 0',
@@ -942,7 +1006,7 @@ export default function Landing() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(240px, 1fr))',
             gap: '32px',
             marginBottom: '48px',
           }}
@@ -988,14 +1052,14 @@ export default function Landing() {
     <section
       style={{
         background: Colors.white,
-        padding: '80px 24px',
+        padding: isMobile ? '48px 16px' : '80px 24px',
         fontFamily: fontStack,
       }}
     >
       <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
         <h2
           style={{
-            fontSize: 42,
+            fontSize: isMobile ? 28 : 42,
             fontWeight: FontWeight.bold,
             color: Colors.charcoal,
             margin: '0 0 24px 0',
@@ -1018,7 +1082,7 @@ export default function Landing() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(240px, 1fr))',
             gap: '32px',
             marginBottom: '48px',
           }}
@@ -1071,8 +1135,8 @@ export default function Landing() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '40px',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: isMobile ? '24px' : '40px',
             marginBottom: '40px',
             paddingBottom: '40px',
             borderBottom: `1px solid rgba(255, 255, 255, 0.1)`,

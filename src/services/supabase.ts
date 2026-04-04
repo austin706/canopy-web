@@ -290,7 +290,23 @@ export const updateMaintenanceLog = async (logId: string, updates: Record<string
 };
 
 // --- Photo Upload ---
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp',
+  'application/pdf',
+];
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+
 export const uploadPhoto = async (bucket: string, path: string, file: File) => {
+  // Validate file size
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(`File too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum is 20MB.`);
+  }
+
+  // Validate MIME type
+  if (file.type && !ALLOWED_MIME_TYPES.includes(file.type)) {
+    throw new Error(`File type "${file.type}" is not allowed. Accepted: JPEG, PNG, HEIC, WebP, PDF.`);
+  }
+
   const { data, error } = await supabase.storage.from(bucket).upload(path, file);
   if (error) throw error;
   const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);

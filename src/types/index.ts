@@ -590,3 +590,60 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPreferences = {
 
   weekly_summary: true,
 };
+
+// ─── Support Tickets ───
+
+export type SupportTicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+
+export interface SupportTicket {
+  id: string;
+  name: string;
+  email: string;
+  category: string;
+  subject: string;
+  message: string;
+  user_id?: string;
+  status: SupportTicketStatus;
+  resolved_at?: string;
+  created_at: string;
+}
+
+// ─── Admin Audit Log ───
+
+export interface AuditLogEntry {
+  id: string;
+  admin_id: string;
+  action: string;
+  entity_type: string;
+  entity_id?: string;
+  details?: Record<string, any>;
+  created_at: string;
+}
+
+// ─── Pro Service Area ───
+
+export interface ProServiceArea {
+  provider_id: string;
+  service_area_zips: string[];
+  service_area_miles: number;
+  service_categories: string[];
+}
+
+// ─── Admin Email Templates ───
+
+export type EmailTemplateCategory = 'admin' | 'user_transactional' | 'user_automated';
+export type EmailRecipientType = 'admin' | 'user' | 'pro_provider';
+
+export interface AdminEmailTemplate {
+  id: string;
+  template_key: string;
+  name: string;
+  description?: string;
+  subject: string;
+  category: EmailTemplateCategory;
+  enabled: boolean;
+  recipient_type: EmailRecipientType;
+  trigger_event: string;
+  created_at: string;
+  updated_at: string;
+}

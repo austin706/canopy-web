@@ -12,6 +12,7 @@ import {
   notifyBuyerOfTransfer,
   type HomeTransfer as HomeTransferType,
 } from '@/services/homeTransfer';
+import { getErrorMessage } from '@/utils/errors';
 
 export default function HomeTransfer() {
   const { user, home } = useStore();
@@ -44,7 +45,7 @@ export default function HomeTransfer() {
       setActiveTransfer(active);
       setIncomingTransfers(incoming);
     } catch (err: any) {
-      setError(err.message || 'Failed to load transfers');
+      setError(getErrorMessage(err) || 'Failed to load transfers');
     } finally {
       setLoading(false);
     }
@@ -66,7 +67,7 @@ export default function HomeTransfer() {
       setTransferNotes('');
       setSuccess('Transfer initiated! The buyer will be notified.');
     } catch (err: any) {
-      setError(err.message || 'Failed to initiate transfer');
+      setError(getErrorMessage(err) || 'Failed to initiate transfer');
     } finally {
       setSubmitting(false);
     }
@@ -79,7 +80,7 @@ export default function HomeTransfer() {
       setActiveTransfer(null);
       setSuccess('Transfer cancelled.');
     } catch (err: any) {
-      setError(err.message || 'Failed to cancel transfer');
+      setError(getErrorMessage(err) || 'Failed to cancel transfer');
     }
   };
 
@@ -93,7 +94,7 @@ export default function HomeTransfer() {
       // Reload the page after a short delay to refresh home data
       setTimeout(() => { window.location.href = '/'; }, 2000);
     } catch (err: any) {
-      setError(err.message || 'Failed to accept transfer');
+      setError(getErrorMessage(err) || 'Failed to accept transfer');
     } finally {
       setSubmitting(false);
     }
@@ -105,7 +106,7 @@ export default function HomeTransfer() {
       setIncomingTransfers(prev => prev.filter(t => t.id !== transfer.id));
       setSuccess('Transfer declined.');
     } catch (err: any) {
-      setError(err.message || 'Failed to decline transfer');
+      setError(getErrorMessage(err) || 'Failed to decline transfer');
     }
   };
 

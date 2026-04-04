@@ -3,6 +3,7 @@ import { Colors } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
 import { supabase, sendNotification } from '@/services/supabase';
 import { useNavigate } from 'react-router-dom';
+import { getErrorMessage } from '@/utils/errors';
 
 const Visits = lazy(() => import('@/pages/Visits'));
 const Quotes = lazy(() => import('@/pages/Quotes'));
@@ -339,7 +340,7 @@ export default function ProServices() {
       setFormData({ date: '', time: '', notes: '' });
       fetchServiceRequests();
     } catch (err: any) {
-      setError(err.message || 'Failed to submit request');
+      setError(getErrorMessage(err) || 'Failed to submit request');
     } finally {
       setIsLoading(false);
     }
@@ -628,8 +629,8 @@ export default function ProServices() {
             <div style={{ marginBottom: 16, padding: '12px 16px', backgroundColor: Colors.sageMuted, borderRadius: 8 }}>
               <p style={{ fontWeight: 600, fontSize: 13, color: Colors.charcoal, margin: '0 0 8px' }}>What's included:</p>
               <ul style={{ margin: 0, paddingLeft: 20 }}>
-                {selectedService.includes.map((item, i) => (
-                  <li key={i} style={{ fontSize: 13, color: Colors.charcoal, marginBottom: 4 }}>{item}</li>
+                {selectedService.includes.map((item) => (
+                  <li key={item} style={{ fontSize: 13, color: Colors.charcoal, marginBottom: 4 }}>{item}</li>
                 ))}
               </ul>
             </div>

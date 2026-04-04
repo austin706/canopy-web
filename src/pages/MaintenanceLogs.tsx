@@ -164,7 +164,7 @@ export default function MaintenanceLogs() {
                       <p style={{ color: Colors.medGray }}>No edits recorded — original entry.</p>
                     ) : (
                       editHistory[log.id].map((edit: any, idx: number) => (
-                        <div key={idx} style={{ marginBottom: idx < editHistory[log.id].length - 1 ? 8 : 0, paddingBottom: 8, borderBottom: idx < editHistory[log.id].length - 1 ? `1px solid ${Colors.lightGray}` : 'none' }}>
+                        <div key={edit.edited_at || `edit-${idx}`} style={{ marginBottom: idx < editHistory[log.id].length - 1 ? 8 : 0, paddingBottom: 8, borderBottom: idx < editHistory[log.id].length - 1 ? `1px solid ${Colors.lightGray}` : 'none' }}>
                           <div className="flex justify-between">
                             <span style={{ fontWeight: 500, color: Colors.charcoal }}>
                               {edit.field_changed?.replace(/_/g, ' ')}
@@ -204,7 +204,7 @@ export default function MaintenanceLogs() {
               </div>
               <div className="form-group">
                 <label>Done By</label>
-                <select className="form-select" value={form.completed_by} onChange={e => setForm({...form, completed_by: e.target.value as any})}>
+                <select className="form-select" value={form.completed_by} onChange={e => setForm({...form, completed_by: e.target.value as string})}>
                   <option value="homeowner">Homeowner</option><option value="pro">Professional</option><option value="contractor">Contractor</option>
                 </select>
               </div>

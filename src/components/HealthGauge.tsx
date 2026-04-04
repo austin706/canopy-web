@@ -1,4 +1,5 @@
 import React from 'react';
+import { Colors } from '@/constants/theme';
 
 interface HealthGaugeProps {
   score: number; // 0-100
@@ -15,7 +16,7 @@ export const HealthGauge: React.FC<HealthGaugeProps> = ({
   score,
   size = 120,
   strokeWidth = 10,
-  backgroundColor = '#E8E2D8',
+  backgroundColor = Colors.lightGray,
 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;

@@ -304,7 +304,7 @@ export default function AgentPortal() {
                     onClick={() => toggleClient(c.id)}
                   >
                     <div className="flex items-center gap-md">
-                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: Colors.copper, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 16, fontWeight: 700 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: Colors.copper, display: 'flex', alignItems: 'center', justifyContent: 'center', color: Colors.white, fontSize: 16, fontWeight: 700 }}>
                         {c.full_name?.charAt(0) || '?'}
                       </div>
                       <div>
@@ -317,14 +317,14 @@ export default function AgentPortal() {
                       {c.home ? (
                         <span className="badge badge-sage" style={{ fontSize: 11 }}>Home set up</span>
                       ) : (
-                        <span className="badge" style={{ background: '#E5393520', color: '#C62828', fontSize: 11 }}>No home</span>
+                        <span className="badge" style={{ background: Colors.error.slice(0, -2) + '15', color: Colors.error, fontSize: 11 }}>No home</span>
                       )}
                       <span style={{ color: 'var(--silver)', fontSize: 12, transform: expandedClient === c.id ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>&#9662;</span>
                     </div>
                   </div>
 
                   {expandedClient === c.id && (
-                    <div style={{ borderTop: '1px solid var(--color-border)', padding: '16px 20px', background: 'var(--color-copper-muted, #FFF3E0)', opacity: 0.4 }}>
+                    <div style={{ borderTop: '1px solid var(--color-border)', padding: '16px 20px', background: Colors.copperMuted, opacity: 0.4 }}>
                       {c.home ? (
                         <div>
                           <div className="flex items-center justify-between mb-md">
@@ -396,6 +396,7 @@ export default function AgentPortal() {
                           <input
                             type="text"
                             className="form-input"
+                            aria-label={`Add note for client ${c.full_name || 'unknown'}`}
                             style={{ flex: 1, padding: '6px 10px', fontSize: 13 }}
                             placeholder="Add a note about this client..."
                             value={expandedClient === c.id ? newNote : ''}
@@ -404,6 +405,7 @@ export default function AgentPortal() {
                           />
                           <select
                             className="form-select"
+                            aria-label="Select note category"
                             style={{ width: 110, padding: '6px 8px', fontSize: 12 }}
                             value={noteCategory}
                             onChange={e => setNoteCategory(e.target.value)}
@@ -429,7 +431,7 @@ export default function AgentPortal() {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
                             {(clientNotes[c.id] || []).map((note: any) => (
                               <div key={note.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 10px', background: 'var(--color-background)', borderRadius: 6, fontSize: 13 }}>
-                                <span style={{ padding: '1px 6px', borderRadius: 4, background: 'var(--color-copper-muted, #FFF3E0)', color: 'var(--color-copper)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', flexShrink: 0, marginTop: 2 }}>{note.category}</span>
+                                <span style={{ padding: '1px 6px', borderRadius: 4, background: Colors.copperMuted, color: 'var(--color-copper)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', flexShrink: 0, marginTop: 2 }}>{note.category}</span>
                                 <span style={{ flex: 1, color: Colors.charcoal }}>{note.note}</span>
                                 <span className="text-xs text-gray" style={{ flexShrink: 0 }}>{new Date(note.created_at).toLocaleDateString()}</span>
                                 <button className="btn btn-ghost" style={{ padding: 0, fontSize: 12, color: Colors.error, lineHeight: 1 }} onClick={() => handleDeleteNote(c.id, note.id)}>×</button>
@@ -712,7 +714,7 @@ export default function AgentPortal() {
                   <tbody>
                     {activeCodes.map(c => (
                       <tr key={c.id}>
-                        <td><code style={{ background: 'var(--color-copper-muted, #FFF3E0)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{c.code}</code></td>
+                        <td><code style={{ background: Colors.copperMuted, padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{c.code}</code></td>
                         <td><span className="badge badge-copper">{c.tier}</span></td>
                         <td className="text-sm">{c.client_name || '—'}</td>
                         <td>{c.duration_months} months</td>
@@ -825,7 +827,7 @@ export default function AgentPortal() {
                       const badge = getExpiryBadge(c.expires_at);
                       return (
                         <tr key={c.id}>
-                          <td><code style={{ background: 'var(--color-copper-muted, #FFF3E0)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{c.code}</code></td>
+                          <td><code style={{ background: Colors.copperMuted, padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{c.code}</code></td>
                           <td><span className="badge badge-copper">{c.tier}</span></td>
                           <td className="text-sm">{c.client_name || '—'}</td>
                           <td><span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: badge.color, background: badge.bg, opacity: badge.opacity || 1 }}>{badge.text}</span></td>

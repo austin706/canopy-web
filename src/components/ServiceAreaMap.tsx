@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/services/supabase';
+import logger from '@/utils/logger';
 import { Colors } from '@/constants/theme';
 
 interface ServiceAreaMapProps {
@@ -73,7 +74,7 @@ export default function ServiceAreaMap({ userZip, compact = false }: ServiceArea
       if (error) throw error;
       setAreas(data || []);
     } catch (err) {
-      console.error('Error loading service areas:', err);
+      logger.error('Error loading service areas:', err);
     } finally {
       setLoading(false);
     }
@@ -91,7 +92,7 @@ export default function ServiceAreaMap({ userZip, compact = false }: ServiceArea
       .limit(1);
 
     if (error) {
-      console.error('Error checking zip:', error);
+      logger.error('Error checking zip:', error);
       return;
     }
 
@@ -135,7 +136,7 @@ export default function ServiceAreaMap({ userZip, compact = false }: ServiceArea
         maxWidth: mapWidth,
         height: mapHeight,
         margin: compact ? '0 auto 12px' : '0 auto 20px',
-        background: `linear-gradient(135deg, #f0f7ed 0%, #e8f0e4 100%)`,
+        background: `linear-gradient(135deg, ${Colors.sageLight}20 0%, ${Colors.sage}15 100%)`,
         borderRadius: 16,
         border: `1px solid ${Colors.sage}40`,
         overflow: 'hidden',
@@ -202,7 +203,7 @@ export default function ServiceAreaMap({ userZip, compact = false }: ServiceArea
                 <circle
                   cx={x} cy={y} r={radius}
                   fill={isHovered ? Colors.copper : Colors.sage}
-                  stroke="#fff"
+                  stroke={Colors.white}
                   strokeWidth={isTulsa ? 2.5 : 1.5}
                   style={{ transition: 'all 0.15s ease' }}
                 />
@@ -319,6 +320,7 @@ export default function ServiceAreaMap({ userZip, compact = false }: ServiceArea
           <input
             type="text"
             className="form-input"
+            aria-label="Enter 5-digit ZIP code to check service availability"
             placeholder="Enter 5-digit ZIP code"
             value={checkZip}
             onChange={e => {

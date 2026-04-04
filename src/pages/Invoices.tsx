@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { payInvoice } from '@/services/quotesInvoices';
 import { Colors, StatusColors } from '@/constants/theme';
 import type { Invoice, InvoicePayment } from '@/types';
+import { getErrorMessage } from '@/utils/errors';
 
 type FilterTab = 'all' | 'unpaid' | 'paid' | 'overdue';
 
@@ -38,7 +39,7 @@ export default function Invoices() {
       setPayments([]);
       setError('');
     } catch (err: any) {
-      setError(err.message || 'Failed to load invoices');
+      setError(getErrorMessage(err) || 'Failed to load invoices');
     } finally {
       setLoading(false);
     }
@@ -50,14 +51,14 @@ export default function Invoices() {
     try {
       const result = await payInvoice(invoiceId);
       // Edge function returns checkout URL or client secret
-      if (result && (result as any).url) {
-        window.location.href = (result as any).url;
+      if (result && (result as { url?: string }).url) {
+        window.location.href = (result as { url: string }).url;
       } else {
         // Payment processed server-side, reload to reflect new status
         await loadInvoices();
       }
     } catch (err: any) {
-      setError(err.message || 'Payment failed. Please try again.');
+      setError(getErrorMessage(err) || 'Payment failed. Please try again.');
     } finally {
       setProcessingPaymentId(null);
     }
@@ -193,7 +194,7 @@ export default function Invoices() {
                         <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
                           <tbody>
                             {invoice.line_items.map((item, idx) => (
-                              <tr key={idx} style={{ borderBottom: `1px solid var(--color-border)` }}>
+                              <tr key={`${item.description}-${idx}`} style={{ borderBottom: `1px solid var(--color-border)` }}>
                                 <td style={{ padding: '8px 0', textAlign: 'left' }}>{item.description}</td>
                                 <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500 }}>{formatCurrency(item.amount)}</td>
                               </tr>
@@ -230,7 +231,7 @@ export default function Invoices() {
                       <div style={{ marginBottom: 16 }}>
                         <p className="text-xs fw-600 mb-sm">Payment History</p>
                         {invoicePayments.map((payment, idx) => (
-                          <div key={idx} style={{ padding: 8, background: 'var(--color-background)', borderRadius: 4, marginBottom: 4, fontSize: 13 }}>
+                          <div key={payment.id || `payment-${idx}`} style={{ padding: 8, background: 'var(--color-background)', borderRadius: 4, marginBottom: 4, fontSize: 13 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               <p style={{ margin: 0 }}>{formatDate(payment.paid_at)}</p>
                               <p style={{ margin: 0, fontWeight: 600 }}>{formatCurrency(payment.amount)}</p>

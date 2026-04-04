@@ -20,13 +20,13 @@ let stripePromise: Promise<any> | null = null;
 function loadStripe(): Promise<any> {
   if (stripePromise) return stripePromise;
   stripePromise = new Promise((resolve, reject) => {
-    if ((window as any).Stripe) {
-      resolve((window as any).Stripe(STRIPE_PUBLISHABLE_KEY));
+    if ((window as unknown as { Stripe?: any }).Stripe) {
+      resolve(((window as unknown) as { Stripe: any }).Stripe(STRIPE_PUBLISHABLE_KEY));
       return;
     }
     const script = document.createElement('script');
     script.src = 'https://js.stripe.com/v3/';
-    script.onload = () => resolve((window as any).Stripe(STRIPE_PUBLISHABLE_KEY));
+    script.onload = () => resolve(((window as unknown) as { Stripe: any }).Stripe(STRIPE_PUBLISHABLE_KEY));
     script.onerror = () => reject(new Error('Failed to load Stripe.js'));
     document.head.appendChild(script);
   });
@@ -354,7 +354,7 @@ export default function Subscription() {
     setRedeeming(true);
     try {
       const r = await redeemGiftCode(giftCode, user.id);
-      setUser({ ...user, subscription_tier: r.tier as any, subscription_expires_at: r.expiresAt, agent_id: r.agent?.id });
+      setUser({ ...user, subscription_tier: r.tier as SubscriptionTier, subscription_expires_at: r.expiresAt, agent_id: r.agent?.id });
       if (r.agent) setAgent(r.agent);
       setMessage(`Upgraded to ${PLANS.find(p => p.value === r.tier)?.name}!`);
       setGiftCode('');
@@ -474,8 +474,8 @@ export default function Subscription() {
               </p>
             )}
             <ul style={{ listStyle: 'none', padding: 0 }}>
-              {plan.features.map((f, i) => (
-                <li key={i} className="flex items-center gap-sm" style={{ padding: '6px 0', fontSize: 14 }}>
+              {plan.features.map((f) => (
+                <li key={f} className="flex items-center gap-sm" style={{ padding: '6px 0', fontSize: 14 }}>
                   <CheckIcon size={14} color={Colors.copper} /> {f}
                 </li>
               ))}
@@ -578,7 +578,7 @@ export default function Subscription() {
         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Redeem Gift Code</h3>
         <p className="text-sm text-gray mb-md">Have a gift code from your real estate agent? Enter it below to unlock premium features.</p>
         <div className="flex gap-sm">
-          <input className="form-input" value={giftCode} onChange={e => setGiftCode(e.target.value.toUpperCase())} placeholder="Enter gift code" style={{ flex: 1 }} />
+          <input className="form-input" aria-label="Enter gift code from your real estate agent" value={giftCode} onChange={e => setGiftCode(e.target.value.toUpperCase())} placeholder="Enter gift code" style={{ flex: 1 }} />
           <button className="btn btn-primary" onClick={handleRedeem} disabled={redeeming || !giftCode.trim()}>
             {redeeming ? 'Redeeming...' : 'Redeem'}
           </button>

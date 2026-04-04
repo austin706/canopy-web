@@ -43,7 +43,7 @@ export default function ProLayout() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
           <span style={{ fontWeight: 700, fontSize: 18 }}>Canopy</span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#fff', background: Colors.sage, padding: '2px 8px', borderRadius: 4, marginLeft: 4 }}>PRO</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: Colors.white, background: Colors.sage, padding: '2px 8px', borderRadius: 4, marginLeft: 4 }}>PRO</span>
         </div>
         <button className="hamburger-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Toggle navigation menu">
           <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`} />
@@ -86,7 +86,7 @@ export default function ProLayout() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 12, color: 'var(--color-error)' }} onClick={handleLogout}>Sign Out</button>
+            <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 12, color: Colors.error }} onClick={handleLogout}>Sign Out</button>
           </div>
         </div>
       </nav>

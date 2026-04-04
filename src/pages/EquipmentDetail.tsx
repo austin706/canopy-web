@@ -41,12 +41,12 @@ export default function EquipmentDetail() {
     expected_lifespan_years: item?.expected_lifespan_years?.toString() || '',
     location_in_home: item?.location_in_home || '',
     notes: item?.notes || '',
-    filter_size: (item as any)?.filter_size || '',
-    tonnage: (item as any)?.tonnage?.toString() || '',
-    seer_rating: (item as any)?.seer_rating?.toString() || '',
-    tank_size_gallons: (item as any)?.tank_size_gallons?.toString() || '',
-    is_tankless: (item as any)?.is_tankless || false,
-    fuel_type: (item as any)?.fuel_type || '',
+    filter_size: item?.filter_size || '',
+    tonnage: item?.tonnage?.toString() || '',
+    seer_rating: item?.seer_rating?.toString() || '',
+    tank_size_gallons: item?.tank_size_gallons?.toString() || '',
+    is_tankless: item?.is_tankless || false,
+    fuel_type: item?.fuel_type || '',
   });
 
   if (!item) {
@@ -421,22 +421,22 @@ export default function EquipmentDetail() {
           <div className="card mb-lg">
             <p style={{ fontWeight: 600, marginBottom: 12 }}>HVAC Details</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-              {(item as any).filter_size && (
+              {item.filter_size && (
                 <div>
                   <p className="text-xs text-gray">Filter Size</p>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{(item as any).filter_size}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{item.filter_size}</p>
                 </div>
               )}
-              {(item as any).tonnage && (
+              {item.tonnage && (
                 <div>
                   <p className="text-xs text-gray">Tonnage</p>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{(item as any).tonnage}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{item.tonnage}</p>
                 </div>
               )}
-              {(item as any).seer_rating && (
+              {item.seer_rating && (
                 <div>
                   <p className="text-xs text-gray">SEER Rating</p>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{(item as any).seer_rating}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{item.seer_rating}</p>
                 </div>
               )}
             </div>
@@ -447,20 +447,20 @@ export default function EquipmentDetail() {
           <div className="card mb-lg">
             <p style={{ fontWeight: 600, marginBottom: 12 }}>Water Heater Details</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {(item as any).tank_size_gallons && (
+              {item.tank_size_gallons && (
                 <div>
                   <p className="text-xs text-gray">Tank Size</p>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{(item as any).tank_size_gallons} gal</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{item.tank_size_gallons} gal</p>
                 </div>
               )}
-              {(item as any).fuel_type && (
+              {item.fuel_type && (
                 <div>
                   <p className="text-xs text-gray">Fuel Type</p>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{(item as any).fuel_type}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{item.fuel_type}</p>
                 </div>
               )}
             </div>
-            {(item as any).is_tankless && (
+            {item.is_tankless && (
               <p className="badge" style={{ background: Colors.sageMuted, color: Colors.sage, marginTop: 12, width: 'fit-content' }}>Tankless</p>
             )}
           </div>

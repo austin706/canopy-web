@@ -81,7 +81,7 @@ export default function AgentView() {
     try {
       await linkAgent(user.id, agentData.id);
       setAgent(agentData);
-      if (user) setUser({ ...user, agent_id: agentData.id } as any);
+      if (user) setUser({ ...user, agent_id: agentData.id });
       setSearchResults([]);
       setSearchQuery('');
     } catch (e: any) {
@@ -98,7 +98,7 @@ export default function AgentView() {
     try {
       await supabase.from('profiles').update({ agent_id: null }).eq('id', user.id);
       setAgent(null);
-      if (user) setUser({ ...user, agent_id: null } as any);
+      if (user) setUser({ ...user, agent_id: null });
     } catch (e: any) {
       alert('Failed to unlink: ' + e.message);
     } finally {
@@ -119,7 +119,7 @@ export default function AgentView() {
       const { data: agentData } = await supabase.from('agents').select('*').eq('id', request.agent_id).single();
       if (agentData) {
         setAgent(agentData);
-        if (user) setUser({ ...user, agent_id: request.agent_id } as any);
+        if (user) setUser({ ...user, agent_id: request.agent_id });
       }
       setPendingRequests(prev => prev.filter(r => r.id !== request.id));
 

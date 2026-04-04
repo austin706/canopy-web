@@ -210,6 +210,7 @@ export default function Login() {
                   <input
                     className="form-input"
                     type="text"
+                    aria-label="Enter verification code from email"
                     value={otpCode}
                     onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
                     placeholder="Enter code from email"

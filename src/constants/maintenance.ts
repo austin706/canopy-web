@@ -2,6 +2,7 @@
 // Canopy Maintenance Engine — Task Templates & Seasonal Logic
 // ═══════════════════════════════════════════════════════════════
 import type { TaskFrequency, TaskPriority, EquipmentCategory, TaskSchedulingType } from '@/types';
+import { Colors } from './theme';
 
 export type ClimateRegion = 'south' | 'north' | 'mountain' | 'coastal' | 'desert' | 'midwest' | 'all';
 
@@ -1718,16 +1719,16 @@ export const getTasksForMonth = (
 
 // ─── Equipment categories with display info ───
 export const EQUIPMENT_CATEGORIES = [
-  { id: 'hvac', label: 'HVAC / Air Conditioning', icon: 'thermometer', color: '#2196F3' },
-  { id: 'water_heater', label: 'Water Heater', icon: 'flame', color: '#FF9800' },
+  { id: 'hvac', label: 'HVAC / Air Conditioning', icon: 'thermometer', color: Colors.info },
+  { id: 'water_heater', label: 'Water Heater', icon: 'flame', color: Colors.warning },
   { id: 'roof', label: 'Roof & Gutters', icon: 'home', color: '#795548' },
   { id: 'plumbing', label: 'Plumbing', icon: 'water', color: '#00BCD4' },
-  { id: 'electrical', label: 'Electrical', icon: 'flash', color: '#FFC107' },
-  { id: 'appliance', label: 'Appliances', icon: 'settings', color: '#607D8B' },
-  { id: 'outdoor', label: 'Outdoor', icon: 'leaf', color: '#8BC34A' },
-  { id: 'safety', label: 'Safety Systems', icon: 'shield-checkmark', color: '#E53935' },
-  { id: 'pool', label: 'Pool & Hot Tub', icon: 'water', color: '#03A9F4' },
-  { id: 'garage', label: 'Garage', icon: 'car', color: '#9E9E9E' },
+  { id: 'electrical', label: 'Electrical', icon: 'flash', color: Colors.warning },
+  { id: 'appliance', label: 'Appliances', icon: 'settings', color: Colors.medGray },
+  { id: 'outdoor', label: 'Outdoor', icon: 'leaf', color: Colors.success },
+  { id: 'safety', label: 'Safety Systems', icon: 'shield-checkmark', color: Colors.error },
+  { id: 'pool', label: 'Pool & Hot Tub', icon: 'water', color: Colors.info },
+  { id: 'garage', label: 'Garage', icon: 'car', color: Colors.silver },
 ] as const;
 
 /**

@@ -261,7 +261,7 @@ export default function Equipment() {
               { step: '2', title: 'AI reads the label', desc: 'and extracts make, model, specs, and age' },
               { step: '3', title: 'Canopy builds your plan', desc: '— maintenance schedule, warranty tracking, replacement alerts' },
             ].map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: i < 2 ? 14 : 0 }}>
+              <div key={item.step} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: i < 2 ? 14 : 0 }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: '50%',
                   background: 'var(--color-copper)', color: '#fff',
@@ -301,8 +301,8 @@ export default function Equipment() {
               Start with these — each scan gives Canopy more data to protect your home.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {SCAN_SUGGESTIONS.map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              {SCAN_SUGGESTIONS.map((item) => (
+                <div key={item.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                   <span style={{ fontSize: 18, lineHeight: '24px', flexShrink: 0 }}>{item.icon}</span>
                   <div>
                     <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: 'var(--color-charcoal)' }}>{item.label}</p>

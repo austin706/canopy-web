@@ -386,8 +386,8 @@ export default function Calendar() {
                         }} />
                       )}
                       {/* Then task dots */}
-                      {dayTasks.slice(0, dayVisits.length > 0 ? 2 : 3).map((t, i) => (
-                        <div key={i} style={{
+                      {dayTasks.slice(0, dayVisits.length > 0 ? 2 : 3).map((t) => (
+                        <div key={t.id} style={{
                           width: 5, height: 5, borderRadius: '50%',
                           background: t.status === 'completed' ? 'var(--color-success)' :
                                      t.status === 'overdue' ? 'var(--color-error)' :

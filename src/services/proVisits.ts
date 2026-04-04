@@ -10,8 +10,8 @@ async function getProviderUserId(visitId: string): Promise<{ providerId: string;
     .from('pro_monthly_visits')
     .select('pro_provider_id, provider:pro_providers(user_id, business_name, contact_name)')
     .eq('id', visitId)
-    .single();
-  const provider = (data as any)?.provider;
+    .single() as Promise<{ data: { pro_provider_id: string; provider: { user_id: string | null; business_name: string | null; contact_name: string | null } | null } | null }>;
+  const provider = data?.provider;
   return {
     providerId: data?.pro_provider_id || '',
     providerUserId: provider?.user_id || null,

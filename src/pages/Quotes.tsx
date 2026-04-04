@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { approveQuote, rejectQuote } from '@/services/quotesInvoices';
 import { Colors, StatusColors } from '@/constants/theme';
 import type { Quote } from '@/types';
+import { getErrorMessage } from '@/utils/errors';
 
 type FilterTab = 'all' | 'pending' | 'approved' | 'rejected';
 
@@ -37,7 +38,7 @@ export default function Quotes() {
       setQuotes((data || []) as Quote[]);
       setError('');
     } catch (err: any) {
-      setError(err.message || 'Failed to load quotes');
+      setError(getErrorMessage(err) || 'Failed to load quotes');
     } finally {
       setLoading(false);
     }
@@ -52,7 +53,7 @@ export default function Quotes() {
       setNoteText('');
       setExpandedId(null);
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err));
     } finally {
       setActionInProgress(false);
     }
@@ -67,7 +68,7 @@ export default function Quotes() {
       setNoteText('');
       setExpandedId(null);
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err));
     } finally {
       setActionInProgress(false);
     }
@@ -176,7 +177,7 @@ export default function Quotes() {
                       <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
                         <tbody>
                           {quote.line_items.map((item, idx) => (
-                            <tr key={idx} style={{ borderBottom: `1px solid ${Colors.lightGray}` }}>
+                            <tr key={`${item.description}-${idx}`} style={{ borderBottom: `1px solid ${Colors.lightGray}` }}>
                               <td style={{ padding: '8px 0', textAlign: 'left' }}>{item.description}</td>
                               <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500 }}>{formatCurrency(item.amount)}</td>
                             </tr>

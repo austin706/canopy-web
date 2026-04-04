@@ -164,7 +164,7 @@ export default function DashboardChat() {
     <div className="card" style={{
       overflow: 'hidden',
       border: `1px solid ${Colors.sage}30`,
-      background: `linear-gradient(135deg, ${Colors.sageMuted}, #fff)`,
+      background: `linear-gradient(135deg, ${Colors.sageMuted}, ${Colors.white})`,
     }}>
       {/* Header — always visible */}
       <div
@@ -180,7 +180,7 @@ export default function DashboardChat() {
         <div style={{
           width: 32, height: 32, borderRadius: '50%', background: Colors.sage,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 16, color: '#fff', flexShrink: 0,
+          fontSize: 16, color: Colors.white, flexShrink: 0,
         }}>
           <span role="img" aria-label="leaf">&#127807;</span>
         </div>
@@ -205,13 +205,13 @@ export default function DashboardChat() {
       {/* Collapsed: show quick question chips */}
       {!expanded && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-          {QUICK_QUESTIONS.map((q, i) => (
+          {QUICK_QUESTIONS.map((q) => (
             <button
-              key={i}
+              key={q}
               onClick={() => sendMessage(q)}
               style={{
                 padding: '6px 12px', borderRadius: 16, fontSize: 12,
-                border: `1px solid ${Colors.sage}40`, background: '#fff',
+                border: `1px solid ${Colors.sage}40`, background: Colors.white,
                 color: Colors.sage, cursor: 'pointer', fontWeight: 500,
               }}
             >
@@ -227,7 +227,7 @@ export default function DashboardChat() {
           {/* Messages */}
           <div style={{
             maxHeight: 280, overflowY: 'auto', marginBottom: 10,
-            borderRadius: 8, background: '#fff', padding: messages.length ? '10px' : 0,
+            borderRadius: 8, background: Colors.white, padding: messages.length ? '10px' : 0,
           }}>
             {messages.length === 0 && (
               <div style={{ padding: '12px 0', textAlign: 'center' }}>
@@ -237,7 +237,7 @@ export default function DashboardChat() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
                   {QUICK_QUESTIONS.map((q, i) => (
                     <button
-                      key={i}
+                      key={q}
                       onClick={() => sendMessage(q)}
                       style={{
                         padding: '6px 12px', borderRadius: 16, fontSize: 12,
@@ -251,9 +251,9 @@ export default function DashboardChat() {
                 </div>
               </div>
             )}
-            {messages.map((msg, i) => (
+            {messages.map((msg) => (
               <div
-                key={i}
+                key={`${msg.role}-${msg.timestamp.getTime()}-${msg.content.substring(0, 20)}`}
                 style={{
                   display: 'flex',
                   justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
@@ -267,7 +267,7 @@ export default function DashboardChat() {
                   borderTopRightRadius: msg.role === 'user' ? 4 : 12,
                   borderTopLeftRadius: msg.role === 'assistant' ? 4 : 12,
                   backgroundColor: msg.role === 'user' ? Colors.sage : '#f5f5f5',
-                  color: msg.role === 'user' ? '#fff' : Colors.charcoal,
+                  color: msg.role === 'user' ? Colors.white : Colors.charcoal,
                   fontSize: 13,
                   lineHeight: 1.5,
                   whiteSpace: 'pre-wrap',
@@ -301,6 +301,7 @@ export default function DashboardChat() {
           <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
             <textarea
               ref={inputRef}
+              aria-label="Ask the home assistant"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -318,7 +319,7 @@ export default function DashboardChat() {
               style={{
                 width: 34, height: 34, borderRadius: '50%', border: 'none',
                 backgroundColor: input.trim() && !isLoading ? Colors.sage : Colors.cream,
-                color: '#fff', cursor: input.trim() && !isLoading ? 'pointer' : 'default',
+                color: Colors.white, cursor: input.trim() && !isLoading ? 'pointer' : 'default',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 16, flexShrink: 0,
               }}

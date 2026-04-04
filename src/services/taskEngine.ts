@@ -139,7 +139,7 @@ export function generateTasksForHome(
 
     // Skip if this template requires specific countertop types
     if (template.requires_countertop_type) {
-      const homeCountertop = (home as any).countertop_type as string | undefined;
+      const homeCountertop = home.countertop_type as string | undefined;
       if (!homeCountertop || !template.requires_countertop_type.includes(homeCountertop)) {
         return;
       }

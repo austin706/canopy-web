@@ -52,7 +52,7 @@ export const PLANS = [
   { id: 'free', name: 'Free', price: 0, period: '/month', value: 'free' as SubscriptionTier, features: ['Basic calendar','5 equipment slots','Generic checklists'] },
   { id: 'home', name: 'Home Plan', price: 6.99, period: '/month', value: 'home' as SubscriptionTier, features: ['80+ AI-powered maintenance tasks','Unlimited equipment','Personalized checklists','Weather alerts','Lawn & Pool & Deck care','Secure notes vault'] },
   { id: 'pro', name: 'Home Pro', price: 149, period: '/month', value: 'pro' as SubscriptionTier, features: ['Everything in Home Plan','Monthly 2-hr pro maintenance visit','Checklist items completed for you','Reschedule or cancel visits','Pro service scheduler','Quotes & invoicing for add-on work'] },
-  { id: 'pro_plus', name: 'Home Pro+', price: null as any, period: '', value: 'pro_plus' as SubscriptionTier, inquireForPricing: true, features: ['Full home concierge service','Custom monthly rate after consultation','Routine maintenance of all systems','Bigger jobs quoted separately','Priority scheduling & support','Dedicated pro provider'] },
+  { id: 'pro_plus', name: 'Home Pro+', price: null as number | null, period: '', value: 'pro_plus' as SubscriptionTier, inquireForPricing: true, features: ['Full home concierge service','Custom monthly rate after consultation','Routine maintenance of all systems','Bigger jobs quoted separately','Priority scheduling & support','Dedicated pro provider'] },
 ];
 
 export function canAccess(tier: SubscriptionTier | undefined | null, feature: Feature): boolean {

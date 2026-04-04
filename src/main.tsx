@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import logger from './utils/logger';
 import './index.css';
 
 // ─── Validate required environment variables on startup ───
@@ -23,14 +24,14 @@ const missingOptional = Object.entries(OPTIONAL_ENV_VARS)
   .map(([key]) => key);
 
 if (missingRequired.length > 0) {
-  console.error(
+  logger.error(
     `[Canopy] FATAL: Missing required environment variables: ${missingRequired.join(', ')}\n` +
     'The app will not function correctly. Check your .env file.'
   );
 }
 
 if (missingOptional.length > 0) {
-  console.warn(
+  logger.warn(
     `[Canopy] Missing optional environment variables: ${missingOptional.join(', ')}\n` +
     'Some features (weather, AI assistant) may be unavailable.'
   );

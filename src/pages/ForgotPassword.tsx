@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { resetPassword } from '@/services/supabase';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
+import { getErrorMessage } from '@/utils/errors';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -19,7 +20,7 @@ export default function ForgotPassword() {
       setSuccess(true);
       setEmail('');
     } catch (err: any) {
-      setError(err.message || 'Failed to send reset email');
+      setError(getErrorMessage(err) || 'Failed to send reset email');
     } finally {
       setLoading(false);
     }

@@ -108,7 +108,7 @@ export default function AdminAgents() {
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Add Agent</button>
       </div>
 
-      <input className="form-input mb-lg" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search agents..." style={{ maxWidth: 400 }} />
+      <input className="form-input mb-lg" aria-label="Search agents by name or email" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search agents..." style={{ maxWidth: 400 }} />
 
       {selectedIds.size > 0 && (
         <div style={{ marginBottom: 16, padding: 12, backgroundColor: Colors.cream, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

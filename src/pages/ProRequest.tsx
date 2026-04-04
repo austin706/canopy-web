@@ -190,10 +190,10 @@ export default function ProRequest() {
                 return (
                   <div key={step} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'center', marginBottom: 8 }}>
-                      {index > 0 && <div style={{ flex: 1, height: 2, background: isActive ? Colors.copper : '#E8E2D8' }} />}
+                      {index > 0 && <div style={{ flex: 1, height: 2, background: isActive ? Colors.copper : Colors.lightGray }} />}
                       <div style={{
                         width: 28, height: 28, borderRadius: 14,
-                        background: isActive ? Colors.copper : '#E8E2D8',
+                        background: isActive ? Colors.copper : Colors.lightGray,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         border: isCurrent ? `3px solid ${Colors.copperLight}` : 'none',
                         color: 'white', fontSize: 14,
@@ -202,7 +202,7 @@ export default function ProRequest() {
                       </div>
                       {index < STATUS_STEPS.length - 1 && <div style={{ flex: 1, height: 2, background: (index < currentStepIndex) ? Colors.copper : '#E8E2D8' }} />}
                     </div>
-                    <span style={{ fontSize: 11, color: isActive ? Colors.charcoal : '#B8B8B8', fontWeight: isCurrent ? 700 : 400, textAlign: 'center' }}>
+                    <span style={{ fontSize: 11, color: isActive ? Colors.charcoal : Colors.silver, fontWeight: isCurrent ? 700 : 400, textAlign: 'center' }}>
                       {STATUS_LABELS[step]}
                     </span>
                   </div>
@@ -217,12 +217,12 @@ export default function ProRequest() {
           <div className="flex items-center justify-between mb-sm">
             <p style={{ fontWeight: 600, fontSize: 16 }}>{selectedRequest.service_type || selectedRequest.category}</p>
             {selectedRequest.urgency && (
-              <span className="badge" style={{ background: '#FF980020', color: '#FF9800', fontSize: 12 }}>
+              <span className="badge" style={{ background: Colors.warning.slice(0, -2) + '15', color: Colors.warning, fontSize: 12 }}>
                 {selectedRequest.urgency.charAt(0).toUpperCase() + selectedRequest.urgency.slice(1)}
               </span>
             )}
           </div>
-          <p style={{ color: '#4A4A4A', fontSize: 14, lineHeight: 1.6 }}>{selectedRequest.description}</p>
+          <p style={{ color: Colors.darkGray, fontSize: 14, lineHeight: 1.6 }}>{selectedRequest.description}</p>
           <p style={{ color: '#B8B8B8', fontSize: 12, marginTop: 8 }}>
             Submitted {new Date(selectedRequest.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
@@ -238,7 +238,7 @@ export default function ProRequest() {
           <div className="card" style={{ marginBottom: 16, borderLeft: `3px solid ${Colors.copper}` }}>
             <p style={{ fontWeight: 600, fontSize: 12, color: Colors.copper, marginBottom: 8, textTransform: 'uppercase' }}>Assigned Provider</p>
             <p style={{ fontWeight: 600, fontSize: 15 }}>{selectedRequest.provider.business_name}</p>
-            <p style={{ color: '#7A7A7A', fontSize: 13, marginTop: 2 }}>
+            <p style={{ color: Colors.medGray, fontSize: 13, marginTop: 2 }}>
               {selectedRequest.provider.contact_name}
               {selectedRequest.provider.phone && ` · ${selectedRequest.provider.phone}`}
             </p>
@@ -260,9 +260,9 @@ export default function ProRequest() {
 
         {/* Completion Details */}
         {selectedRequest.status === 'completed' && (
-          <div className="card" style={{ marginBottom: 16, background: '#8B9E7E10' }}>
+          <div className="card" style={{ marginBottom: 16, background: Colors.sage.slice(0, -2) + '10' }}>
             <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Completion Details</p>
-            {selectedRequest.completion_notes && <p style={{ fontSize: 14, color: '#4A4A4A' }}>{selectedRequest.completion_notes}</p>}
+            {selectedRequest.completion_notes && <p style={{ fontSize: 14, color: Colors.darkGray }}>{selectedRequest.completion_notes}</p>}
             {selectedRequest.cost != null && <p style={{ fontSize: 16, fontWeight: 700, color: Colors.sage, marginTop: 8 }}>Cost: ${selectedRequest.cost.toFixed(2)}</p>}
           </div>
         )}
@@ -291,8 +291,8 @@ export default function ProRequest() {
           />
           {(selectedRequest.photos && selectedRequest.photos.length > 0) ? (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {selectedRequest.photos.map((url: string, i: number) => (
-                <img key={i} src={url} alt={`Photo ${i + 1}`} style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover', background: '#E8E2D8' }} />
+              {selectedRequest.photos.map((url: string) => (
+                <img key={url} src={url} alt={`Photo`} style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover', background: '#E8E2D8' }} />
               ))}
             </div>
           ) : (
@@ -306,7 +306,7 @@ export default function ProRequest() {
             className="btn btn-outline btn-lg"
             onClick={handleCancelRequest}
             disabled={cancelling}
-            style={{ width: '100%', borderColor: '#E53935', color: '#E53935' }}
+            style={{ width: '100%', borderColor: Colors.error, color: Colors.error }}
           >
             {cancelling ? 'Cancelling...' : 'Cancel Request'}
           </button>

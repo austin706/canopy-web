@@ -218,9 +218,9 @@ export default function HomeAssistant() {
               I can help with maintenance advice, troubleshooting, seasonal tasks, cost estimates, and more.
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 500, margin: '0 auto' }}>
-              {SUGGESTED_QUESTIONS.map((q, i) => (
+              {SUGGESTED_QUESTIONS.map((q) => (
                 <button
-                  key={i}
+                  key={q}
                   onClick={() => sendMessage(q)}
                   style={{
                     padding: '8px 14px', borderRadius: 20, fontSize: 13,
@@ -234,9 +234,9 @@ export default function HomeAssistant() {
             </div>
           </div>
         ) : (
-          messages.map((msg, i) => (
+          messages.map((msg) => (
             <div
-              key={i}
+              key={`${msg.role}-${msg.timestamp.getTime()}-${msg.content.substring(0, 20)}`}
               style={{
                 display: 'flex',
                 justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',

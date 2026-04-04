@@ -6,6 +6,7 @@ import { supabase } from '@/services/supabase';
 import { quickCompleteTask, quickSnoozeTask, quickSkipTask } from '@/services/utils';
 import { Colors } from '@/constants/theme';
 import type { MaintenanceTask } from '@/types';
+import { getErrorMessage } from '@/utils/errors';
 
 const MAX_FILE_SIZE_MB = 250; // Supabase bucket limit — also check project-level Storage settings
 const RESUMABLE_THRESHOLD_MB = 5; // Use resumable upload for files > 5MB
@@ -633,7 +634,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
       setStep('review');
     } catch (err: any) {
       console.error('Error parsing inspection:', err);
-      setError(err.message || 'Failed to parse inspection document');
+      setError(getErrorMessage(err) || 'Failed to parse inspection document');
     } finally {
       setParsing(false);
       setProgress('');
@@ -801,7 +802,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
       onTasksCreated?.(selectedTasks.size);
     } catch (err: any) {
       console.error('Error creating tasks:', err);
-      setError(err.message || 'Failed to create tasks');
+      setError(getErrorMessage(err) || 'Failed to create tasks');
     } finally {
       setSaving(false);
     }
@@ -840,7 +841,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
               onClick={() => setShowConfirmUploadNew(false)}
             >
               <div style={{
-                background: '#fff', borderRadius: 12, padding: 24, maxWidth: 400, width: '90%',
+                background: Colors.white, borderRadius: 12, padding: 24, maxWidth: 400, width: '90%',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
               }}
                 onClick={e => e.stopPropagation()}
@@ -894,13 +895,14 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
             type="file"
             accept=".pdf"
             onChange={handleReuploadDocument}
+            aria-label="Re-upload inspection document PDF"
             style={{ display: 'none' }}
           />
 
           {/* Report header */}
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-            padding: '16px 0', borderBottom: '1px solid #f3f4f6', marginBottom: 16,
+            padding: '16px 0', borderBottom: `1px solid ${Colors.lightGray}`, marginBottom: 16,
           }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -955,8 +957,8 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           {error && (
             <div style={{
               marginBottom: 12, padding: '10px 14px', borderRadius: 8,
-              background: '#FEF3CD', border: '1px solid #FFC107',
-              fontSize: 13, color: '#856404',
+              background: `${Colors.warning}20`, border: `1px solid ${Colors.warning}`,
+              fontSize: 13, color: Colors.warning,
             }}>
               {error}
             </div>
@@ -966,22 +968,22 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           {inspectionTasks.length > 0 && (
             <>
               <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: '#f9f9f7', textAlign: 'center' }}>
+                <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: Colors.cream, textAlign: 'center' }}>
                   <p style={{ fontSize: 20, fontWeight: 700, color: Colors.sage, margin: 0 }}>{completedCount}</p>
                   <p style={{ fontSize: 11, color: Colors.medGray, margin: '2px 0 0' }}>Completed</p>
                 </div>
-                <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: '#f9f9f7', textAlign: 'center' }}>
+                <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: Colors.cream, textAlign: 'center' }}>
                   <p style={{ fontSize: 20, fontWeight: 700, color: Colors.copper, margin: 0 }}>{upcomingCount}</p>
                   <p style={{ fontSize: 11, color: Colors.medGray, margin: '2px 0 0' }}>Remaining</p>
                 </div>
                 {overdueCount > 0 && (
-                  <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: '#FFF3E0', textAlign: 'center' }}>
+                  <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: Colors.copperMuted, textAlign: 'center' }}>
                     <p style={{ fontSize: 20, fontWeight: 700, color: Colors.error, margin: 0 }}>{overdueCount}</p>
                     <p style={{ fontSize: 11, color: Colors.medGray, margin: '2px 0 0' }}>Overdue</p>
                   </div>
                 )}
                 {totalCost > 0 && (
-                  <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: '#f9f9f7', textAlign: 'center' }}>
+                  <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: Colors.cream, textAlign: 'center' }}>
                     <p style={{ fontSize: 20, fontWeight: 700, color: Colors.charcoal, margin: 0 }}>${totalCost.toLocaleString()}</p>
                     <p style={{ fontSize: 11, color: Colors.medGray, margin: '2px 0 0' }}>Est. Total</p>
                   </div>
@@ -994,7 +996,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer',
-                  borderTop: '1px solid #f3f4f6', fontSize: 14, fontWeight: 600, color: Colors.charcoal,
+                  borderTop: `1px solid ${Colors.lightGray}`, fontSize: 14, fontWeight: 600, color: Colors.charcoal,
                 }}
               >
                 <span>{inspectionTasks.length} Inspection Tasks</span>
@@ -1012,13 +1014,13 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                     return (
                       <div key={task.id} style={{
                         display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '10px 4px', borderBottom: '1px solid #f9f9f7',
+                        padding: '10px 4px', borderBottom: `1px solid ${Colors.cream}`,
                         opacity: task.status === 'completed' ? 0.6 : 1,
                         cursor: 'pointer',
                         transition: 'background 0.15s ease',
                       }}
                         onClick={() => navigate(`/task/${task.id}`)}
-                        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#f5f5f3'; }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = Colors.lightGray; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
                       >
                         <div style={{
@@ -1063,7 +1065,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                               >&#9203;</button>
                               {snoozeTaskId === task.id && (
                                 <div style={{
-                                  position: 'absolute', right: 0, top: 32, background: '#fff', borderRadius: 8,
+                                  position: 'absolute', right: 0, top: 32, background: Colors.white, borderRadius: 8,
                                   boxShadow: '0 4px 16px rgba(0,0,0,0.15)', zIndex: 10, minWidth: 120, overflow: 'hidden',
                                 }}>
                                   {[{ days: 3, label: '3 days' }, { days: 7, label: '1 week' }, { days: 14, label: '2 weeks' }, { days: 30, label: '1 month' }].map(opt => (
@@ -1141,6 +1143,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
             type="file"
             accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx"
             onChange={handleFileSelect}
+            aria-label="Upload inspection document"
             style={{ display: 'none' }}
           />
 
@@ -1200,8 +1203,8 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
             marginTop: 12,
             padding: '10px 14px',
             borderRadius: 8,
-            background: '#E5393520',
-            color: '#C62828',
+            background: Colors.error.slice(0, -2) + '15',
+            color: Colors.error,
             fontSize: 13,
           }}>
             {error}
@@ -1237,20 +1240,21 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
             </p>
             {items.map(({ task, index }) => (
               <div
-                key={index}
+                key={`${section}-${task.title}-${index}`}
                 style={{
                   display: 'flex',
                   gap: 12,
                   padding: 12,
                   borderRadius: 8,
                   marginBottom: 4,
-                  background: selectedTasks.has(index) ? '#fff' : '#f9f9f7',
+                  background: selectedTasks.has(index) ? Colors.white : Colors.cream,
                   border: `1px solid ${selectedTasks.has(index) ? Colors.copper : Colors.lightGray}`,
                   transition: 'all 0.15s ease',
                 }}
               >
                 <input
                   type="checkbox"
+                  aria-label={`Select ${task.title}`}
                   checked={selectedTasks.has(index)}
                   onChange={() => toggleTask(index)}
                   style={{ marginTop: 2, accentColor: Colors.copper, cursor: 'pointer' }}
@@ -1274,6 +1278,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                   </p>
                   <div style={{ display: 'flex', gap: 12, fontSize: 12, color: Colors.medGray, alignItems: 'center', marginTop: 8 }}>
                     <select
+                      aria-label={`Select timeline for ${task.title}`}
                       value={taskTimeframes.get(index) || task.recommended_timeframe}
                       onChange={(e) => {
                         e.stopPropagation();
@@ -1287,7 +1292,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                         padding: '4px 8px',
                         borderRadius: 4,
                         border: `1px solid ${Colors.lightGray}`,
-                        background: '#fff',
+                        background: Colors.white,
                         cursor: 'pointer',
                         color: Colors.charcoal,
                       }}
@@ -1312,8 +1317,8 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                         border: 'none',
                         fontSize: 11,
                         fontWeight: 600,
-                        background: proRequestTasks.has(index) ? Colors.copper : '#f0f0f0',
-                        color: proRequestTasks.has(index) ? '#fff' : Colors.medGray,
+                        background: proRequestTasks.has(index) ? Colors.copper : Colors.silver.slice(0, -2) + '30',
+                        color: proRequestTasks.has(index) ? Colors.white : Colors.medGray,
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                       }}
@@ -1331,8 +1336,8 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           <div style={{
             padding: '10px 14px',
             borderRadius: 8,
-            background: '#E5393520',
-            color: '#C62828',
+            background: Colors.error.slice(0, -2) + '15',
+            color: Colors.error,
             fontSize: 13,
             marginBottom: 12,
           }}>
@@ -1416,13 +1421,13 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
 
       {error && (
         <div style={{
-          background: '#FEF3CD',
-          border: '1px solid #FFC107',
+          background: `${Colors.warning}20`,
+          border: `1px solid ${Colors.warning}`,
           borderRadius: 8,
           padding: '12px 16px',
           marginBottom: 16,
           fontSize: 13,
-          color: '#856404',
+          color: Colors.warning,
           textAlign: 'left',
         }}>
           <strong>Note:</strong> {error}

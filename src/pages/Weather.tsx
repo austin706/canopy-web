@@ -5,6 +5,7 @@ import { fetchWeather } from '@/services/weather';
 import { canAccess } from '@/services/subscriptionGate';
 import { Colors, StatusColors } from '@/constants/theme';
 import type { WeatherData, DayForecast, WeatherAlert } from '@/types';
+import { getErrorMessage } from '@/utils/errors';
 
 const DEMO_WEATHER: WeatherData = {
   temperature: 72,
@@ -43,7 +44,7 @@ export default function Weather() {
         const data = await fetchWeather(home.latitude!, home.longitude!);
         setDisplayWeather(data);
       } catch (e: any) {
-        setError(e.message);
+        setError(getErrorMessage(e));
       } finally {
         setLoading(false);
       }
@@ -146,8 +147,8 @@ export default function Weather() {
                     <div style={{ background: 'var(--color-cream)', borderRadius: 8, padding: 12, marginTop: 12 }}>
                       <p className="text-xs fw-600 text-copper mb-sm">What To Do</p>
                       <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                        {alert.action_items.slice(0, 4).map((item, i) => (
-                          <li key={i} className="flex gap-sm items-start" style={{ marginBottom: i < alert.action_items.length - 1 ? 6 : 0, fontSize: 13 }}>
+                        {alert.action_items.slice(0, 4).map((item) => (
+                          <li key={item} className="flex gap-sm items-start" style={{ marginBottom: 6, fontSize: 13 }}>
                             <span style={{ color: 'var(--color-sage)', fontWeight: 600, flexShrink: 0 }}>✓</span>
                             <span className="text-gray">{item}</span>
                           </li>
@@ -173,8 +174,8 @@ export default function Weather() {
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>7-Day Forecast</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12 }}>
-            {displayWeather.forecast.map((day, i) => (
-              <div key={i} className="card" style={{ padding: '14px 12px', textAlign: 'center' }}>
+            {displayWeather.forecast.map((day) => (
+              <div key={day.date} className="card" style={{ padding: '14px 12px', textAlign: 'center' }}>
                 <p className="text-xs text-gray fw-600">
                   {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                 </p>

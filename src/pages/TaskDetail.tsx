@@ -271,8 +271,8 @@ export default function TaskDetail() {
           <div className="card mb-lg" style={{ background: Colors.copperMuted, border: `1px solid ${Colors.copper}30` }}>
             <p style={{ fontWeight: 600, marginBottom: 10, color: Colors.copperDark }}>Items to Have on Hand</p>
             <div className="flex-col gap-xs">
-              {task.items_to_have_on_hand.map((item: string, i: number) => (
-                <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {task.items_to_have_on_hand.map((item: string) => (
+                <div key={item} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <span style={{ color: Colors.copper, fontSize: 14 }}>•</span>
                   <p style={{ fontSize: 14, color: Colors.charcoal }}>{item}</p>
                 </div>
@@ -287,7 +287,7 @@ export default function TaskDetail() {
             <p style={{ fontWeight: 600, marginBottom: 12 }}>How To Do This</p>
             <div className="flex-col gap-sm">
               {task.instructions.map((instruction: string, i: number) => (
-                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <div key={instruction} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <div style={{
                     width: 24,
                     height: 24,

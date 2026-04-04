@@ -703,7 +703,7 @@ export default function ProInspection() {
                         }}
                       >
                         {item.photos.map((photo, idx) => (
-                          <div key={idx} style={{ position: 'relative' }}>
+                          <div key={photo.url || `photo-${idx}`} style={{ position: 'relative' }}>
                             <img
                               src={photo.url}
                               alt={`Photo ${idx + 1}`}
@@ -835,6 +835,7 @@ export default function ProInspection() {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        aria-label="Upload inspection photo"
         style={{ display: 'none' }}
         onChange={(e) => {
           if (e.target.files?.[0] && activeInspection && uploadingPhotoFor) {

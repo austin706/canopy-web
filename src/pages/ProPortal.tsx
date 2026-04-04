@@ -107,7 +107,7 @@ export default function ProPortal() {
       // Count homes per zip code (only Pro/Pro+ subscribers)
       const zipCounts: Record<string, number> = {};
       for (const h of (homeZips || [])) {
-        const tier = (h as any).profiles?.subscription_tier;
+        const tier = (h as { profiles?: { subscription_tier?: string } }).profiles?.subscription_tier;
         if (h.zip_code && (tier === 'pro' || tier === 'pro_plus')) {
           zipCounts[h.zip_code] = (zipCounts[h.zip_code] || 0) + 1;
         }
@@ -281,7 +281,7 @@ export default function ProPortal() {
           scheduled_date: a.scheduled_date,
           scheduled_time: a.scheduled_time || '',
           status: a.status,
-          home: a.home as any,
+          home: a.home as { address?: string; city?: string },
         });
       }
       for (const v of (bimonthlyData || [])) {
@@ -291,8 +291,8 @@ export default function ProPortal() {
           scheduled_date: v.confirmed_date || v.proposed_date || '',
           scheduled_time: v.confirmed_start_time || v.proposed_time_slot || '',
           status: v.status,
-          user: v.homeowner as any,
-          home: v.home as any,
+          user: v.homeowner as { full_name?: string; email?: string },
+          home: v.home as { address?: string; city?: string },
         });
       }
       mergedVisits.sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
@@ -592,6 +592,7 @@ export default function ProPortal() {
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
                           <input
                             className="form-input"
+                            aria-label="Enter service ZIP codes"
                             value={zipInput}
                             onChange={e => setZipInput(e.target.value)}
                             placeholder="74101, 74104, 74105..."

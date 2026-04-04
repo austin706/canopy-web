@@ -43,7 +43,7 @@ export default function Profile() {
     setRedeeming(true);
     try {
       const result = await redeemGiftCode(giftCode, user.id);
-      setUser({ ...user, subscription_tier: result.tier as any, subscription_expires_at: result.expiresAt, agent_id: result.agent?.id });
+      setUser({ ...user, subscription_tier: result.tier as SubscriptionTier, subscription_expires_at: result.expiresAt, agent_id: result.agent?.id });
       if (result.agent) setAgent(result.agent);
       setMessage(`Upgraded to ${PLANS.find(p => p.value === result.tier)?.name}!`);
       setGiftCode('');

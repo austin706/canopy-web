@@ -15,7 +15,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({ variant = 'text', width, hei
     return (
       <>
         {items.map((_, i) => (
-          <div key={i} className="skeleton-card">
+          <div key={`skeleton-card-${i}`} className="skeleton-card">
             <div className="skeleton-row">
               <div className="skeleton skeleton-avatar" />
               <div style={{ flex: 1 }}>
@@ -39,7 +39,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({ variant = 'text', width, hei
     <>
       {items.map((_, i) => (
         <div
-          key={i}
+          key={`skeleton-${i}`}
           className={`skeleton ${variantClass} ${className}`}
           style={{ ...(width ? { width } : {}), ...(height ? { height } : {}) }}
         />

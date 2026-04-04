@@ -8,6 +8,7 @@ import {
   sendTestEmail,
   type EmailTemplate,
 } from '@/services/emailTemplates';
+import { getErrorMessage } from '@/utils/errors';
 
 export default function AdminEmails() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function AdminEmails() {
 
       setTemplates(data);
     } catch (err) {
-      setError(`Failed to load templates: ${err instanceof Error ? err.message : String(err)}`);
+      setError(`Failed to load templates: ${getErrorMessage(err)}`);
       console.error('Error loading templates:', err);
     } finally {
       setLoading(false);
@@ -53,7 +54,7 @@ export default function AdminEmails() {
         prev.map(t => (t.id === template.id ? { ...t, enabled: newEnabled } : t))
       );
     } catch (err) {
-      setError(`Failed to update template: ${err instanceof Error ? err.message : String(err)}`);
+      setError(`Failed to update template: ${getErrorMessage(err)}`);
     }
   };
 
@@ -86,7 +87,7 @@ export default function AdminEmails() {
         return copy;
       });
     } catch (err) {
-      setError(`Failed to update subject: ${err instanceof Error ? err.message : String(err)}`);
+      setError(`Failed to update subject: ${getErrorMessage(err)}`);
     }
   };
 

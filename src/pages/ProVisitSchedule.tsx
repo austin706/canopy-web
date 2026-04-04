@@ -194,11 +194,11 @@ export default function ProVisitSchedule() {
           purpose: v.selected_task_ids?.length
             ? `${v.selected_task_ids.length} task${v.selected_task_ids.length !== 1 ? 's' : ''} selected`
             : 'Routine maintenance visit',
-          homeowner_name: (v.homeowner as any)?.full_name,
-          homeowner_email: (v.homeowner as any)?.email,
-          address: (v.home as any)?.address,
-          city: (v.home as any)?.city,
-          state: (v.home as any)?.state,
+          homeowner_name: (v.homeowner as { full_name?: string })?.full_name,
+          homeowner_email: (v.homeowner as { email?: string })?.email,
+          address: (v.home as { address?: string })?.address,
+          city: (v.home as { city?: string })?.city,
+          state: (v.home as { state?: string })?.state,
           time_spent_minutes: v.time_spent_minutes,
           notes: v.pro_notes,
           homeowner_notes: v.homeowner_notes,
@@ -216,9 +216,9 @@ export default function ProVisitSchedule() {
           time: a.scheduled_time || '',
           status: a.status,
           purpose: a.service_purpose || a.description || '',
-          address: (a.home as any)?.address,
-          city: (a.home as any)?.city,
-          state: (a.home as any)?.state,
+          address: (a.home as { address?: string })?.address,
+          city: (a.home as { city?: string })?.city,
+          state: (a.home as { state?: string })?.state,
           notes: a.notes,
         });
       }

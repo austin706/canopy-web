@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signUp } from '@/services/supabase';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
+import { getErrorMessage } from '@/utils/errors';
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -82,7 +83,7 @@ export default function Signup() {
       // Don't block — redirect to login with a success message
       navigate('/login?signup=success');
     } catch (err: any) {
-      setError(err.message || 'Signup failed');
+      setError(getErrorMessage(err) || 'Signup failed');
     } finally {
       setLoading(false);
     }

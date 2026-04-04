@@ -74,13 +74,13 @@ let stripePromise: Promise<any> | null = null;
 function loadStripe(): Promise<any> {
   if (stripePromise) return stripePromise;
   stripePromise = new Promise((resolve, reject) => {
-    if ((window as any).Stripe) {
-      resolve((window as any).Stripe(STRIPE_PUBLISHABLE_KEY));
+    if ((window as unknown as { Stripe?: any }).Stripe) {
+      resolve(((window as unknown) as { Stripe: any }).Stripe(STRIPE_PUBLISHABLE_KEY));
       return;
     }
     const script = document.createElement('script');
     script.src = 'https://js.stripe.com/v3/';
-    script.onload = () => resolve((window as any).Stripe(STRIPE_PUBLISHABLE_KEY));
+    script.onload = () => resolve(((window as unknown) as { Stripe: any }).Stripe(STRIPE_PUBLISHABLE_KEY));
     script.onerror = () => reject(new Error('Failed to load Stripe.js'));
     document.head.appendChild(script);
   });
@@ -862,7 +862,7 @@ export default function Onboarding() {
           <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
             {Array.from({ length: PROGRESS_STEPS }).map((_, i) => (
               <div
-                key={i}
+                key={`step-${i}`}
                 style={{
                   flex: 1, height: 4,
                   backgroundColor: i < progressStep ? Colors.copper : i === progressStep ? Colors.copper : Colors.lightGray,
@@ -905,8 +905,8 @@ export default function Onboarding() {
             display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16,
             maxWidth: 420, margin: '0 auto 32px', textAlign: 'left',
           }}>
-            {VALUE_PROPS.map((prop, i) => (
-              <div key={i} style={{
+            {VALUE_PROPS.map((prop) => (
+              <div key={prop.title} style={{
                 padding: 16, backgroundColor: 'var(--color-background)', borderRadius: 12,
                 borderLeft: `3px solid ${Colors.sage}`,
               }}>
@@ -1288,7 +1288,7 @@ export default function Onboarding() {
                   onChange={e => updateFireplaceCount(e.target.value)} />
               </div>
               {systemsForm.fireplaces.map((fp, i) => (
-                <div key={i} className="form-group" style={{ marginBottom: i < systemsForm.fireplaces.length - 1 ? 8 : 0 }}>
+                <div key={`fp-${i}-${fp.type}`} className="form-group" style={{ marginBottom: i < systemsForm.fireplaces.length - 1 ? 8 : 0 }}>
                   <label style={{ fontSize: 13 }}>Fireplace {systemsForm.fireplaces.length > 1 ? `#${i + 1}` : ''} Type</label>
                   <select className="form-select" value={fp.type}
                     onChange={e => {
@@ -1316,7 +1316,7 @@ export default function Onboarding() {
                   onChange={e => updateFilterCount(e.target.value)} />
               </div>
               {systemsForm.filters.map((filter, i) => (
-                <div key={i} className="form-group" style={{ marginBottom: i < systemsForm.filters.length - 1 ? 8 : 0 }}>
+                <div key={`filter-${i}-${filter.size}`} className="form-group" style={{ marginBottom: i < systemsForm.filters.length - 1 ? 8 : 0 }}>
                   <label style={{ fontSize: 13 }}>Filter {systemsForm.filters.length > 1 ? `#${i + 1}` : ''} Size</label>
                   <input className="form-input" placeholder='e.g., 20x25x1'
                     value={filter.size}
@@ -1465,8 +1465,8 @@ export default function Onboarding() {
                     )}
                   </div>
                   <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0 0 0' }}>
-                    {plan.features.map((f, i) => (
-                      <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13 }}>
+                    {plan.features.map((f) => (
+                      <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13 }}>
                         <CheckIcon size={12} color={isSelected ? Colors.copper : Colors.sage} />
                         <span style={{ color: isLocked ? Colors.silver : Colors.charcoal }}>{f}</span>
                       </li>
@@ -1543,8 +1543,8 @@ export default function Onboarding() {
                   <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal, marginBottom: 12 }}>
                     {equipmentList.length} item{equipmentList.length !== 1 ? 's' : ''} added{equipmentLimit ? ` (${equipmentLimit - equipmentList.length} remaining on Free plan)` : ''}
                   </p>
-                  {equipmentList.map((item, i) => (
-                    <div key={i} style={{
+                  {equipmentList.map((item) => (
+                    <div key={item.id || item.name} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '12px 16px', backgroundColor: 'var(--color-background)', borderRadius: 10,
                       marginBottom: 8, borderLeft: `3px solid ${Colors.sage}`,
@@ -1604,8 +1604,8 @@ export default function Onboarding() {
                   Look for stickers or nameplates on these common items. Each scan gives Canopy more data to work with.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {SCAN_SUGGESTIONS.map((item, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  {SCAN_SUGGESTIONS.map((item) => (
+                    <div key={item.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                       <span style={{ fontSize: 18, lineHeight: '24px', flexShrink: 0 }}>{item.icon}</span>
                       <div>
                         <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: Colors.charcoal }}>{item.label}</p>
@@ -1757,8 +1757,8 @@ export default function Onboarding() {
               { label: 'Equipment', value: equipmentList.length, icon: '🔧' },
               { label: 'Systems', value: Object.entries(systemsForm).filter(([k, v]) => k.startsWith('has_') && v === true).length, icon: '🏠' },
               { label: 'Plan', value: PLANS.find(p => p.value === (user?.subscription_tier || selectedPlan))?.name || 'Free', icon: '⭐' },
-            ].map((card, i) => (
-              <div key={i} style={{
+            ].map((card) => (
+              <div key={card.label} style={{
                 padding: 16, backgroundColor: 'var(--color-background)', borderRadius: 12, textAlign: 'center',
               }}>
                 <span style={{ fontSize: 24, display: 'block', marginBottom: 8 }}>{card.icon}</span>
@@ -1776,7 +1776,7 @@ export default function Onboarding() {
                 { label: 'Monitor the weather', desc: 'Get proactive alerts for storms and freeze warnings' },
                 { label: 'Add more equipment', desc: 'Scan labels for tailored maintenance reminders' },
               ].map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <div key={item.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <span style={{
                     width: 24, height: 24, borderRadius: '50%', background: Colors.copperMuted,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
+import { getErrorMessage } from '@/utils/errors';
 
 type ServiceCategory = 'hvac' | 'plumbing' | 'electrical' | 'roofing' | 'landscaping' | 'pest' | 'appliance' | 'handyman' | 'painting' | 'flooring' | 'windows' | 'gutters' | 'foundation' | 'pool' | 'garage' | 'locksmith';
 
@@ -142,7 +143,7 @@ export default function ApplyPro() {
         navigate('/');
       }, 4000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit application. Please try again.');
+      setError(getErrorMessage(err) || 'Failed to submit application. Please try again.');
     } finally {
       setLoading(false);
     }

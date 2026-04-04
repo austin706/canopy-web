@@ -51,7 +51,7 @@ export function AgentAvatar({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#fff',
+        color: Colors.white,
         fontSize: sizeStyles.fontSize,
         fontWeight: 700,
         ...style,

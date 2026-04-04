@@ -399,7 +399,7 @@ export default function ProJobQueue() {
                   >
                     {getItemsToHaveOnHand(visit.equipment).map((item, idx) => (
                       <span
-                        key={idx}
+                        key={item}
                         style={{
                           padding: `${Spacing.xs}px ${Spacing.sm}px`,
                           backgroundColor: Colors.cream,

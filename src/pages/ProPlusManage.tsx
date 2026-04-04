@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { getProPlusStatus, approveQuote as approveProPlusQuote, cancelProPlus, pauseProPlus } from '@/services/proPlus';
 import { Colors, StatusColors } from '@/constants/theme';
 import type { ProPlusSubscription } from '@/types';
+import { getErrorMessage } from '@/utils/errors';
 
 export default function ProPlusManage() {
   const { user, home } = useStore();
@@ -27,7 +28,7 @@ export default function ProPlusManage() {
       setSubscription(sub);
       setError('');
     } catch (err: any) {
-      setError(err.message || 'Failed to load subscription');
+      setError(getErrorMessage(err) || 'Failed to load subscription');
     } finally {
       setLoading(false);
     }
@@ -48,7 +49,7 @@ export default function ProPlusManage() {
       if (insertErr) throw insertErr;
       await loadSubscription();
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err));
     } finally {
       setActionInProgress(false);
     }
@@ -61,7 +62,7 @@ export default function ProPlusManage() {
       await approveProPlusQuote(subscription.id);
       await loadSubscription();
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err));
     } finally {
       setActionInProgress(false);
     }
@@ -78,7 +79,7 @@ export default function ProPlusManage() {
       if (updateErr) throw updateErr;
       await loadSubscription();
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err));
     } finally {
       setActionInProgress(false);
     }
@@ -92,7 +93,7 @@ export default function ProPlusManage() {
       await pauseProPlus(subscription.id);
       await loadSubscription();
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err));
     } finally {
       setActionInProgress(false);
     }
@@ -106,7 +107,7 @@ export default function ProPlusManage() {
       await cancelProPlus(subscription.id);
       await loadSubscription();
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err));
     } finally {
       setActionInProgress(false);
     }

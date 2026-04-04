@@ -2,8 +2,10 @@ import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
+import logger from '@/utils/logger';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/theme';
 // Layout shells stay eager — they wrap every route
 import Layout from '@/components/Layout';
 import AgentLayout from '@/components/AgentLayout';
@@ -111,7 +113,7 @@ export default function App() {
 
       const { data: { session }, error } = await supabase.auth.getSession();
       if (!session || error) {
-        console.warn('[Auth] Session expired or invalid — logging out', error?.message);
+        logger.warn('[Auth] Session expired or invalid — logging out', error?.message);
         reset();
         return;
       }
@@ -146,7 +148,7 @@ export default function App() {
     <ThemeProvider>
     <BrowserRouter>
       <ErrorBoundary>
-        <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--color-text-secondary, #888)' }}>Loading…</div>}>
+        <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: Colors.medGray }}>Loading…</div>}>
         <Routes>
           {/* Landing/Home — shows Landing for unauthenticated, Dashboard for authenticated */}
           <Route path="/" element={<HomeRoute />} />

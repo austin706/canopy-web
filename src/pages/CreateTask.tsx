@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore';
 import { createTask } from '@/services/supabase';
 import { canAccess } from '@/services/subscriptionGate';
 import type { MaintenanceTask, EquipmentCategory, TaskPriority, TaskFrequency } from '@/types';
+import { getErrorMessage } from '@/utils/errors';
 
 type Category = EquipmentCategory | 'general' | 'lawn' | 'pool' | 'deck' | 'seasonal' | 'pest_control';
 
@@ -125,7 +126,7 @@ export default function CreateTask() {
 
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create task');
+      setError(getErrorMessage(err) || 'Failed to create task');
     } finally {
       setIsLoading(false);
     }
@@ -365,7 +366,7 @@ export default function CreateTask() {
           <div style={{ marginBottom: '16px' }}>
             <label style={labelStyle}>Instructions</label>
             {instructions.map((instruction, index) => (
-              <div key={index} style={listItemStyle}>
+              <div key={`instruction-${index}-${instruction}`} style={listItemStyle}>
                 <input
                   type="text"
                   value={instruction}
@@ -406,7 +407,7 @@ export default function CreateTask() {
           <div style={{ marginBottom: '16px' }}>
             <label style={labelStyle}>Items to Have on Hand</label>
             {itemsToHave.map((item, index) => (
-              <div key={index} style={listItemStyle}>
+              <div key={`item-${index}-${item}`} style={listItemStyle}>
                 <input
                   type="text"
                   value={item}

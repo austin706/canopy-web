@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { updatePassword } from '@/services/supabase';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
+import { getErrorMessage } from '@/utils/errors';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export default function ResetPassword() {
         navigate('/login', { replace: true });
       }, 2000);
     } catch (err: any) {
-      setError(err.message || 'Failed to update password. Please try again.');
+      setError(getErrorMessage(err) || 'Failed to update password. Please try again.');
     } finally {
       setLoading(false);
     }

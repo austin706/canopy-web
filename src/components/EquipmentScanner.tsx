@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { scanEquipmentLabel, lookupByModelNumber, AiUsageLimitError, type ScanResult } from '@/services/ai';
 import { Colors } from '@/constants/theme';
 import type { EquipmentCategory } from '@/types';
+import { getErrorMessage } from '@/utils/errors';
 
 interface EquipmentScannerProps {
   onScanComplete?: (data: ScanResult & { name: string; category: EquipmentCategory }) => void;
@@ -285,7 +286,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
       setScanning(false);
       if (err instanceof AiUsageLimitError) {
         setUsageLimitHit(true);
-        setError(err.message);
+        setError(getErrorMessage(err));
       } else {
         const errorMsg = err?.message || 'Scan failed. Please try again.';
         setError(errorMsg);
@@ -372,7 +373,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
       console.error('Manual lookup error:', err);
       if (err instanceof AiUsageLimitError) {
         setUsageLimitHit(true);
-        setError(err.message);
+        setError(getErrorMessage(err));
         setLookingUp(false);
         return;
       }
@@ -498,9 +499,9 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
               marginBottom: 16,
             }}
           >
-            {['Make/Brand name', 'Model number', 'Serial number', 'Any efficiency ratings'].map((item, i) => (
+            {['Make/Brand name', 'Model number', 'Serial number', 'Any efficiency ratings'].map((item) => (
               <div
-                key={i}
+                key={item}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -681,6 +682,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
             type="file"
             accept="image/*"
             onChange={handleInputChange}
+            aria-label="Upload equipment label photo"
             style={{ display: 'none' }}
           />
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: Colors.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', fontSize: 24 }}>📷</div>
@@ -729,8 +731,8 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-              {PHOTO_TIPS.map((tip, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              {PHOTO_TIPS.map((tip) => (
+                <div key={tip.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <div style={{
                     width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
                     backgroundColor: tip.good ? 'var(--color-success)20' : 'var(--color-error)20',
@@ -754,8 +756,8 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
                 Where to find the label
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {LABEL_LOCATIONS.map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {LABEL_LOCATIONS.map((item) => (
+                  <div key={item.equipment} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
                     <div>
                       <span style={{ fontSize: 13, fontWeight: 500, color: Colors.charcoal }}>{item.equipment}</span>
@@ -877,9 +879,9 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
           {/* AI Alerts */}
           {scanData.alerts && Array.isArray(scanData.alerts) && scanData.alerts.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              {scanData.alerts.map((alert, i) => (
+              {scanData.alerts.map((alert) => (
                 <div
-                  key={i}
+                  key={alert}
                   style={{
                     padding: 12,
                     backgroundColor: 'var(--color-copper-muted, #FFF3E0)',
@@ -1045,7 +1047,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
               display: 'inline-block',
               padding: '8px 20px',
               background: Colors.copper,
-              color: '#fff',
+              color: Colors.white,
               borderRadius: 8,
               fontSize: 13,
               fontWeight: 600,
@@ -1062,7 +1064,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
           style={{
             marginTop: 16,
             padding: 12,
-            backgroundColor: 'var(--color-copper-muted, #FFEBEE)',
+            backgroundColor: Colors.error.slice(0, -2) + '15',
             borderLeft: `4px solid ${Colors.error}`,
             borderRadius: 8,
           }}

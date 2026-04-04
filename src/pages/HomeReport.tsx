@@ -5,6 +5,7 @@ import { getMaintenanceLogs } from '@/services/supabase';
 import { getPastVisits } from '@/services/proVisits';
 import { calculateCompletenessScore } from '@/services/homeTransfer';
 import type { MaintenanceLog, ProMonthlyVisit, Equipment, Home } from '@/types';
+import { getErrorMessage } from '@/utils/errors';
 
 // Format currency
 const fmt = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -32,7 +33,7 @@ export default function HomeReport() {
         setVisits(visitsData.filter(v => v.status === 'completed'));
         setCompletenessScore(score);
       } catch (err: any) {
-        setError(err.message || 'Failed to load report data');
+        setError(getErrorMessage(err) || 'Failed to load report data');
       } finally {
         setLoading(false);
       }

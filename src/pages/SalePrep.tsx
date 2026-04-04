@@ -12,6 +12,7 @@ import {
   notifyAgentSalePrep,
   type HomeSalePrep,
 } from '@/services/salePrep';
+import { getErrorMessage } from '@/utils/errors';
 
 export default function SalePrep() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function SalePrep() {
       setPrep(data);
       if (data?.target_list_date) setTargetDate(data.target_list_date);
     } catch (err: any) {
-      setError(err.message || 'Failed to load sale prep');
+      setError(getErrorMessage(err) || 'Failed to load sale prep');
     } finally {
       setLoading(false);
     }
@@ -61,7 +62,7 @@ export default function SalePrep() {
         setActivationMessage('Sale prep activated! Link an agent in your profile to keep them in the loop.');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to activate sale prep');
+      setError(getErrorMessage(err) || 'Failed to activate sale prep');
     } finally {
       setActivating(false);
     }
@@ -74,7 +75,7 @@ export default function SalePrep() {
       const newItems = await toggleSalePrepItem(prep.id, itemId, !isCompleted, prep.completed_items);
       setPrep({ ...prep, completed_items: newItems });
     } catch (err: any) {
-      setError(err.message || 'Failed to update item');
+      setError(getErrorMessage(err) || 'Failed to update item');
     }
   };
 
@@ -84,7 +85,7 @@ export default function SalePrep() {
       await updateTargetDate(prep.id, targetDate);
       setPrep({ ...prep, target_list_date: targetDate });
     } catch (err: any) {
-      setError(err.message || 'Failed to update date');
+      setError(getErrorMessage(err) || 'Failed to update date');
     }
   };
 
@@ -95,7 +96,7 @@ export default function SalePrep() {
       setPrep(null);
       setShowConfirmCancel(false);
     } catch (err: any) {
-      setError(err.message || 'Failed to close sale prep');
+      setError(getErrorMessage(err) || 'Failed to close sale prep');
     }
   };
 

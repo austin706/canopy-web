@@ -6,6 +6,7 @@ import { getItemsToHaveOnHand, getUpcomingVisits, getPastVisits, confirmVisit, c
 import { uploadInspectionDoc, getVisitDocuments, deleteInspectionDoc, type InspectionDocument } from '@/services/inspectionDocs';
 import { getEquipmentTrends, type EquipmentTrend } from '@/services/equipmentTrending';
 import type { ProMonthlyVisit, VisitAllocation } from '@/types';
+import { getErrorMessage } from '@/utils/errors';
 
 export default function Visits() {
   const { user, home } = useStore();
@@ -79,7 +80,7 @@ export default function Visits() {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load visits');
+      setError(getErrorMessage(err) || 'Failed to load visits');
     } finally {
       setLoading(false);
     }
@@ -91,7 +92,7 @@ export default function Visits() {
       await confirmVisit(upcomingVisit.id);
       await loadVisits();
     } catch (err: any) {
-      setError(err.message || 'Failed to confirm visit');
+      setError(getErrorMessage(err) || 'Failed to confirm visit');
     }
   };
 
@@ -108,7 +109,7 @@ export default function Visits() {
       }
       await loadVisits();
     } catch (err: any) {
-      setError(err.message || 'Failed to cancel visit');
+      setError(getErrorMessage(err) || 'Failed to cancel visit');
     } finally {
       setCanceling(false);
     }
@@ -123,7 +124,7 @@ export default function Visits() {
       setNewDate('');
       await loadVisits();
     } catch (err: any) {
-      setError(err.message || 'Failed to reschedule visit');
+      setError(getErrorMessage(err) || 'Failed to reschedule visit');
     } finally {
       setRescheduling(false);
     }
@@ -139,7 +140,7 @@ export default function Visits() {
       setRatingReview('');
       await loadVisits();
     } catch (err: any) {
-      setError(err.message || 'Failed to submit rating');
+      setError(getErrorMessage(err) || 'Failed to submit rating');
     } finally {
       setSubmittingRating(false);
     }
@@ -171,7 +172,7 @@ export default function Visits() {
       await uploadInspectionDoc(visitId, file, user.id);
       await loadVisitDocuments(visitId);
     } catch (err: any) {
-      setError(err.message || 'Failed to upload document');
+      setError(getErrorMessage(err) || 'Failed to upload document');
     } finally {
       setUploadingDoc(prev => {
         const next = new Set(prev);
@@ -192,7 +193,7 @@ export default function Visits() {
         return next;
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to delete document');
+      setError(getErrorMessage(err) || 'Failed to delete document');
     }
   };
 
@@ -277,6 +278,7 @@ export default function Visits() {
                         >
                           <input
                             type="checkbox"
+                            aria-label={`Mark ${item} as prepared`}
                             checked={preparedItems.has(item)}
                             onChange={(e) => {
                               const newItems = new Set(preparedItems);
@@ -620,6 +622,7 @@ export default function Visits() {
                             accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"
                             onChange={(e) => handleDocumentUpload(visit.id, e)}
                             disabled={uploadingDoc.has(visit.id)}
+                            aria-label="Upload inspection document"
                             style={{
                               display: 'none',
                             }}
@@ -760,7 +763,7 @@ export default function Visits() {
                   {expandedTrend === trend.equipmentId && (
                     <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${Colors.lightGray}` }}>
                       {trend.snapshots.map((snapshot, idx) => (
-                        <div key={idx} style={{ padding: 10, background: Colors.cream, borderRadius: 6, marginBottom: 8 }}>
+                        <div key={snapshot.date || `snapshot-${idx}`} style={{ padding: 10, background: Colors.cream, borderRadius: 6, marginBottom: 8 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                             <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal }}>
                               {new Date(snapshot.visitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

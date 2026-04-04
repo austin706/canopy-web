@@ -242,6 +242,7 @@ export default function AdminProProviders() {
 
       <input
         className="form-input mb-lg"
+        aria-label="Search pro providers by name, contact, or service"
         value={search}
         onChange={e => setSearch(e.target.value)}
         placeholder="Search by name, contact, or service..."

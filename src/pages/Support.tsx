@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
+import { getErrorMessage } from '@/utils/errors';
 
 type SupportCategory = 'general' | 'bug' | 'billing' | 'pro-issue' | 'account' | 'feature' | 'other';
 
@@ -101,7 +102,7 @@ export default function Support() {
         navigate('/');
       }, 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send message. Please try again.');
+      setError(getErrorMessage(err) || 'Failed to send message. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -78,6 +78,7 @@ const Support = lazy(() => import('@/pages/Support'));
 const ApplyPro = lazy(() => import('@/pages/ApplyPro'));
 const AgentLanding = lazy(() => import('@/pages/AgentLanding'));
 const ProLanding = lazy(() => import('@/pages/ProLanding'));
+const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useStore();
@@ -244,7 +245,7 @@ export default function App() {
           </Route>
 
           {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
       </ErrorBoundary>

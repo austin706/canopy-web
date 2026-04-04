@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase, getClientHome, createGiftCodes, getNotifications, markNotificationRead } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors, StatusColors } from '@/constants/theme';
+import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 
 function generateCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -253,7 +254,8 @@ export default function AgentPortal() {
 
   // ─── Render ───
   return (
-    <div className="page-wide">
+    <SectionErrorBoundary sectionName="AgentPortal">
+      <div className="page-wide">
       <div className="flex items-center justify-between mb-lg">
         <div>
           <h1>Agent Portal</h1>
@@ -907,6 +909,7 @@ export default function AgentPortal() {
           )}
         </>
       )}
-    </div>
+      </div>
+    </SectionErrorBoundary>
   );
 }

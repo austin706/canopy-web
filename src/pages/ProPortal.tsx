@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase, getNotifications, markNotificationRead } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
+import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 
 interface ProProvider {
   id: string;
@@ -701,7 +702,8 @@ export default function ProPortal() {
 
   // ═══ Provider View ═══
   return (
-    <div className="page" style={{ maxWidth: 900 }}>
+    <SectionErrorBoundary sectionName="ProPortal">
+      <div className="page" style={{ maxWidth: 900 }}>
       <div className="page-header">
         <div>
           <h1>Canopy Pro Dashboard</h1>
@@ -1025,6 +1027,7 @@ export default function ProPortal() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </SectionErrorBoundary>
   );
 }

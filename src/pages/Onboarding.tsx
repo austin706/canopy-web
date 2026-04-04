@@ -13,6 +13,7 @@ import InspectionUploader from '@/components/InspectionUploader';
 import { lookupByModelNumber } from '@/services/ai';
 import { Colors } from '@/constants/theme';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
+import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import type { EquipmentCategory, Equipment as EquipmentType, SubscriptionTier } from '@/types';
 
 const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
@@ -853,7 +854,8 @@ export default function Onboarding() {
   const showProgress = step >= 1 && step <= 4;
 
   return (
-    <div className="page" style={{ maxWidth: 600, margin: '0 auto', paddingTop: 40, paddingBottom: 60 }}>
+    <SectionErrorBoundary sectionName="Onboarding">
+      <div className="page" style={{ maxWidth: 600, margin: '0 auto', paddingTop: 40, paddingBottom: 60 }}>
       {/* Progress Bar — only visible during steps 1-4 */}
       {showProgress && (
         <div style={{ marginBottom: 32 }}>
@@ -1871,6 +1873,7 @@ export default function Onboarding() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </SectionErrorBoundary>
   );
 }

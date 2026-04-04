@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /agent-portal
+Disallow: /pro-portal
+
+Sitemap: https://canopyhome.app/sitemap.xml

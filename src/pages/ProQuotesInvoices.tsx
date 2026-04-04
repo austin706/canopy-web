@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase, sendNotification } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
+import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 
 interface LineItem {
   id: string;
@@ -617,7 +618,8 @@ export default function ProQuotesInvoices() {
   }
 
   return (
-    <div className="page" style={{ maxWidth: 900 }}>
+    <SectionErrorBoundary sectionName="ProQuotesInvoices">
+      <div className="page" style={{ maxWidth: 900 }}>
       <div className="page-header">
         <div>
           <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/pro-portal')}>
@@ -1111,6 +1113,7 @@ export default function ProQuotesInvoices() {
           </div>
         )
       )}
-    </div>
+      </div>
+    </SectionErrorBoundary>
   );
 }

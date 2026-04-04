@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Colors, FontSize, FontWeight, BorderRadius } from '@/constants/theme';
+import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -1221,7 +1222,8 @@ export default function Landing() {
   );
 
   return (
-    <div style={{ fontFamily: fontStack }}>
+    <SectionErrorBoundary sectionName="Landing">
+      <div style={{ fontFamily: fontStack }}>
       <NavHeader />
       <HeroSection />
       <ProblemsSection />
@@ -1229,6 +1231,7 @@ export default function Landing() {
       <PricingSection />
       <ProsCta />
       <Footer />
-    </div>
+      </div>
+    </SectionErrorBoundary>
   );
 }

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://canopyhome.app/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://canopyhome.app/for-agents</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://canopyhome.app/for-pros</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://canopyhome.app/apply-pro</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://canopyhome.app/support</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://canopyhome.app/login</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://canopyhome.app/signup</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://canopyhome.app/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://canopyhome.app/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://canopyhome.app/ai-disclaimer</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
+  <url><loc>https://canopyhome.app/cancellation</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
+  <url><loc>https://canopyhome.app/pci-compliance</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
+  <url><loc>https://canopyhome.app/contractor-terms</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
+</urlset>

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import type { ProMonthlyVisit, Home, Equipment } from '@/types';
 import type {
   VisitInspection,
@@ -459,7 +460,8 @@ export default function ProInspection() {
   const activeInspection = inspections.find((i) => i.id === activeTabId);
 
   return (
-    <div className="page" style={{ maxWidth: 1200, paddingBottom: Spacing.xxl }}>
+    <SectionErrorBoundary sectionName="ProInspection">
+      <div className="page" style={{ maxWidth: 1200, paddingBottom: Spacing.xxl }}>
       {/* Visit Header */}
       <div
         style={{
@@ -998,6 +1000,7 @@ export default function ProInspection() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </SectionErrorBoundary>
   );
 }

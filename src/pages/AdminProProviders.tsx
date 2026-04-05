@@ -388,7 +388,7 @@ export default function AdminProProviders() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
-            <h2 style={{ marginTop: 0 }}>{editing ? 'Edit Provider' : 'Add Pro Provider'}</h2>
+            <h2 style={{ marginTop: 0 }}>{editing ? 'Edit Pro Provider' : 'Add Pro Provider'}</h2>
             <div className="form-group">
               <label>Business Name *</label>
               <input className="form-input" value={form.business_name} onChange={e => setForm({ ...form, business_name: e.target.value })} />

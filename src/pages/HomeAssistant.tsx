@@ -201,7 +201,7 @@ export default function HomeAssistant() {
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
           }}>🌿</div>
           <div>
-            <h1 style={{ fontSize: 18, fontWeight: 700, color: Colors.charcoal, margin: 0 }}>Canopy Home Assistant</h1>
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: Colors.charcoal, margin: 0 }}>Canopy Assistant</h1>
             <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>AI-powered home maintenance advice · <a href="/ai-disclaimer" style={{ color: Colors.sage, textDecoration: 'none' }}>Disclaimer</a></p>
           </div>
         </div>

@@ -1,13 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
+import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
+import AdminPreviewBanner from '@/components/AdminPreviewBanner';
 
 interface AvailabilityDay {
   day: string;
   enabled: boolean;
   start: string;
   end: string;
+}
+
+interface ProviderOption {
+  id: string;
+  user_id: string;
+  business_name?: string;
+  contact_name?: string;
+  email?: string;
+  is_available?: boolean;
+  zip_codes?: string[];
+  schedule?: AvailabilityDay[];
 }
 
 const DEFAULT_SCHEDULE: AvailabilityDay[] = [
@@ -22,6 +35,8 @@ const DEFAULT_SCHEDULE: AvailabilityDay[] = [
 
 export default function ProAvailability() {
   const navigate = useNavigate();
+  const { user } = useStore();
+  const isAdmin = user?.role === 'admin';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
@@ -29,15 +44,53 @@ export default function ProAvailability() {
   const [providerId, setProviderId] = useState<string | null>(null);
   const [zipCodes, setZipCodes] = useState<string[]>([]);
 
+  // Admin preview
+  const [allProviders, setAllProviders] = useState<ProviderOption[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
+
   useEffect(() => {
     loadAvailability();
   }, []);
+
+  // When admin selects a different provider, reload their data
+  useEffect(() => {
+    if (isAdmin && selectedProviderId && allProviders.length > 0) {
+      const provider = allProviders.find(p => p.id === selectedProviderId);
+      if (provider) {
+        applyProviderData(provider);
+      }
+    }
+  }, [selectedProviderId]);
+
+  const applyProviderData = (provider: ProviderOption) => {
+    setProviderId(provider.id);
+    setIsAvailable(provider.is_available ?? true);
+    setZipCodes(provider.zip_codes || []);
+    if (provider.schedule && Array.isArray(provider.schedule)) {
+      setSchedule(provider.schedule as AvailabilityDay[]);
+    } else {
+      setSchedule(DEFAULT_SCHEDULE);
+    }
+  };
 
   const loadAvailability = async () => {
     try {
       const { data: authUser } = await supabase.auth.getUser();
       if (!authUser?.user) {
         navigate('/pro-login');
+        return;
+      }
+
+      // Admin: load all providers, preview the first one
+      if (isAdmin) {
+        const { data: providers } = await supabase.from('pro_providers').select('*').order('business_name');
+        const list = providers || [];
+        setAllProviders(list);
+        if (list.length > 0) {
+          setSelectedProviderId(list[0].id);
+          applyProviderData(list[0]);
+        }
+        setLoading(false);
         return;
       }
 
@@ -48,12 +101,10 @@ export default function ProAvailability() {
         .single();
 
       if (provider) {
-        setProviderId(provider.id);
-        setIsAvailable(provider.is_available ?? true);
-        setZipCodes(provider.zip_codes || []);
-        if (provider.schedule && Array.isArray(provider.schedule)) {
-          setSchedule(provider.schedule);
-        }
+        applyProviderData(provider);
+      } else {
+        navigate('/pro-login');
+        return;
       }
     } catch (err) {
       console.error('Error loading availability:', err);
@@ -90,6 +141,23 @@ export default function ProAvailability() {
     setSchedule(updated);
   };
 
+  const updateTime = (index: number, field: 'start' | 'end', value: string) => {
+    const updated = [...schedule];
+    updated[index][field] = value;
+    setSchedule(updated);
+  };
+
+  // Generate time options in 30-minute increments (5:00 AM to 10:00 PM)
+  const TIME_OPTIONS: string[] = [];
+  for (let h = 5; h <= 22; h++) {
+    for (const m of ['00', '30']) {
+      if (h === 22 && m === '30') continue;
+      const hour12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      TIME_OPTIONS.push(`${hour12}:${m} ${ampm}`);
+    }
+  }
+
   if (loading) {
     return (
       <div className="page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
@@ -100,13 +168,21 @@ export default function ProAvailability() {
 
   return (
     <div className="page" style={{ maxWidth: 600 }}>
+      {isAdmin && (
+        <AdminPreviewBanner
+          portalType="pro"
+          providers={allProviders}
+          selectedId={selectedProviderId}
+          onSelect={setSelectedProviderId}
+        />
+      )}
       <div className="page-header">
         <div>
           <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/pro-portal')}>
             &larr; Back
           </button>
           <h1>Availability</h1>
-          <p className="subtitle">Manage your working status and schedule</p>
+          <p className="subtitle">{isAdmin ? 'Preview provider availability settings' : 'Manage your working status and schedule'}</p>
         </div>
       </div>
 
@@ -154,7 +230,7 @@ export default function ProAvailability() {
       <div className="card mb-lg">
         <p style={{ margin: '0 0 8px 0', fontWeight: 600, fontSize: 15 }}>Working Days</p>
         <p style={{ margin: '0 0 16px 0', fontSize: 13, color: Colors.medGray }}>
-          Toggle the days you're available for visits
+          Toggle days on/off and set your working hours
         </p>
 
         {schedule.map((day, index) => (
@@ -173,13 +249,44 @@ export default function ProAvailability() {
                 backgroundColor: day.enabled ? Colors.sage : Colors.lightGray,
                 color: day.enabled ? 'white' : Colors.medGray,
                 border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+                flexShrink: 0,
               }}
             >
               {day.day.slice(0, 3)}
             </button>
-            <p style={{ margin: 0, flex: 1, color: day.enabled ? Colors.charcoal : Colors.medGray }}>
-              {day.enabled ? `${day.start || '—'} — ${day.end || '—'}` : 'Off'}
-            </p>
+            {day.enabled ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                <select
+                  value={day.start}
+                  onChange={e => updateTime(index, 'start', e.target.value)}
+                  style={{
+                    padding: '6px 10px', borderRadius: 6, fontSize: 13,
+                    border: `1px solid ${Colors.lightGray}`, color: Colors.charcoal,
+                    background: 'white', cursor: 'pointer', minWidth: 110,
+                  }}
+                >
+                  {TIME_OPTIONS.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+                <span style={{ fontSize: 13, color: Colors.medGray }}>to</span>
+                <select
+                  value={day.end}
+                  onChange={e => updateTime(index, 'end', e.target.value)}
+                  style={{
+                    padding: '6px 10px', borderRadius: 6, fontSize: 13,
+                    border: `1px solid ${Colors.lightGray}`, color: Colors.charcoal,
+                    background: 'white', cursor: 'pointer', minWidth: 110,
+                  }}
+                >
+                  {TIME_OPTIONS.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <p style={{ margin: 0, flex: 1, color: Colors.medGray }}>Off</p>
+            )}
           </div>
         ))}
       </div>

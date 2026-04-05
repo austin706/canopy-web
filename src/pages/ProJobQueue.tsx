@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { TASK_TEMPLATES } from '@/constants/maintenance';
+import AdminPreviewBanner from '@/components/AdminPreviewBanner';
 import type { ProMonthlyVisit, Home, Equipment, ProProvider } from '@/types';
 
 interface Visit extends ProMonthlyVisit {
@@ -21,6 +22,7 @@ interface VisitStats {
 export default function ProJobQueue() {
   const navigate = useNavigate();
   const { user } = useStore();
+  const isAdmin = user?.role === 'admin';
 
   const [visits, setVisits] = useState<Visit[]>([]);
   const [stats, setStats] = useState<VisitStats>({ todaysVisits: 0, completed: 0, nextVisitTime: null });
@@ -29,6 +31,10 @@ export default function ProJobQueue() {
   const [expandedVisits, setExpandedVisits] = useState<Set<string>>(new Set());
   const [provider, setProvider] = useState<ProProvider | null>(null);
 
+  // Admin preview
+  const [allProviders, setAllProviders] = useState<ProProvider[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!user?.id) {
       navigate('/pro-login');
@@ -36,6 +42,50 @@ export default function ProJobQueue() {
     }
     loadData();
   }, [selectedDate]);
+
+  // Admin: reload when switching provider
+  useEffect(() => {
+    if (isAdmin && selectedProviderId) {
+      const p = allProviders.find(p => p.id === selectedProviderId);
+      if (p) {
+        setProvider(p);
+        loadVisitsForProvider(p.id);
+      }
+    }
+  }, [selectedProviderId]);
+
+  const loadVisitsForProvider = async (providerId: string) => {
+    setLoading(true);
+    try {
+      const { data: visitsData, error: visitsError } = await supabase
+        .from('pro_monthly_visits')
+        .select(`*, home:homes(*), homeowner:profiles(first_name, last_name)`)
+        .eq('pro_provider_id', providerId)
+        .eq('visit_date', selectedDate)
+        .order('created_at', { ascending: true });
+
+      if (visitsError) throw visitsError;
+
+      const enrichedVisits: Visit[] = await Promise.all(
+        (visitsData || []).map(async (visit) => {
+          const { data: equipmentData } = await supabase.from('equipment').select('*').eq('home_id', visit.home_id);
+          return { ...visit, equipment: equipmentData || [] };
+        })
+      );
+
+      setVisits(enrichedVisits);
+      const completedCount = enrichedVisits.filter((v) => v.status === 'completed').length;
+      setStats({
+        todaysVisits: enrichedVisits.length,
+        completed: completedCount,
+        nextVisitTime: enrichedVisits.length - completedCount > 0 ? `${enrichedVisits.length - completedCount} left` : null,
+      });
+    } catch (error) {
+      console.error('Error loading visits:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -46,6 +96,21 @@ export default function ProJobQueue() {
         return;
       }
 
+      // Admin: load all providers, preview the first one
+      if (isAdmin) {
+        const { data: providers } = await supabase.from('pro_providers').select('*').order('business_name');
+        const list = (providers || []) as ProProvider[];
+        setAllProviders(list);
+        if (list.length > 0) {
+          setSelectedProviderId(list[0].id);
+          setProvider(list[0]);
+          await loadVisitsForProvider(list[0].id);
+        } else {
+          setLoading(false);
+        }
+        return;
+      }
+
       // Load provider info
       const { data: providerData } = await supabase
         .from('pro_providers')
@@ -53,9 +118,12 @@ export default function ProJobQueue() {
         .eq('user_id', authUser.user.id)
         .single();
 
-      if (providerData) {
-        setProvider(providerData);
+      if (!providerData) {
+        navigate('/pro-login');
+        return;
       }
+
+      setProvider(providerData);
 
       // Load visits for selected date — visit_date is a DATE column, use .eq()
       const { data: visitsData, error: visitsError } = await supabase
@@ -67,7 +135,7 @@ export default function ProJobQueue() {
           homeowner:profiles(first_name, last_name)
         `
         )
-        .eq('pro_provider_id', providerData?.id || '')
+        .eq('pro_provider_id', providerData.id)
         .eq('visit_date', selectedDate)
         .order('created_at', { ascending: true });
 
@@ -247,6 +315,14 @@ export default function ProJobQueue() {
 
   return (
     <div className="page" style={{ maxWidth: 1000 }}>
+      {isAdmin && (
+        <AdminPreviewBanner
+          portalType="pro"
+          providers={allProviders}
+          selectedId={selectedProviderId}
+          onSelect={setSelectedProviderId}
+        />
+      )}
       {/* Header */}
       <div className="page-header" style={{ marginBottom: Spacing.lg }}>
         <div>

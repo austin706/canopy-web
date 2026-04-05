@@ -451,7 +451,7 @@ export default function Visits() {
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${Colors.sage}20` }}>
                           <span style={{ fontSize: 18 }}>🌿</span>
-                          <span style={{ fontWeight: 600, color: Colors.sage }}>Canopy Home Health Report</span>
+                          <span style={{ fontWeight: 600, color: Colors.sage }}>Canopy Home Report</span>
                           {visit.ai_summary_generated_at && (
                             <span style={{ fontSize: 11, color: Colors.medGray, marginLeft: 'auto' }}>
                               Generated {new Date(visit.ai_summary_generated_at).toLocaleDateString()}

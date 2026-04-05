@@ -4,6 +4,7 @@ import { supabase, getClientHome, createGiftCodes, getNotifications, markNotific
 import { useStore } from '@/store/useStore';
 import { Colors, StatusColors } from '@/constants/theme';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
+import AdminPreviewBanner from '@/components/AdminPreviewBanner';
 
 function generateCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -24,6 +25,7 @@ interface ClientData {
 export default function AgentPortal() {
   const navigate = useNavigate();
   const { user } = useStore();
+  const isAdmin = user?.role === 'admin';
   const [tab, setTab] = useState<'clients' | 'new-client' | 'codes' | 'notifications' | 'analytics'>('clients');
   const [clients, setClients] = useState<ClientData[]>([]);
   const [codes, setCodes] = useState<any[]>([]);
@@ -31,6 +33,10 @@ export default function AgentPortal() {
   const [agentId, setAgentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
+
+  // Admin preview
+  const [allAgents, setAllAgents] = useState<{ id: string; name?: string; email?: string }[]>([]);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
   // Client notes
   const [clientNotes, setClientNotes] = useState<Record<string, any[]>>({});
@@ -55,26 +61,43 @@ export default function AgentPortal() {
     lawn_type: 'none',
   });
 
+  const loadAgentData = async (agentRecord: { id: string; name?: string; email?: string }) => {
+    setAgentId(agentRecord.id);
+    const { data: profileData } = await supabase.from('profiles').select('*').eq('agent_id', agentRecord.id);
+    const clientList = profileData || [];
+
+    const clientsWithHomes = await Promise.all(
+      clientList.map(async (c: any) => {
+        let home = null;
+        try { home = await getClientHome(c.id); } catch {}
+        return { ...c, home };
+      })
+    );
+    setClients(clientsWithHomes);
+
+    const { data: codeData } = await supabase.from('gift_codes').select('*').eq('agent_id', agentRecord.id);
+    setCodes(codeData || []);
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
+        // Admin: load all agents, preview the first one
+        if (isAdmin) {
+          const { data: agents } = await supabase.from('agents').select('*').order('name');
+          const list = (agents || []).map((a: any) => ({ id: a.id, name: a.name, email: a.email }));
+          setAllAgents(list);
+          if (list.length > 0) {
+            setSelectedAgentId(list[0].id);
+            await loadAgentData(list[0]);
+          }
+          setLoading(false);
+          return;
+        }
+
         const { data: agentData } = await supabase.from('agents').select('*').eq('email', user?.email).single();
         if (agentData) {
-          setAgentId(agentData.id);
-          const { data: profileData } = await supabase.from('profiles').select('*').eq('agent_id', agentData.id);
-          const clientList = profileData || [];
-
-          const clientsWithHomes = await Promise.all(
-            clientList.map(async (c: any) => {
-              let home = null;
-              try { home = await getClientHome(c.id); } catch {}
-              return { ...c, home };
-            })
-          );
-          setClients(clientsWithHomes);
-
-          const { data: codeData } = await supabase.from('gift_codes').select('*').eq('agent_id', agentData.id);
-          setCodes(codeData || []);
+          await loadAgentData(agentData);
 
           // Load notifications for this agent (using their auth uid, not agents.id)
           if (user?.id) {
@@ -88,6 +111,17 @@ export default function AgentPortal() {
     };
     load();
   }, [user]);
+
+  // Admin: reload when switching agent
+  useEffect(() => {
+    if (isAdmin && selectedAgentId && allAgents.length > 0) {
+      const agent = allAgents.find(a => a.id === selectedAgentId);
+      if (agent) {
+        setLoading(true);
+        loadAgentData(agent).finally(() => setLoading(false));
+      }
+    }
+  }, [selectedAgentId]);
 
   const activeCodes = codes.filter(c => !c.redeemed_by);
   const redeemedCodes = codes.filter(c => c.redeemed_by);
@@ -256,14 +290,22 @@ export default function AgentPortal() {
   return (
     <SectionErrorBoundary sectionName="AgentPortal">
       <div className="page-wide">
+      {isAdmin && (
+        <AdminPreviewBanner
+          portalType="agent"
+          agents={allAgents}
+          selectedId={selectedAgentId}
+          onSelect={setSelectedAgentId}
+        />
+      )}
       <div className="flex items-center justify-between mb-lg">
         <div>
           <h1>Agent Portal</h1>
-          <p className="subtitle">Manage your clients and gift codes</p>
+          <p className="subtitle">{isAdmin ? 'Preview agent portal' : 'Manage your clients and gift codes'}</p>
         </div>
         <div className="flex gap-sm">
           <button className="btn btn-secondary" onClick={() => navigate('/agent-portal/profile')}>Edit Profile</button>
-          <button className="btn btn-ghost" onClick={() => navigate('/')}>Back to App &rarr;</button>
+          <button className="btn btn-ghost" onClick={() => navigate('/')}>&larr; Back to Dashboard</button>
         </div>
       </div>
 

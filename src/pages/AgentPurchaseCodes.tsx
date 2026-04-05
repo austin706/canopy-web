@@ -40,9 +40,9 @@ export default function AgentPurchaseCodes() {
   const [tab, setTab] = useState<'gift' | 'codes'>('gift');
   const [filter, setFilter] = useState<'all' | 'available' | 'redeemed'>('all');
 
-  // Role gate: only agents can access this page
+  // Role gate: agents and admins can access this page
   useEffect(() => {
-    if (user && user.role !== 'agent') {
+    if (user && !['agent', 'admin'].includes(user.role || '')) {
       navigate('/dashboard', { replace: true });
     }
   }, [user, navigate]);

@@ -108,7 +108,7 @@ export default function Signup() {
               </div>
             ))}
           </div>
-          <p style={{ marginTop: 40, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Powered by Canopy</p>
+          <p style={{ marginTop: 40, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Smart home maintenance</p>
         </div>
       </div>
       <div className="auth-form-panel">

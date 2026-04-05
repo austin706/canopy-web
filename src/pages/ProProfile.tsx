@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
+import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
+import AdminPreviewBanner from '@/components/AdminPreviewBanner';
 
 interface ProviderProfile {
   id: string;
@@ -18,6 +20,8 @@ interface ProviderProfile {
 
 export default function ProProfile() {
   const navigate = useNavigate();
+  const { user } = useStore();
+  const isAdmin = user?.role === 'admin';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<ProviderProfile | null>(null);
@@ -28,15 +32,50 @@ export default function ProProfile() {
   const [bio, setBio] = useState('');
   const [yearsExperience, setYearsExperience] = useState('');
 
+  // Admin preview
+  const [allProviders, setAllProviders] = useState<ProviderProfile[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
+
   useEffect(() => {
     loadProfile();
   }, []);
+
+  // When admin selects a different provider
+  useEffect(() => {
+    if (isAdmin && selectedProviderId && allProviders.length > 0) {
+      const p = allProviders.find(p => p.id === selectedProviderId);
+      if (p) applyProfileData(p);
+    }
+  }, [selectedProviderId]);
+
+  const applyProfileData = (data: ProviderProfile) => {
+    setProfile(data);
+    setContactName(data.contact_name || '');
+    setEmail(data.email || '');
+    setPhone(data.phone || '');
+    setLicenseNumber(data.license_number || '');
+    setBio(data.bio || '');
+    setYearsExperience(data.years_experience?.toString() || '');
+  };
 
   const loadProfile = async () => {
     try {
       const { data: authUser } = await supabase.auth.getUser();
       if (!authUser?.user) {
         navigate('/pro-login');
+        return;
+      }
+
+      // Admin: load all providers, preview the first one
+      if (isAdmin) {
+        const { data: providers } = await supabase.from('pro_providers').select('*').order('business_name');
+        const list = (providers || []) as ProviderProfile[];
+        setAllProviders(list);
+        if (list.length > 0) {
+          setSelectedProviderId(list[0].id);
+          applyProfileData(list[0]);
+        }
+        setLoading(false);
         return;
       }
 
@@ -112,12 +151,20 @@ export default function ProProfile() {
 
   return (
     <div className="page" style={{ maxWidth: 600 }}>
+      {isAdmin && (
+        <AdminPreviewBanner
+          portalType="pro"
+          providers={allProviders}
+          selectedId={selectedProviderId}
+          onSelect={setSelectedProviderId}
+        />
+      )}
       <div className="page-header">
         <div>
           <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/pro-portal')}>
             &larr; Back
           </button>
-          <h1>My Profile</h1>
+          <h1>{isAdmin ? 'Provider Profile' : 'My Profile'}</h1>
         </div>
       </div>
 

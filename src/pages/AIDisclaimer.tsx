@@ -2,7 +2,7 @@ export default function AIDisclaimer() {
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--color-text)', lineHeight: 1.7 }}>
       <div style={{ marginBottom: 32 }}>
-        <a href="/" style={{ color: 'var(--color-sage)', textDecoration: 'none', fontSize: 14 }}>← Back to Canopy</a>
+        <a href="/" style={{ color: 'var(--color-sage)', textDecoration: 'none', fontSize: 14 }}>← Back</a>
       </div>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>AI Recommendations Disclaimer</h1>

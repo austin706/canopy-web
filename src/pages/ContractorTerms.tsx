@@ -1,7 +1,7 @@
 export default function ContractorTerms() {
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--color-text)', lineHeight: 1.7 }}>
-      <a href="/" style={{ color: 'var(--color-sage)', textDecoration: 'none', fontSize: 14 }}>← Back to Canopy</a>
+      <a href="/" style={{ color: 'var(--color-sage)', textDecoration: 'none', fontSize: 14 }}>← Back</a>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Pro Provider Terms of Service</h1>
       <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginBottom: 32 }}>Effective April 3, 2026</p>

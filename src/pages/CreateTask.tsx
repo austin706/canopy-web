@@ -244,7 +244,7 @@ export default function CreateTask() {
   return (
     <div className="page" style={{ maxWidth: 700 }}>
       <div className="card" style={{ padding: 32 }}>
-        <a onClick={() => navigate('/')} style={backLinkStyle}>← Back to Dashboard</a>
+        <a onClick={() => navigate('/')} style={backLinkStyle}>&larr; Back to Dashboard</a>
 
         <h1 style={{ fontSize: '24px', fontWeight: '600', color: Colors.charcoal, margin: '16px 0 24px 0' }}>
           Create Custom Task

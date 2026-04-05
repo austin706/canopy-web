@@ -20,6 +20,86 @@ export type {
 
 export type SubscriptionTier = 'free' | 'home' | 'pro' | 'pro_plus';
 
+// ─── ENUM TYPES ───────────────────────────────────────────
+
+export type RoofType =
+  // Legacy (still accepted in DB for backward compat)
+  | 'asphalt_shingle' | 'metal' | 'tile' | 'slate' | 'flat' | 'wood_shake'
+  // Granular shingle types
+  | '3_tab_shingle' | 'architectural_shingle' | 'premium_shingle' | 'composite_shingle'
+  // Granular metal types
+  | 'metal_standing_seam' | 'metal_corrugated'
+  // Granular tile types
+  | 'tile_clay' | 'tile_concrete'
+  // Granular flat types
+  | 'flat_epdm' | 'flat_tpo' | 'flat_buildup'
+  // Other
+  | 'copper' | 'other';
+
+export type FoundationType = 'slab' | 'crawlspace' | 'basement' | 'pier_and_beam';
+
+export type SidingType = 'brick' | 'vinyl' | 'wood' | 'stucco' | 'fiber_cement' | 'stone';
+
+export type HeatingType = 'forced_air' | 'heat_pump' | 'radiant' | 'boiler' | 'baseboard';
+
+export type CoolingType = 'central_ac' | 'heat_pump' | 'window_units' | 'mini_split' | 'none';
+
+export type SepticType = 'aerobic' | 'anaerobic' | 'mound' | 'chamber';
+
+export type SepticDrainfieldType = 'conventional' | 'chamber' | 'mound' | 'drip' | 'sand_filter';
+
+export type ConstructionType = 'wood_frame' | 'steel_frame' | 'concrete_block' | 'icf' | 'sip' | 'log' | 'brick_masonry' | 'adobe' | 'rammed_earth' | 'other';
+
+export type FrameSize = '2x4' | '2x6' | '2x8' | 'unknown';
+
+export type StoriesType = 'single' | 'two_story' | 'split_level' | 'tri_level' | 'raised_ranch' | 'other';
+
+export type WindowFrameMaterial = 'vinyl' | 'wood' | 'aluminum' | 'fiberglass' | 'composite' | 'clad_wood' | 'unknown';
+
+export type WindowGlazing = 'single_pane' | 'double_pane' | 'triple_pane' | 'unknown';
+
+export type ExteriorDoorMaterial = 'wood' | 'fiberglass' | 'steel' | 'vinyl' | 'glass' | 'unknown';
+
+export type PlumbingSupplyType = 'copper' | 'pex' | 'cpvc' | 'galvanized' | 'polybutylene' | 'mixed' | 'unknown';
+
+export type PlumbingDrainType = 'pvc' | 'abs' | 'cast_iron' | 'galvanized' | 'clay' | 'mixed' | 'unknown';
+
+export type WaterFiltrationType = 'whole_house' | 'reverse_osmosis' | 'under_sink' | 'uv' | 'water_softener_combo' | 'other';
+
+export type ElectricalWiringType = 'copper' | 'aluminum' | 'knob_and_tube' | 'mixed' | 'unknown';
+
+export type InsulationType = 'fiberglass_batt' | 'blown_cellulose' | 'spray_foam_open' | 'spray_foam_closed' | 'mineral_wool' | 'rigid_foam' | 'none' | 'unknown';
+
+export type DuctworkType = 'sheet_metal' | 'flex' | 'fiberglass_board' | 'mixed' | 'none';
+
+export type FlooringType = 'hardwood' | 'engineered_wood' | 'laminate' | 'tile' | 'vinyl_plank' | 'carpet' | 'concrete' | 'stone' | 'bamboo' | 'mixed';
+
+export type InteriorWallType = 'drywall' | 'plaster' | 'wood_panel' | 'concrete' | 'other';
+
+export type CeilingType = 'flat_drywall' | 'textured' | 'popcorn' | 'coffered' | 'beadboard' | 'exposed_beam' | 'other';
+
+export type DrivewayMaterial = 'concrete' | 'asphalt' | 'gravel' | 'pavers' | 'brick' | 'dirt' | 'none';
+
+export type PatioMaterial = 'concrete' | 'pavers' | 'brick' | 'stone' | 'stamped_concrete' | 'other';
+
+export type FenceType = 'wood' | 'vinyl' | 'chain_link' | 'wrought_iron' | 'aluminum' | 'composite' | 'split_rail' | 'none';
+
+export type WellPumpType = 'submersible' | 'jet' | 'hand' | 'unknown';
+
+export type SolarInverterType = 'string' | 'micro' | 'hybrid' | 'unknown';
+
+export type EVChargerLevel = 'level_1' | 'level_2' | 'dc_fast';
+
+export type GeneratorType = 'standby_natural_gas' | 'standby_propane' | 'standby_diesel' | 'portable';
+
+export type LawnType = 'bermuda' | 'fescue' | 'zoysia' | 'st_augustine' | 'bluegrass' | 'buffalo' | 'mixed' | 'none';
+
+export type CountertopType = 'granite' | 'marble' | 'quartz' | 'butcher_block' | 'laminate' | 'tile' | 'concrete' | 'stainless_steel';
+
+export type FireplaceType = 'wood_burning' | 'gas_starter' | 'gas' | 'electric';
+
+export type HvacReturnLocation = 'ceiling' | 'wall' | 'floor' | 'furnace' | 'multiple';
+
 export interface User {
   id: string;
   email: string;
@@ -61,71 +141,373 @@ export interface ProProvider {
 export interface Home {
   id: string;
   user_id: string;
+
+  // ─── CORE ADDRESS & IDENTIFICATION ───
   address: string;
   city: string;
   state: string;
   zip_code: string;
   latitude?: number;
   longitude?: number;
-  /** USPS-standardized canonical address for reliable dedup (e.g. "123 N MAIN ST APT 1") */
   normalized_address?: string;
-  /** USPS ZIP+4 code (e.g. "74103-1234") for enhanced dedup accuracy */
   zip_plus4?: string;
+  photo_url?: string;
+
+  // ─── PROPERTY BASICS ───
   year_built?: number;
+  year_renovated?: number;
   square_footage?: number;
   lot_size_sqft?: number;
   stories: number;
+  stories_type?: StoriesType;
   bedrooms: number;
   bathrooms: number;
   garage_spaces: number;
-  foundation_type?: 'slab' | 'crawlspace' | 'basement' | 'pier';
-  roof_type?: 'asphalt_shingle' | 'metal' | 'tile' | 'slate' | 'flat' | 'wood_shake';
+
+  // ─── STRUCTURE & FRAMING ───
+  construction_type?: ConstructionType;
+  frame_size?: FrameSize;
+  foundation_type?: FoundationType;
+  basement_finished_pct?: number;
+  has_basement_waterproofing?: boolean;
+  has_vapor_barrier?: boolean;
+  has_french_drain?: boolean;
+
+  // ─── ROOF ───
+  roof_type?: RoofType;
+  roof_install_year?: number;
+  /** @deprecated Use roof_install_year instead. Kept for backward compat. */
   roof_age_years?: number;
-  siding_type?: 'brick' | 'vinyl' | 'wood' | 'stucco' | 'fiber_cement' | 'stone';
-  heating_type?: 'forced_air' | 'heat_pump' | 'radiant' | 'boiler' | 'baseboard';
-  cooling_type?: 'central_ac' | 'heat_pump' | 'window_units' | 'mini_split' | 'none';
+
+  // ─── EXTERIOR ENVELOPE ───
+  siding_type?: SidingType;
+  siding_install_year?: number;
+  exterior_paint_year?: number;
+  window_frame_material?: WindowFrameMaterial;
+  window_glazing?: WindowGlazing;
+  window_install_year?: number;
+  exterior_door_material?: ExteriorDoorMaterial;
+  has_storm_windows?: boolean;
+  has_storm_doors?: boolean;
+
+  // ─── MECHANICAL SYSTEMS ───
+  heating_type?: HeatingType;
+  cooling_type?: CoolingType;
+  gas_service?: boolean;
+
+  // ─── HVAC DETAILS ───
+  number_of_hvac_filters?: number;
+  hvac_filter_size?: string;
+  hvac_return_location?: HvacReturnLocation;
+  ductwork_type?: DuctworkType;
+  ductwork_insulated?: boolean;
+  has_whole_house_fan?: boolean;
+  has_attic_fan?: boolean;
+  has_whole_house_humidifier?: boolean;
+  has_whole_house_dehumidifier?: boolean;
+  has_air_purifier?: boolean;
+  has_erv_hrv?: boolean;
+
+  // ─── PLUMBING ───
   water_source?: 'municipal' | 'well';
   sewer_type?: 'municipal' | 'septic';
-  lawn_type?: 'bermuda' | 'fescue' | 'zoysia' | 'st_augustine' | 'bluegrass' | 'buffalo' | 'mixed' | 'none';
+  plumbing_supply_type?: PlumbingSupplyType;
+  plumbing_supply_install_year?: number;
+  plumbing_drain_type?: PlumbingDrainType;
+  plumbing_drain_install_year?: number;
+  has_water_filtration?: boolean;
+  water_filtration_type?: WaterFiltrationType;
+  has_recirculation_pump?: boolean;
+  has_expansion_tank?: boolean;
+
+  // ─── ELECTRICAL ───
+  electrical_panel_amps?: number;
+  electrical_wiring_type?: ElectricalWiringType;
+  electrical_panel_brand?: string;
+  electrical_panel_year?: number;
+  has_whole_house_surge_protector?: boolean;
+  has_gfci_outlets?: boolean;
+  has_afci_breakers?: boolean;
+
+  // ─── INSULATION & ENVELOPE ───
+  insulation_wall_type?: InsulationType;
+  insulation_attic_type?: InsulationType;
+  insulation_attic_depth_inches?: number;
+  insulation_r_value_walls?: number;
+  insulation_r_value_attic?: number;
+  has_house_wrap?: boolean;
+
+  // ─── INTERIOR FINISHES ───
+  primary_flooring?: FlooringType;
+  flooring_install_year?: number;
+  interior_wall_type?: InteriorWallType;
+  ceiling_type?: CeilingType;
+  ceiling_height_ft?: number;
+  countertop_type?: CountertopType;
+
+  // ─── SEPTIC (when sewer_type = 'septic') ───
+  septic_type?: SepticType;
+  septic_tank_size_gallons?: number;
+  septic_install_year?: number;
+  septic_last_pumped?: string;
+  septic_last_inspected?: string;
+  septic_drainfield_type?: SepticDrainfieldType;
+
+  // ─── WELL (when water_source = 'well') ───
+  well_depth_ft?: number;
+  well_pump_type?: WellPumpType;
+  well_pump_install_year?: number;
+  well_pressure_tank_install_year?: number;
+  well_last_tested?: string;
+
+  // ─── EXTERIOR & LANDSCAPING ───
+  lawn_type?: LawnType;
   has_pool: boolean;
   has_deck: boolean;
   has_sprinkler_system: boolean;
+  has_patio?: boolean;
+  patio_material?: PatioMaterial;
+  driveway_material?: DrivewayMaterial;
+  driveway_install_year?: number;
+  has_fence: boolean;
+  fence_type?: FenceType;
+  fence_install_year?: number;
+
+  // ─── FEATURES & AMENITIES ───
   has_fireplace: boolean;
+  fireplace_type?: FireplaceType;
+  fireplace_count?: number;
   has_gutters: boolean;
   has_fire_extinguisher: boolean;
   has_water_softener: boolean;
   has_sump_pump: boolean;
   has_storm_shelter: boolean;
-  fireplace_type?: 'wood_burning' | 'gas_starter' | 'gas';
-  fireplace_count?: number;
-  countertop_type?: 'granite' | 'marble' | 'quartz' | 'butcher_block' | 'laminate' | 'tile' | 'concrete' | 'stainless_steel';
-  hose_bib_locations?: string;
-  number_of_hvac_filters?: number;
-  hvac_filter_size?: string;
-  hvac_return_location?: 'ceiling' | 'wall' | 'floor' | 'furnace' | 'multiple';
-  photo_url?: string;
-  climate_zone?: string;
-  usda_zone?: string;
 
-  // Infrastructure locations
-  main_breaker_location?: string;
-  sub_panel_locations?: string;
-  water_shutoff_location?: string;
-  gas_meter_location?: string;
-  water_meter_location?: string;
+  // ─── RENEWABLE ENERGY & MODERN SYSTEMS ───
+  has_generator: boolean;
+  generator_type?: GeneratorType;
+  generator_capacity_kw?: number;
+  generator_install_year?: number;
+  has_solar_panels: boolean;
+  solar_panel_count?: number;
+  solar_install_year?: number;
+  solar_inverter_type?: SolarInverterType;
+  solar_capacity_kw?: number;
+  has_ev_charger: boolean;
+  ev_charger_level?: EVChargerLevel;
+  ev_charger_install_year?: number;
+  has_battery_storage?: boolean;
+  battery_storage_install_year?: number;
 
-  // Home Token / verification
+  // ─── SAFETY & ENVIRONMENTAL ───
+  has_radon_mitigation?: boolean;
+  has_radon_test?: boolean;
+  last_radon_level_pci?: number;
+  has_security_system?: boolean;
+  has_smart_home_hub?: boolean;
+  known_asbestos?: boolean;
+  known_lead_paint?: boolean;
+
+  // ─── HOME TOKEN / VERIFICATION ───
   agent_attested_at?: string;
   agent_attestation_note?: string;
   record_completeness_score?: number;
 
+  // ─── ENVIRONMENTAL ───
+  climate_zone?: string;
+  usda_zone?: string;
+
+  // ─── TIMESTAMPS ───
   created_at: string;
 }
 
 export type EquipmentCategory =
-  | 'hvac' | 'water_heater' | 'roof' | 'plumbing'
-  | 'electrical' | 'appliance' | 'outdoor' | 'safety'
-  | 'pool' | 'garage' | 'filter' | 'pest_control';
+  | 'hvac'
+  | 'water_heater'
+  | 'roof'
+  | 'plumbing'
+  | 'electrical'
+  | 'appliance'
+  | 'outdoor'
+  | 'safety'
+  | 'pool'
+  | 'garage'
+  | 'filter'
+  | 'pest_control'
+  | 'solar'
+  | 'ventilation'
+  | 'water_treatment';
+
+// ─── USER PREFERENCES ─────────────────────────────────────
+
+export type MaintenanceDepth = 'simple' | 'standard' | 'comprehensive';
+export type HomeDetailDepth = 'essentials' | 'detailed' | 'everything';
+
+export type TaskCategoryKey =
+  | 'hvac' | 'water_heater' | 'roof' | 'plumbing' | 'electrical'
+  | 'appliance' | 'safety' | 'pool' | 'garage' | 'outdoor'
+  | 'lawn' | 'deck' | 'fireplace' | 'sprinkler' | 'seasonal'
+  | 'pest_control' | 'cleaning' | 'solar' | 'generator' | 'well'
+  | 'septic' | 'hardscape';
+
+export interface UserPreferences {
+  /** Controls how many tasks are shown: simple (~20 core), standard (all relevant), comprehensive (everything + cleaning + niche) */
+  maintenance_depth: MaintenanceDepth;
+
+  /** Whether to show cleaning-category tasks (deep clean, window washing, pressure washing, carpet cleaning) */
+  show_cleaning_tasks: boolean;
+
+  /** Controls which home detail fields are shown in UI */
+  home_detail_depth: HomeDetailDepth;
+
+  /** Per-category overrides — user can hide/show individual categories regardless of maintenance_depth */
+  task_category_overrides: Partial<Record<TaskCategoryKey, boolean>>;
+
+  /** Whether to show tasks marked as pro_responsible (for users who don't have Pro tier) */
+  show_pro_tasks: boolean;
+
+  /** Days before due date to send task reminders */
+  task_reminder_days_before: number;
+
+  /** Whether weather-triggered alerts are enabled */
+  weather_alerts_enabled: boolean;
+}
+
+export const DEFAULT_USER_PREFERENCES: UserPreferences = {
+  maintenance_depth: 'standard',
+  show_cleaning_tasks: true,
+  home_detail_depth: 'detailed',
+  task_category_overrides: {},
+  show_pro_tasks: true,
+  task_reminder_days_before: 3,
+  weather_alerts_enabled: true,
+};
+
+// ─── TASK VISIBILITY LOGIC ────────────────────────────────
+
+/**
+ * Core tasks shown at ALL depth levels (even "simple").
+ * These are the ~20 essential tasks every homeowner should do.
+ */
+export const CORE_TASK_IDS: string[] = [
+  'hvac-filter-change',
+  'hvac-spring-tuneup',
+  'hvac-fall-furnace',
+  'smoke-co-test',
+  'fire-extinguisher-check',
+  'water-heater-flush',
+  'gutter-clean-spring',
+  'gutter-clean-fall',
+  'roof-inspection',
+  'check-for-leaks',
+  'winterize-hose-bibs',
+  'spring-exterior-walkthrough',
+  'fall-winterize',
+  'dryer-vent-clean',
+  'garage-door-maintenance',
+  'gfci-outlet-test',
+  'water-heater-tpr-valve',
+  'foundation-inspection',
+  'spring-lawn-care',
+  'fall-lawn-care',
+];
+
+/**
+ * Tasks only shown at "comprehensive" depth (in addition to standard).
+ * These are niche, detailed, or less common tasks.
+ */
+export const COMPREHENSIVE_ONLY_TASK_IDS: string[] = [
+  // Cleaning
+  'window-washing-exterior',
+  'window-washing-interior',
+  'pressure-wash-exterior',
+  'deep-clean-kitchen',
+  'deep-clean-bathroom',
+  'carpet-deep-clean',
+  'garbage-bins-clean',
+  // Niche maintenance
+  'air-duct-cleaning',
+  'humidifier-pad-replace',
+  'air-purifier-filter',
+  'surge-protector-check',
+  'driveway-seal',
+  'stone-countertop-seal',
+  'air-exchanger-clean',
+  'lightbulb-check',
+  'knife-sharpen',
+];
+
+/**
+ * Determines if a task should be visible based on user preferences.
+ */
+export function isTaskVisible(
+  taskId: string,
+  taskCategory: string,
+  prefs: UserPreferences,
+  isProTask: boolean = false,
+): boolean {
+  // Check per-category override first (highest priority)
+  const categoryKey = taskCategory as TaskCategoryKey;
+  if (prefs.task_category_overrides[categoryKey] === false) return false;
+  if (prefs.task_category_overrides[categoryKey] === true) return true;
+
+  // Check cleaning toggle
+  if (taskCategory === 'cleaning' && !prefs.show_cleaning_tasks) return false;
+
+  // Check pro task visibility
+  if (isProTask && !prefs.show_pro_tasks) return false;
+
+  // Check maintenance depth
+  switch (prefs.maintenance_depth) {
+    case 'simple':
+      return CORE_TASK_IDS.includes(taskId);
+    case 'standard':
+      // Show everything except comprehensive-only (unless overridden above)
+      return !COMPREHENSIVE_ONLY_TASK_IDS.includes(taskId);
+    case 'comprehensive':
+      return true;
+    default:
+      return true;
+  }
+}
+
+/**
+ * Home detail field visibility groups.
+ * Controls which fields are shown in the Home Details UI.
+ */
+export const HOME_DETAIL_FIELDS = {
+  essentials: [
+    'year_built', 'square_footage', 'stories', 'bedrooms', 'bathrooms', 'garage_spaces',
+    'foundation_type', 'roof_type', 'roof_install_year', 'heating_type', 'cooling_type',
+    'water_source', 'sewer_type', 'lawn_type',
+    // Feature toggles
+    'has_pool', 'has_deck', 'has_sprinkler_system', 'has_fireplace', 'has_gutters',
+    'has_fire_extinguisher', 'has_water_softener', 'has_sump_pump', 'has_storm_shelter',
+    'has_generator', 'has_solar_panels', 'has_ev_charger', 'has_fence',
+  ],
+  detailed: [
+    // Everything in essentials PLUS:
+    'siding_type', 'construction_type', 'frame_size',
+    'countertop_type', 'primary_flooring',
+    'plumbing_supply_type', 'electrical_wiring_type', 'electrical_panel_amps',
+    'insulation_wall_type', 'insulation_attic_type',
+    'window_frame_material', 'window_glazing',
+    'ductwork_type', 'gas_service',
+    'driveway_material', 'fence_type',
+    'number_of_hvac_filters', 'hvac_filter_size',
+    // Septic/well details
+    'septic_type', 'septic_tank_size_gallons', 'septic_last_pumped',
+    'well_pump_type', 'well_last_tested',
+    // Solar/EV/Generator details
+    'generator_type', 'solar_panel_count', 'ev_charger_level',
+    // Safety
+    'known_asbestos', 'known_lead_paint',
+  ],
+  everything: [
+    // ALL fields — no filtering
+    '*',
+  ],
+} as const;
 
 export interface Equipment {
   id: string;

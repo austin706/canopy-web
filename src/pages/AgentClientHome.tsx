@@ -20,7 +20,7 @@ export default function AgentClientHome() {
     address: '', city: '', state: '', zip_code: '',
     year_built: '', square_footage: '',
     stories: '1', bedrooms: '3', bathrooms: '2', garage_spaces: '2',
-    roof_type: '', roof_age_years: '',
+    roof_type: '', roof_install_year: '',
     heating_type: '', cooling_type: '',
     has_pool: false, has_deck: false, has_sprinkler_system: false, has_fireplace: false,
     lawn_type: 'none',
@@ -45,7 +45,7 @@ export default function AgentClientHome() {
             year_built: homeData.year_built?.toString() || '', square_footage: homeData.square_footage?.toString() || '',
             stories: homeData.stories?.toString() || '1', bedrooms: homeData.bedrooms?.toString() || '3',
             bathrooms: homeData.bathrooms?.toString() || '2', garage_spaces: homeData.garage_spaces?.toString() || '2',
-            roof_type: homeData.roof_type || '', roof_age_years: homeData.roof_age_years?.toString() || '',
+            roof_type: homeData.roof_type || '', roof_install_year: homeData.roof_install_year?.toString() || '',
             heating_type: homeData.heating_type || '', cooling_type: homeData.cooling_type || '',
             has_pool: homeData.has_pool || false, has_deck: homeData.has_deck || false,
             has_sprinkler_system: homeData.has_sprinkler_system || false, has_fireplace: homeData.has_fireplace || false,
@@ -73,7 +73,7 @@ export default function AgentClientHome() {
         bedrooms: parseInt(form.bedrooms) || 3,
         bathrooms: parseInt(form.bathrooms) || 2,
         garage_spaces: parseInt(form.garage_spaces) || 0,
-        roof_age_years: form.roof_age_years ? parseInt(form.roof_age_years) : null,
+        roof_install_year: form.roof_install_year ? parseInt(form.roof_install_year) : null,
         created_at: home?.created_at || new Date().toISOString(),
       };
       const saved = await upsertClientHome(homeData);
@@ -131,7 +131,7 @@ export default function AgentClientHome() {
               {['asphalt_shingle','metal','tile','slate','flat','wood_shake'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
             </select>
           </div>
-          <div className="form-group"><label>Roof Age (years)</label><input className="form-input" type="number" value={form.roof_age_years} onChange={e => setForm({...form, roof_age_years: e.target.value})} /></div>
+          <div className="form-group"><label>Roof Install Year</label><input className="form-input" type="number" value={form.roof_install_year} onChange={e => setForm({...form, roof_install_year: e.target.value})} /></div>
         </div>
         <div className="grid-2">
           <div className="form-group">

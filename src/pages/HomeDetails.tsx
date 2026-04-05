@@ -18,7 +18,7 @@ export default function HomeDetails() {
     year_built: home?.year_built?.toString() || '', square_footage: home?.square_footage?.toString() || '',
     stories: home?.stories?.toString() || '1', bedrooms: home?.bedrooms?.toString() || '3', bathrooms: home?.bathrooms?.toString() || '2',
     garage_spaces: home?.garage_spaces?.toString() || '2',
-    roof_type: home?.roof_type || '', roof_age_years: home?.roof_age_years?.toString() || '',
+    roof_type: home?.roof_type || '', roof_install_year: home?.roof_install_year?.toString() || '',
     heating_type: home?.heating_type || '', cooling_type: home?.cooling_type || '',
     has_pool: home?.has_pool || false, has_deck: home?.has_deck || false, has_sprinkler_system: home?.has_sprinkler_system || false,
     has_fireplace: home?.has_fireplace || false,
@@ -94,7 +94,7 @@ export default function HomeDetails() {
         bedrooms: parseInt(form.bedrooms) || 3,
         bathrooms: parseInt(form.bathrooms) || 2,
         garage_spaces: parseInt(form.garage_spaces) || 0,
-        roof_age_years: form.roof_age_years ? parseInt(form.roof_age_years) : null,
+        roof_install_year: form.roof_install_year ? parseInt(form.roof_install_year) : null,
         number_of_hvac_filters: form.number_of_hvac_filters ? parseInt(form.number_of_hvac_filters) : null,
         hvac_filter_size: form.hvac_filter_size || null,
         hvac_return_location: form.hvac_return_location || null,
@@ -192,7 +192,7 @@ export default function HomeDetails() {
                 {['asphalt_shingle','metal','tile','slate','flat','wood_shake'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
               </select>
             </div>
-            <div className="form-group"><label>Roof Age (years)</label><input className="form-input" type="number" value={form.roof_age_years} onChange={e => setForm({...form, roof_age_years: e.target.value})} /></div>
+            <div className="form-group"><label>Roof Install Year</label><input className="form-input" type="number" value={form.roof_install_year} onChange={e => setForm({...form, roof_install_year: e.target.value})} /></div>
           </div>
           <div className="grid-2">
             <div className="form-group">
@@ -350,7 +350,7 @@ export default function HomeDetails() {
           <p className="text-sm text-gray mb-lg">{home.city}, {home.state} {home.zip_code}</p>
           <Field label="Year Built"><p style={{ fontWeight: 500 }}>{home.year_built || '—'}</p></Field>
           <Field label="Size"><p style={{ fontWeight: 500 }}>{home.square_footage?.toLocaleString() || '—'} sq ft &middot; {home.stories} stories &middot; {home.bedrooms} bed / {home.bathrooms} bath</p></Field>
-          <Field label="Roof"><p style={{ fontWeight: 500 }}>{home.roof_type?.replace(/_/g,' ') || '—'} {home.roof_age_years ? `(${home.roof_age_years} years old)` : ''}</p></Field>
+          <Field label="Roof"><p style={{ fontWeight: 500 }}>{home.roof_type?.replace(/_/g,' ') || '—'} {home.roof_install_year ? `(installed ${home.roof_install_year})` : ''}</p></Field>
           <Field label="HVAC"><p style={{ fontWeight: 500 }}>{home.heating_type?.replace(/_/g,' ') || '—'} / {home.cooling_type?.replace(/_/g,' ') || '—'}</p></Field>
           {home.lawn_type && home.lawn_type !== 'none' && <Field label="Lawn"><p style={{ fontWeight: 500 }}>{home.lawn_type.replace(/_/g,' ')}</p></Field>}
           <Field label="Features">

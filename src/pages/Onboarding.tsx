@@ -161,7 +161,7 @@ export default function Onboarding() {
   // Step 2: Home Systems
   const [systemsForm, setSystemsForm] = useState({
     foundation_type: '',
-    roof_type: '', roof_age_years: '',
+    roof_type: '', roof_install_year: '',
     heating_type: '', cooling_type: '',
     water_source: '', sewer_type: '',
     lawn_type: 'none',
@@ -498,7 +498,7 @@ export default function Onboarding() {
         ...home,
         foundation_type: systemsForm.foundation_type || null,
         roof_type: systemsForm.roof_type || null,
-        roof_age_years: systemsForm.roof_age_years ? parseInt(systemsForm.roof_age_years) : null,
+        roof_install_year: systemsForm.roof_install_year ? parseInt(systemsForm.roof_install_year) : null,
         heating_type: systemsForm.heating_type || null,
         cooling_type: systemsForm.cooling_type || null,
         water_source: systemsForm.water_source || null,
@@ -1205,9 +1205,9 @@ export default function Onboarding() {
               </select>
             </div>
             <div className="form-group">
-              <label>Roof Age (years)</label>
-              <input className="form-input" type="number" value={systemsForm.roof_age_years}
-                onChange={e => setSystemsForm({ ...systemsForm, roof_age_years: e.target.value })} />
+              <label>Roof Install Year</label>
+              <input className="form-input" type="number" value={systemsForm.roof_install_year}
+                onChange={e => setSystemsForm({ ...systemsForm, roof_install_year: e.target.value })} />
             </div>
           </div>
 

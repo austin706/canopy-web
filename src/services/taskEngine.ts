@@ -338,7 +338,8 @@ export function createNextDynamicTask(
  * - At 80% lifespan: "Inspect" task (priority: high)
  * - At 95% lifespan: "Plan Replacement" task (priority: urgent)
  *
- * Special handling for roof: uses home.roof_age_years if available,
+ * Special handling for roof: uses home.roof_install_year to calculate age,
+ * falls back to roof_age_years for backward compatibility,
  * cross-references expected lifespan by roof type.
  */
 export function generateEquipmentLifecycleAlerts(
@@ -354,7 +355,9 @@ export function generateEquipmentLifecycleAlerts(
       const lifespan = ROOF_LIFESPANS[home.roof_type];
       if (!lifespan) return;
 
-      const roofAge = home.roof_age_years ?? 0;
+      const roofAge = home.roof_install_year
+        ? new Date().getFullYear() - home.roof_install_year
+        : home.roof_age_years ?? 0;
       const percentageThrough =
         lifespan.min > 0 ? roofAge / lifespan.min : 0;
 

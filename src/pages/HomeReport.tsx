@@ -154,7 +154,7 @@ export default function HomeReport() {
                 <div><span style={{ fontSize: 12, color: Colors.medGray }}>Year Built</span><p style={{ fontWeight: 600 }}>{home.year_built || 'N/A'}</p></div>
                 <div><span style={{ fontSize: 12, color: Colors.medGray }}>Square Footage</span><p style={{ fontWeight: 600 }}>{home.square_footage ? home.square_footage.toLocaleString() + ' sq ft' : 'N/A'}</p></div>
                 <div><span style={{ fontSize: 12, color: Colors.medGray }}>Bedrooms / Bathrooms</span><p style={{ fontWeight: 600 }}>{home.bedrooms} bed / {home.bathrooms} bath</p></div>
-                <div><span style={{ fontSize: 12, color: Colors.medGray }}>Roof Type</span><p style={{ fontWeight: 600 }}>{home.roof_type?.replace(/_/g, ' ') || 'N/A'}{home.roof_age_years ? ` (${home.roof_age_years} years)` : ''}</p></div>
+                <div><span style={{ fontSize: 12, color: Colors.medGray }}>Roof Type</span><p style={{ fontWeight: 600 }}>{home.roof_type?.replace(/_/g, ' ') || 'N/A'}{home.roof_install_year ? ` (installed ${home.roof_install_year})` : ''}</p></div>
                 <div><span style={{ fontSize: 12, color: Colors.medGray }}>Foundation</span><p style={{ fontWeight: 600 }}>{home.foundation_type?.replace(/_/g, ' ') || 'N/A'}</p></div>
                 <div><span style={{ fontSize: 12, color: Colors.medGray }}>HVAC</span><p style={{ fontWeight: 600 }}>{home.heating_type?.replace(/_/g, ' ') || 'N/A'} / {home.cooling_type?.replace(/_/g, ' ') || 'N/A'}</p></div>
                 <div><span style={{ fontSize: 12, color: Colors.medGray }}>Water / Sewer</span><p style={{ fontWeight: 600 }}>{home.water_source || 'N/A'} / {home.sewer_type || 'N/A'}</p></div>

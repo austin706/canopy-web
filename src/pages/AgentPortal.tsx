@@ -49,7 +49,7 @@ export default function AgentPortal() {
     address: '', city: '', state: '', zip_code: '',
     year_built: '', square_footage: '',
     stories: '1', bedrooms: '3', bathrooms: '2', garage_spaces: '2',
-    roof_type: '', roof_age_years: '',
+    roof_type: '', roof_install_year: '',
     heating_type: '', cooling_type: '',
     has_pool: false, has_deck: false, has_sprinkler_system: false, has_fireplace: false,
     lawn_type: 'none',
@@ -202,7 +202,7 @@ export default function AgentPortal() {
       if (homeForm.year_built) pendingHome.year_built = parseInt(homeForm.year_built);
       if (homeForm.square_footage) pendingHome.square_footage = parseInt(homeForm.square_footage);
       if (homeForm.roof_type) pendingHome.roof_type = homeForm.roof_type;
-      if (homeForm.roof_age_years) pendingHome.roof_age_years = parseInt(homeForm.roof_age_years);
+      if (homeForm.roof_install_year) pendingHome.roof_install_year = parseInt(homeForm.roof_install_year);
       if (homeForm.heating_type) pendingHome.heating_type = homeForm.heating_type;
       if (homeForm.cooling_type) pendingHome.cooling_type = homeForm.cooling_type;
 
@@ -238,7 +238,7 @@ export default function AgentPortal() {
       address: '', city: '', state: '', zip_code: '',
       year_built: '', square_footage: '',
       stories: '1', bedrooms: '3', bathrooms: '2', garage_spaces: '2',
-      roof_type: '', roof_age_years: '',
+      roof_type: '', roof_install_year: '',
       heating_type: '', cooling_type: '',
       has_pool: false, has_deck: false, has_sprinkler_system: false, has_fireplace: false,
       lawn_type: 'none',
@@ -573,8 +573,8 @@ export default function AgentPortal() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Roof Age (years)</label>
-                  <input className="form-input" type="number" value={homeForm.roof_age_years} onChange={e => setHomeForm({ ...homeForm, roof_age_years: e.target.value })} placeholder="10" />
+                  <label>Roof Install Year</label>
+                  <input className="form-input" type="number" value={homeForm.roof_install_year} onChange={e => setHomeForm({ ...homeForm, roof_install_year: e.target.value })} placeholder="2015" />
                 </div>
               </div>
 

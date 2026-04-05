@@ -16,7 +16,9 @@ function getLifespanPct(item: EquipmentType, home: any): number | null {
   if (item.category === 'roof' && home?.roof_type) {
     const lifespan = ROOF_LIFESPANS[home.roof_type as keyof typeof ROOF_LIFESPANS];
     if (!lifespan) return null;
-    const roofAge = home.roof_age_years ?? 0;
+    const roofAge = home.roof_install_year
+      ? new Date().getFullYear() - home.roof_install_year
+      : home.roof_age_years ?? 0;
     return lifespan.min > 0 ? (roofAge / lifespan.min) * 100 : 0;
   }
   if (!item.install_date || !item.expected_lifespan_years) return null;

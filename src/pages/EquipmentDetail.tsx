@@ -66,7 +66,9 @@ export default function EquipmentDetail() {
   if (item.category === 'roof' && home?.roof_type) {
     const roofData = ROOF_LIFESPANS[home.roof_type as keyof typeof ROOF_LIFESPANS];
     if (roofData) {
-      age = home.roof_age_years ?? 0;
+      age = home.roof_install_year
+        ? new Date().getFullYear() - home.roof_install_year
+        : home.roof_age_years ?? 0;
       expectedLifespan = roofData.min;
     }
   } else if (item.install_date) {

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Colors } from '@/constants/theme';
 import {
   getEmailTemplates,
@@ -11,15 +10,16 @@ import {
 import { getErrorMessage } from '@/utils/errors';
 
 export default function AdminEmails() {
-  const navigate = useNavigate();
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [testEmailOpen, setTestEmailOpen] = useState<string | null>(null);
   const [testEmail, setTestEmail] = useState('');
   const [testSending, setTestSending] = useState(false);
   const [updateMap, setUpdateMap] = useState<Record<string, Partial<EmailTemplate>>>({});
+  const [activeTab, setActiveTab] = useState<'admin' | 'user_transactional' | 'user_automated'>(
+    'admin'
+  );
 
   useEffect(() => {
     loadTemplates();
@@ -50,8 +50,8 @@ export default function AdminEmails() {
     const newEnabled = !template.enabled;
     try {
       await updateEmailTemplate(template.id, { enabled: newEnabled });
-      setTemplates(prev =>
-        prev.map(t => (t.id === template.id ? { ...t, enabled: newEnabled } : t))
+      setTemplates((prev) =>
+        prev.map((t) => (t.id === template.id ? { ...t, enabled: newEnabled } : t))
       );
     } catch (err) {
       setError(`Failed to update template: ${getErrorMessage(err)}`);
@@ -59,7 +59,7 @@ export default function AdminEmails() {
   };
 
   const handleSubjectChange = (templateId: string, newSubject: string) => {
-    setUpdateMap(prev => ({
+    setUpdateMap((prev) => ({
       ...prev,
       [templateId]: { ...prev[templateId], subject: newSubject },
     }));
@@ -68,7 +68,7 @@ export default function AdminEmails() {
   const handleSubjectBlur = async (template: EmailTemplate) => {
     const newSubject = updateMap[template.id]?.subject;
     if (!newSubject || newSubject === template.subject) {
-      setUpdateMap(prev => {
+      setUpdateMap((prev) => {
         const copy = { ...prev };
         delete copy[template.id];
         return copy;
@@ -78,10 +78,10 @@ export default function AdminEmails() {
 
     try {
       await updateEmailTemplate(template.id, { subject: newSubject });
-      setTemplates(prev =>
-        prev.map(t => (t.id === template.id ? { ...t, subject: newSubject } : t))
+      setTemplates((prev) =>
+        prev.map((t) => (t.id === template.id ? { ...t, subject: newSubject } : t))
       );
-      setUpdateMap(prev => {
+      setUpdateMap((prev) => {
         const copy = { ...prev };
         delete copy[template.id];
         return copy;
@@ -126,7 +126,7 @@ export default function AdminEmails() {
   const getCategoryLabel = (category: string): string => {
     switch (category) {
       case 'admin':
-        return 'Admin Notifications';
+        return 'Admin';
       case 'user_transactional':
         return 'User Transactional';
       case 'user_automated':
@@ -136,42 +136,33 @@ export default function AdminEmails() {
     }
   };
 
-  const groupedTemplates = templates.reduce(
-    (acc, template) => {
-      const cat = template.category;
-      if (!acc[cat]) acc[cat] = [];
-      acc[cat].push(template);
-      return acc;
-    },
-    {} as Record<string, EmailTemplate[]>
-  );
-
-  const categories: Array<'admin' | 'user_transactional' | 'user_automated'> = [
+  const tabs: Array<'admin' | 'user_transactional' | 'user_automated'> = [
     'admin',
     'user_transactional',
     'user_automated',
   ];
 
+  const filteredTemplates = templates.filter((t) => t.category === activeTab);
+
   return (
     <div className="page-wide">
-      <div className="mb-lg">
-        <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/admin')}>
-          &larr; Back
-        </button>
-        <h1>Email Templates</h1>
-        <p className="subtitle" style={{ color: Colors.medGray }}>
-          Manage notification templates and test email delivery
-        </p>
+      {/* Page Header */}
+      <div className="admin-page-header">
+        <div>
+          <h1>Email Templates</h1>
+          <p className="subtitle">Manage notification templates and test email delivery</p>
+        </div>
       </div>
 
+      {/* Error Alert */}
       {error && (
         <div
-          className="card"
           style={{
             background: Colors.error + '15',
             borderLeft: `4px solid ${Colors.error}`,
             marginBottom: 24,
             padding: 16,
+            borderRadius: 4,
           }}
         >
           <p style={{ color: Colors.error, fontWeight: 600, margin: 0 }}>Error: {error}</p>
@@ -179,125 +170,135 @@ export default function AdminEmails() {
       )}
 
       {loading ? (
-        <div className="text-center" style={{ paddingTop: 100 }}>
+        <div style={{ textAlign: 'center', paddingTop: 100 }}>
           <div className="spinner" style={{ width: 40, height: 40 }} />
           <p className="mt-md text-gray">Loading email templates...</p>
         </div>
       ) : (
         <>
-          {categories.map(category => (
-            <div key={category} style={{ marginBottom: 32 }}>
-              <div
+          {/* Tabs */}
+          <div className="admin-tabs" style={{ marginBottom: 32 }}>
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                className={`admin-tab ${activeTab === tab ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab)}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  marginBottom: 16,
-                  paddingBottom: 12,
-                  borderBottom: `2px solid ${getCategoryColor(category)}20`,
+                  padding: '12px 20px',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: activeTab === tab ? getCategoryColor(tab) : Colors.medGray,
+                  borderBottom: activeTab === tab ? `2px solid ${getCategoryColor(tab)}` : '1px solid ' + Colors.lightGray,
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                <div
+                {getCategoryLabel(tab)}
+                <span
                   style={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: 2,
-                    background: getCategoryColor(category),
+                    marginLeft: 8,
+                    opacity: 0.6,
+                    fontSize: 12,
                   }}
-                />
-                <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
-                  {getCategoryLabel(category)}
-                </h2>
-                <span className="badge" style={{ background: getCategoryColor(category) + '20', color: getCategoryColor(category) }}>
-                  {groupedTemplates[category]?.length || 0}
+                >
+                  ({templates.filter((t) => t.category === tab).length})
                 </span>
-              </div>
+              </button>
+            ))}
+          </div>
 
-              <div style={{ display: 'grid', gap: 12 }}>
-                {(groupedTemplates[category] || []).map(template => (
-                  <div
-                    key={template.id}
-                    className="card"
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '40px 1fr auto auto',
-                      alignItems: 'center',
-                      gap: 16,
-                      padding: 16,
-                    }}
-                  >
-                    {/* Toggle */}
+          {/* Card Grid */}
+          <div className="admin-card-grid">
+            {filteredTemplates.length === 0 ? (
+              <div className="admin-empty">
+                <p>No templates in this category</p>
+              </div>
+            ) : (
+              filteredTemplates.map((template) => (
+                <div
+                  key={template.id}
+                  className="admin-card"
+                  style={{
+                    border: `1px solid ${Colors.lightGray}`,
+                    borderRadius: 8,
+                    padding: 16,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 12,
+                  }}
+                >
+                  {/* Header with Toggle */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ margin: '0 0 4px 0', fontSize: 14, fontWeight: 600 }}>
+                        {template.name}
+                      </h3>
+                      <p style={{ margin: 0, fontSize: 13, color: Colors.medGray }}>
+                        {template.description}
+                      </p>
+                    </div>
+
+                    {/* Toggle Switch */}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={template.enabled}
+                        onChange={() => handleToggleEnabled(template)}
+                        style={{
+                          width: 18,
+                          height: 18,
+                          cursor: 'pointer',
+                          accentColor: getCategoryColor(template.category),
+                        }}
+                      />
+                      <span style={{ fontSize: 12, color: Colors.medGray }}>
+                        {template.enabled ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Subject Line Edit */}
+                  <div style={{ borderTop: `1px solid ${Colors.lightGray}`, paddingTop: 12 }}>
+                    <label style={{ fontSize: 12, color: Colors.medGray, fontWeight: 500 }}>
+                      Subject
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={template.enabled}
-                      onChange={() => handleToggleEnabled(template)}
+                      type="text"
+                      value={
+                        updateMap[template.id]?.subject !== undefined
+                          ? updateMap[template.id].subject!
+                          : template.subject
+                      }
+                      onChange={(e) => handleSubjectChange(template.id, e.target.value)}
+                      onBlur={() => handleSubjectBlur(template)}
                       style={{
-                        width: 20,
-                        height: 20,
-                        cursor: 'pointer',
-                        accentColor: getCategoryColor(category),
+                        width: '100%',
+                        padding: '8px 10px',
+                        border: `1px solid ${Colors.lightGray}`,
+                        borderRadius: 4,
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        marginTop: 6,
+                        boxSizing: 'border-box',
                       }}
                     />
-
-                    {/* Name + Description */}
-                    <div>
-                      <div style={{ fontWeight: 600, marginBottom: 4, color: Colors.charcoal }}>
-                        {template.name}
-                      </div>
-                      <div style={{ fontSize: 13, color: Colors.medGray, marginBottom: 8 }}>
-                        {template.description}
-                      </div>
-                      <div style={{ fontSize: 12 }}>
-                        <span style={{ color: Colors.silver, marginRight: 12 }}>
-                          Subject:
-                        </span>
-                        <input
-                          type="text"
-                          value={
-                            updateMap[template.id]?.subject !== undefined
-                              ? updateMap[template.id].subject!
-                              : template.subject
-                          }
-                          onChange={e => handleSubjectChange(template.id, e.target.value)}
-                          onBlur={() => handleSubjectBlur(template)}
-                          style={{
-                            padding: '6px 8px',
-                            border: `1px solid ${Colors.lightGray}`,
-                            borderRadius: 4,
-                            fontFamily: 'monospace',
-                            fontSize: 12,
-                            width: '100%',
-                            maxWidth: 500,
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Send Test Button */}
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => setTestEmailOpen(template.template_key)}
-                      style={{ whiteSpace: 'nowrap' }}
-                    >
-                      Send Test
-                    </button>
-
-                    {/* Status Indicator */}
-                    <div
-                      style={{
-                        textAlign: 'center',
-                        fontSize: 12,
-                        color: template.enabled ? Colors.success : Colors.silver,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {template.enabled ? '✓' : '○'}
-                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          ))}
+
+                  {/* Send Test Button */}
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setTestEmailOpen(template.template_key)}
+                    style={{ width: '100%' }}
+                  >
+                    Send Test Email
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </>
       )}
 
@@ -310,7 +311,7 @@ export default function AdminEmails() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.3)',
+            background: 'rgba(0, 0, 0, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -322,12 +323,20 @@ export default function AdminEmails() {
           }}
         >
           <div
-            className="card"
-            style={{ width: '100%', maxWidth: 400, padding: 24 }}
-            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--color-card-background)',
+              borderRadius: 8,
+              padding: 24,
+              width: '100%',
+              maxWidth: 420,
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+            }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ marginTop: 0 }}>Send Test Email</h3>
-            <p style={{ color: Colors.medGray, fontSize: 14 }}>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: 18, fontWeight: 600 }}>
+              Send Test Email
+            </h3>
+            <p style={{ color: Colors.medGray, fontSize: 14, margin: '0 0 16px 0' }}>
               Enter an email address to receive a test of this template.
             </p>
             <input
@@ -335,7 +344,7 @@ export default function AdminEmails() {
               className="form-input"
               placeholder="your@email.com"
               value={testEmail}
-              onChange={e => setTestEmail(e.target.value)}
+              onChange={(e) => setTestEmail(e.target.value)}
               style={{ marginBottom: 16 }}
             />
             <div style={{ display: 'flex', gap: 8 }}>

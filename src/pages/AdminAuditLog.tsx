@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 
@@ -17,29 +16,30 @@ interface AuditLog {
 type DateRange = 'today' | 'last7d' | 'last30d' | 'all';
 
 const ACTION_COLOR_MAP: Record<string, string> = {
-  'user.tier_change': '#A0826D',
-  'user.delete': '#D32F2F',
-  'user.create': '#2196F3',
+  'user.tier_change': Colors.copper,
+  'user.delete': Colors.error,
+  'user.create': Colors.info,
   'agent.create': '#9C27B0',
   'agent.update': '#9C27B0',
-  'agent.delete': '#D32F2F',
-  'code.generate': '#2196F3',
-  'code.redeem': '#4CAF50',
+  'agent.delete': Colors.error,
+  'code.generate': Colors.info,
+  'code.redeem': Colors.success,
   'provider.update': '#FF9800',
-  'provider.delete': '#D32F2F',
+  'provider.delete': Colors.error,
   'notification.broadcast': '#00BCD4',
   'request.assign': '#8BC34A',
 };
 
 export default function AdminAuditLog() {
-  const navigate = useNavigate();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState<DateRange>('last30d');
+  const [actionFilter, setActionFilter] = useState('');
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const pageSize = 200;
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const pageSize = 50;
 
   useEffect(() => {
     fetchLogs();
@@ -83,22 +83,23 @@ export default function AdminAuditLog() {
         const adminIds = [...new Set(data.map((log) => log.admin_id))];
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, email')
+          .select('id, full_name, email')
           .in('id', adminIds);
 
         const emailMap = new Map(
-          (profiles || []).map((p: any) => [p.id, p.email]),
+          (profiles || []).map((p: any) => [p.id, { email: p.email, name: p.full_name }])
         );
 
         const enrichedLogs = data.map((log) => ({
           ...log,
-          admin_email: emailMap.get(log.admin_id) || 'Unknown',
-        }));
+          admin_email: emailMap.get(log.admin_id)?.email || 'Unknown',
+          admin_name: emailMap.get(log.admin_id)?.name || 'Unknown',
+        })) as (AuditLog & { admin_name: string })[];
 
         if (offset === 0) {
-          setLogs(enrichedLogs);
+          setLogs(enrichedLogs as AuditLog[]);
         } else {
-          setLogs((prev) => [...prev, ...enrichedLogs]);
+          setLogs((prev) => [...prev, ...(enrichedLogs as AuditLog[])]);
         }
 
         setHasMore(data.length === pageSize);
@@ -114,264 +115,259 @@ export default function AdminAuditLog() {
   }
 
   function getActionColor(action: string): string {
-    return ACTION_COLOR_MAP[action] || '#616161';
+    return ACTION_COLOR_MAP[action] || Colors.charcoal;
   }
 
   function formatTimestamp(timestamp: string): string {
     const date = new Date(timestamp);
-    return date.toLocaleString();
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
   }
 
   function filterLogs(): AuditLog[] {
-    if (!searchTerm) return logs;
-
-    const term = searchTerm.toLowerCase();
     return logs.filter((log) => {
-      return (
-        log.action.toLowerCase().includes(term) ||
-        log.entity_type.toLowerCase().includes(term) ||
-        JSON.stringify(log.details).toLowerCase().includes(term) ||
-        log.admin_email?.toLowerCase().includes(term)
-      );
+      const matchesSearch =
+        !searchTerm ||
+        log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.entity_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        JSON.stringify(log.details).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.admin_email?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesAction = !actionFilter || log.action === actionFilter;
+
+      return matchesSearch && matchesAction;
     });
   }
 
   const filteredLogs = filterLogs();
+  const uniqueActions = [...new Set(logs.map((l) => l.action))].sort();
 
   return (
-    <div style={{ padding: '20px', backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600' }}>Admin Audit Log</h1>
-        <button
-          onClick={() => navigate('/admin')}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: Colors.copper,
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px',
-          }}
-        >
-          Back to Admin
-        </button>
+    <div className="page-wide">
+      {/* Page Header */}
+      <div className="admin-page-header">
+        <h1>Audit Log</h1>
       </div>
 
-      {/* Controls */}
-      <div
-        style={{
-          backgroundColor: 'var(--color-card-background)',
-          padding: '16px',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-        }}
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-          {/* Search */}
-          <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: '500', color: 'var(--color-text-secondary)' }}>
-              Search
-            </label>
-            <input
-              type="text"
-              placeholder="Search action, entity, admin, or details..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid var(--color-border)',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-              }}
-            />
-          </div>
+      {/* Toolbar */}
+      <div className="admin-table-toolbar">
+        {/* Search Input */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
+          <input
+            type="text"
+            placeholder="Search action, entity, admin..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="admin-search"
+            style={{ flex: 1 }}
+          />
+        </div>
 
-          {/* Date Range */}
-          <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: '500', color: 'var(--color-text-secondary)' }}>
-              Date Range
-            </label>
-            <select
-              value={dateRange}
-              onChange={(e) => {
-                setDateRange(e.target.value as DateRange);
+        {/* Date Range Buttons */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(
+            [
+              { id: 'today', label: 'Today' },
+              { id: 'last7d', label: '7d' },
+              { id: 'last30d', label: '30d' },
+              { id: 'all', label: 'All' },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => {
+                setDateRange(opt.id);
                 setOffset(0);
+                setExpandedId(null);
               }}
               style={{
-                width: '100%',
                 padding: '8px 12px',
-                border: '1px solid var(--color-border)',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
+                border: dateRange === opt.id ? `2px solid ${Colors.copper}` : `1px solid ${Colors.lightGray}`,
+                background: dateRange === opt.id ? Colors.copper + '10' : 'transparent',
+                color: dateRange === opt.id ? Colors.copper : Colors.charcoal,
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease',
               }}
             >
-              <option value="today">Today</option>
-              <option value="last7d">Last 7 Days</option>
-              <option value="last30d">Last 30 Days</option>
-              <option value="all">All Time</option>
-            </select>
-          </div>
+              {opt.label}
+            </button>
+          ))}
         </div>
 
-        <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-          Showing {filteredLogs.length} of {logs.length} logs
-        </div>
+        {/* Action Type Filter */}
+        {uniqueActions.length > 0 && (
+          <select
+            value={actionFilter}
+            onChange={(e) => setActionFilter(e.target.value)}
+            className="admin-filter-select"
+            style={{
+              padding: '8px 12px',
+              border: `1px solid ${Colors.lightGray}`,
+              borderRadius: 4,
+              fontSize: 13,
+            }}
+          >
+            <option value="">All Actions</option>
+            {uniqueActions.map((action) => (
+              <option key={action} value={action}>
+                {action}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Table */}
       {loading && offset === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>Loading...</div>
+        <div style={{ textAlign: 'center', padding: 60 }}>
+          <div className="spinner" style={{ width: 40, height: 40 }} />
+          <p style={{ marginTop: 16, color: Colors.medGray }}>Loading audit logs...</p>
+        </div>
       ) : filteredLogs.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>No audit logs found</div>
+        <div className="admin-empty">
+          <p>No audit logs found</p>
+        </div>
       ) : (
         <>
-          <div style={{ overflowX: 'auto', backgroundColor: 'var(--color-card-background)', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' }}>
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: '14px',
-              }}
-            >
+          <div className="admin-table-wrapper">
+            <table>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                  <th
-                    style={{
-                      padding: '12px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: 'var(--color-text-secondary)',
-                      backgroundColor: 'var(--color-background)',
-                      borderBottom: '2px solid var(--color-border)',
-                    }}
-                  >
-                    Timestamp
-                  </th>
-                  <th
-                    style={{
-                      padding: '12px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: 'var(--color-text-secondary)',
-                      backgroundColor: 'var(--color-background)',
-                      borderBottom: '2px solid var(--color-border)',
-                    }}
-                  >
-                    Admin
-                  </th>
-                  <th
-                    style={{
-                      padding: '12px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: 'var(--color-text-secondary)',
-                      backgroundColor: 'var(--color-background)',
-                      borderBottom: '2px solid var(--color-border)',
-                    }}
-                  >
-                    Action
-                  </th>
-                  <th
-                    style={{
-                      padding: '12px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: 'var(--color-text-secondary)',
-                      backgroundColor: 'var(--color-background)',
-                      borderBottom: '2px solid var(--color-border)',
-                    }}
-                  >
-                    Entity
-                  </th>
-                  <th
-                    style={{
-                      padding: '12px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: 'var(--color-text-secondary)',
-                      backgroundColor: 'var(--color-background)',
-                      borderBottom: '2px solid var(--color-border)',
-                    }}
-                  >
-                    Details
-                  </th>
+                <tr>
+                  <th style={{ width: '140px' }}>Timestamp</th>
+                  <th style={{ width: '140px' }}>Admin</th>
+                  <th style={{ width: '140px' }}>Action</th>
+                  <th style={{ width: '100px' }}>Entity Type</th>
+                  <th style={{ width: '120px' }}>Entity ID</th>
+                  <th style={{ flex: 1 }}>Details</th>
+                  <th style={{ width: '40px' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {filteredLogs.map((log) => (
-                  <tr key={log.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <td style={{ padding: '12px', color: 'var(--color-text)' }}>{formatTimestamp(log.created_at)}</td>
-                    <td style={{ padding: '12px', color: 'var(--color-text)' }}>{log.admin_email}</td>
-                    <td style={{ padding: '12px' }}>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          backgroundColor: getActionColor(log.action),
-                          color: 'white',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                        }}
-                      >
-                        {log.action}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px', color: 'var(--color-text)' }}>
-                      <div>
-                        <div style={{ fontWeight: '500' }}>{log.entity_type}</div>
-                        {log.entity_id && <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>{log.entity_id}</div>}
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {Object.entries(log.details).map(([key, value]) => (
-                          <span
-                            key={key}
-                            style={{
-                              backgroundColor: 'var(--color-success)',
-                              opacity: 0.15,
-                              color: 'var(--color-success)',
-                              padding: '2px 6px',
-                              borderRadius: '3px',
-                              fontSize: '11px',
-                              whiteSpace: 'nowrap',
-                            }}
-                            title={`${key}: ${JSON.stringify(value)}`}
-                          >
-                            {key}: {String(value).substring(0, 15)}
-                            {String(value).length > 15 ? '...' : ''}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
+                  <>
+                    <tr key={log.id} style={{ cursor: 'pointer' }}>
+                      <td style={{ fontSize: 12 }}>
+                        {formatTimestamp(log.created_at)}
+                      </td>
+                      <td style={{ fontSize: 13, fontWeight: 500 }}>
+                        {log.admin_email}
+                      </td>
+                      <td>
+                        <span
+                          className="admin-status"
+                          style={{
+                            background: getActionColor(log.action) + '20',
+                            color: getActionColor(log.action),
+                            padding: '4px 10px',
+                            borderRadius: 4,
+                            fontSize: 12,
+                            fontWeight: 500,
+                          }}
+                        >
+                          {log.action}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 13 }}>
+                        {log.entity_type}
+                      </td>
+                      <td style={{ fontSize: 12, color: Colors.medGray, fontFamily: 'monospace' }}>
+                        {log.entity_id ? log.entity_id.substring(0, 12) + '...' : '—'}
+                      </td>
+                      <td style={{ fontSize: 12, color: Colors.medGray }}>
+                        {Object.keys(log.details).length > 0 ? (
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                            {Object.entries(log.details).slice(0, 2).map(([key]) => (
+                              <span
+                                key={key}
+                                style={{
+                                  background: Colors.charcoal + '08',
+                                  padding: '2px 6px',
+                                  borderRadius: 3,
+                                  fontSize: 11,
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {key}
+                              </span>
+                            ))}
+                            {Object.keys(log.details).length > 2 && (
+                              <span style={{ fontSize: 11, color: Colors.medGray }}>
+                                +{Object.keys(log.details).length - 2} more
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: 16,
+                            color: Colors.medGray,
+                            padding: '4px 8px',
+                          }}
+                        >
+                          {expandedId === log.id ? '−' : '+'}
+                        </button>
+                      </td>
+                    </tr>
+
+                    {/* Expanded Detail Row */}
+                    {expandedId === log.id && (
+                      <tr style={{ background: Colors.charcoal + '02' }}>
+                        <td colSpan={7} style={{ padding: 16 }}>
+                          <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+                            <h4 style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 600 }}>
+                              Full Details
+                            </h4>
+                            <pre
+                              style={{
+                                background: Colors.charcoal + '05',
+                                padding: 12,
+                                borderRadius: 4,
+                                fontSize: 11,
+                                margin: 0,
+                                overflow: 'auto',
+                                fontFamily: 'monospace',
+                              }}
+                            >
+                              {JSON.stringify(log.details, null, 2)}
+                            </pre>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* Load More */}
+          {/* Load More Button */}
           {hasMore && (
-            <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <div style={{ textAlign: 'center', marginTop: 24 }}>
               <button
                 onClick={() => setOffset(offset + pageSize)}
                 disabled={loading}
+                className="btn btn-secondary"
                 style={{
-                  padding: '10px 24px',
-                  backgroundColor: Colors.copper,
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
                   opacity: loading ? 0.6 : 1,
+                  cursor: loading ? 'not-allowed' : 'pointer',
                 }}
               >
                 {loading ? 'Loading...' : 'Load More'}

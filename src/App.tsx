@@ -10,6 +10,7 @@ import { Colors } from '@/constants/theme';
 import Layout from '@/components/Layout';
 import AgentLayout from '@/components/AgentLayout';
 import ProLayout from '@/components/ProLayout';
+import AdminLayout from '@/components/AdminLayout';
 
 // ─── Lazy-loaded pages (code-split per route) ───────────────
 const Login = lazy(() => import('@/pages/Login'));
@@ -199,8 +200,27 @@ export default function App() {
           </Route>
 
           {/* ═══════════════════════════════════════════════════════
-              HOMEOWNER + ADMIN — Full Layout with sidebar
-              Admin can access everything; regular users see homeowner nav
+              ADMIN PORTAL — Dedicated layout with admin sidebar
+          ═══════════════════════════════════════════════════════ */}
+          <Route element={<RoleRoute roles={['admin']}><AdminLayout /></RoleRoute>}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/agents" element={<AdminAgents />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/gift-codes" element={<AdminGiftCodes />} />
+            <Route path="/admin/pro-providers" element={<AdminProProviders />} />
+            <Route path="/admin/pro-requests" element={<AdminProRequests />} />
+            <Route path="/admin/service-areas" element={<AdminServiceAreas />} />
+            <Route path="/admin/notifications" element={<AdminNotifications />} />
+            <Route path="/admin/emails" element={<AdminEmails />} />
+            <Route path="/admin/analytics" element={<AdminAnalytics />} />
+            <Route path="/admin/audit-log" element={<AdminAuditLog />} />
+            <Route path="/admin/provider-applications" element={<AdminProviderApplications />} />
+            <Route path="/admin/support-tickets" element={<AdminSupportTickets />} />
+          </Route>
+
+          {/* ═══════════════════════════════════════════════════════
+              HOMEOWNER — Full Layout with sidebar
+              Admin can still access homeowner views
           ═══════════════════════════════════════════════════════ */}
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<Dashboard />} />
@@ -229,21 +249,6 @@ export default function App() {
             <Route path="/home-report" element={<HomeReport />} />
             <Route path="/transfer" element={<HomeTransfer />} />
             <Route path="/transfer/accept" element={<HomeTransfer />} />
-
-            {/* Admin pages — inside homeowner Layout since admin sees everything */}
-            <Route path="/admin" element={<RoleRoute roles={['admin']}><AdminDashboard /></RoleRoute>} />
-            <Route path="/admin/agents" element={<RoleRoute roles={['admin']}><AdminAgents /></RoleRoute>} />
-            <Route path="/admin/users" element={<RoleRoute roles={['admin']}><AdminUsers /></RoleRoute>} />
-            <Route path="/admin/gift-codes" element={<RoleRoute roles={['admin']}><AdminGiftCodes /></RoleRoute>} />
-            <Route path="/admin/pro-providers" element={<RoleRoute roles={['admin']}><AdminProProviders /></RoleRoute>} />
-            <Route path="/admin/pro-requests" element={<RoleRoute roles={['admin']}><AdminProRequests /></RoleRoute>} />
-            <Route path="/admin/service-areas" element={<RoleRoute roles={['admin']}><AdminServiceAreas /></RoleRoute>} />
-            <Route path="/admin/notifications" element={<RoleRoute roles={['admin']}><AdminNotifications /></RoleRoute>} />
-            <Route path="/admin/emails" element={<RoleRoute roles={['admin']}><AdminEmails /></RoleRoute>} />
-            <Route path="/admin/analytics" element={<RoleRoute roles={['admin']}><AdminAnalytics /></RoleRoute>} />
-            <Route path="/admin/audit-log" element={<RoleRoute roles={['admin']}><AdminAuditLog /></RoleRoute>} />
-            <Route path="/admin/provider-applications" element={<RoleRoute roles={['admin']}><AdminProviderApplications /></RoleRoute>} />
-            <Route path="/admin/support-tickets" element={<RoleRoute roles={['admin']}><AdminSupportTickets /></RoleRoute>} />
           </Route>
 
           {/* Catch-all */}

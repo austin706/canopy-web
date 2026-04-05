@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   getAllProProviders, createProProvider, updateProProvider, deleteProProvider,
 } from '@/services/supabase';
@@ -22,7 +21,6 @@ const emptyForm = {
 };
 
 export default function AdminProProviders() {
-  const navigate = useNavigate();
   const [providers, setProviders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -31,15 +29,15 @@ export default function AdminProProviders() {
   const [form, setForm] = useState({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [showMetrics, setShowMetrics] = useState(false);
   const [metrics, setMetrics] = useState<Record<string, any>>({});
   const [loadingMetrics, setLoadingMetrics] = useState(false);
+  const [showMetrics, setShowMetrics] = useState(true);
 
   useEffect(() => {
-    getAllProProviders()
-      .then(setProviders)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      getAllProProviders().then(setProviders).catch(() => []),
+      loadMetrics(),
+    ]).finally(() => setLoading(false));
   }, []);
 
   const loadMetrics = async () => {
@@ -51,25 +49,18 @@ export default function AdminProProviders() {
 
       if (error) throw error;
 
-      // Group by provider and compute metrics
       const metricsMap: Record<string, any> = {};
-
       (data || []).forEach((request: any) => {
         const providerId = request.assigned_provider;
         if (!providerId) return;
 
         if (!metricsMap[providerId]) {
           metricsMap[providerId] = {
-            total: 0,
-            completed: 0,
-            cancelled: 0,
-            active: 0,
-            ratings: [],
+            total: 0, completed: 0, cancelled: 0, active: 0, ratings: [],
           };
         }
 
         metricsMap[providerId].total += 1;
-
         if (request.status === 'completed') {
           metricsMap[providerId].completed += 1;
         } else if (request.status === 'cancelled') {
@@ -77,13 +68,11 @@ export default function AdminProProviders() {
         } else if (request.status === 'matched' || request.status === 'in_progress') {
           metricsMap[providerId].active += 1;
         }
-
         if (request.rating) {
           metricsMap[providerId].ratings.push(request.rating);
         }
       });
 
-      // Compute completion rates and averages
       const computedMetrics: Record<string, any> = {};
       Object.entries(metricsMap).forEach(([providerId, data]: [string, any]) => {
         const completionRate = data.total > 0 ? (data.completed / data.total) * 100 : 0;
@@ -107,13 +96,6 @@ export default function AdminProProviders() {
     } finally {
       setLoadingMetrics(false);
     }
-  };
-
-  const handleShowMetrics = async () => {
-    if (!showMetrics) {
-      await loadMetrics();
-    }
-    setShowMetrics(!showMetrics);
   };
 
   const openAdd = () => {
@@ -179,6 +161,15 @@ export default function AdminProProviders() {
     finally { setDeleting(null); }
   };
 
+  const toggleAvailability = async (id: string, currentStatus: boolean) => {
+    try {
+      const provider = providers.find(p => p.id === id);
+      const updated = await updateProProvider(id, { is_available: !currentStatus });
+      setProviders(prev => prev.map(p => p.id === id ? updated : p));
+      await logAdminAction('provider.toggle_availability', 'pro_provider', id, { business_name: provider?.business_name, is_available: !currentStatus });
+    } catch (e: any) { alert(e.message); }
+  };
+
   const toggleCategory = (cat: string) => {
     setForm(prev => ({
       ...prev,
@@ -194,10 +185,10 @@ export default function AdminProProviders() {
     (p.service_categories || []).some((c: string) => c.toLowerCase().includes(search.toLowerCase()))
   );
 
-  // Calculate platform-wide metrics
   const platformMetrics = {
     totalJobs: Object.values(metrics).reduce((sum: number, m: any) => sum + (m.total || 0), 0),
     totalCompleted: Object.values(metrics).reduce((sum: number, m: any) => sum + (m.completed || 0), 0),
+    availableProviders: providers.filter(p => p.is_available).length,
     allRatings: Object.values(metrics).reduce((acc: any[], m: any) => acc.concat(m.ratings || []), []),
   };
   const platformCompletionRate = platformMetrics.totalJobs > 0
@@ -220,155 +211,176 @@ export default function AdminProProviders() {
   };
 
   return (
-    <div className="page-wide">
-      <div className="flex items-center justify-between mb-lg">
+    <div style={{ padding: 24 }}>
+      {/* Page Header */}
+      <div className="admin-page-header">
         <div>
-          <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/admin')}>&larr; Back</button>
-          <h1>Pro Provider Management</h1>
-          <p className="subtitle">{providers.length} providers</p>
+          <h1 style={{ margin: '0 0 4px 0', fontSize: 28, fontWeight: 700 }}>Pro Providers</h1>
+          <p style={{ margin: 0, fontSize: 14, color: Colors.medGray }}>{providers.length} total providers</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            className="btn btn-ghost"
-            onClick={handleShowMetrics}
-            disabled={loadingMetrics}
-            style={{ color: showMetrics ? Colors.sage : Colors.medGray }}
-          >
-            {loadingMetrics ? '...' : showMetrics ? '✓ Performance Metrics' : 'Performance Metrics'}
-          </button>
-          <button className="btn btn-primary" onClick={openAdd}>+ Add Provider</button>
-        </div>
+        <button className="btn btn-primary" onClick={openAdd}>+ Add Provider</button>
       </div>
 
-      <input
-        className="form-input mb-lg"
-        aria-label="Search pro providers by name, contact, or service"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        placeholder="Search by name, contact, or service..."
-        style={{ maxWidth: 400 }}
-      />
-
-      {showMetrics && (
-        <div className="card mb-lg" style={{ background: Colors.lightGray, padding: 20, borderRadius: 8 }}>
-          <h3 style={{ marginTop: 0, marginBottom: 16 }}>Platform Performance Summary</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-            <div>
-              <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 4px 0' }}>Total Jobs Assigned</p>
-              <p style={{ fontSize: 24, fontWeight: 600, margin: 0, color: Colors.charcoal }}>{platformMetrics.totalJobs}</p>
-            </div>
-            <div>
-              <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 4px 0' }}>Platform Completion Rate</p>
-              <p style={{
-                fontSize: 24, fontWeight: 600, margin: 0,
-                color: getRatingColor(parseFloat(platformCompletionRate as string))
-              }}>
-                {platformCompletionRate}%
-              </p>
-            </div>
-            <div>
-              <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 4px 0' }}>Average Rating</p>
-              <p style={{ fontSize: 16, fontWeight: 600, margin: 0, color: Colors.charcoal }}>
-                {platformAvgRating ? `${platformAvgRating} ★` : 'N/A'}
-              </p>
-            </div>
+      {/* KPI Grid */}
+      {!loading && (
+        <div className="admin-kpi-grid" style={{ marginBottom: 32 }}>
+          <div className="admin-kpi-card">
+            <p className="admin-kpi-label">Total Providers</p>
+            <p className="admin-kpi-value">{providers.length}</p>
+          </div>
+          <div className="admin-kpi-card">
+            <p className="admin-kpi-label">Available</p>
+            <p className="admin-kpi-value" style={{ color: Colors.success }}>{platformMetrics.availableProviders}</p>
+          </div>
+          <div className="admin-kpi-card">
+            <p className="admin-kpi-label">Avg Completion Rate</p>
+            <p className="admin-kpi-value" style={{ color: getRatingColor(parseFloat(platformCompletionRate as string)) }}>
+              {platformCompletionRate}%
+            </p>
+          </div>
+          <div className="admin-kpi-card">
+            <p className="admin-kpi-label">Total Jobs</p>
+            <p className="admin-kpi-value">{platformMetrics.totalJobs}</p>
           </div>
         </div>
       )}
 
+      {/* Search */}
+      {!loading && (
+        <div className="admin-table-toolbar" style={{ marginBottom: 24 }}>
+          <input
+            type="text"
+            className="admin-search"
+            placeholder="Search by business name, contact, or service..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+      )}
+
       {loading ? (
-        <div className="text-center"><div className="spinner" /></div>
+        <div className="text-center" style={{ padding: '40px 0' }}>
+          <div className="spinner" />
+        </div>
       ) : (
-        <div className="card table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Business</th>
-                <th>Contact</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Services</th>
-                <th>Status</th>
-                {showMetrics && (
-                  <>
-                    <th>Jobs</th>
-                    <th>Completion</th>
-                    <th>Rating</th>
-                  </>
-                )}
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(p => (
-                <tr key={p.id}>
-                  <td><span className="fw-600">{p.business_name}</span></td>
-                  <td>{p.contact_name || '—'}</td>
-                  <td>{p.email || '—'}</td>
-                  <td>{p.phone || '—'}</td>
-                  <td>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      {(p.service_categories || []).slice(0, 3).map((c: string) => (
-                        <span key={c} style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: Colors.sageMuted, color: Colors.sage, fontWeight: 600 }}>{c}</span>
+        <div className="admin-card-grid">
+          {filtered.map(p => {
+            const m = metrics[p.id];
+            const completionRate = m?.completionRate || 0;
+            return (
+              <div key={p.id} className="admin-provider-card" style={{
+                border: `1px solid ${Colors.lightGray}`,
+                borderRadius: 8,
+                padding: 20,
+                background: '#fff',
+              }}>
+                {/* Header with availability dot */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ margin: '0 0 4px 0', fontSize: 16, fontWeight: 700, color: Colors.charcoal }}>
+                      {p.business_name}
+                    </h3>
+                    <p style={{ margin: 0, fontSize: 13, color: Colors.medGray }}>
+                      {p.contact_name}
+                    </p>
+                    <p style={{ margin: '8px 0 0 0', fontSize: 12, color: Colors.medGray }}>
+                      {p.email}
+                    </p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: 12, color: Colors.medGray }}>
+                      {p.phone}
+                    </p>
+                  </div>
+                  <div style={{
+                    width: 12, height: 12, borderRadius: '50%',
+                    background: p.is_available ? Colors.success : Colors.medGray,
+                    flexShrink: 0,
+                  }} />
+                </div>
+
+                {/* Service Categories */}
+                {(p.service_categories || []).length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {(p.service_categories || []).slice(0, 4).map((c: string) => (
+                        <span key={c} style={{
+                          fontSize: 11, padding: '2px 8px', borderRadius: 4,
+                          background: Colors.sageMuted, color: Colors.sage, fontWeight: 600
+                        }}>
+                          {c}
+                        </span>
                       ))}
-                      {(p.service_categories || []).length > 3 && (
-                        <span style={{ fontSize: 11, color: Colors.medGray }}>+{p.service_categories.length - 3}</span>
+                      {(p.service_categories || []).length > 4 && (
+                        <span style={{ fontSize: 11, color: Colors.medGray, alignSelf: 'center' }}>
+                          +{p.service_categories.length - 4}
+                        </span>
                       )}
                     </div>
-                  </td>
-                  <td>
-                    <span style={{
-                      fontSize: 11, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
-                      background: p.is_available ? Colors.success + '20' : Colors.error + '20',
-                      color: p.is_available ? Colors.success : Colors.error,
-                    }}>
-                      {p.is_available ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  {showMetrics && (
-                    <>
-                      <td>
-                        <span style={{ fontWeight: 600 }}>{metrics[p.id]?.total || 0}</span>
-                        <span style={{ fontSize: 11, color: Colors.medGray, marginLeft: 4 }}>
-                          ({metrics[p.id]?.active || 0} active)
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{
-                          fontSize: 12, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
-                          background: getRatingColor(metrics[p.id]?.completionRate || 0) + '20',
-                          color: getRatingColor(metrics[p.id]?.completionRate || 0),
-                        }}>
-                          {metrics[p.id] ? `${metrics[p.id].completionRate}%` : '—'}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: 12, color: Colors.charcoal }}>
-                          {metrics[p.id] ? renderStars(parseFloat(metrics[p.id].avgRating || 0)) : '—'}
-                        </span>
-                      </td>
-                    </>
-                  )}
-                  <td>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button className="btn btn-secondary btn-sm" onClick={() => openEdit(p)}>Edit</button>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ color: Colors.error }}
-                        onClick={() => handleDelete(p.id)}
-                        disabled={deleting === p.id}
-                      >
-                        {deleting === p.id ? '...' : 'Delete'}
-                      </button>
+                  </div>
+                )}
+
+                {/* Performance Metrics */}
+                {showMetrics && m && (
+                  <div style={{
+                    padding: 12, borderRadius: 6, background: Colors.cream, marginBottom: 16,
+                    fontSize: 12, color: Colors.charcoal,
+                  }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div>
+                        <p style={{ margin: '0 0 4px 0', color: Colors.medGray, fontSize: 11 }}>Completion</p>
+                        <p style={{ margin: 0, fontWeight: 700, color: getRatingColor(completionRate) }}>
+                          {completionRate.toFixed(1)}%
+                        </p>
+                      </div>
+                      <div>
+                        <p style={{ margin: '0 0 4px 0', color: Colors.medGray, fontSize: 11 }}>Rating</p>
+                        <p style={{ margin: 0, fontWeight: 600 }}>
+                          {m.avgRating ? `${m.avgRating} ★` : 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <p style={{ margin: '0 0 4px 0', color: Colors.medGray, fontSize: 11 }}>Total Jobs</p>
+                        <p style={{ margin: 0, fontWeight: 600 }}>{m.total}</p>
+                      </div>
+                      <div>
+                        <p style={{ margin: '0 0 4px 0', color: Colors.medGray, fontSize: 11 }}>Active</p>
+                        <p style={{ margin: 0, fontWeight: 600 }}>{m.active}</p>
+                      </div>
                     </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={showMetrics ? 10 : 7} className="text-center text-gray" style={{ padding: 32 }}>No providers found</td></tr>
-              )}
-            </tbody>
-          </table>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => openEdit(p)} style={{ flex: 1 }}>
+                    Edit
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    style={{
+                      color: p.is_available ? Colors.warning : Colors.success,
+                      flex: 1,
+                    }}
+                    onClick={() => toggleAvailability(p.id, p.is_available)}
+                  >
+                    {p.is_available ? 'Pause' : 'Resume'}
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: Colors.error, flex: 1 }}
+                    onClick={() => handleDelete(p.id)}
+                    disabled={deleting === p.id}
+                  >
+                    {deleting === p.id ? '...' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="admin-empty" style={{ gridColumn: '1 / -1' }}>
+              <p>No providers found</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -376,7 +388,7 @@ export default function AdminProProviders() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
-            <h2>{editing ? 'Edit Provider' : 'Add Pro Provider'}</h2>
+            <h2 style={{ marginTop: 0 }}>{editing ? 'Edit Provider' : 'Add Pro Provider'}</h2>
             <div className="form-group">
               <label>Business Name *</label>
               <input className="form-input" value={form.business_name} onChange={e => setForm({ ...form, business_name: e.target.value })} />

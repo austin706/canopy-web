@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
+import { logAdminAction } from '@/services/auditLog';
 import type { SubscriptionTier } from '@/types';
 
 interface NotificationRecord {
@@ -23,8 +23,15 @@ interface Profile {
   subscription_tier: SubscriptionTier;
 }
 
+const NOTIFICATION_CATEGORIES = [
+  { id: 'general', label: 'General' },
+  { id: 'home_maintenance', label: 'Home Maintenance' },
+  { id: 'pro_invoice', label: 'Pro Invoice' },
+  { id: 'weather_alert', label: 'Weather Alert' },
+  { id: 'system', label: 'System' },
+];
+
 export default function AdminNotifications() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<Profile[]>([]);
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
@@ -140,6 +147,14 @@ export default function AdminNotifications() {
         throw new Error(errData.error || `Edge function returned ${res.status}`);
       }
 
+      // Log audit action
+      await logAdminAction('notification.broadcast', 'notification', 'broadcast', {
+        audience,
+        recipient_count: userIds.length,
+        category,
+        title,
+      });
+
       setMessage({
         type: 'success',
         text: `Notification sent to ${userIds.length} user${userIds.length !== 1 ? 's' : ''}`,
@@ -165,27 +180,26 @@ export default function AdminNotifications() {
 
   return (
     <div className="page-wide">
-      <div className="flex items-center justify-between mb-lg">
+      {/* Page Header */}
+      <div className="admin-page-header">
         <div>
-          <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/admin')}>
-            &larr; Back
-          </button>
           <h1>Notifications</h1>
           <p className="subtitle">{unreadCount} unread</p>
         </div>
+        <button className="btn btn-primary" onClick={handleSend} disabled={sending}>
+          {sending ? 'Sending...' : 'Send Notification'}
+        </button>
       </div>
 
+      {/* Message Alert */}
       {message && (
         <div
-          className="card"
           style={{
-            background:
-              message.type === 'success'
-                ? Colors.success + '15'
-                : Colors.error + '15',
+            background: message.type === 'success' ? Colors.success + '15' : Colors.error + '15',
             borderLeft: `4px solid ${message.type === 'success' ? Colors.success : Colors.error}`,
             marginBottom: 24,
             padding: 16,
+            borderRadius: 4,
           }}
         >
           <p
@@ -200,237 +214,238 @@ export default function AdminNotifications() {
         </div>
       )}
 
-      {/* Send Notification Form */}
-      <div className="card mb-lg">
-        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Send Notification</h2>
+      {/* Main Layout: Compose Form (Left) + Recent Notifications (Right) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
+        {/* Compose Form - Left Side */}
+        <div className="admin-section">
+          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 20, marginTop: 0 }}>
+            Compose Notification
+          </h2>
 
-        {/* Audience Selection */}
-        <div className="form-group">
-          <label style={{ fontWeight: 600, marginBottom: 12, display: 'block' }}>Audience</label>
-          <div style={{ display: 'flex', gap: 24 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <input
-                type="radio"
-                value="single"
-                checked={audience === 'single'}
-                onChange={(e) => setAudience(e.target.value as 'single' | 'all' | 'tier')}
-              />
-              <span>Single User</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <input
-                type="radio"
-                value="all"
-                checked={audience === 'all'}
-                onChange={(e) => setAudience(e.target.value as 'single' | 'all' | 'tier')}
-              />
-              <span>All Users</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <input
-                type="radio"
-                value="tier"
-                checked={audience === 'tier'}
-                onChange={(e) => setAudience(e.target.value as 'single' | 'all' | 'tier')}
-              />
-              <span>By Tier</span>
-            </label>
-          </div>
-        </div>
-
-        {/* User Picker */}
-        {audience === 'single' && (
+          {/* Audience Selection */}
           <div className="form-group">
-            <label>Select User</label>
-            <select
-              className="form-select"
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-            >
-              <option value="">— Choose a user —</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.full_name} ({u.email})
-                </option>
+            <label style={{ fontWeight: 600, marginBottom: 12, display: 'block' }}>
+              Target Audience
+            </label>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              {(['single', 'all', 'tier'] as const).map((opt) => (
+                <label
+                  key={opt}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    cursor: 'pointer',
+                    fontSize: 14,
+                  }}
+                >
+                  <input
+                    type="radio"
+                    value={opt}
+                    checked={audience === opt}
+                    onChange={(e) => setAudience(e.target.value as 'single' | 'all' | 'tier')}
+                  />
+                  <span>
+                    {opt === 'single' ? 'Single User' : opt === 'all' ? 'All Users' : 'By Tier'}
+                  </span>
+                </label>
               ))}
-            </select>
-          </div>
-        )}
-
-        {/* Tier Picker */}
-        {audience === 'tier' && (
-          <div className="form-group">
-            <label>Select Tier</label>
-            <select
-              className="form-select"
-              value={selectedTier}
-              onChange={(e) => setSelectedTier(e.target.value as SubscriptionTier)}
-            >
-              <option value="free">Free</option>
-              <option value="home">Home</option>
-              <option value="pro">Pro</option>
-              <option value="pro_plus">Pro+</option>
-            </select>
-          </div>
-        )}
-
-        {/* Category */}
-        <div className="form-group">
-          <label>Category</label>
-          <select
-            className="form-select"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            <option value="general">General</option>
-            <option value="home_maintenance">Home Maintenance</option>
-            <option value="pro_invoice">Pro Invoice</option>
-            <option value="weather_alert">Weather Alert</option>
-            <option value="system">System</option>
-          </select>
-        </div>
-
-        {/* Title */}
-        <div className="form-group">
-          <label>Title</label>
-          <input
-            className="form-input"
-            type="text"
-            placeholder="Notification title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </div>
-
-        {/* Body */}
-        <div className="form-group">
-          <label>Body</label>
-          <textarea
-            className="form-input"
-            placeholder="Notification message"
-            rows={4}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            style={{ resize: 'vertical' }}
-          />
-        </div>
-
-        {/* Action URL */}
-        <div className="form-group">
-          <label>Action URL (optional)</label>
-          <input
-            className="form-input"
-            type="text"
-            placeholder="/tasks or /subscription"
-            value={actionUrl}
-            onChange={(e) => setActionUrl(e.target.value)}
-          />
-        </div>
-
-        {/* Send Button */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            className="btn btn-primary"
-            onClick={handleSend}
-            disabled={sending}
-            style={{ minWidth: 120 }}
-          >
-            {sending ? 'Sending...' : 'Send Notification'}
-          </button>
-          <button
-            className="btn btn-ghost"
-            onClick={() => {
-              setTitle('');
-              setBody('');
-              setActionUrl('');
-              setCategory('general');
-              setSelectedUserId('');
-            }}
-            disabled={sending}
-          >
-            Clear
-          </button>
-        </div>
-      </div>
-
-      {/* Recent Notifications Table */}
-      <div>
-        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Recent Notifications</h2>
-        <div className="card table-container">
-          {loading ? (
-            <div className="text-center" style={{ padding: 32 }}>
-              <div className="spinner" />
             </div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Title</th>
-                  <th>Category</th>
-                  <th>Sent At</th>
-                  <th>Read</th>
-                </tr>
-              </thead>
-              <tbody>
-                {notifications.map((n) => (
-                  <tr key={n.id}>
-                    <td>
-                      <div>
-                        <div style={{ fontWeight: 500, fontSize: 13 }}>
-                          {n.user?.full_name || '—'}
-                        </div>
-                        <div style={{ fontSize: 12, color: Colors.medGray }}>
-                          {n.user?.email || '—'}
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ fontWeight: 500, fontSize: 13 }}>{n.title}</td>
-                    <td>
-                      <span
-                        className="badge"
-                        style={{
-                          background:
-                            n.category === 'system'
-                              ? Colors.error + '20'
-                              : Colors.copper + '20',
-                          color:
-                            n.category === 'system'
-                              ? Colors.error
-                              : Colors.copper,
-                          fontSize: 11,
-                        }}
-                      >
-                        {n.category}
-                      </span>
-                    </td>
-                    <td className="text-sm text-gray">
-                      {new Date(n.created_at).toLocaleString()}
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          background: n.read ? Colors.silver : Colors.copper,
-                        }}
-                        title={n.read ? 'Read' : 'Unread'}
-                      />
-                    </td>
-                  </tr>
+          </div>
+
+          {/* User Picker */}
+          {audience === 'single' && (
+            <div className="form-group">
+              <label>Select User</label>
+              <select
+                className="form-select"
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+              >
+                <option value="">— Choose a user —</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.full_name} ({u.email})
+                  </option>
                 ))}
-                {notifications.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="text-center text-gray" style={{ padding: 32 }}>
-                      No notifications yet
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+              </select>
+            </div>
           )}
+
+          {/* Tier Picker */}
+          {audience === 'tier' && (
+            <div className="form-group">
+              <label>Select Tier</label>
+              <select
+                className="form-select"
+                value={selectedTier}
+                onChange={(e) => setSelectedTier(e.target.value as SubscriptionTier)}
+              >
+                <option value="free">Free</option>
+                <option value="home">Home</option>
+                <option value="pro">Pro</option>
+                <option value="pro_plus">Pro+</option>
+              </select>
+            </div>
+          )}
+
+          {/* Category - Pills/Chips Style */}
+          <div className="form-group">
+            <label style={{ fontWeight: 600, marginBottom: 12, display: 'block' }}>
+              Category
+            </label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {NOTIFICATION_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setCategory(cat.id)}
+                  style={{
+                    padding: '8px 14px',
+                    border: `2px solid ${category === cat.id ? Colors.copper : Colors.lightGray}`,
+                    background: category === cat.id ? Colors.copper + '10' : 'transparent',
+                    color: category === cat.id ? Colors.copper : Colors.charcoal,
+                    borderRadius: 20,
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Title */}
+          <div className="form-group">
+            <label style={{ fontWeight: 500 }}>Title</label>
+            <input
+              className="form-input"
+              type="text"
+              placeholder="Notification title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+
+          {/* Body */}
+          <div className="form-group">
+            <label style={{ fontWeight: 500 }}>Body</label>
+            <textarea
+              className="form-input"
+              placeholder="Notification message"
+              rows={5}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+
+          {/* Action URL */}
+          <div className="form-group">
+            <label style={{ fontWeight: 500 }}>Action URL (optional)</label>
+            <input
+              className="form-input"
+              type="text"
+              placeholder="/tasks or /subscription"
+              value={actionUrl}
+              onChange={(e) => setActionUrl(e.target.value)}
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              className="btn btn-primary"
+              onClick={handleSend}
+              disabled={sending}
+              style={{ flex: 1 }}
+            >
+              {sending ? 'Sending...' : 'Send Notification'}
+            </button>
+            <button
+              className="btn btn-ghost"
+              onClick={() => {
+                setTitle('');
+                setBody('');
+                setActionUrl('');
+                setCategory('general');
+                setSelectedUserId('');
+              }}
+              disabled={sending}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        {/* Recent Notifications - Right Side */}
+        <div className="admin-section">
+          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, marginTop: 0 }}>
+            Recent Notifications
+          </h2>
+          <div className="admin-table-wrapper">
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: 32 }}>
+                <div className="spinner" />
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="admin-empty">
+                <p>No notifications sent yet</p>
+              </div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Target</th>
+                    <th>Category</th>
+                    <th>Sent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {notifications.map((n) => (
+                    <tr key={n.id}>
+                      <td>
+                        <div style={{ fontWeight: 500, fontSize: 13 }}>{n.title}</div>
+                        <div style={{ fontSize: 12, color: Colors.medGray, marginTop: 2 }}>
+                          {n.body.substring(0, 50)}
+                          {n.body.length > 50 ? '...' : ''}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: 13, color: Colors.medGray }}>
+                          {n.user?.full_name || 'System'}
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          className="badge"
+                          style={{
+                            background:
+                              n.category === 'system'
+                                ? Colors.error + '20'
+                                : Colors.copper + '20',
+                            color:
+                              n.category === 'system'
+                                ? Colors.error
+                                : Colors.copper,
+                            fontSize: 11,
+                          }}
+                        >
+                          {n.category}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 12, color: Colors.medGray }}>
+                        {new Date(n.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       </div>
     </div>

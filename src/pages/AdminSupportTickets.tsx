@@ -52,8 +52,6 @@ export default function AdminSupportTickets() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'in_progress' | 'resolved' | 'closed'>('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [sortBy, setSortBy] = useState<'created_at' | 'status'>('created_at');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -96,7 +94,6 @@ export default function AdminSupportTickets() {
           : t
       ));
 
-      // Log the action
       logAdminAction('ticket.status_change', 'support_ticket', ticketId, {
         old_status: oldStatus,
         new_status: newStatus,
@@ -125,13 +122,8 @@ export default function AdminSupportTickets() {
 
   // Apply filters
   const filtered = tickets.filter(t => {
-    // Status filter
     const statusMatch = statusFilter === 'all' || t.status === statusFilter;
 
-    // Category filter
-    const categoryMatch = categoryFilter === 'all' || t.category === categoryFilter;
-
-    // Search filter: match name, email, or subject
     let searchMatch = true;
     if (search.trim()) {
       const searchLower = search.toLowerCase();
@@ -141,17 +133,12 @@ export default function AdminSupportTickets() {
         t.subject.toLowerCase().includes(searchLower);
     }
 
-    return statusMatch && categoryMatch && searchMatch;
+    return statusMatch && searchMatch;
   });
 
-  // Sort
+  // Sort by created date
   const sorted = [...filtered].sort((a, b) => {
-    if (sortBy === 'created_at') {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    } else {
-      const statusOrder = { open: 0, in_progress: 1, resolved: 2, closed: 3 };
-      return statusOrder[a.status] - statusOrder[b.status];
-    }
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   const countByStatus = {
@@ -162,198 +149,247 @@ export default function AdminSupportTickets() {
     closed: tickets.filter(t => t.status === 'closed').length,
   };
 
-  const categories = ['general', 'bug', 'billing', 'pro_issue', 'pro_service', 'account', 'feature', 'other'];
-
   return (
-    <div className="page-wide">
-      <div className="mb-lg">
-        <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/admin')}>&larr; Back</button>
-        <h1>Support Tickets</h1>
-        <p className="subtitle">{tickets.length} total tickets</p>
+    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+      {/* Page Header */}
+      <div className="admin-page-header">
+        <div>
+          <h1>Support Tickets</h1>
+          <p style={{ margin: '4px 0 0 0', fontSize: 14, color: Colors.medGray }}>
+            View and manage customer support tickets.
+          </p>
+        </div>
       </div>
 
-      {/* Search and Filter Controls */}
-      <div className="flex gap-md mb-lg" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <label className="text-xs text-gray" style={{ display: 'block', marginBottom: 4 }}>Search</label>
-          <input
-            type="text"
-            className="form-input"
-            placeholder="Name, email, or subject..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ width: '100%', padding: '6px 8px', fontSize: 13 }}
-          />
-        </div>
-        <div style={{ minWidth: 150 }}>
-          <label className="text-xs text-gray" style={{ display: 'block', marginBottom: 4 }}>Status</label>
-          <select
-            className="form-select"
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
-            style={{ width: '100%', padding: '6px 8px', fontSize: 13 }}
-          >
-            <option value="all">All Statuses</option>
-            <option value="open">Open</option>
-            <option value="in_progress">In Progress</option>
-            <option value="resolved">Resolved</option>
-            <option value="closed">Closed</option>
-          </select>
-        </div>
-        <div style={{ minWidth: 150 }}>
-          <label className="text-xs text-gray" style={{ display: 'block', marginBottom: 4 }}>Category</label>
-          <select
-            className="form-select"
-            value={categoryFilter}
-            onChange={e => setCategoryFilter(e.target.value)}
-            style={{ width: '100%', padding: '6px 8px', fontSize: 13 }}
-          >
-            <option value="all">All Categories</option>
-            {categories.map(cat => (
-              <option key={cat} value={cat}>
-                {cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, ' ')}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div style={{ minWidth: 120 }}>
-          <label className="text-xs text-gray" style={{ display: 'block', marginBottom: 4 }}>Sort By</label>
-          <select
-            className="form-select"
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value as typeof sortBy)}
-            style={{ width: '100%', padding: '6px 8px', fontSize: 13 }}
-          >
-            <option value="created_at">Newest First</option>
-            <option value="status">By Status</option>
-          </select>
-        </div>
+      {/* Search */}
+      <div className="admin-table-toolbar" style={{ marginBottom: 24 }}>
+        <input
+          type="text"
+          className="admin-search"
+          placeholder="Search by name, email, or subject..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
 
       {/* Status Tabs */}
-      <div className="tabs mb-lg">
+      <div className="admin-tabs" style={{ marginBottom: 24 }}>
         {(['all', 'open', 'in_progress', 'resolved', 'closed'] as const).map(s => (
           <button
             key={s}
-            className={`tab ${statusFilter === s ? 'active' : ''}`}
+            className={`admin-tab ${statusFilter === s ? 'active' : ''}`}
             onClick={() => setStatusFilter(s)}
           >
-            {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ')} ({countByStatus[s]})
+            {s === 'all' ? 'All' : s.replace(/_/g, ' ').charAt(0).toUpperCase() + s.replace(/_/g, ' ').slice(1)} ({countByStatus[s]})
           </button>
         ))}
       </div>
 
+      {/* Tickets Table */}
       {loading ? (
-        <div className="text-center"><div className="spinner" /></div>
+        <div className="admin-empty" style={{ textAlign: 'center', padding: 40 }}>
+          <p>Loading tickets...</p>
+        </div>
+      ) : sorted.length === 0 ? (
+        <div className="admin-empty" style={{ textAlign: 'center', padding: 40 }}>
+          <p>No tickets found.</p>
+          {search || statusFilter !== 'all' ? (
+            <p style={{ fontSize: 13, color: Colors.medGray }}>Try adjusting your filters.</p>
+          ) : null}
+        </div>
       ) : (
-        <div className="flex-col gap-md">
-          {sorted.map(ticket => (
-            <div key={ticket.id} className="card">
-              {/* Header Row - Always Visible */}
-              <div
-                onClick={() => setExpandedId(expandedId === ticket.id ? null : ticket.id)}
-                style={{ cursor: 'pointer', paddingBottom: 12, borderBottom: expandedId === ticket.id ? `1px solid ${Colors.lightGray}` : 'none' }}
-              >
-                <div className="flex items-center justify-between mb-sm">
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 600, marginBottom: 4 }}>{ticket.subject}</p>
-                    <div className="flex items-center gap-sm" style={{ marginBottom: 8 }}>
-                      <span
-                        className="badge"
-                        style={{
-                          background: categoryColors[ticket.category] || categoryColors.other,
-                          color: categoryTextColors[ticket.category] || categoryTextColors.other,
-                          padding: '2px 8px',
-                          fontSize: 11,
-                          borderRadius: 4,
-                          fontWeight: 600
-                        }}
-                      >
-                        {ticket.category.replace(/_/g, ' ')}
-                      </span>
-                      <span
-                        className="badge"
-                        style={{
-                          background: statusColorMap[ticket.status] + '20',
-                          color: statusColorMap[ticket.status],
-                          padding: '2px 8px',
-                          fontSize: 11,
-                          borderRadius: 4,
-                          fontWeight: 600
-                        }}
-                      >
-                        {ticket.status.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray">{ticket.name} • {ticket.email}</p>
-                  </div>
-                  <div style={{ textAlign: 'right', minWidth: 100 }}>
-                    <p className="text-xs text-gray">{formatTimeAgo(ticket.created_at)}</p>
-                  </div>
-                </div>
-              </div>
+        <div className="admin-table-wrapper">
+          <table style={{ width: '100%' }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid var(--border-color)` }}>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Name
+                </th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Subject
+                </th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Category
+                </th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Status
+                </th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Date
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((ticket, idx) => (
+                <tr
+                  key={ticket.id}
+                  onClick={() => setExpandedId(expandedId === ticket.id ? null : ticket.id)}
+                  style={{
+                    cursor: 'pointer',
+                    borderBottom: `1px solid var(--border-color)`,
+                    background: expandedId === ticket.id ? Colors.cream : 'transparent',
+                  }}
+                >
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>{ticket.name}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>{ticket.subject}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 12 }}>
+                    <span
+                      className="admin-status"
+                      style={{
+                        background: categoryColors[ticket.category] || categoryColors.other,
+                        color: categoryTextColors[ticket.category] || categoryTextColors.other,
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        fontWeight: 600,
+                        display: 'inline-block',
+                      }}
+                    >
+                      {ticket.category.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 12 }}>
+                    <span
+                      className="admin-status"
+                      style={{
+                        background: statusColorMap[ticket.status] + '20',
+                        color: statusColorMap[ticket.status],
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        fontWeight: 600,
+                        display: 'inline-block',
+                      }}
+                    >
+                      {ticket.status.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 12, color: Colors.medGray }}>
+                    {formatTimeAgo(ticket.created_at)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-              {/* Expanded Details */}
-              {expandedId === ticket.id && (
-                <div style={{ paddingTop: 12 }}>
+      {/* Expanded Details Modal/Drawer */}
+      {expandedId && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: 16,
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: 24,
+            maxWidth: 600,
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+          }}>
+            {(() => {
+              const ticket = tickets.find(t => t.id === expandedId);
+              if (!ticket) return null;
+              return (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>
+                      {ticket.subject}
+                    </h2>
+                    <button
+                      onClick={() => setExpandedId(null)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        fontSize: 20,
+                        cursor: 'pointer',
+                        color: Colors.silver,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+
                   {/* Full Message */}
-                  <div style={{ marginBottom: 16, padding: '10px 12px', backgroundColor: 'var(--color-copper-muted, #FFF3E0)', borderRadius: 6, borderLeft: `3px solid var(--color-text-secondary)` }}>
-                    <p className="text-xs text-gray" style={{ marginBottom: 4, fontWeight: 600 }}>Message</p>
-                    <p style={{ fontSize: 13, lineHeight: 1.5, color: Colors.charcoal, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  <div style={{ marginBottom: 16, padding: '12px', backgroundColor: Colors.copperMuted, borderRadius: 6, borderLeft: `3px solid ${Colors.copper}` }}>
+                    <p style={{ fontSize: 11, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 600 }}>
+                      Message
+                    </p>
+                    <p style={{ fontSize: 13, lineHeight: 1.6, color: Colors.charcoal, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>
                       {ticket.message}
                     </p>
                   </div>
 
                   {/* Metadata */}
-                  <div style={{ marginBottom: 16, padding: '10px 12px', backgroundColor: 'var(--color-background)', borderRadius: 6 }}>
-                    <div className="flex gap-lg" style={{ fontSize: 12, flexWrap: 'wrap' }}>
+                  <div style={{ marginBottom: 16, padding: '12px', backgroundColor: Colors.lightGray, borderRadius: 6 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, fontSize: 12 }}>
                       <div>
-                        <p className="text-xs text-gray" style={{ fontWeight: 600 }}>Created</p>
-                        <p style={{ color: Colors.charcoal }}>{formatDate(ticket.created_at)}</p>
+                        <p style={{ fontSize: 11, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 600 }}>
+                          Created
+                        </p>
+                        <p style={{ color: Colors.charcoal, margin: 0 }}>{formatDate(ticket.created_at)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray" style={{ fontWeight: 600 }}>Last Updated</p>
-                        <p style={{ color: Colors.charcoal }}>{formatDate(ticket.updated_at)}</p>
+                        <p style={{ fontSize: 11, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 600 }}>
+                          Last Updated
+                        </p>
+                        <p style={{ color: Colors.charcoal, margin: 0 }}>{formatDate(ticket.updated_at)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray" style={{ fontWeight: 600 }}>User ID</p>
-                        <p style={{ color: Colors.charcoal, fontFamily: 'monospace', fontSize: 11 }}>{ticket.user_id || '(not linked)'}</p>
+                        <p style={{ fontSize: 11, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 600 }}>
+                          User ID
+                        </p>
+                        <p style={{ color: Colors.charcoal, margin: 0, fontFamily: 'monospace', fontSize: 11 }}>
+                          {ticket.user_id || '(not linked)'}
+                        </p>
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 11, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 600 }}>
+                          Email
+                        </p>
+                        <p style={{ color: Colors.charcoal, margin: 0, fontSize: 12 }}>{ticket.email}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Admin Actions */}
-                  <div style={{ borderTop: `1px solid var(--color-border)`, paddingTop: 12 }}>
-                    <p className="text-xs text-gray" style={{ fontWeight: 600, marginBottom: 8 }}>Admin Actions</p>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <label className="text-xs text-gray" style={{ fontWeight: 600 }}>Change Status:</label>
-                      <select
-                        className="form-select"
-                        value={ticket.status}
-                        onChange={e => handleStatusChange(ticket.id, e.target.value)}
-                        style={{ width: 140, padding: '6px 8px', fontSize: 12 }}
-                      >
-                        <option value="open">Open</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="resolved">Resolved</option>
-                        <option value="closed">Closed</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+                  <div style={{ borderTop: `1px solid var(--border-color)`, paddingTop: 12 }}>
+                    <label style={{ fontSize: 11, color: Colors.medGray, fontWeight: 600, display: 'block', marginBottom: 8 }}>
+                      Change Status
+                    </label>
+                    <select
+                      className="form-select"
+                      value={ticket.status}
+                      onChange={e => handleStatusChange(ticket.id, e.target.value)}
+                      style={{ width: '100%', padding: '8px', fontSize: 13, marginBottom: 16 }}
+                    >
+                      <option value="open">Open</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="resolved">Resolved</option>
+                      <option value="closed">Closed</option>
+                    </select>
 
-          {sorted.length === 0 && (
-            <div className="empty-state">
-              <div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>--</div>
-              <h3>No tickets found</h3>
-              {search || statusFilter !== 'all' || categoryFilter !== 'all' ? (
-                <p className="text-sm text-gray">Try adjusting your filters</p>
-              ) : null}
-            </div>
-          )}
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() => setExpandedId(null)}
+                      style={{ width: '100%' }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
         </div>
       )}
     </div>

@@ -1,12 +1,23 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { getAllUsers, updateProfile, deleteUserAccount } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { logAdminAction } from '@/services/auditLog';
 
+const TIER_COLORS: Record<string, string> = {
+  free: '#6B7280',
+  home: '#3B82F6',
+  pro: '#8B5CF6',
+  pro_plus: '#EC4899',
+};
+
+const TIER_LABELS: Record<string, string> = {
+  free: 'Free',
+  home: 'Home',
+  pro: 'Pro',
+  pro_plus: 'Pro+',
+};
 
 export default function AdminUsers() {
-  const navigate = useNavigate();
   const { user: currentUser, setUser } = useStore();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +28,6 @@ export default function AdminUsers() {
 
   useEffect(() => { getAllUsers().then(setUsers).catch(() => {}).finally(() => setLoading(false)); }, []);
 
-  // If admin changes their own profile, sync the store so UI updates immediately
   const syncCurrentUser = (userId: string, updates: Record<string, any>) => {
     if (currentUser && currentUser.id === userId) {
       setUser({ ...currentUser, ...updates } as any);
@@ -42,7 +52,7 @@ export default function AdminUsers() {
       const user = users.find(u => u.id === userId);
       const oldTier = user?.subscription_tier || 'free';
       const expires = newTier === 'free' ? null : new Date(Date.now() + 365 * 86400000).toISOString();
-      const isOverride = newTier !== 'free'; // Only set override for paid tiers
+      const isOverride = newTier !== 'free';
       await updateProfile(userId, {
         subscription_tier: newTier,
         subscription_expires_at: expires,
@@ -126,80 +136,180 @@ export default function AdminUsers() {
 
   return (
     <div className="page-wide">
-      <div className="mb-lg">
-        <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/admin')}>&larr; Back</button>
-        <h1>User Accounts</h1>
-        <p className="subtitle">{users.length} users</p>
-      </div>
-
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 24 }}>
-        <input className="form-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search users..." style={{ maxWidth: 400 }} />
-        <select className="form-select" value={tierFilter} onChange={e => setTierFilter(e.target.value)} style={{ width: 140, padding: '8px 12px' }}>
-          <option value="all">All Tiers</option>
-          <option value="free">Free</option>
-          <option value="home">Home</option>
-          <option value="pro">Pro</option>
-          <option value="pro_plus">Pro+</option>
-        </select>
-      </div>
-
-      {selectedIds.size > 0 && (
-        <div style={{ background: 'var(--color-background)', padding: 16, borderRadius: 8, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'space-between' }}>
-          <span style={{ fontWeight: 600 }}>{selectedIds.size} user(s) selected</span>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <select className="form-select" value={bulkTierAction || ''} onChange={e => setBulkTierAction(e.target.value)} style={{ width: 120, padding: '4px 8px', fontSize: 12 }}>
-              <option value="">Select tier...</option>
-              <option value="free">Free</option>
-              <option value="home">Home</option>
-              <option value="pro">Pro</option>
-              <option value="pro_plus">Pro+</option>
-            </select>
-            <button className="btn btn-primary btn-sm" onClick={() => bulkTierAction && handleBulkTierChange(bulkTierAction)} disabled={!bulkTierAction} style={{ padding: '4px 12px', fontSize: 12 }}>Change Tier</button>
-            <button className="btn btn-danger btn-sm" onClick={handleBulkDelete} style={{ padding: '4px 12px', fontSize: 12 }}>Delete Selected</button>
-          </div>
+      {/* Page Header */}
+      <div className="admin-page-header mb-lg">
+        <div>
+          <h1 style={{ fontSize: 28, margin: 0 }}>Users</h1>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>{filtered.length} of {users.length} users</p>
         </div>
-      )}
+      </div>
 
-      {loading ? <div className="text-center"><div className="spinner" /></div> : (
-        <div className="card table-container">
-          <table>
-            <thead><tr><th style={{ width: 40 }}><input type="checkbox" checked={selectedIds.size === filtered.length && filtered.length > 0} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} /></th><th>Name</th><th>Email</th><th>Tier</th><th>Role</th><th>Override</th><th>Joined</th><th></th></tr></thead>
+      {/* Table Toolbar */}
+      <div className="admin-table-wrapper">
+        <div className="admin-table-toolbar mb-md">
+          <input
+            className="admin-search"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name or email..."
+          />
+          <select
+            className="admin-filter-select"
+            value={tierFilter}
+            onChange={e => setTierFilter(e.target.value)}
+          >
+            <option value="all">All Tiers</option>
+            <option value="free">Free</option>
+            <option value="home">Home</option>
+            <option value="pro">Pro</option>
+            <option value="pro_plus">Pro+</option>
+          </select>
+        </div>
+
+        {/* Bulk Actions Bar */}
+        {selectedIds.size > 0 && (
+          <div className="admin-bulk-bar mb-md">
+            <span style={{ fontWeight: 600 }}>{selectedIds.size} user(s) selected</span>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <select
+                className="admin-filter-select"
+                value={bulkTierAction || ''}
+                onChange={e => setBulkTierAction(e.target.value)}
+                style={{ fontSize: 13 }}
+              >
+                <option value="">Select tier...</option>
+                <option value="free">Free</option>
+                <option value="home">Home</option>
+                <option value="pro">Pro</option>
+                <option value="pro_plus">Pro+</option>
+              </select>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => bulkTierAction && handleBulkTierChange(bulkTierAction)}
+                disabled={!bulkTierAction}
+              >
+                Change Tier
+              </button>
+              <button className="btn btn-danger btn-sm" onClick={handleBulkDelete}>Delete Selected</button>
+            </div>
+          </div>
+        )}
+
+        {/* Users Table */}
+        {loading ? (
+          <div className="text-center" style={{ padding: '32px 16px' }}>
+            <div className="spinner" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="admin-empty">
+            <p>No users found</p>
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <th style={{ width: 40, padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === filtered.length && filtered.length > 0}
+                    onChange={toggleSelectAll}
+                    style={{ cursor: 'pointer' }}
+                  />
+                </th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Name</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Email</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Tier</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Role</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Override</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Joined</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: 13 }}>Action</th>
+              </tr>
+            </thead>
             <tbody>
               {filtered.map(u => (
-                <tr key={u.id} style={{ background: selectedIds.has(u.id) ? '#F5F5F5' : undefined }}>
-                  <td style={{ width: 40 }}><input type="checkbox" checked={selectedIds.has(u.id)} onChange={() => toggleSelectUser(u.id)} style={{ cursor: 'pointer' }} /></td>
-                  <td className="fw-600">{u.full_name || '—'}</td>
-                  <td>{u.email || '—'}</td>
-                  <td>
-                    <select className="form-select" value={u.subscription_tier || 'free'} onChange={e => handleTierChange(u.id, e.target.value)} style={{ width: 120, padding: '4px 8px', fontSize: 12 }}>
-                      <option value="free">Free</option><option value="home">Home</option><option value="pro">Pro</option><option value="pro_plus">Pro+</option>
+                <tr
+                  key={u.id}
+                  style={{
+                    borderBottom: '1px solid var(--color-border)',
+                    background: selectedIds.has(u.id) ? 'var(--color-background)' : 'transparent',
+                  }}
+                >
+                  <td style={{ width: 40, padding: '12px 16px' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(u.id)}
+                      onChange={() => toggleSelectUser(u.id)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  </td>
+                  <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--charcoal)' }}>{u.full_name || '—'}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)' }}>{u.email || '—'}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: TIER_COLORS[u.subscription_tier || 'free'] || TIER_COLORS.free,
+                        }}
+                      />
+                      <select
+                        className="admin-filter-select"
+                        value={u.subscription_tier || 'free'}
+                        onChange={e => handleTierChange(u.id, e.target.value)}
+                        style={{ fontSize: 13 }}
+                      >
+                        <option value="free">Free</option>
+                        <option value="home">Home</option>
+                        <option value="pro">Pro</option>
+                        <option value="pro_plus">Pro+</option>
+                      </select>
+                    </div>
+                  </td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <select
+                      className="admin-filter-select"
+                      value={u.role || 'user'}
+                      onChange={e => handleRoleChange(u.id, e.target.value)}
+                      style={{ fontSize: 13 }}
+                    >
+                      <option value="user">User</option>
+                      <option value="agent">Agent</option>
+                      <option value="pro_provider">Pro Provider</option>
+                      <option value="admin">Admin</option>
                     </select>
                   </td>
-                  <td>
-                    <select className="form-select" value={u.role || 'user'} onChange={e => handleRoleChange(u.id, e.target.value)} style={{ width: 120, padding: '4px 8px', fontSize: 12 }}>
-                      <option value="user">User</option><option value="agent">Agent</option><option value="pro_provider">Pro Provider</option><option value="admin">Admin</option>
-                    </select>
-                  </td>
-                  <td>
+                  <td style={{ padding: '12px 16px' }}>
                     {u.admin_override ? (
-                      <span style={{ fontSize: 11, background: 'var(--color-copper-muted, #FFF3E0)', color: 'var(--color-copper)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>Admin Set</span>
+                      <span className="admin-status" style={{ background: 'var(--color-copper-muted, #FFF3E0)', color: 'var(--color-copper)' }}>
+                        Admin Set
+                      </span>
                     ) : (
-                      <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Stripe</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Stripe</span>
                     )}
                   </td>
-                  <td className="text-sm text-gray">{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
-                  <td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)' }}>
+                    {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                     {u.role !== 'admin' && (
-                      <button className="btn btn-danger btn-sm" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => handleDeleteUser(u.id, u.full_name)}>Delete</button>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => handleDeleteUser(u.id, u.full_name)}
+                        style={{ fontSize: 12, padding: '4px 12px' }}
+                      >
+                        Delete
+                      </button>
                     )}
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={8} className="text-center text-gray" style={{ padding: 32 }}>No users found</td></tr>}
             </tbody>
           </table>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
@@ -9,15 +9,23 @@ interface Stats {
   totalHomes: number; totalEquipment: number; totalTasks: number; completedTasks: number; proRequests: number;
 }
 
+interface AuditLogEntry {
+  id: string;
+  action: string;
+  entity_type: string;
+  timestamp: string;
+  details: any;
+}
+
 export default function AdminDashboard() {
-  const navigate = useNavigate();
-  const { user, reset } = useStore();
+  const { user } = useStore();
   const [stats, setStats] = useState<Stats | null>(null);
+  const [recentActivity, setRecentActivity] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadStats(); }, []);
+  useEffect(() => { loadData(); }, []);
 
-  const loadStats = async () => {
+  const loadData = async () => {
     try {
       const [u, a, gc, gcr, h, e, t, tc, pr] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
@@ -31,88 +39,179 @@ export default function AdminDashboard() {
         supabase.from('pro_requests').select('*', { count: 'exact', head: true }),
       ]);
       setStats({ totalUsers: u.count||0, totalAgents: a.count||0, activeGiftCodes: gc.count||0, redeemedGiftCodes: gcr.count||0, totalHomes: h.count||0, totalEquipment: e.count||0, totalTasks: t.count||0, completedTasks: tc.count||0, proRequests: pr.count||0 });
+
+      // Fetch recent audit log entries
+      const { data: auditData } = await supabase
+        .from('admin_audit_log')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(5);
+      setRecentActivity(auditData || []);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    reset();
-    navigate('/login');
   };
 
   if (loading) return <div className="page text-center" style={{ paddingTop: 100 }}><div className="spinner" style={{ width: 40, height: 40 }} /><p className="mt-md text-gray">Loading admin data...</p></div>;
 
   const rate = stats && stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0;
+  const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
     <div className="page-wide">
-      <div className="flex items-center justify-between mb-lg">
-        <div><h1 style={{ fontSize: 28 }}>Admin Dashboard</h1><p className="text-sm text-copper fw-500">Canopy Home</p></div>
-        <div className="flex gap-sm">
-          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/')}>&#8592; Back to App</button>
-          <button className="btn btn-danger btn-sm" onClick={handleLogout}>Sign Out</button>
+      {/* Page Header */}
+      <div className="admin-page-header mb-lg">
+        <div>
+          <h1 style={{ fontSize: 28, margin: 0 }}>Dashboard</h1>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>{today}</p>
         </div>
       </div>
 
-      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Overview</h2>
-      <div className="stats-grid">
+      {/* KPI Cards */}
+      <div className="admin-kpi-grid mb-lg">
         {[
-          { label: 'Users', value: stats?.totalUsers||0, color: Colors.copper, abbr: 'US' },
-          { label: 'Agents', value: stats?.totalAgents||0, color: Colors.sage, abbr: 'AG' },
-          { label: 'Homes', value: stats?.totalHomes||0, color: Colors.info, abbr: 'HM' },
-          { label: 'Equipment', value: stats?.totalEquipment||0, color: Colors.copperDark, abbr: 'EQ' },
-          { label: 'Total Tasks', value: stats?.totalTasks||0, color: Colors.sage, abbr: 'TK' },
-          { label: 'Completed', value: stats?.completedTasks||0, color: Colors.success, abbr: 'OK' },
-          { label: 'Active Codes', value: stats?.activeGiftCodes||0, color: Colors.copper, abbr: 'GC' },
-          { label: 'Pro Requests', value: stats?.proRequests||0, color: Colors.warning, abbr: 'PR' },
-        ].map(s => (
-          <div key={s.label} className="card stat-card">
-            <div className="stat-icon" style={{ background: s.color + '15', fontSize: 12, fontWeight: 700, color: s.color }}>{s.abbr}</div>
-            <div className="stat-value">{s.value}</div>
-            <div className="stat-label">{s.label}</div>
+          { label: 'Users', value: stats?.totalUsers||0, icon: '👥', color: Colors.copper },
+          { label: 'Agents', value: stats?.totalAgents||0, icon: '🏢', color: Colors.sage },
+          { label: 'Homes', value: stats?.totalHomes||0, icon: '🏠', color: Colors.info },
+          { label: 'Equipment', value: stats?.totalEquipment||0, icon: '⚙️', color: Colors.copperDark },
+          { label: 'Tasks', value: stats?.totalTasks||0, icon: '✓', color: Colors.sage },
+          { label: 'Completed', value: stats?.completedTasks||0, icon: '✓✓', color: Colors.success },
+          { label: 'Active Codes', value: stats?.activeGiftCodes||0, icon: '🎁', color: Colors.copper },
+          { label: 'Pro Requests', value: stats?.proRequests||0, icon: '⭐', color: Colors.warning },
+        ].map(kpi => (
+          <div key={kpi.label} className="admin-kpi-card">
+            <div className="kpi-icon" style={{ background: kpi.color + '15' }}>{kpi.icon}</div>
+            <div className="kpi-value">{kpi.value}</div>
+            <div className="kpi-label">{kpi.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Completion Rate */}
+      {/* Task Completion Rate */}
       {stats && stats.totalTasks > 0 && (
-        <div className="card mb-lg">
-          <p style={{ fontWeight: 600, marginBottom: 8 }}>Platform Task Completion Rate</p>
+        <div style={{
+          background: 'var(--color-card)',
+          padding: 20,
+          borderRadius: 8,
+          marginBottom: 32,
+          border: '1px solid var(--color-border)'
+        }}>
+          <p style={{ fontWeight: 600, marginBottom: 12, fontSize: 14 }}>Platform Task Completion Rate</p>
           <div className="progress-bar"><div className="progress-fill" style={{ width: `${rate}%`, background: Colors.sage }} /></div>
-          <p className="text-xs text-gray mt-sm">{rate}% ({stats.completedTasks}/{stats.totalTasks})</p>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>{rate}% ({stats.completedTasks}/{stats.totalTasks})</p>
         </div>
       )}
 
-      {/* Navigation */}
-      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, marginTop: 24 }}>Manage</h2>
-      <div className="grid-2">
-        {[
-          { label: 'Agent Management', route: '/admin/agents', badge: stats?.totalAgents },
-          { label: 'Pro Service Requests', route: '/admin/pro-requests', badge: stats?.proRequests },
-          { label: 'User Accounts', route: '/admin/users', badge: stats?.totalUsers },
-          { label: 'Gift Codes', route: '/admin/gift-codes', badge: stats?.activeGiftCodes },
-          { label: 'Pro Providers', route: '/admin/pro-providers', badge: undefined },
-          { label: 'Service Areas', route: '/admin/service-areas', badge: undefined },
-          { label: 'Notifications', route: '/admin/notifications', badge: undefined },
-          { label: 'Email Templates', route: '/admin/emails', badge: undefined },
-          { label: 'Provider Applications', route: '/admin/provider-applications', badge: undefined },
-          { label: 'Support Tickets', route: '/admin/support-tickets', badge: undefined },
-          { label: 'Analytics', route: '/admin/analytics', badge: undefined },
-          { label: 'Audit Log', route: '/admin/audit-log', badge: undefined },
-          { label: 'Agent Portal (View as Agent)', route: '/agent-portal', badge: undefined },
-          { label: 'Pro Provider Portal (View as Pro)', route: '/pro-portal', badge: undefined },
-        ].map(n => (
-          <Link key={n.label} to={n.route} className="card" style={{ textDecoration: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div className="flex items-center gap-md">
-              <span style={{ fontWeight: 600, color: 'var(--charcoal)' }}>{n.label}</span>
+      {/* Quick Actions */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Quick Actions</h2>
+        <div className="admin-card-grid">
+          {[
+            { label: 'Agent Management', route: '/admin/agents', icon: '🏢', count: stats?.totalAgents || 0 },
+            { label: 'User Accounts', route: '/admin/users', icon: '👥', count: stats?.totalUsers || 0 },
+            { label: 'Pro Service Requests', route: '/admin/pro-requests', icon: '⭐', count: stats?.proRequests || 0 },
+            { label: 'Gift Codes', route: '/admin/gift-codes', icon: '🎁', count: stats?.activeGiftCodes || 0 },
+            { label: 'Pro Providers', route: '/admin/pro-providers', icon: '🏅', count: 0 },
+            { label: 'Service Areas', route: '/admin/service-areas', icon: '📍', count: 0 },
+            { label: 'Notifications', route: '/admin/notifications', icon: '🔔', count: 0 },
+            { label: 'Email Templates', route: '/admin/emails', icon: '📧', count: 0 },
+            { label: 'Provider Applications', route: '/admin/provider-applications', icon: '📝', count: 0 },
+            { label: 'Support Tickets', route: '/admin/support-tickets', icon: '🎫', count: 0 },
+            { label: 'Analytics', route: '/admin/analytics', icon: '📊', count: 0 },
+            { label: 'Audit Log', route: '/admin/audit-log', icon: '📋', count: 0 },
+          ].map(action => (
+            <Link
+              key={action.label}
+              to={action.route}
+              style={{ textDecoration: 'none' }}
+            >
+              <div style={{
+                background: 'var(--color-card)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 8,
+                padding: 20,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                textAlign: 'center',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = Colors.copper;
+                (e.currentTarget as HTMLElement).style.boxShadow = `0 2px 8px ${Colors.copper}15`;
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border)';
+                (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+              }}
+              >
+                <div style={{ fontSize: 28, marginBottom: 8 }}>{action.icon}</div>
+                <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 4px 0', color: 'var(--charcoal)' }}>{action.label}</p>
+                {action.count > 0 && (
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>{action.count} items</p>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      {recentActivity.length > 0 && (
+        <div>
+          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Recent Activity</h2>
+          <div style={{
+            background: 'var(--color-card)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 8,
+            overflow: 'hidden'
+          }}>
+            <div style={{ padding: 16 }}>
+              {recentActivity.map(entry => (
+                <div
+                  key={entry.id}
+                  style={{
+                    paddingBottom: 12,
+                    marginBottom: 12,
+                    borderBottom: '1px solid var(--color-border)',
+                  }}
+                  className="last:border-b-0"
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    <div>
+                      <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 4px 0', color: 'var(--charcoal)' }}>
+                        {entry.action.replace(/\./g, ' ').replace(/_/g, ' ')}
+                      </p>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
+                        {entry.entity_type} • {new Date(entry.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                    <span style={{
+                      fontSize: 11,
+                      background: 'var(--color-background)',
+                      padding: '4px 8px',
+                      borderRadius: 4,
+                      color: 'var(--text-secondary)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {entry.entity_type}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center gap-sm">
-              {n.badge !== undefined && n.badge > 0 && <span className="badge badge-copper">{n.badge}</span>}
-              <span style={{ color: 'var(--silver)' }}>&rarr;</span>
-            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Portal Links (for testing) */}
+      <div style={{ marginTop: 32, paddingTop: 32, borderTop: '1px solid var(--color-border)' }}>
+        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Portal Previews</h2>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <Link to="/agent-portal" style={{ textDecoration: 'none' }}>
+            <button className="btn btn-secondary btn-sm">View as Agent</button>
           </Link>
-        ))}
+          <Link to="/pro-portal" style={{ textDecoration: 'none' }}>
+            <button className="btn btn-secondary btn-sm">View as Pro</button>
+          </Link>
+        </div>
       </div>
     </div>
   );

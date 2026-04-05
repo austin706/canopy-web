@@ -308,6 +308,14 @@ export interface Home {
   known_asbestos?: boolean;
   known_lead_paint?: boolean;
 
+  // ─── UTILITY LOCATIONS ───
+  water_shutoff_location?: string;
+  main_breaker_location?: string;
+  gas_meter_location?: string;
+  water_meter_location?: string;
+  sub_panel_locations?: string;
+  hose_bib_locations?: string;
+
   // ─── HOME TOKEN / VERIFICATION ───
   agent_attested_at?: string;
   agent_attestation_note?: string;
@@ -560,7 +568,7 @@ export interface Equipment {
 
 export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low';
 export type TaskStatus = 'upcoming' | 'due' | 'overdue' | 'completed' | 'skipped';
-export type TaskFrequency = 'monthly' | 'quarterly' | 'biannual' | 'annual' | 'as_needed' | 'weekly';
+export type TaskFrequency = 'monthly' | 'quarterly' | 'biannual' | 'annual' | 'as_needed' | 'weekly' | 'seasonal' | 'semi_annual';
 export type TaskSchedulingType = 'dynamic' | 'seasonal';
 
 export interface MaintenanceTask {

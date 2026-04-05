@@ -1396,7 +1396,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     pro_responsible: true,
     title: 'Start Up Evaporative Cooler (Swamp Cooler)',
     description: 'Evaporative coolers need spring startup — reconnect water, replace pads, and oil the motor. Neglecting this shortens the unit\'s life.',
-    service_purpose: 'Neglecting startup shortens the unit's life and reduces cooling efficiency',
+    service_purpose: 'Neglecting startup shortens the unit\'s life and reduces cooling efficiency',
     instructions: [
       'Remove the winter cover',
       'Connect the water supply line and check for leaks',
@@ -2309,7 +2309,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     pro_responsible: false,
     title: 'Whole House Surge Protector Annual Check',
     description: 'Annual inspection of whole-house surge protector ensures it\'s protecting your electrical system. Protectors degrade over time and lose effectiveness, requiring periodic replacement.',
-    service_purpose: 'Checking protectors ensures they're protecting your electrical system from surges',
+    service_purpose: 'Checking protectors ensures they\'re protecting your electrical system from surges',
     instructions: [
       'Locate surge protector panel (usually near main electrical panel)',
       'Check indicator light — should be green/on (consult manual for your model)',

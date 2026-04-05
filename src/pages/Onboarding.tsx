@@ -742,7 +742,7 @@ export default function Onboarding() {
   };
 
   const handlePlanCheckout = async () => {
-    if (selectedPlan === 'free' || user?.subscription_tier !== 'free') {
+    if (selectedPlan === 'free' || (user?.subscription_tier && user.subscription_tier !== 'free')) {
       setStep(4);
       return;
     }
@@ -975,8 +975,13 @@ export default function Onboarding() {
           <div className="grid-2">
             <div className="form-group">
               <label>Year Built</label>
-              <input className="form-input" type="number" placeholder="1998" value={addressForm.year_built}
-                onChange={e => setAddressForm({ ...addressForm, year_built: e.target.value })} />
+              <select className="form-input" value={addressForm.year_built}
+                onChange={e => setAddressForm({ ...addressForm, year_built: e.target.value })}>
+                <option value="">Select year...</option>
+                {Array.from({ length: new Date().getFullYear() - 1900 + 1 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
             </div>
             <div className="form-group">
               <label>Sq Ft</label>

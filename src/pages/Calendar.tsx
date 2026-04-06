@@ -33,9 +33,13 @@ export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [snoozeMenuId, setSnoozeMenuId] = useState<string | null>(null);
   const [visits, setVisits] = useState<ProMonthlyVisit[]>([]);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // Fetch tasks on mount if not already loaded
   useEffect(() => {
@@ -174,7 +178,15 @@ export default function Calendar() {
         return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` === selectedDate;
       })
     : monthVisits;
-  const filteredTasks = filter === 'all' || filter === 'visits' ? displayTasks : displayTasks.filter(t => t.status === filter);
+  const filteredTasks = (filter === 'all' || filter === 'visits' ? displayTasks : displayTasks.filter(t => t.status === filter))
+    .filter(t => {
+      if (!searchTerm.trim()) return true;
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        t.title.toLowerCase().includes(searchLower) ||
+        (t.description && t.description.toLowerCase().includes(searchLower))
+      );
+    });
   const showVisits = filter === 'all' || filter === 'visits';
 
   const nav = (dir: number) => setCurrentDate(new Date(year, month + dir, 1));
@@ -189,6 +201,39 @@ export default function Calendar() {
       }
     } catch (error) {
       console.error('Error reopening task:', error);
+    }
+  };
+
+  const toggleTaskSelection = (taskId: string) => {
+    const newSelected = new Set(selectedTaskIds);
+    if (newSelected.has(taskId)) {
+      newSelected.delete(taskId);
+    } else {
+      newSelected.add(taskId);
+    }
+    setSelectedTaskIds(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedTaskIds.size === filteredTasks.length) {
+      setSelectedTaskIds(new Set());
+    } else {
+      setSelectedTaskIds(new Set(filteredTasks.map(t => t.id)));
+    }
+  };
+
+  const handleBulkMarkComplete = async () => {
+    if (selectedTaskIds.size === 0 || bulkProcessing) return;
+    setBulkProcessing(true);
+    try {
+      const tasksToComplete = filteredTasks.filter(t => selectedTaskIds.has(t.id));
+      await Promise.all(tasksToComplete.map(t => quickCompleteTask(t)));
+      setSelectedTaskIds(new Set());
+      setSelectMode(false);
+    } catch (error) {
+      console.error('Error bulk completing tasks:', error);
+    } finally {
+      setBulkProcessing(false);
     }
   };
 
@@ -274,17 +319,46 @@ export default function Calendar() {
           <h1>Calendar</h1>
           <p className="subtitle">Tasks, visits & maintenance history</p>
         </div>
-        <button
-          className="btn btn-primary btn-sm"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 16px', fontSize: 13, fontWeight: 600,
-            borderRadius: 8, whiteSpace: 'nowrap',
-          }}
-          onClick={() => navigate('/task/create')}
-        >
-          + New Task
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {!selectMode && (
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{
+                padding: '8px 16px', fontSize: 13, fontWeight: 600,
+                borderRadius: 8, whiteSpace: 'nowrap',
+              }}
+              onClick={() => setSelectMode(true)}
+            >
+              Select
+            </button>
+          )}
+          {selectMode && (
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{
+                padding: '8px 16px', fontSize: 13, fontWeight: 600,
+                borderRadius: 8, whiteSpace: 'nowrap',
+              }}
+              onClick={() => {
+                setSelectMode(false);
+                setSelectedTaskIds(new Set());
+              }}
+            >
+              Done
+            </button>
+          )}
+          <button
+            className="btn btn-primary btn-sm"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 16px', fontSize: 13, fontWeight: 600,
+              borderRadius: 8, whiteSpace: 'nowrap',
+            }}
+            onClick={() => navigate('/task/create')}
+          >
+            + New Task
+          </button>
+        </div>
       </div>
 
       {/* Sub-tab navigation */}
@@ -427,8 +501,51 @@ export default function Calendar() {
               )}
             </div>
 
-            {/* Status Filter Tabs */}
-            <div className="tabs" style={{ marginBottom: 16, overflowX: 'auto', flexWrap: 'nowrap' }}>
+            {/* Search Bar */}
+            <div style={{ position: 'relative', marginBottom: 16 }}>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Search tasks by title or description..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ paddingRight: searchTerm ? 36 : undefined }}
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  style={{
+                    position: 'absolute',
+                    right: 12,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 18,
+                    color: 'var(--color-text-secondary)',
+                    padding: '4px 8px',
+                  }}
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Status Filter Tabs + Select All Option */}
+            <div className="tabs" style={{ marginBottom: 16, overflowX: 'auto', flexWrap: 'nowrap', display: 'flex', alignItems: 'center' }}>
+              {selectMode && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', marginRight: 8, cursor: 'pointer', borderRadius: 4, background: 'var(--color-cream)' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedTaskIds.size === filteredTasks.length && filteredTasks.length > 0}
+                    onChange={toggleSelectAll}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: 13 }}>All</span>
+                </label>
+              )}
               {['all', 'due', 'upcoming', 'completed', 'overdue', ...(visits.length > 0 ? ['visits'] : [])].map(f => (
                 <button key={f} className={`tab ${filter === f ? 'active' : ''}`} style={{ whiteSpace: 'nowrap', flexShrink: 0 }} onClick={() => setFilter(f)}>
                   {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -498,11 +615,20 @@ export default function Calendar() {
               {/* Task Cards */}
               {(filter !== 'visits') && filteredTasks.map(task => {
                 const dueDate = new Date(task.due_date);
+                const isSelected = selectedTaskIds.has(task.id);
                 return (
-                  <div key={task.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--light-gray)' }}>
+                  <div key={task.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--light-gray)', background: isSelected ? 'var(--color-copper)15' : 'transparent' }}>
                     <div className="flex items-center gap-md">
+                      {selectMode && (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleTaskSelection(task.id)}
+                          style={{ cursor: 'pointer', flexShrink: 0 }}
+                        />
+                      )}
                       <div style={{ width: 4, height: 40, borderRadius: 2, background: PriorityColors[task.priority] }} />
-                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', cursor: 'pointer' }} onClick={() => !isDemo && navigate(`/task/${task.id}`)}>
+                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', cursor: selectMode ? 'default' : 'pointer' }} onClick={() => !isDemo && !selectMode && navigate(`/task/${task.id}`)}>
                         <p style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</p>
                         <p className="text-xs text-gray">
                           {task.category} &middot; ~{task.estimated_minutes || '?'} min
@@ -513,7 +639,7 @@ export default function Calendar() {
                       </div>
                       <span className="badge" style={{ background: `${StatusColors[task.status] || '#ccc'}20`, color: StatusColors[task.status] }}>{task.status}</span>
                     </div>
-                    {task.status !== 'completed' && task.status !== 'skipped' && !isDemo && (
+                    {!selectMode && task.status !== 'completed' && task.status !== 'skipped' && !isDemo && (
                       <div className="flex gap-sm mt-sm" style={{ marginLeft: 20, position: 'relative' }}>
                         <button className="btn btn-sm" style={{ background: 'var(--color-sage)', color: '#fff', border: 'none' }} onClick={() => quickCompleteTask(task)}>Complete</button>
                         <button className="btn btn-ghost btn-sm" onClick={() => setSnoozeMenuId(snoozeMenuId === task.id ? null : task.id)}>Snooze</button>
@@ -543,7 +669,7 @@ export default function Calendar() {
                         <button className="btn btn-ghost btn-sm" onClick={() => quickSkipTask(task)}>Skip</button>
                       </div>
                     )}
-                    {task.status === 'completed' && !isDemo && (
+                    {!selectMode && task.status === 'completed' && !isDemo && (
                       <div className="flex gap-sm mt-sm" style={{ marginLeft: 20 }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => handleQuickReopen(task)} style={{ borderColor: 'var(--color-copper)', color: 'var(--color-copper)' }}>Reopen</button>
                       </div>
@@ -561,6 +687,29 @@ export default function Calendar() {
           )}
         </div>
       </div>
+
+      {/* Floating Action Bar for Bulk Actions */}
+      {selectMode && selectedTaskIds.size > 0 && (
+        <div style={{
+          position: 'fixed', bottom: 20, right: 20, left: 20, maxWidth: 600,
+          background: 'var(--color-charcoal)', color: 'var(--color-white)',
+          padding: '16px 20px', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          zIndex: 50,
+        }}>
+          <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>
+            {selectedTaskIds.size} selected
+          </p>
+          <button
+            className="btn btn-sage btn-sm"
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, borderRadius: 6 }}
+            onClick={handleBulkMarkComplete}
+            disabled={bulkProcessing}
+          >
+            {bulkProcessing ? 'Completing...' : 'Mark Complete'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,15 +3,32 @@
  *
  * Set VITE_GA_MEASUREMENT_ID in your .env to enable.
  * When the env var is missing, all calls are no-ops — safe for local dev.
+ *
+ * Cookie consent is checked before initialization.
+ * If user has declined cookies, GA4 is not loaded.
  */
 
 const GA_ID = import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined;
 
 let initialized = false;
 
+/** Check if user has consented to cookie analytics. */
+export function hasConsentForAnalytics(): boolean {
+  const consent = localStorage.getItem('canopy_cookie_consent');
+  // If no preference stored, we default to false (require explicit accept)
+  // Only proceed if explicitly 'accepted'
+  return consent === 'accepted';
+}
+
 /** Load the GA4 gtag.js script and configure the measurement ID. */
 export function initGA() {
   if (initialized || !GA_ID) return;
+
+  // Check if user has given consent before initializing GA4
+  if (!hasConsentForAnalytics()) {
+    return;
+  }
+
   initialized = true;
 
   // Global dataLayer
@@ -36,6 +53,9 @@ export function initGA() {
 
 /** Send a page_view event (call on every route change). */
 export function trackPageView(path: string) {
+  // Skip tracking if user has not consented
+  if (!hasConsentForAnalytics()) return;
+
   const w = window as unknown as Record<string, unknown>;
   if (!GA_ID || typeof w.gtag !== 'function') return;
   const gtagFn = w.gtag as (...args: unknown[]) => void;
@@ -47,6 +67,9 @@ export function trackPageView(path: string) {
 
 /** Send a custom event. */
 export function trackEvent(eventName: string, params?: Record<string, unknown>) {
+  // Skip tracking if user has not consented
+  if (!hasConsentForAnalytics()) return;
+
   const w = window as unknown as Record<string, unknown>;
   if (!GA_ID || typeof w.gtag !== 'function') return;
   const gtagFn = w.gtag as (...args: unknown[]) => void;

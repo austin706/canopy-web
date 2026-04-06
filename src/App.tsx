@@ -7,11 +7,13 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/theme';
 import { useCanonical, usePageMeta } from '@/utils/seo';
+import { ProgressProvider } from '@/components/ProgressBar';
 // Layout shells stay eager — they wrap every route
 import Layout from '@/components/Layout';
 import AgentLayout from '@/components/AgentLayout';
 import ProLayout from '@/components/ProLayout';
 import AdminLayout from '@/components/AdminLayout';
+import Toast from '@/components/Toast';
 
 // ─── Lazy-loaded pages (code-split per route) ───────────────
 const Login = lazy(() => import('@/pages/Login'));
@@ -159,10 +161,12 @@ export default function App() {
   return (
     <ThemeProvider>
     <BrowserRouter>
-      <SEOManager />
-      <ErrorBoundary>
-        <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: Colors.medGray }}>Loading…</div>}>
-        <Routes>
+      <ProgressProvider>
+        <SEOManager />
+        <Toast />
+        <ErrorBoundary>
+          <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: Colors.medGray }}>Loading…</div>}>
+          <Routes>
           {/* Landing/Home — shows Landing for unauthenticated, Dashboard for authenticated */}
           <Route path="/" element={<HomeRoute />} />
 
@@ -268,9 +272,10 @@ export default function App() {
 
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
-        </Routes>
-        </Suspense>
-      </ErrorBoundary>
+          </Routes>
+          </Suspense>
+        </ErrorBoundary>
+      </ProgressProvider>
     </BrowserRouter>
     </ThemeProvider>
   );

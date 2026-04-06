@@ -302,7 +302,18 @@ export default function ProJobQueue() {
     const today = new Date();
     const ageMs = today.getTime() - install.getTime();
     const ageYears = Math.floor(ageMs / (365.25 * 24 * 60 * 60 * 1000));
-    return `${ageYears} years old`;
+
+    if (ageYears > 0) {
+      return `${ageYears} years old`;
+    }
+
+    // For equipment less than 1 year old, show months
+    const ageMonths = Math.floor(ageMs / (30.44 * 24 * 60 * 60 * 1000));
+    if (ageMonths > 0) {
+      return `${ageMonths} month${ageMonths === 1 ? '' : 's'} old`;
+    }
+
+    return 'New';
   };
 
   if (loading) {

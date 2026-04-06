@@ -318,7 +318,7 @@ export default function EquipmentDetail() {
               <span style={{ fontWeight: 700, fontSize: 16 }}>Replacement Due</span>
             </div>
             <p style={{ fontSize: 14, margin: '0 0 4px', opacity: 0.95, lineHeight: 1.5 }}>
-              Your {item.name} is at <strong>{Math.round(lifespanPercent)}%</strong> of its expected {expectedLifespan}-year lifespan ({age} years old).
+              Your {item.name} is at <strong>{Math.round(lifespanPercent)}%</strong> of its expected {expectedLifespan}-year lifespan ({age === 0 ? '<1 year old' : `${age} years old`}).
             </p>
             <p style={{ fontSize: 13, margin: '0 0 16px', opacity: 0.8, lineHeight: 1.5 }}>
               Equipment past its expected lifespan is more likely to fail unexpectedly. Get a pro quote for replacement before it becomes an emergency.

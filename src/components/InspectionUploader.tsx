@@ -7,6 +7,7 @@ import { quickCompleteTask, quickSnoozeTask, quickSkipTask } from '@/services/ut
 import { Colors } from '@/constants/theme';
 import type { MaintenanceTask } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
+import { useProgress } from '@/components/ProgressBar';
 
 const MAX_FILE_SIZE_MB = 250; // Supabase bucket limit — also check project-level Storage settings
 const RESUMABLE_THRESHOLD_MB = 5; // Use resumable upload for files > 5MB
@@ -291,6 +292,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reuploadFileRef = useRef<HTMLInputElement>(null);
+  const { show: showProgress, hide: hideProgress, setProgress: setProgressValue } = useProgress();
   const [parsing, setParsing] = useState(false);
   const [tasks, setLocalTasks] = useState<InspectionTask[]>([]);
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
@@ -446,6 +448,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
     setError('');
     setParsing(true);
     setProgress('');
+    showProgress(true); // Show indeterminate progress indicator
 
     try {
       let documentText = '';
@@ -626,14 +629,18 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
         }
       }
 
+      setProgressValue(90);
       const result = await parseHomeInspection(documentText, imageBase64);
 
+      setProgressValue(100);
+      setTimeout(() => hideProgress(), 500);
       setLocalTasks(result);
       // Select all by default
       setSelectedTasks(new Set(result.map((_, i) => i)));
       setStep('review');
     } catch (err: any) {
       console.error('Error parsing inspection:', err);
+      hideProgress();
       setError(getErrorMessage(err) || 'Failed to parse inspection document');
     } finally {
       setParsing(false);

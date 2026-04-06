@@ -5,6 +5,7 @@ import { createProRequest, getProRequests, supabase, sendNotification } from '@/
 import { isProOrHigher } from '@/services/subscriptionGate';
 import MessageBanner from '@/components/MessageBanner';
 import { Colors, StatusColors } from '@/constants/theme';
+import { ImageViewer } from '@/components/ImageViewer';
 import type { ProRequest as ProRequestType } from '@/types';
 
 const SERVICE_TYPES = ['HVAC Maintenance', 'Filter Change', 'Gutter Cleaning', 'Plumbing Repair', 'Electrical Inspection', 'Roof Inspection', 'Pool Service', 'Deck Maintenance', 'Lawn Care', 'General Handyman', 'Custom/Other'];
@@ -30,6 +31,11 @@ export default function ProRequest() {
   const [uploading, setUploading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Image viewer state
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerImages, setViewerImages] = useState<string[]>([]);
+  const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
 
   const tier = user?.subscription_tier || 'free';
   const hasPro = isProOrHigher(tier);
@@ -291,8 +297,28 @@ export default function ProRequest() {
           />
           {(selectedRequest.photos && selectedRequest.photos.length > 0) ? (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {selectedRequest.photos.map((url: string) => (
-                <img key={url} src={url} alt={`Photo`} style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover', background: '#E8E2D8' }} />
+              {selectedRequest.photos.map((url: string, idx: number) => (
+                <img
+                  key={url}
+                  src={url}
+                  alt={`Photo`}
+                  onClick={() => {
+                    setViewerImages(selectedRequest.photos);
+                    setViewerInitialIndex(idx);
+                    setViewerOpen(true);
+                  }}
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 8,
+                    objectFit: 'cover',
+                    background: '#E8E2D8',
+                    cursor: 'pointer',
+                    transition: 'opacity 0.2s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.7')}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                />
               ))}
             </div>
           ) : (
@@ -389,6 +415,15 @@ export default function ProRequest() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Image Viewer Modal */}
+      {viewerOpen && (
+        <ImageViewer
+          images={viewerImages}
+          initialIndex={viewerInitialIndex}
+          onClose={() => setViewerOpen(false)}
+        />
       )}
     </div>
   );

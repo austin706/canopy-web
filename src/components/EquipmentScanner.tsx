@@ -3,6 +3,7 @@ import { scanEquipmentLabel, lookupByModelNumber, AiUsageLimitError, type ScanRe
 import { Colors } from '@/constants/theme';
 import type { EquipmentCategory } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
+import { useProgress } from '@/components/ProgressBar';
 
 interface EquipmentScannerProps {
   onScanComplete?: (data: ScanResult & { name: string; category: EquipmentCategory }) => void;
@@ -171,6 +172,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
   const [equipmentName, setEquipmentName] = useState('');
   const [equipmentCategory, setEquipmentCategory] = useState<EquipmentCategory>('hvac');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { show: showProgress, hide: hideProgress, setProgress } = useProgress();
 
   // Manual entry mode state
   const [manualMode, setManualMode] = useState(false);
@@ -247,20 +249,24 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
     setScanning(true);
     setError('');
     setShowScanFailurePopup(false);
+    showProgress(true); // Show indeterminate progress
 
     try {
       // Compress, resize, and convert to JPEG for the API
       // Tries multiple strategies: createImageBitmap, blob URL, preview data URL
       const base64String = await compressImageFromFile(selectedFile, preview, 1024, 1024, 0.7);
       // Image compressed for API submission
+      setProgress(30);
 
       // Call AI service
       const result = await scanEquipmentLabel(base64String);
+      setProgress(90);
       // Scan complete — check confidence
 
       // Check confidence level for scan quality
       if (result.confidence < 0.3) {
         setScanning(false);
+        hideProgress();
         setShowScanFailurePopup(true);
         return;
       }
@@ -280,10 +286,13 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
           setEquipmentCategory(result.category as EquipmentCategory);
         }
       }
+      setProgress(100);
+      setTimeout(() => hideProgress(), 500);
       setScanning(false);
       setScanned(true);
     } catch (err: any) {
       setScanning(false);
+      hideProgress();
       if (err instanceof AiUsageLimitError) {
         setUsageLimitHit(true);
         setError(getErrorMessage(err));

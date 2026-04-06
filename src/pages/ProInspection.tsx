@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
+import { ImageViewer } from '@/components/ImageViewer';
 import type { ProMonthlyVisit, Home, Equipment } from '@/types';
 import type {
   VisitInspection,
@@ -50,6 +51,11 @@ export default function ProInspection() {
   // Photo upload
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPhotoFor, setUploadingPhotoFor] = useState<string | null>(null);
+
+  // Image viewer state
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerImages, setViewerImages] = useState<string[]>([]);
+  const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
 
   // Debounce for notes auto-save
   const debounceRef = useRef<Record<string, NodeJS.Timeout>>({});
@@ -707,12 +713,21 @@ export default function ProInspection() {
                             <img
                               src={photo.url}
                               alt={`Photo ${idx + 1}`}
+                              onClick={() => {
+                                setViewerImages(item.photos.map(p => p.url));
+                                setViewerInitialIndex(idx);
+                                setViewerOpen(true);
+                              }}
                               style={{
                                 width: '100%',
                                 height: 100,
                                 objectFit: 'cover',
                                 borderRadius: BorderRadius.md,
+                                cursor: 'pointer',
+                                transition: 'opacity 0.2s',
                               }}
+                              onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
+                              onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
                             />
                             {photo.caption && (
                               <p
@@ -1000,6 +1015,15 @@ export default function ProInspection() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Image Viewer Modal */}
+      {viewerOpen && (
+        <ImageViewer
+          images={viewerImages}
+          initialIndex={viewerInitialIndex}
+          onClose={() => setViewerOpen(false)}
+        />
       )}
       </div>
     </SectionErrorBoundary>

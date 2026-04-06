@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import CookieConsent from './components/CookieConsent';
 import logger from './utils/logger';
 import { initGA } from './utils/analytics';
 import { initSentry } from './utils/sentry';
@@ -48,6 +49,7 @@ initSentry();
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
+    <CookieConsent />
   </React.StrictMode>
 );
 

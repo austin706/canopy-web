@@ -58,6 +58,7 @@ export default function Equipment() {
   const [showModal, setShowModal] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [filter, setFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [form, setForm] = useState({ name: '', category: 'hvac' as EquipmentCategory, make: '', model: '', serial_number: '', install_date: '', expected_lifespan_years: '', location_in_home: '', notes: '' });
   const [scanExtras, setScanExtras] = useState<{ equipment_subtype?: string; refrigerant_type?: string }>({});
   const [saving, setSaving] = useState(false);
@@ -122,7 +123,17 @@ export default function Equipment() {
     }
   };
 
-  const filtered = filter === 'all' ? equipment : equipment.filter(e => e.category === filter);
+  const filtered = (filter === 'all' ? equipment : equipment.filter(e => e.category === filter))
+    .filter(e => {
+      if (!searchTerm.trim()) return true;
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        e.name.toLowerCase().includes(searchLower) ||
+        (e.make && e.make.toLowerCase().includes(searchLower)) ||
+        (e.model && e.model.toLowerCase().includes(searchLower)) ||
+        e.category.toLowerCase().includes(searchLower)
+      );
+    });
   const catAbbr = (cat: string) => CATEGORIES.find(c => c.value === cat)?.abbr || 'EQ';
   const catIcon = (cat: string) => CATEGORIES.find(c => c.value === cat)?.icon;
   const catLabel = (cat: string) => CATEGORIES.find(c => c.value === cat)?.label || cat;
@@ -257,6 +268,36 @@ export default function Equipment() {
         </div>
       ) : (
       <>
+      <div style={{ position: 'relative', marginBottom: 16 }}>
+        <input
+          type="text"
+          className="form-input"
+          placeholder="Search by name, make, model, or category..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ paddingRight: searchTerm ? 36 : undefined }}
+        />
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm('')}
+            style={{
+              position: 'absolute',
+              right: 12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 18,
+              color: 'var(--color-text-secondary)',
+              padding: '4px 8px',
+            }}
+            aria-label="Clear search"
+          >
+            ✕
+          </button>
+        )}
+      </div>
       <div className="tabs mb-lg">
         <button className={`tab ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All ({equipment.length})</button>
         {CATEGORIES.filter(c => equipment.some(e => e.category === c.value)).map(c => (
@@ -276,13 +317,16 @@ export default function Equipment() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 16px', fontSize: 32,
             }} role="img" aria-label="Clipboard">📋</div>
-            <h3 style={{ marginBottom: 8, fontSize: 20 }}>Your Equipment Registry</h3>
+            <h3 style={{ marginBottom: 8, fontSize: 20 }}>{searchTerm ? 'No results found' : 'Your Equipment Registry'}</h3>
             <p style={{ color: Colors.medGray, fontSize: 14, lineHeight: 1.6, maxWidth: 420, margin: '0 auto' }}>
-              Scan your equipment labels and Canopy handles the rest — maintenance reminders, warranty tracking, and lifecycle alerts all personalized to your home.
+              {searchTerm
+                ? `No equipment matches "${searchTerm}". Try a different search term.`
+                : 'Scan your equipment labels and Canopy handles the rest — maintenance reminders, warranty tracking, and lifecycle alerts all personalized to your home.'}
             </p>
           </div>
 
-          {/* What happens when you scan — 1-2-3 flow */}
+          {/* What happens when you scan — 1-2-3 flow (only show if not searching) */}
+          {!searchTerm && (
           <div style={{
             background: 'var(--color-card-background)',
             borderRadius: 12,
@@ -314,6 +358,7 @@ export default function Equipment() {
               </div>
             ))}
           </div>
+          )}
 
           {/* CTA */}
           <button

@@ -23,7 +23,9 @@ interface CanopyState {
   removeEquipment: (id: string) => void;
   tasks: MaintenanceTask[];
   setTasks: (tasks: MaintenanceTask[]) => void;
+  setTask: (task: MaintenanceTask) => void;
   addTask: (task: MaintenanceTask) => void;
+  removeTask: (id: string) => void;
   completeTask: (id: string, notes?: string, photoUrl?: string) => void;
   reopenTask: (id: string) => void;
   skipTask: (id: string) => void;
@@ -71,7 +73,11 @@ export const useStore = create<CanopyState>()(
       removeEquipment: (id) => set((s) => ({ equipment: s.equipment.filter((e) => e.id !== id) })),
       tasks: [],
       setTasks: (tasks) => set({ tasks }),
+      setTask: (task) => set((s) => ({
+        tasks: s.tasks.map((t) => t.id === task.id ? task : t),
+      })),
       addTask: (task) => set((s) => ({ tasks: [...s.tasks, task] })),
+      removeTask: (id) => set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
       completeTask: (id, notes, photoUrl) => set((s) => ({
         tasks: s.tasks.map((t) => t.id === id ? { ...t, status: 'completed' as const, completed_date: new Date().toISOString(), completion_notes: notes, completion_photo_url: photoUrl } : t),
       })),

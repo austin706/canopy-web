@@ -5,6 +5,7 @@ import { canAccess, getTaskLimit, PLANS } from '@/services/subscriptionGate';
 import { Colors, PriorityColors, StatusColors } from '@/constants/theme';
 import DashboardChat from '@/components/DashboardChat';
 import { quickCompleteTask } from '@/services/utils';
+import { ImageViewer } from '@/components/ImageViewer';
 import { getTasks, createTasks, getHomeJoinRequests, approveHomeJoinRequest, denyHomeJoinRequest } from '@/services/supabase';
 import { fetchWeather } from '@/services/weather';
 import { Skeleton } from '@/components/Skeleton';
@@ -34,6 +35,11 @@ export default function Dashboard() {
   const [tasksLoading, setTasksLoading] = useState(false);
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
   const [processingRequest, setProcessingRequest] = useState<string | null>(null);
+
+  // Image viewer state
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerImages, setViewerImages] = useState<string[]>([]);
+  const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
 
   // Load pending home join requests
   useEffect(() => {
@@ -370,9 +376,29 @@ export default function Dashboard() {
         <div className="flex-col gap-lg">
           {/* Home Photo */}
           {home?.photo_url ? (
-            <div className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer' }} onClick={() => navigate('/home')}>
-              <img src={home.photo_url} alt="Home" style={{ width: '100%', height: 180, objectFit: 'cover' }} />
-              <div style={{ padding: '12px 16px' }}>
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <img
+                src={home.photo_url}
+                alt="Home"
+                onClick={() => {
+                  setViewerImages([home.photo_url!]);
+                  setViewerInitialIndex(0);
+                  setViewerOpen(true);
+                }}
+                style={{
+                  width: '100%',
+                  height: 180,
+                  objectFit: 'cover',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+              />
+              <div
+                style={{ padding: '12px 16px', cursor: 'pointer' }}
+                onClick={() => navigate('/home')}
+              >
                 <p style={{ fontWeight: 600, fontSize: 14 }}>{home.address}</p>
                 <p className="text-xs text-gray">{home.city}, {home.state}</p>
               </div>
@@ -495,7 +521,7 @@ export default function Dashboard() {
                         )}
                       </div>
                       <p className="text-xs text-gray">
-                        {item.remainingYears <= 0 ? 'Past expected lifespan' : `~${Math.round(item.remainingYears)}yr remaining`}
+                        {item.remainingYears <= 0 ? 'Past expected lifespan' : item.remainingYears < 1 ? '<1yr remaining' : `~${Math.round(item.remainingYears)}yr remaining`}
                         {' · '}
                         {item.isProQuote
                           ? `$${item.estimatedCost.toLocaleString()}`
@@ -566,6 +592,15 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Image Viewer Modal */}
+      {viewerOpen && (
+        <ImageViewer
+          images={viewerImages}
+          initialIndex={viewerInitialIndex}
+          onClose={() => setViewerOpen(false)}
+        />
+      )}
     </div>
   );
 }

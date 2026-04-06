@@ -26,16 +26,17 @@ export default function AgentPortal() {
   const navigate = useNavigate();
   const { user } = useStore();
   const isAdmin = user?.role === 'admin';
-  const [tab, setTab] = useState<'clients' | 'new-client' | 'codes' | 'notifications' | 'analytics'>('clients');
+  const [tab, setTab] = useState<'clients' | 'new-client' | 'codes' | 'my-qr' | 'notifications' | 'analytics'>('clients');
   const [clients, setClients] = useState<ClientData[]>([]);
   const [codes, setCodes] = useState<any[]>([]);
   const [agentNotifications, setAgentNotifications] = useState<any[]>([]);
   const [agentId, setAgentId] = useState<string | null>(null);
+  const [agentSlug, setAgentSlug] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
 
   // Admin preview
-  const [allAgents, setAllAgents] = useState<{ id: string; name?: string; email?: string }[]>([]);
+  const [allAgents, setAllAgents] = useState<{ id: string; name?: string; email?: string; slug?: string }[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
   // Client notes
@@ -61,8 +62,9 @@ export default function AgentPortal() {
     lawn_type: 'none',
   });
 
-  const loadAgentData = async (agentRecord: { id: string; name?: string; email?: string }) => {
+  const loadAgentData = async (agentRecord: { id: string; name?: string; email?: string; slug?: string }) => {
     setAgentId(agentRecord.id);
+    setAgentSlug(agentRecord.slug || null);
     const { data: profileData } = await supabase.from('profiles').select('*').eq('agent_id', agentRecord.id);
     const clientList = profileData || [];
 
@@ -85,7 +87,7 @@ export default function AgentPortal() {
         // Admin: load all agents, preview the first one
         if (isAdmin) {
           const { data: agents } = await supabase.from('agents').select('*').order('name');
-          const list = (agents || []).map((a: any) => ({ id: a.id, name: a.name, email: a.email }));
+          const list = (agents || []).map((a: any) => ({ id: a.id, name: a.name, email: a.email, slug: a.slug }));
           setAllAgents(list);
           if (list.length > 0) {
             setSelectedAgentId(list[0].id);
@@ -313,6 +315,7 @@ export default function AgentPortal() {
         <button className={`tab ${tab === 'clients' ? 'active' : ''}`} onClick={() => setTab('clients')}>Clients ({clients.length})</button>
         <button className={`tab ${tab === 'new-client' ? 'active' : ''}`} onClick={() => { setTab('new-client'); resetSetupForm(); }}>+ New Client</button>
         <button className={`tab ${tab === 'codes' ? 'active' : ''}`} onClick={() => setTab('codes')}>Gift Codes ({codes.length})</button>
+        <button className={`tab ${tab === 'my-qr' ? 'active' : ''}`} onClick={() => setTab('my-qr')}>My QR Code</button>
         <button className={`tab ${tab === 'analytics' ? 'active' : ''}`} onClick={() => setTab('analytics')}>Analytics</button>
         <button className={`tab ${tab === 'notifications' ? 'active' : ''}`} onClick={() => setTab('notifications')} style={{ position: 'relative' }}>
           Alerts
@@ -881,6 +884,110 @@ export default function AgentPortal() {
               </div>
             </>
           )}
+        </>
+      ) :
+
+      // ═══ My QR Code Tab ═══
+      tab === 'my-qr' ? (
+        <>
+          {(() => {
+            const agentUrl = agentSlug ? `${window.location.origin}/a/${agentSlug}` : null;
+            const qrApiUrl = agentUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(agentUrl)}&color=C4844E` : null;
+            return agentUrl ? (
+              <div style={{ maxWidth: 520, margin: '0 auto' }}>
+                <div className="card" style={{ padding: 32, textAlign: 'center' }}>
+                  <h2 style={{ fontSize: 20, marginBottom: 8 }}>Your Personal QR Code</h2>
+                  <p className="text-sm text-gray" style={{ marginBottom: 24 }}>
+                    Print this on business cards, flyers, or closing packets. Clients scan it and enter their gift code to get started.
+                  </p>
+
+                  {/* QR code image */}
+                  <div style={{ display: 'inline-block', padding: 16, background: Colors.white, borderRadius: 16, border: `2px solid ${Colors.copper}20`, marginBottom: 20 }}>
+                    <img
+                      src={qrApiUrl!}
+                      alt="Agent QR Code"
+                      width={200}
+                      height={200}
+                      style={{ display: 'block' }}
+                    />
+                  </div>
+
+                  {/* URL display */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'var(--color-background)', borderRadius: 8, marginBottom: 20 }}>
+                    <svg viewBox="0 0 21 21" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="1" y="1" width="7" height="7" rx="1" stroke={Colors.copper} strokeWidth="1.5" />
+                      <rect x="13" y="1" width="7" height="7" rx="1" stroke={Colors.copper} strokeWidth="1.5" />
+                      <rect x="1" y="13" width="7" height="7" rx="1" stroke={Colors.copper} strokeWidth="1.5" />
+                      <rect x="3" y="3" width="3" height="3" fill={Colors.copper} />
+                      <rect x="15" y="3" width="3" height="3" fill={Colors.copper} />
+                      <rect x="3" y="15" width="3" height="3" fill={Colors.copper} />
+                    </svg>
+                    <code style={{ flex: 1, fontSize: 13, color: Colors.copper, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {agentUrl}
+                    </code>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex gap-sm">
+                    <button
+                      className="btn btn-secondary"
+                      style={{ flex: 1 }}
+                      onClick={() => { navigator.clipboard.writeText(agentUrl); alert('Link copied to clipboard!'); }}
+                    >
+                      Copy Link
+                    </button>
+                    <a
+                      className="btn btn-primary"
+                      style={{ flex: 1, textDecoration: 'none' }}
+                      href={qrApiUrl!}
+                      download={`canopy-qr-${agentSlug}.png`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Download QR
+                    </a>
+                  </div>
+
+                  {/* Preview link */}
+                  <a
+                    href={agentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'block', textAlign: 'center', marginTop: 16, fontSize: 13, color: Colors.copper, textDecoration: 'none' }}
+                  >
+                    Preview my page &rarr;
+                  </a>
+                </div>
+
+                {/* How it works */}
+                <div className="card" style={{ padding: 24, marginTop: 16 }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>How It Works</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {[
+                      { step: '1', title: 'Set up a client', desc: 'Use the "+ New Client" tab to enter their info, home details, and pick a tier.' },
+                      { step: '2', title: 'Share the gift code + QR code', desc: 'Give the client their gift code and your QR code (on a card, in an email, at closing).' },
+                      { step: '3', title: 'Client scans & redeems', desc: 'They scan the QR code, create an account, enter their gift code — and their home is ready.' },
+                    ].map(item => (
+                      <div key={item.step} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 14, background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: Colors.copper, flexShrink: 0 }}>
+                          {item.step}
+                        </div>
+                        <div>
+                          <p style={{ fontWeight: 600, fontSize: 14 }}>{item.title}</p>
+                          <p className="text-sm text-gray">{item.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <h3>QR Code Not Available</h3>
+                <p>Your agent profile needs a slug to generate a QR code. Contact support.</p>
+              </div>
+            );
+          })()}
         </>
       ) :
 

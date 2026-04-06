@@ -15,6 +15,23 @@ interface SupportTicket {
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
   created_at: string;
   updated_at: string;
+  device_info?: {
+    browser?: string;
+    os?: string;
+    platform?: string;
+    screen?: string;
+    viewport?: string;
+    pixel_ratio?: number;
+    user_agent?: string;
+    os_version?: string;
+    app_version?: string;
+    device_model?: string;
+    sdk_version?: string;
+  } | null;
+  screenshot_url?: string | null;
+  steps_to_reproduce?: string | null;
+  app_version?: string | null;
+  priority?: string | null;
 }
 
 const categoryColors: Record<string, string> = {
@@ -329,6 +346,30 @@ export default function AdminSupportTickets() {
                     </p>
                   </div>
 
+                  {/* Steps to Reproduce (bug reports) */}
+                  {ticket.steps_to_reproduce && (
+                    <div style={{ marginBottom: 16, padding: '12px', backgroundColor: '#FFF8E1', borderRadius: 6, borderLeft: '3px solid #FFE082' }}>
+                      <p style={{ fontSize: 11, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 600 }}>
+                        Steps to Reproduce
+                      </p>
+                      <p style={{ fontSize: 13, lineHeight: 1.6, color: Colors.charcoal, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>
+                        {ticket.steps_to_reproduce}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Screenshot (bug reports) */}
+                  {ticket.screenshot_url && (
+                    <div style={{ marginBottom: 16 }}>
+                      <p style={{ fontSize: 11, color: Colors.medGray, margin: '0 0 8px 0', fontWeight: 600 }}>
+                        Screenshot
+                      </p>
+                      <div style={{ fontSize: 12, color: Colors.medGray, background: Colors.lightGray, padding: 8, borderRadius: 4 }}>
+                        Stored at: <code style={{ fontSize: 11 }}>{ticket.screenshot_url}</code>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Metadata */}
                   <div style={{ marginBottom: 16, padding: '12px', backgroundColor: Colors.lightGray, borderRadius: 6 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, fontSize: 12 }}>
@@ -342,7 +383,7 @@ export default function AdminSupportTickets() {
                         <p style={{ fontSize: 11, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 600 }}>
                           Last Updated
                         </p>
-                        <p style={{ color: Colors.charcoal, margin: 0 }}>{formatDate(ticket.updated_at)}</p>
+                        <p style={{ color: Colors.charcoal, margin: 0 }}>{ticket.updated_at ? formatDate(ticket.updated_at) : '—'}</p>
                       </div>
                       <div>
                         <p style={{ fontSize: 11, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 600 }}>
@@ -358,8 +399,63 @@ export default function AdminSupportTickets() {
                         </p>
                         <p style={{ color: Colors.charcoal, margin: 0, fontSize: 12 }}>{ticket.email}</p>
                       </div>
+                      {ticket.app_version && (
+                        <div>
+                          <p style={{ fontSize: 11, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 600 }}>
+                            App Version
+                          </p>
+                          <p style={{ color: Colors.charcoal, margin: 0 }}>{ticket.app_version}</p>
+                        </div>
+                      )}
+                      {ticket.priority && ticket.priority !== 'normal' && (
+                        <div>
+                          <p style={{ fontSize: 11, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 600 }}>
+                            Priority
+                          </p>
+                          <p style={{ color: ticket.priority === 'urgent' || ticket.priority === 'high' ? Colors.error : Colors.charcoal, margin: 0, fontWeight: 600 }}>
+                            {ticket.priority.toUpperCase()}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* Device Info (bug reports) */}
+                  {ticket.device_info && (
+                    <div style={{ marginBottom: 16, padding: '12px', backgroundColor: '#E8F5E9', borderRadius: 6, borderLeft: '3px solid #81C784' }}>
+                      <p style={{ fontSize: 11, color: Colors.medGray, margin: '0 0 8px 0', fontWeight: 600 }}>
+                        Device Info
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, fontSize: 12 }}>
+                        {ticket.device_info.browser && (
+                          <div><span style={{ color: Colors.medGray }}>Browser:</span> {ticket.device_info.browser}</div>
+                        )}
+                        {ticket.device_info.os && (
+                          <div><span style={{ color: Colors.medGray }}>OS:</span> {ticket.device_info.os}</div>
+                        )}
+                        {ticket.device_info.platform && (
+                          <div><span style={{ color: Colors.medGray }}>Platform:</span> {ticket.device_info.platform}</div>
+                        )}
+                        {ticket.device_info.screen && (
+                          <div><span style={{ color: Colors.medGray }}>Screen:</span> {ticket.device_info.screen}</div>
+                        )}
+                        {ticket.device_info.viewport && (
+                          <div><span style={{ color: Colors.medGray }}>Viewport:</span> {ticket.device_info.viewport}</div>
+                        )}
+                        {ticket.device_info.device_model && (
+                          <div><span style={{ color: Colors.medGray }}>Device:</span> {ticket.device_info.device_model}</div>
+                        )}
+                        {ticket.device_info.os_version && (
+                          <div><span style={{ color: Colors.medGray }}>OS Version:</span> {ticket.device_info.os_version}</div>
+                        )}
+                      </div>
+                      {ticket.device_info.user_agent && (
+                        <div style={{ marginTop: 8, fontSize: 10, color: Colors.medGray, wordBreak: 'break-all' }}>
+                          UA: {ticket.device_info.user_agent}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Admin Actions */}
                   <div style={{ borderTop: `1px solid var(--border-color)`, paddingTop: 12 }}>

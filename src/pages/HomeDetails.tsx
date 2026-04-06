@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { upsertHome, updateProfile, uploadPhoto } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
+import HomeMembers from '@/components/HomeMembers';
 
 export default function HomeDetails() {
   const navigate = useNavigate();
@@ -388,6 +389,9 @@ export default function HomeDetails() {
               {home.hose_bib_locations && <Field label="Hose Bibs"><p style={{ fontWeight: 500 }}>{home.hose_bib_locations}</p></Field>}
             </>
           )}
+
+          {/* Home Members */}
+          <HomeMembers homeId={home.id} />
         </div>
       ) : null}
     </div>

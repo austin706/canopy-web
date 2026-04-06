@@ -136,6 +136,23 @@ export interface ProProvider {
   total_reviews: number;
   created_at: string;
   updated_at: string;
+  // Provider type distinction (migration 027)
+  provider_type: 'canopy_technician' | 'partner_pro';
+  // Canopy Technician fields
+  employee_id?: string;
+  hire_date?: string;
+  certification_level?: 'trainee' | 'standard' | 'senior' | 'lead';
+  training_completed_at?: string;
+  assigned_zones?: string[];
+  max_daily_visits?: number;
+  specializations?: string[];
+  // Partner Pro fields
+  commission_rate?: number;
+  contract_type?: 'per_job' | 'retainer' | 'hybrid';
+  payment_terms?: 'net_15' | 'net_30' | 'net_45' | 'on_completion';
+  background_check_status?: 'pending' | 'passed' | 'failed' | 'expired';
+  background_check_date?: string;
+  partner_since?: string;
 }
 
 export interface Home {

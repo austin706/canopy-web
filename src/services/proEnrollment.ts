@@ -95,10 +95,11 @@ async function findOpenDate(providerId: string, startDate: Date): Promise<string
 }
 
 // ─── Find a provider for a given zip code ───
-export async function findProviderForZip(zipCode: string): Promise<{ id: string; user_id: string; business_name: string; contact_name: string } | null> {
+// Prefers Canopy Technicians for bimonthly visits; falls back to Partner Pros
+export async function findProviderForZip(zipCode: string): Promise<{ id: string; user_id: string; business_name: string; contact_name: string; provider_type?: string } | null> {
   const { data: providers } = await supabase
     .from('pro_providers')
-    .select('id, user_id, business_name, contact_name, zip_codes, is_available')
+    .select('id, user_id, business_name, contact_name, zip_codes, is_available, provider_type')
     .eq('is_available', true);
 
   if (!providers || providers.length === 0) return null;
@@ -109,6 +110,9 @@ export async function findProviderForZip(zipCode: string): Promise<{ id: string;
   );
 
   if (matching.length > 0) {
+    // Prefer canopy_technicians for bimonthly visits over partner_pros
+    const technician = matching.find(p => p.provider_type === 'canopy_technician');
+    if (technician) return technician;
     return matching[0];
   }
 

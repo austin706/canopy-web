@@ -12,12 +12,29 @@ const SERVICE_CATEGORIES = [
   'Foundation', 'Garage Door', 'Windows/Doors', 'Flooring', 'Other',
 ];
 
+const PROVIDER_TYPES = {
+  canopy_technician: { label: 'Canopy Technician', color: '#1a6b4a', bg: '#e6f5ee' },
+  partner_pro: { label: 'Partner Pro', color: '#6b4a1a', bg: '#fdf3e6' },
+} as const;
+
+const CERTIFICATION_LEVELS = ['trainee', 'standard', 'senior', 'lead'] as const;
+const CONTRACT_TYPES = ['per_job', 'retainer', 'hybrid'] as const;
+const PAYMENT_TERMS = ['net_15', 'net_30', 'net_45', 'on_completion'] as const;
+
 const emptyForm = {
   business_name: '', contact_name: '', email: '', phone: '',
   service_categories: [] as string[], service_area_miles: 25,
   service_area_zips: '' as string,
   license_number: '', bio: '', years_experience: 0,
   is_available: true,
+  provider_type: 'partner_pro' as 'canopy_technician' | 'partner_pro',
+  // Technician fields
+  employee_id: '', certification_level: 'standard' as string,
+  assigned_zones: '' as string, specializations: '' as string,
+  max_daily_visits: 6,
+  // Partner fields
+  commission_rate: 15, contract_type: 'per_job' as string,
+  payment_terms: 'net_30' as string,
 };
 
 export default function AdminProProviders() {
@@ -32,6 +49,7 @@ export default function AdminProProviders() {
   const [metrics, setMetrics] = useState<Record<string, any>>({});
   const [loadingMetrics, setLoadingMetrics] = useState(false);
   const [showMetrics, setShowMetrics] = useState(true);
+  const [typeFilter, setTypeFilter] = useState<'all' | 'canopy_technician' | 'partner_pro'>('all');
 
   useEffect(() => {
     Promise.all([
@@ -118,6 +136,15 @@ export default function AdminProProviders() {
       bio: provider.bio || '',
       years_experience: provider.years_experience || 0,
       is_available: provider.is_available !== false,
+      provider_type: provider.provider_type || 'partner_pro',
+      employee_id: provider.employee_id || '',
+      certification_level: provider.certification_level || 'standard',
+      assigned_zones: (provider.assigned_zones || []).join(', '),
+      specializations: (provider.specializations || []).join(', '),
+      max_daily_visits: provider.max_daily_visits || 6,
+      commission_rate: provider.commission_rate || 15,
+      contract_type: provider.contract_type || 'per_job',
+      payment_terms: provider.payment_terms || 'net_30',
     });
     setShowModal(true);
   };
@@ -126,12 +153,38 @@ export default function AdminProProviders() {
     if (!form.business_name || !form.contact_name) return;
     setSaving(true);
     try {
-      const payload = {
-        ...form,
+      const payload: Record<string, any> = {
+        business_name: form.business_name,
+        contact_name: form.contact_name,
+        email: form.email,
+        phone: form.phone,
+        service_categories: form.service_categories,
+        service_area_miles: form.service_area_miles,
         service_area_zips: form.service_area_zips
           ? form.service_area_zips.split(',').map(z => z.trim()).filter(Boolean)
           : [],
+        license_number: form.license_number,
+        bio: form.bio,
+        years_experience: form.years_experience,
+        is_available: form.is_available,
+        provider_type: form.provider_type,
       };
+      // Add type-specific fields
+      if (form.provider_type === 'canopy_technician') {
+        payload.employee_id = form.employee_id || null;
+        payload.certification_level = form.certification_level;
+        payload.assigned_zones = form.assigned_zones
+          ? form.assigned_zones.split(',').map(z => z.trim()).filter(Boolean)
+          : [];
+        payload.specializations = form.specializations
+          ? form.specializations.split(',').map(s => s.trim()).filter(Boolean)
+          : [];
+        payload.max_daily_visits = form.max_daily_visits;
+      } else {
+        payload.commission_rate = form.commission_rate;
+        payload.contract_type = form.contract_type;
+        payload.payment_terms = form.payment_terms;
+      }
       if (editing) {
         const updated = await updateProProvider(editing.id, payload);
         setProviders(prev => prev.map(p => p.id === editing.id ? updated : p));
@@ -179,11 +232,14 @@ export default function AdminProProviders() {
     }));
   };
 
-  const filtered = providers.filter(p =>
-    p.business_name?.toLowerCase().includes(search.toLowerCase()) ||
-    p.contact_name?.toLowerCase().includes(search.toLowerCase()) ||
-    (p.service_categories || []).some((c: string) => c.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = providers.filter(p => {
+    const matchesSearch = !search ||
+      p.business_name?.toLowerCase().includes(search.toLowerCase()) ||
+      p.contact_name?.toLowerCase().includes(search.toLowerCase()) ||
+      (p.service_categories || []).some((c: string) => c.toLowerCase().includes(search.toLowerCase()));
+    const matchesType = typeFilter === 'all' || p.provider_type === typeFilter;
+    return matchesSearch && matchesType;
+  });
 
   const platformMetrics = {
     totalJobs: Object.values(metrics).reduce((sum: number, m: any) => sum + (m.total || 0), 0),
@@ -229,6 +285,18 @@ export default function AdminProProviders() {
             <p className="admin-kpi-value">{providers.length}</p>
           </div>
           <div className="admin-kpi-card">
+            <p className="admin-kpi-label">Canopy Technicians</p>
+            <p className="admin-kpi-value" style={{ color: PROVIDER_TYPES.canopy_technician.color }}>
+              {providers.filter(p => p.provider_type === 'canopy_technician').length}
+            </p>
+          </div>
+          <div className="admin-kpi-card">
+            <p className="admin-kpi-label">Partner Pros</p>
+            <p className="admin-kpi-value" style={{ color: PROVIDER_TYPES.partner_pro.color }}>
+              {providers.filter(p => p.provider_type === 'partner_pro').length}
+            </p>
+          </div>
+          <div className="admin-kpi-card">
             <p className="admin-kpi-label">Available</p>
             <p className="admin-kpi-value" style={{ color: Colors.success }}>{platformMetrics.availableProviders}</p>
           </div>
@@ -245,16 +313,35 @@ export default function AdminProProviders() {
         </div>
       )}
 
-      {/* Search */}
+      {/* Search & Filter */}
       {!loading && (
-        <div className="admin-table-toolbar" style={{ marginBottom: 24 }}>
+        <div className="admin-table-toolbar" style={{ marginBottom: 24, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <input
             type="text"
             className="admin-search"
             placeholder="Search by business name, contact, or service..."
             value={search}
             onChange={e => setSearch(e.target.value)}
+            style={{ flex: 1, minWidth: 220 }}
           />
+          <div style={{ display: 'flex', gap: 4 }}>
+            {(['all', 'canopy_technician', 'partner_pro'] as const).map(type => (
+              <button
+                key={type}
+                className="btn btn-sm"
+                onClick={() => setTypeFilter(type)}
+                style={{
+                  fontSize: 12, padding: '4px 12px', borderRadius: 6,
+                  background: typeFilter === type ? Colors.sage : 'transparent',
+                  color: typeFilter === type ? '#fff' : Colors.medGray,
+                  border: `1px solid ${typeFilter === type ? Colors.sage : Colors.lightGray}`,
+                  cursor: 'pointer', fontWeight: 500,
+                }}
+              >
+                {type === 'all' ? 'All' : PROVIDER_TYPES[type].label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -274,21 +361,44 @@ export default function AdminProProviders() {
                 padding: 20,
                 background: '#fff',
               }}>
-                {/* Header with availability dot */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+                {/* Header with type badge and availability dot */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ margin: '0 0 4px 0', fontSize: 16, fontWeight: 700, color: Colors.charcoal }}>
-                      {p.business_name}
-                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: Colors.charcoal }}>
+                        {p.business_name}
+                      </h3>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <span style={{
+                        fontSize: 10, padding: '2px 8px', borderRadius: 4, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px',
+                        background: PROVIDER_TYPES[p.provider_type as keyof typeof PROVIDER_TYPES]?.bg || PROVIDER_TYPES.partner_pro.bg,
+                        color: PROVIDER_TYPES[p.provider_type as keyof typeof PROVIDER_TYPES]?.color || PROVIDER_TYPES.partner_pro.color,
+                      }}>
+                        {PROVIDER_TYPES[p.provider_type as keyof typeof PROVIDER_TYPES]?.label || 'Partner Pro'}
+                      </span>
+                      {p.provider_type === 'canopy_technician' && p.certification_level && (
+                        <span style={{ fontSize: 10, color: Colors.medGray, fontWeight: 500 }}>
+                          {p.certification_level.charAt(0).toUpperCase() + p.certification_level.slice(1)}
+                        </span>
+                      )}
+                    </div>
                     <p style={{ margin: 0, fontSize: 13, color: Colors.medGray }}>
                       {p.contact_name}
                     </p>
-                    <p style={{ margin: '8px 0 0 0', fontSize: 12, color: Colors.medGray }}>
-                      {p.email}
+                    <p style={{ margin: '4px 0 0 0', fontSize: 12, color: Colors.medGray }}>
+                      {p.email} &middot; {p.phone}
                     </p>
-                    <p style={{ margin: '2px 0 0 0', fontSize: 12, color: Colors.medGray }}>
-                      {p.phone}
-                    </p>
+                    {p.provider_type === 'canopy_technician' && p.employee_id && (
+                      <p style={{ margin: '2px 0 0 0', fontSize: 11, color: Colors.medGray }}>
+                        Employee ID: {p.employee_id}
+                      </p>
+                    )}
+                    {p.provider_type === 'partner_pro' && p.commission_rate && (
+                      <p style={{ margin: '2px 0 0 0', fontSize: 11, color: Colors.medGray }}>
+                        {p.commission_rate}% commission &middot; {(p.payment_terms || 'net_30').replace('_', ' ')}
+                      </p>
+                    )}
                   </div>
                   <div style={{
                     width: 12, height: 12, borderRadius: '50%',
@@ -389,6 +499,30 @@ export default function AdminProProviders() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
             <h2 style={{ marginTop: 0 }}>{editing ? 'Edit Pro Provider' : 'Add Pro Provider'}</h2>
+
+            {/* Provider Type Selector */}
+            <div className="form-group">
+              <label>Provider Type *</label>
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                {(['canopy_technician', 'partner_pro'] as const).map(type => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setForm({ ...form, provider_type: type })}
+                    style={{
+                      flex: 1, padding: '10px 16px', borderRadius: 8, cursor: 'pointer',
+                      border: `2px solid ${form.provider_type === type ? PROVIDER_TYPES[type].color : Colors.lightGray}`,
+                      background: form.provider_type === type ? PROVIDER_TYPES[type].bg : '#fff',
+                      color: form.provider_type === type ? PROVIDER_TYPES[type].color : Colors.medGray,
+                      fontWeight: 600, fontSize: 13, transition: 'all 0.15s',
+                    }}
+                  >
+                    {PROVIDER_TYPES[type].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="form-group">
               <label>Business Name *</label>
               <input className="form-input" value={form.business_name} onChange={e => setForm({ ...form, business_name: e.target.value })} />
@@ -447,6 +581,75 @@ export default function AdminProProviders() {
               <label>Bio</label>
               <textarea className="form-input" rows={3} value={form.bio} onChange={e => setForm({ ...form, bio: e.target.value })} placeholder="Short bio about this provider..." />
             </div>
+
+            {/* Technician-specific fields */}
+            {form.provider_type === 'canopy_technician' && (
+              <div style={{ padding: 16, borderRadius: 8, background: PROVIDER_TYPES.canopy_technician.bg, marginBottom: 16 }}>
+                <p style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 700, color: PROVIDER_TYPES.canopy_technician.color }}>
+                  Canopy Technician Details
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Employee ID</label>
+                    <input className="form-input" value={form.employee_id} onChange={e => setForm({ ...form, employee_id: e.target.value })} placeholder="CT-001" />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Certification Level</label>
+                    <select className="form-input" value={form.certification_level} onChange={e => setForm({ ...form, certification_level: e.target.value })}>
+                      {CERTIFICATION_LEVELS.map(l => (
+                        <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group" style={{ margin: '12px 0 0 0' }}>
+                  <label>Max Daily Visits</label>
+                  <input className="form-input" type="number" min="1" max="20" value={form.max_daily_visits} onChange={e => setForm({ ...form, max_daily_visits: parseInt(e.target.value) || 6 })} />
+                </div>
+                <div className="form-group" style={{ margin: '12px 0 0 0' }}>
+                  <label>Assigned Zones</label>
+                  <input className="form-input" value={form.assigned_zones} onChange={e => setForm({ ...form, assigned_zones: e.target.value })} placeholder="Zone A, Zone B..." />
+                  <p style={{ fontSize: 11, color: Colors.medGray, marginTop: 4 }}>Comma-separated zone names</p>
+                </div>
+                <div className="form-group" style={{ margin: '12px 0 0 0' }}>
+                  <label>Specializations</label>
+                  <input className="form-input" value={form.specializations} onChange={e => setForm({ ...form, specializations: e.target.value })} placeholder="HVAC inspection, Water heater..." />
+                  <p style={{ fontSize: 11, color: Colors.medGray, marginTop: 4 }}>Comma-separated specializations</p>
+                </div>
+              </div>
+            )}
+
+            {/* Partner Pro-specific fields */}
+            {form.provider_type === 'partner_pro' && (
+              <div style={{ padding: 16, borderRadius: 8, background: PROVIDER_TYPES.partner_pro.bg, marginBottom: 16 }}>
+                <p style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 700, color: PROVIDER_TYPES.partner_pro.color }}>
+                  Partner Pro Details
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Commission Rate (%)</label>
+                    <input className="form-input" type="number" min="0" max="100" step="0.5" value={form.commission_rate} onChange={e => setForm({ ...form, commission_rate: parseFloat(e.target.value) || 15 })} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Contract Type</label>
+                    <select className="form-input" value={form.contract_type} onChange={e => setForm({ ...form, contract_type: e.target.value })}>
+                      {CONTRACT_TYPES.map(t => (
+                        <option key={t} value={t}>{t.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Payment Terms</label>
+                    <select className="form-input" value={form.payment_terms} onChange={e => setForm({ ...form, payment_terms: e.target.value })}>
+                      {PAYMENT_TERMS.map(t => (
+                        <option key={t} value={t}>{t.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <input type="checkbox" id="is_available" checked={form.is_available} onChange={e => setForm({ ...form, is_available: e.target.checked })} />
               <label htmlFor="is_available" style={{ margin: 0 }}>Available for jobs</label>

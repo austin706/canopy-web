@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllUsers, updateProfile, deleteUserAccount } from '@/services/supabase';
+import { getAllUsers, updateProfile, deleteUserAccount, getUserDetailData } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { logAdminAction } from '@/services/auditLog';
 
@@ -17,20 +17,54 @@ const TIER_LABELS: Record<string, string> = {
   pro_plus: 'Pro+',
 };
 
+interface UserDetail {
+  homes: { id: string; address: string; city: string; state: string; zip_code: string; year_built: number | null; square_footage: number | null; bedrooms: number; bathrooms: number }[];
+  equipmentCount: number;
+  taskCount: number;
+  logCount: number;
+  phone: string | null;
+  agent: { name: string; brokerage: string } | null;
+  giftCode: string | null;
+  giftCodeDetails: { code: string; tier: string; agent_id: string } | null;
+}
+
 export default function AdminUsers() {
   const { user: currentUser, setUser } = useStore();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTierAction, setBulkTierAction] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [detailCache, setDetailCache] = useState<Record<string, UserDetail>>({});
+  const [detailLoading, setDetailLoading] = useState<string | null>(null);
 
   useEffect(() => { getAllUsers().then(setUsers).catch(() => {}).finally(() => setLoading(false)); }, []);
 
   const syncCurrentUser = (userId: string, updates: Record<string, any>) => {
     if (currentUser && currentUser.id === userId) {
       setUser({ ...currentUser, ...updates } as any);
+    }
+  };
+
+  const handleExpandToggle = async (userId: string) => {
+    if (expandedId === userId) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(userId);
+    if (!detailCache[userId]) {
+      setDetailLoading(userId);
+      try {
+        const detail = await getUserDetailData(userId);
+        setDetailCache(prev => ({ ...prev, [userId]: detail }));
+      } catch (e: any) {
+        console.error('Failed to load user detail:', e.message);
+      } finally {
+        setDetailLoading(null);
+      }
     }
   };
 
@@ -131,8 +165,11 @@ export default function AdminUsers() {
   const filtered = users.filter(u => {
     const matchesSearch = u.full_name?.toLowerCase().includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase());
     const matchesTier = tierFilter === 'all' || u.subscription_tier === tierFilter;
-    return matchesSearch && matchesTier;
+    const matchesRole = roleFilter === 'all' || (u.role || 'user') === roleFilter;
+    return matchesSearch && matchesTier && matchesRole;
   });
+
+  const colCount = 8;
 
   return (
     <div className="page-wide">
@@ -163,6 +200,17 @@ export default function AdminUsers() {
             <option value="home">Home</option>
             <option value="pro">Pro</option>
             <option value="pro_plus">Pro+</option>
+          </select>
+          <select
+            className="admin-filter-select"
+            value={roleFilter}
+            onChange={e => setRoleFilter(e.target.value)}
+          >
+            <option value="all">All Roles</option>
+            <option value="user">User</option>
+            <option value="agent">Agent</option>
+            <option value="pro_provider">Pro Provider</option>
+            <option value="admin">Admin</option>
           </select>
         </div>
 
@@ -226,90 +274,210 @@ export default function AdminUsers() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(u => (
-                <tr
-                  key={u.id}
-                  style={{
-                    borderBottom: '1px solid var(--color-border)',
-                    background: selectedIds.has(u.id) ? 'var(--color-background)' : 'transparent',
-                  }}
-                >
-                  <td style={{ width: 40, padding: '12px 16px' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(u.id)}
-                      onChange={() => toggleSelectUser(u.id)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                  </td>
-                  <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--charcoal)' }}>{u.full_name || '—'}</td>
-                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)' }}>{u.email || '—'}</td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          background: TIER_COLORS[u.subscription_tier || 'free'] || TIER_COLORS.free,
-                        }}
-                      />
-                      <select
-                        className="admin-filter-select"
-                        value={u.subscription_tier || 'free'}
-                        onChange={e => handleTierChange(u.id, e.target.value)}
-                        style={{ fontSize: 13 }}
-                      >
-                        <option value="free">Free</option>
-                        <option value="home">Home</option>
-                        <option value="pro">Pro</option>
-                        <option value="pro_plus">Pro+</option>
-                      </select>
-                    </div>
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <select
-                      className="admin-filter-select"
-                      value={u.role || 'user'}
-                      onChange={e => handleRoleChange(u.id, e.target.value)}
-                      style={{ fontSize: 13 }}
+              {filtered.map(u => {
+                const isExpanded = expandedId === u.id;
+                const detail = detailCache[u.id];
+                const isLoadingDetail = detailLoading === u.id;
+
+                return (
+                  <>
+                    {/* Main row */}
+                    <tr
+                      key={u.id}
+                      onClick={() => handleExpandToggle(u.id)}
+                      style={{
+                        borderBottom: isExpanded ? 'none' : '1px solid var(--color-border)',
+                        background: selectedIds.has(u.id) ? 'var(--color-background)' : isExpanded ? 'var(--color-background)' : 'transparent',
+                        cursor: 'pointer',
+                        transition: 'background 0.15s ease',
+                      }}
                     >
-                      <option value="user">User</option>
-                      <option value="agent">Agent</option>
-                      <option value="pro_provider">Pro Provider</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    {u.admin_override ? (
-                      <span className="admin-status" style={{ background: 'var(--color-copper-muted, #FFF3E0)', color: 'var(--color-copper)' }}>
-                        Admin Set
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Stripe</span>
+                      <td style={{ width: 40, padding: '12px 16px' }} onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(u.id)}
+                          onChange={() => toggleSelectUser(u.id)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </td>
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--charcoal)' }}>
+                        <span style={{ marginRight: 6 }}>{isExpanded ? '\u25BC' : '\u25B6'}</span>
+                        {u.full_name || '\u2014'}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)' }}>{u.email || '\u2014'}</td>
+                      <td style={{ padding: '12px 16px' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              background: TIER_COLORS[u.subscription_tier || 'free'] || TIER_COLORS.free,
+                            }}
+                          />
+                          <select
+                            className="admin-filter-select"
+                            value={u.subscription_tier || 'free'}
+                            onChange={e => handleTierChange(u.id, e.target.value)}
+                            style={{ fontSize: 13 }}
+                          >
+                            <option value="free">Free</option>
+                            <option value="home">Home</option>
+                            <option value="pro">Pro</option>
+                            <option value="pro_plus">Pro+</option>
+                          </select>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 16px' }} onClick={e => e.stopPropagation()}>
+                        <select
+                          className="admin-filter-select"
+                          value={u.role || 'user'}
+                          onChange={e => handleRoleChange(u.id, e.target.value)}
+                          style={{ fontSize: 13 }}
+                        >
+                          <option value="user">User</option>
+                          <option value="agent">Agent</option>
+                          <option value="pro_provider">Pro Provider</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        {u.admin_override ? (
+                          <span className="admin-status" style={{ background: 'var(--color-copper-muted, #FFF3E0)', color: 'var(--color-copper)' }}>
+                            Admin Set
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Stripe</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)' }}>
+                        {u.created_at ? new Date(u.created_at).toLocaleDateString() : '\u2014'}
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                        {u.role !== 'admin' && (
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleDeleteUser(u.id, u.full_name)}
+                            style={{ fontSize: 12, padding: '4px 12px' }}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+
+                    {/* Expanded detail row */}
+                    {isExpanded && (
+                      <tr key={`${u.id}-detail`} style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-background)' }}>
+                        <td colSpan={colCount} style={{ padding: '0 16px 20px 56px' }}>
+                          {isLoadingDetail ? (
+                            <div style={{ padding: '16px 0' }}>
+                              <div className="spinner" style={{ width: 20, height: 20 }} />
+                            </div>
+                          ) : detail ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 40px', paddingTop: 8 }}>
+                              {/* Left column: Contact & Agent */}
+                              <div>
+                                <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', margin: '0 0 10px 0' }}>Contact &amp; Agent</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+                                  <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Phone: </span>
+                                    <span style={{ fontWeight: 500 }}>{detail.phone || 'Not set'}</span>
+                                  </div>
+                                  <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Agent: </span>
+                                    <span style={{ fontWeight: 500 }}>
+                                      {detail.agent ? `${detail.agent.name} (${detail.agent.brokerage})` : 'None'}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Gift Code: </span>
+                                    <span style={{ fontWeight: 500 }}>
+                                      {detail.giftCode ? (
+                                        <>
+                                          <code style={{ background: 'var(--color-border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>{detail.giftCode}</code>
+                                          {detail.giftCodeDetails && (
+                                            <span style={{ marginLeft: 6, color: 'var(--text-secondary)', fontSize: 12 }}>
+                                              ({TIER_LABELS[detail.giftCodeDetails.tier] || detail.giftCodeDetails.tier})
+                                            </span>
+                                          )}
+                                        </>
+                                      ) : 'None'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Stats row */}
+                                <div style={{ display: 'flex', gap: 16, marginTop: 14 }}>
+                                  <StatBadge label="Equipment" value={detail.equipmentCount} />
+                                  <StatBadge label="Tasks" value={detail.taskCount} />
+                                  <StatBadge label="Logs" value={detail.logCount} />
+                                </div>
+                              </div>
+
+                              {/* Right column: Homes */}
+                              <div>
+                                <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', margin: '0 0 10px 0' }}>
+                                  Homes ({detail.homes.length})
+                                </h4>
+                                {detail.homes.length === 0 ? (
+                                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>No homes registered</p>
+                                ) : (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    {detail.homes.map(h => (
+                                      <div
+                                        key={h.id}
+                                        style={{
+                                          background: 'var(--color-surface, white)',
+                                          border: '1px solid var(--color-border)',
+                                          borderRadius: 8,
+                                          padding: '10px 14px',
+                                          fontSize: 13,
+                                        }}
+                                      >
+                                        <div style={{ fontWeight: 600, marginBottom: 2 }}>{h.address}</div>
+                                        <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                                          {h.city}, {h.state} {h.zip_code}
+                                          {h.year_built && <> &middot; Built {h.year_built}</>}
+                                          {h.square_footage && <> &middot; {h.square_footage.toLocaleString()} sqft</>}
+                                          {h.bedrooms > 0 && <> &middot; {h.bedrooms}bd/{h.bathrooms}ba</>}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <p style={{ fontSize: 13, color: 'var(--text-secondary)', padding: '12px 0' }}>Failed to load details</p>
+                          )}
+                        </td>
+                      </tr>
                     )}
-                  </td>
-                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)' }}>
-                    {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                    {u.role !== 'admin' && (
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => handleDeleteUser(u.id, u.full_name)}
-                        style={{ fontSize: 12, padding: '4px 12px' }}
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                  </>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
+    </div>
+  );
+}
+
+function StatBadge({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={{
+      background: 'var(--color-surface, white)',
+      border: '1px solid var(--color-border)',
+      borderRadius: 8,
+      padding: '6px 14px',
+      textAlign: 'center',
+      minWidth: 64,
+    }}>
+      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--charcoal)' }}>{value}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>{label}</div>
     </div>
   );
 }

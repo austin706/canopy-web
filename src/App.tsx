@@ -41,6 +41,8 @@ const AdminAnalytics = lazy(() => import('@/pages/AdminAnalytics'));
 const AdminAuditLog = lazy(() => import('@/pages/AdminAuditLog'));
 const AdminProviderApplications = lazy(() => import('@/pages/AdminProviderApplications'));
 const AdminSupportTickets = lazy(() => import('@/pages/AdminSupportTickets'));
+const AdminReferenceData = lazy(() => import('@/pages/AdminReferenceData'));
+const AdminTechnicianOnboarding = lazy(() => import('@/pages/AdminTechnicianOnboarding'));
 const AgentPortal = lazy(() => import('@/pages/AgentPortal'));
 const AgentProfile = lazy(() => import('@/pages/AgentProfile'));
 const AgentClientHome = lazy(() => import('@/pages/AgentClientHome'));
@@ -81,6 +83,7 @@ const Support = lazy(() => import('@/pages/Support'));
 const ApplyPro = lazy(() => import('@/pages/ApplyPro'));
 const AgentLanding = lazy(() => import('@/pages/AgentLanding'));
 const ProLanding = lazy(() => import('@/pages/ProLanding'));
+const AgentRedeem = lazy(() => import('@/pages/AgentRedeem'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -170,6 +173,7 @@ export default function App() {
           <Route path="/apply-pro" element={<ApplyPro />} />
           <Route path="/for-agents" element={<AgentLanding />} />
           <Route path="/for-pros" element={<ProLanding />} />
+          <Route path="/a/:slug" element={<AgentRedeem />} />
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
           {/* ═══════════════════════════════════════════════════════
@@ -216,6 +220,8 @@ export default function App() {
             <Route path="/admin/audit-log" element={<AdminAuditLog />} />
             <Route path="/admin/provider-applications" element={<AdminProviderApplications />} />
             <Route path="/admin/support-tickets" element={<AdminSupportTickets />} />
+            <Route path="/admin/reference-data" element={<AdminReferenceData />} />
+            <Route path="/admin/technician-onboarding" element={<AdminTechnicianOnboarding />} />
           </Route>
 
           {/* ═══════════════════════════════════════════════════════

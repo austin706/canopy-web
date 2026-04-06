@@ -78,6 +78,11 @@ const Icon = {
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
     </svg>
   ),
+  Database: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+    </svg>
+  ),
   Ticket: () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 9a3 3 0 013-3h14a3 3 0 013 3"/><path d="M2 9v6a3 3 0 003 3h14a3 3 0 003-3V9"/><path d="M13 6v12"/><path d="M2 9h20"/>
@@ -147,6 +152,7 @@ export default function AdminLayout() {
         { to: '/admin/agents', label: 'Agents', icon: <Icon.Agent /> },
         { to: '/admin/pro-providers', label: 'Pro Providers', icon: <Icon.Wrench /> },
         { to: '/admin/provider-applications', label: 'Applications', icon: <Icon.Clipboard /> },
+        { to: '/admin/technician-onboarding', label: 'Tech Onboarding', icon: <Icon.Clipboard /> },
       ],
     },
     {
@@ -169,6 +175,7 @@ export default function AdminLayout() {
       title: 'System',
       items: [
         { to: '/admin/audit-log', label: 'Audit Log', icon: <Icon.Shield /> },
+        { to: '/admin/reference-data', label: 'Reference Data', icon: <Icon.Database /> },
       ],
     },
   ];

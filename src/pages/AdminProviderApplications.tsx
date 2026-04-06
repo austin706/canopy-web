@@ -22,6 +22,7 @@ interface ProviderApplication {
   status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
   review_notes: string | null;
   created_at: string;
+  requested_type: 'canopy_technician' | 'partner_pro';
 }
 
 export default function AdminProviderApplications() {
@@ -79,6 +80,7 @@ export default function AdminProviderApplications() {
           service_area_zips: app.service_area_zips,
           bio: app.bio,
           provider_status: 'approved',
+          provider_type: app.requested_type || 'partner_pro',
           application_id: app.id,
           user_id: null,
           is_available: true,
@@ -263,9 +265,18 @@ export default function AdminProviderApplications() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 600, fontSize: 15, margin: '0 0 4px 0' }}>
-                      {app.business_name}
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <p style={{ fontWeight: 600, fontSize: 15, margin: 0 }}>
+                        {app.business_name}
+                      </p>
+                      <span style={{
+                        fontSize: 10, padding: '2px 8px', borderRadius: 4, fontWeight: 700, textTransform: 'uppercase',
+                        background: app.requested_type === 'canopy_technician' ? '#e6f5ee' : '#fdf3e6',
+                        color: app.requested_type === 'canopy_technician' ? '#1a6b4a' : '#6b4a1a',
+                      }}>
+                        {app.requested_type === 'canopy_technician' ? 'Technician' : 'Partner Pro'}
+                      </span>
+                    </div>
                     <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 2px 0' }}>
                       {app.contact_name} • {app.email}
                     </p>

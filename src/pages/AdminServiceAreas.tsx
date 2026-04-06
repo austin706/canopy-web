@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/services/supabase';
+import { supabase, getServiceAreaServices, upsertServiceAreaService, deleteServiceAreaService } from '@/services/supabase';
+import type { ServiceAreaService } from '@/services/supabase';
 import { invalidateServiceAreaCache } from '@/services/subscriptionGate';
 import { logAdminAction } from '@/services/auditLog';
 import { getMessageVariant, messageColors } from '@/utils/messageType';
@@ -15,6 +16,10 @@ interface ServiceArea {
   is_active: boolean;
   launched_at: string;
   created_at: string;
+  max_providers: number;
+  pricing_tier: string;
+  notes: string | null;
+  coverage_radius_miles: number;
 }
 
 interface ProProvider {
@@ -54,9 +59,65 @@ export default function AdminServiceAreas() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
+  // Service catalog modal state
+  const [catalogArea, setCatalogArea] = useState<ServiceArea | null>(null);
+  const [catalogServices, setCatalogServices] = useState<ServiceAreaService[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [editingService, setEditingService] = useState<Partial<ServiceAreaService> | null>(null);
+
   useEffect(() => {
     fetchAreas();
   }, []);
+
+  const openServiceCatalog = async (area: ServiceArea) => {
+    setCatalogArea(area);
+    setCatalogLoading(true);
+    try {
+      const services = await getServiceAreaServices(area.id, true);
+      setCatalogServices(services);
+    } catch (e) {
+      console.error('Error loading service catalog:', e);
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
+
+  const handleSaveService = async () => {
+    if (!catalogArea || !editingService) return;
+    try {
+      const saved = await upsertServiceAreaService({
+        ...editingService,
+        service_area_id: catalogArea.id,
+        service_key: editingService.service_key || '',
+        service_label: editingService.service_label || '',
+        category: editingService.category || 'General',
+      } as any);
+      setCatalogServices(prev => {
+        const existing = prev.findIndex(s => s.id === saved.id);
+        if (existing >= 0) {
+          const updated = [...prev];
+          updated[existing] = saved;
+          return updated;
+        }
+        return [...prev, saved];
+      });
+      setEditingService(null);
+      await logAdminAction('service_area_service.upsert', 'service_area_services', saved.id, { service_key: saved.service_key, area: catalogArea.zip_code });
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
+  const handleDeleteService = async (serviceId: string) => {
+    if (!confirm('Remove this service from this area?')) return;
+    try {
+      await deleteServiceAreaService(serviceId);
+      setCatalogServices(prev => prev.filter(s => s.id !== serviceId));
+      await logAdminAction('service_area_service.delete', 'service_area_services', serviceId, { area: catalogArea?.zip_code });
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
 
   const fetchAreas = async () => {
     setLoading(true);
@@ -395,16 +456,30 @@ export default function AdminServiceAreas() {
                         .sort(([a], [b]) => a.localeCompare(b))
                         .map(([city, cityAreas]) => (
                           <div key={city} style={{ marginBottom: 12 }}>
-                            <p style={{
-                              fontSize: 12,
-                              fontWeight: 600,
-                              color: Colors.medGray,
-                              textTransform: 'uppercase',
-                              letterSpacing: 0.5,
-                              margin: '0 0 8px 0',
-                            }}>
-                              {city}
-                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                              <p style={{
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: Colors.medGray,
+                                textTransform: 'uppercase',
+                                letterSpacing: 0.5,
+                                margin: 0,
+                              }}>
+                                {city}
+                              </p>
+                              <button
+                                onClick={() => openServiceCatalog(cityAreas[0])}
+                                style={{
+                                  fontSize: 11, padding: '2px 8px', borderRadius: 4,
+                                  background: Colors.sage + '15', color: Colors.sage,
+                                  border: `1px solid ${Colors.sage}30`, cursor: 'pointer',
+                                  fontWeight: 600,
+                                }}
+                                title="Manage service catalog for this area"
+                              >
+                                Services ({cityAreas.length} zips)
+                              </button>
+                            </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                               {cityAreas.map(area => (
                                 <div
@@ -714,6 +789,202 @@ export default function AdminServiceAreas() {
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Service Catalog Modal */}
+      {catalogArea && (
+        <div className="modal-overlay" onClick={() => { setCatalogArea(null); setEditingService(null); }}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 720, maxHeight: '85vh', overflow: 'auto' }}>
+            <h2 style={{ marginTop: 0 }}>
+              Service Catalog — {catalogArea.city_name || catalogArea.zip_code} ({catalogArea.state})
+            </h2>
+            <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 20 }}>
+              Manage which services are available in this area. Services apply to all zip codes in this region.
+            </p>
+
+            {catalogLoading ? (
+              <div style={{ textAlign: 'center', padding: 32 }}>
+                <div className="spinner" />
+              </div>
+            ) : (
+              <>
+                {/* Service List */}
+                <table className="admin-table" style={{ fontSize: 13, width: '100%' }}>
+                  <thead>
+                    <tr>
+                      <th>Service</th>
+                      <th>Category</th>
+                      <th>Price</th>
+                      <th>Time</th>
+                      <th>Active</th>
+                      <th style={{ width: 80 }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {catalogServices.sort((a, b) => a.sort_order - b.sort_order).map(svc => (
+                      <tr key={svc.id}>
+                        <td style={{ fontWeight: 500 }}>{svc.service_label}</td>
+                        <td>
+                          <span style={{
+                            fontSize: 11, padding: '2px 6px', borderRadius: 4,
+                            background: Colors.sageMuted, color: Colors.sage,
+                          }}>
+                            {svc.category}
+                          </span>
+                        </td>
+                        <td>{svc.base_price_cents ? `$${(svc.base_price_cents / 100).toFixed(2)}` : 'Free'}</td>
+                        <td>{svc.estimated_minutes ? `${svc.estimated_minutes}m` : '—'}</td>
+                        <td>
+                          <span style={{ color: svc.is_active ? Colors.success : Colors.medGray }}>
+                            {svc.is_active ? '●' : '○'}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              style={{ fontSize: 11, padding: '2px 6px' }}
+                              onClick={() => setEditingService({ ...svc })}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              style={{ fontSize: 11, padding: '2px 6px', color: Colors.error }}
+                              onClick={() => handleDeleteService(svc.id)}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {catalogServices.length === 0 && (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: 24, color: Colors.medGray }}>
+                          No services configured for this area
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+
+                {/* Add/Edit Service Form */}
+                {editingService ? (
+                  <div style={{ marginTop: 16, padding: 16, borderRadius: 8, background: Colors.cream, border: `1px solid ${Colors.lightGray}` }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: 14 }}>
+                      {editingService.id ? 'Edit Service' : 'Add Service'}
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Service Key</label>
+                        <input
+                          className="form-input"
+                          value={editingService.service_key || ''}
+                          onChange={e => setEditingService({ ...editingService, service_key: e.target.value })}
+                          placeholder="hvac_inspection"
+                          disabled={!!editingService.id}
+                        />
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Display Label</label>
+                        <input
+                          className="form-input"
+                          value={editingService.service_label || ''}
+                          onChange={e => setEditingService({ ...editingService, service_label: e.target.value })}
+                          placeholder="HVAC Inspection"
+                        />
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Category</label>
+                        <input
+                          className="form-input"
+                          value={editingService.category || ''}
+                          onChange={e => setEditingService({ ...editingService, category: e.target.value })}
+                          placeholder="HVAC"
+                        />
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Base Price (cents)</label>
+                        <input
+                          className="form-input"
+                          type="number"
+                          min="0"
+                          value={editingService.base_price_cents ?? ''}
+                          onChange={e => setEditingService({ ...editingService, base_price_cents: parseInt(e.target.value) || 0 })}
+                          placeholder="0"
+                        />
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Estimated Minutes</label>
+                        <input
+                          className="form-input"
+                          type="number"
+                          min="0"
+                          value={editingService.estimated_minutes ?? ''}
+                          onChange={e => setEditingService({ ...editingService, estimated_minutes: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Sort Order</label>
+                        <input
+                          className="form-input"
+                          type="number"
+                          value={editingService.sort_order ?? 0}
+                          onChange={e => setEditingService({ ...editingService, sort_order: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                        <input
+                          type="checkbox"
+                          checked={editingService.is_active !== false}
+                          onChange={e => setEditingService({ ...editingService, is_active: e.target.checked })}
+                        />
+                        Active
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                        <input
+                          type="checkbox"
+                          checked={editingService.requires_pro_plus || false}
+                          onChange={e => setEditingService({ ...editingService, requires_pro_plus: e.target.checked })}
+                        />
+                        Requires Pro+
+                      </label>
+                      <div style={{ flex: 1 }} />
+                      <button className="btn btn-ghost btn-sm" onClick={() => setEditingService(null)}>Cancel</button>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={handleSaveService}
+                        disabled={!editingService.service_key || !editingService.service_label}
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    className="btn btn-secondary"
+                    style={{ marginTop: 12 }}
+                    onClick={() => setEditingService({
+                      service_key: '', service_label: '', category: 'General',
+                      is_active: true, base_price_cents: 0, estimated_minutes: 30,
+                      sort_order: (catalogServices.length + 1) * 10,
+                      requires_pro_plus: false,
+                    })}
+                  >
+                    + Add Service
+                  </button>
+                )}
+              </>
+            )}
+
+            <div className="modal-actions" style={{ marginTop: 20 }}>
+              <button className="btn btn-ghost" onClick={() => { setCatalogArea(null); setEditingService(null); }}>Close</button>
             </div>
           </div>
         </div>

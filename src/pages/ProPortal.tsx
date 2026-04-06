@@ -17,6 +17,10 @@ interface ProProvider {
   rating?: number;
   total_reviews: number;
   assigned_clients?: number;
+  provider_type: 'canopy_technician' | 'partner_pro';
+  certification_level?: string;
+  employee_id?: string;
+  commission_rate?: number;
 }
 
 interface AssignedClient {

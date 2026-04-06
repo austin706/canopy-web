@@ -20,6 +20,7 @@ export default function AgentProfile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [agent, setAgent] = useState<Agent | null>(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -27,6 +28,7 @@ export default function AgentProfile() {
   const [accentColor, setAccentColor] = useState(Colors.copper);
   const [message, setMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadAgent();
@@ -76,6 +78,36 @@ export default function AgentProfile() {
     } finally {
       setUploadingPhoto(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    if (!agent || !file) return;
+
+    setUploadingLogo(true);
+    try {
+      const logoUrl = await uploadPhoto('agent-photos', `${agent.id}/logo_${Date.now()}_${file.name}`, file);
+      const updatedAgent = await updateAgent(agent.id, { logo_url: logoUrl });
+      setAgent(updatedAgent);
+      setMessage('Logo uploaded successfully!');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err: any) {
+      setMessage('Failed to upload logo: ' + err.message);
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!agent) return;
+    try {
+      const updatedAgent = await updateAgent(agent.id, { logo_url: null });
+      setAgent(updatedAgent);
+      setMessage('Logo removed.');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err: any) {
+      setMessage('Failed to remove logo: ' + err.message);
     }
   };
 
@@ -173,6 +205,65 @@ export default function AgentProfile() {
         >
           {uploadingPhoto ? 'Uploading...' : 'Change Photo'}
         </button>
+      </div>
+
+      {/* Brokerage Logo */}
+      <div className="card">
+        <h2 style={{ fontSize: 16, marginBottom: 16 }}>Brokerage Logo</h2>
+        <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>
+          Shown on your client-facing QR code page. Use a transparent PNG for best results.
+        </p>
+
+        {agent.logo_url ? (
+          <div style={{ textAlign: 'center', marginBottom: 16 }}>
+            <div style={{ display: 'inline-block', padding: 16, background: 'var(--color-background)', borderRadius: 8 }}>
+              <img
+                src={agent.logo_url}
+                alt="Brokerage logo"
+                style={{ maxHeight: 60, maxWidth: 240, objectFit: 'contain', display: 'block' }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            textAlign: 'center', padding: '24px 16px', marginBottom: 16,
+            background: 'var(--color-background)', borderRadius: 8,
+            border: '2px dashed var(--color-border)',
+          }}>
+            <p className="text-sm text-gray">No logo uploaded yet</p>
+          </div>
+        )}
+
+        <input
+          ref={logoInputRef}
+          type="file"
+          accept="image/*"
+          onChange={e => {
+            const file = e.target.files?.[0];
+            if (file) handleLogoUpload(file);
+          }}
+          style={{ display: 'none' }}
+        />
+
+        <div className="flex gap-sm">
+          <button
+            className="btn btn-secondary"
+            onClick={() => logoInputRef.current?.click()}
+            disabled={uploadingLogo}
+            style={{ flex: 1 }}
+          >
+            {uploadingLogo ? 'Uploading...' : agent.logo_url ? 'Change Logo' : 'Upload Logo'}
+          </button>
+          {agent.logo_url && (
+            <button
+              className="btn btn-ghost"
+              onClick={handleRemoveLogo}
+              style={{ color: 'var(--color-error)' }}
+            >
+              Remove
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Basic Information */}

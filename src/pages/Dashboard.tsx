@@ -14,6 +14,7 @@ import { geocodeAddress } from '@/services/geocoding';
 import { upsertHome } from '@/services/supabase';
 import { CanopyLogo, NavWeather, NavHome } from '@/components/icons/CanopyLogo';
 import { generateCostForecast, FORECAST_DISCLAIMER } from '@/services/costForecast';
+import PendingInvites from '@/components/PendingInvites';
 import type { MaintenanceTask } from '@/types';
 
 const DEMO_TASKS = [
@@ -226,6 +227,9 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+
+      {/* Pending Home Member Invites */}
+      <PendingInvites />
 
       <div className="dashboard-layout">
         <div className="flex-col gap-lg">

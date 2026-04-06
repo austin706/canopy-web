@@ -118,6 +118,7 @@ export default function AdminDashboard() {
             { label: 'Support Tickets', route: '/admin/support-tickets', icon: '🎫', count: 0 },
             { label: 'Analytics', route: '/admin/analytics', icon: '📊', count: 0 },
             { label: 'Audit Log', route: '/admin/audit-log', icon: '📋', count: 0 },
+            { label: 'Reference Data', route: '/admin/reference-data', icon: '🗄️', count: 0 },
           ].map(action => (
             <Link
               key={action.label}

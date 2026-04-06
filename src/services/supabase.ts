@@ -472,6 +472,83 @@ export const getAllUsers = async () => {
   return data || [];
 };
 
+export const getUserDetailData = async (userId: string) => {
+  // Fetch homes with equipment counts
+  const { data: homes, error: homesErr } = await supabase
+    .from('homes')
+    .select('id, address, city, state, zip_code, year_built, square_footage, bedrooms, bathrooms')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (homesErr) throw homesErr;
+
+  // Count equipment across all user homes
+  let equipmentCount = 0;
+  const homeIds = (homes || []).map(h => h.id);
+  if (homeIds.length > 0) {
+    const { count, error: eqErr } = await supabase
+      .from('equipment')
+      .select('*', { count: 'exact', head: true })
+      .in('home_id', homeIds);
+    if (!eqErr && count !== null) equipmentCount = count;
+  }
+
+  // Fetch agent info if user has one
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('agent_id, gift_code, phone')
+    .eq('id', userId)
+    .single();
+
+  let agent: { name: string; brokerage: string } | null = null;
+  if (profile?.agent_id) {
+    const { data: agentData } = await supabase
+      .from('agents')
+      .select('name, brokerage')
+      .eq('id', profile.agent_id)
+      .single();
+    if (agentData) agent = agentData;
+  }
+
+  // Fetch redeemed gift code details
+  let giftCodeDetails: { code: string; tier: string; agent_id: string } | null = null;
+  if (profile?.gift_code) {
+    const { data: codeData } = await supabase
+      .from('gift_codes')
+      .select('code, tier, agent_id')
+      .eq('code', profile.gift_code)
+      .single();
+    if (codeData) giftCodeDetails = codeData;
+  }
+
+  // Count maintenance tasks and logs
+  let taskCount = 0;
+  let logCount = 0;
+  if (homeIds.length > 0) {
+    const { count: tc } = await supabase
+      .from('maintenance_tasks')
+      .select('*', { count: 'exact', head: true })
+      .in('home_id', homeIds);
+    if (tc !== null) taskCount = tc;
+
+    const { count: lc } = await supabase
+      .from('maintenance_logs')
+      .select('*', { count: 'exact', head: true })
+      .in('home_id', homeIds);
+    if (lc !== null) logCount = lc;
+  }
+
+  return {
+    homes: homes || [],
+    equipmentCount,
+    taskCount,
+    logCount,
+    phone: profile?.phone || null,
+    agent,
+    giftCode: profile?.gift_code || null,
+    giftCodeDetails,
+  };
+};
+
 export const getAllGiftCodes = async () => {
   const { data, error } = await supabase.from('gift_codes').select('*').order('created_at', { ascending: false });
   if (error) throw error;
@@ -723,4 +800,641 @@ export const upsertVaultPin = async (userId: string, pinHash: string) => {
     .single();
   if (error) throw error;
   return data;
+};
+
+// ─── Home Members ───
+
+export interface HomeMember {
+  id: string;
+  home_id: string;
+  user_id: string | null;
+  role: 'owner' | 'editor' | 'viewer';
+  invite_email: string | null;
+  invite_status: 'pending' | 'accepted' | 'declined';
+  invited_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  profile?: { full_name: string; email: string } | null;
+}
+
+export const getHomeMembers = async (homeId: string): Promise<HomeMember[]> => {
+  const { data, error } = await supabase
+    .from('home_members')
+    .select('*, profile:profiles!home_members_user_id_fkey(full_name, email)')
+    .eq('home_id', homeId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data || []) as HomeMember[];
+};
+
+export const inviteHomeMember = async (homeId: string, email: string, role: 'editor' | 'viewer', invitedBy: string) => {
+  // Check if there's already a user with this email
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('id, email')
+    .eq('email', email.toLowerCase().trim())
+    .single();
+
+  const insertData: Record<string, any> = {
+    home_id: homeId,
+    role,
+    invite_email: email.toLowerCase().trim(),
+    invited_by: invitedBy,
+    invite_status: existingProfile ? 'pending' : 'pending',
+    user_id: existingProfile?.id || null,
+  };
+
+  const { data, error } = await supabase
+    .from('home_members')
+    .insert([insertData])
+    .select()
+    .single();
+  if (error) {
+    if (error.code === '23505') throw new Error('This person has already been invited to this home.');
+    throw error;
+  }
+
+  // Send invite notification email
+  try {
+    await supabase.functions.invoke('send-email', {
+      body: {
+        to: email,
+        subject: 'You\'ve been invited to join a home on Canopy',
+        html: `
+          <h2>You've been invited!</h2>
+          <p>Someone has invited you to join their home on Canopy Home.</p>
+          <p><strong>Role:</strong> ${role === 'editor' ? 'Editor (can view and edit)' : 'Viewer (can view only)'}</p>
+          <p>${existingProfile ? 'Log in to your Canopy account to accept this invitation.' : 'Create a Canopy account with this email to accept.'}</p>
+          <p><a href="https://canopyhome.app">Open Canopy</a></p>
+        `,
+      },
+    });
+  } catch (emailErr) {
+    console.error('Invite email failed:', emailErr);
+  }
+
+  return data;
+};
+
+export const acceptHomeInvite = async (memberId: string) => {
+  const { data, error } = await supabase
+    .from('home_members')
+    .update({ invite_status: 'accepted', updated_at: new Date().toISOString() })
+    .eq('id', memberId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const declineHomeInvite = async (memberId: string) => {
+  const { data, error } = await supabase
+    .from('home_members')
+    .update({ invite_status: 'declined', updated_at: new Date().toISOString() })
+    .eq('id', memberId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const removeHomeMember = async (memberId: string) => {
+  const { error } = await supabase
+    .from('home_members')
+    .delete()
+    .eq('id', memberId);
+  if (error) throw error;
+};
+
+export const updateHomeMemberRole = async (memberId: string, role: 'editor' | 'viewer') => {
+  const { data, error } = await supabase
+    .from('home_members')
+    .update({ role, updated_at: new Date().toISOString() })
+    .eq('id', memberId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const getPendingInvites = async (userEmail: string) => {
+  const { data, error } = await supabase
+    .from('home_members')
+    .select('*, home:homes!home_members_home_id_fkey(address, city, state)')
+    .eq('invite_email', userEmail.toLowerCase())
+    .eq('invite_status', 'pending');
+  if (error) throw error;
+  return data || [];
+};
+
+export const getMyMemberships = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('home_members')
+    .select('*, home:homes!home_members_home_id_fkey(id, address, city, state, zip_code)')
+    .eq('user_id', userId)
+    .eq('invite_status', 'accepted');
+  if (error) throw error;
+  return data || [];
+};
+
+// ─── Reference Data ───
+
+export interface ReferenceData {
+  id: string;
+  type: string;
+  key: string;
+  label: string;
+  value: Record<string, any>;
+  sort_order: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const getReferenceData = async (type: string, includeInactive = false): Promise<ReferenceData[]> => {
+  let query = supabase
+    .from('reference_data')
+    .select('*')
+    .eq('type', type)
+    .order('sort_order', { ascending: true });
+  if (!includeInactive) query = query.eq('active', true);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+};
+
+export const getAllReferenceTypes = async (): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from('reference_data')
+    .select('type')
+    .order('type');
+  if (error) throw error;
+  const types = [...new Set((data || []).map(d => d.type))];
+  return types;
+};
+
+export const upsertReferenceData = async (item: Partial<ReferenceData> & { type: string; key: string; label: string }) => {
+  const { data, error } = await supabase
+    .from('reference_data')
+    .upsert({
+      ...item,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'type,key' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteReferenceData = async (id: string) => {
+  const { error } = await supabase
+    .from('reference_data')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+};
+
+// ─── Task Templates (DB) ───
+
+export interface TaskTemplateDB {
+  id: string;
+  title: string;
+  description: string | null;
+  instructions: string | null;
+  category: string;
+  priority: string;
+  frequency: string;
+  applicable_months: number[];
+  estimated_minutes: number | null;
+  estimated_cost_low: number | null;
+  estimated_cost_high: number | null;
+  regions: string[];
+  requires_feature: string | null;
+  pro_required: boolean;
+  is_weather_triggered: boolean;
+  sort_order: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const getTaskTemplates = async (includeInactive = false): Promise<TaskTemplateDB[]> => {
+  let query = supabase
+    .from('task_templates')
+    .select('*')
+    .order('sort_order', { ascending: true });
+  if (!includeInactive) query = query.eq('active', true);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+};
+
+export const upsertTaskTemplate = async (template: Partial<TaskTemplateDB> & { title: string; category: string }) => {
+  const { data, error } = await supabase
+    .from('task_templates')
+    .upsert({
+      ...template,
+      updated_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteTaskTemplate = async (id: string) => {
+  const { error } = await supabase
+    .from('task_templates')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+};
+
+// ─── Service Area Services ───
+
+export interface ServiceAreaService {
+  id: string;
+  service_area_id: string;
+  service_key: string;
+  service_label: string;
+  category: string;
+  is_active: boolean;
+  base_price_cents: number | null;
+  estimated_minutes: number | null;
+  requires_pro_plus: boolean;
+  notes: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const getServiceAreaServices = async (serviceAreaId: string, includeInactive = false): Promise<ServiceAreaService[]> => {
+  let query = supabase
+    .from('service_area_services')
+    .select('*')
+    .eq('service_area_id', serviceAreaId)
+    .order('sort_order', { ascending: true });
+  if (!includeInactive) query = query.eq('is_active', true);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+};
+
+export const upsertServiceAreaService = async (item: Partial<ServiceAreaService> & { service_area_id: string; service_key: string; service_label: string; category: string }) => {
+  const { data, error } = await supabase
+    .from('service_area_services')
+    .upsert({
+      ...item,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'service_area_id,service_key' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteServiceAreaService = async (id: string) => {
+  const { error } = await supabase
+    .from('service_area_services')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+};
+
+// ─── Provider Services (Capabilities) ───
+
+export interface ProviderService {
+  id: string;
+  provider_id: string;
+  service_key: string;
+  proficiency: 'basic' | 'standard' | 'expert';
+  is_active: boolean;
+  certified_at: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export const getProviderServices = async (providerId: string): Promise<ProviderService[]> => {
+  const { data, error } = await supabase
+    .from('provider_services')
+    .select('*')
+    .eq('provider_id', providerId)
+    .eq('is_active', true);
+  if (error) throw error;
+  return data || [];
+};
+
+export const upsertProviderService = async (item: Partial<ProviderService> & { provider_id: string; service_key: string }) => {
+  const { data, error } = await supabase
+    .from('provider_services')
+    .upsert(item, { onConflict: 'provider_id,service_key' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteProviderService = async (id: string) => {
+  const { error } = await supabase
+    .from('provider_services')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+};
+
+// ─── Technician Onboarding ───
+
+export interface TrainingMaterial {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  content_type: string;
+  content_url: string | null;
+  content_body: string | null;
+  duration_minutes: number | null;
+  required_for_level: string[];
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OnboardingStep {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  required: boolean;
+  sort_order: number;
+  estimated_minutes: number | null;
+  training_material_id: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface TechnicianOnboarding {
+  id: string;
+  provider_id: string;
+  step_id: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'skipped';
+  completed_at: string | null;
+  completed_by: string | null;
+  notes: string | null;
+  score: number | null;
+  created_at: string;
+  updated_at: string;
+  step?: OnboardingStep;
+}
+
+export const getTrainingMaterials = async (category?: string): Promise<TrainingMaterial[]> => {
+  let query = supabase
+    .from('training_materials')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+  if (category) query = query.eq('category', category);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+};
+
+export const upsertTrainingMaterial = async (item: Partial<TrainingMaterial> & { title: string; category: string; content_type: string }) => {
+  const { data, error } = await supabase
+    .from('training_materials')
+    .upsert({ ...item, updated_at: new Date().toISOString() })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const getOnboardingSteps = async (): Promise<OnboardingStep[]> => {
+  const { data, error } = await supabase
+    .from('onboarding_steps')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return data || [];
+};
+
+export const getTechnicianOnboardingProgress = async (providerId: string): Promise<TechnicianOnboarding[]> => {
+  const { data, error } = await supabase
+    .from('technician_onboarding')
+    .select('*, step:onboarding_steps(*)')
+    .eq('provider_id', providerId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+};
+
+export const initTechnicianOnboarding = async (providerId: string): Promise<void> => {
+  const steps = await getOnboardingSteps();
+  const records = steps.map(step => ({
+    provider_id: providerId,
+    step_id: step.id,
+    status: 'pending' as const,
+  }));
+  if (records.length > 0) {
+    const { error } = await supabase
+      .from('technician_onboarding')
+      .upsert(records, { onConflict: 'provider_id,step_id' });
+    if (error) throw error;
+  }
+};
+
+// ─── Equipment Scan Guides ───
+
+export interface EquipmentScanGuide {
+  id: string;
+  equipment_type: string;
+  display_name: string;
+  icon: string | null;
+  category: string;
+  nameplate_location: string;
+  nameplate_description: string | null;
+  photo_url: string | null;
+  video_url: string | null;
+  tips: string[];
+  common_brands: string[];
+  every_home_should_have: boolean;
+  priority_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EquipmentChecklist {
+  id: string;
+  user_id: string;
+  home_id: string;
+  equipment_type: string;
+  status: 'not_started' | 'scanned' | 'not_applicable' | 'skipped';
+  equipment_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const getEquipmentScanGuides = async (): Promise<EquipmentScanGuide[]> => {
+  const { data, error } = await supabase
+    .from('equipment_scan_guides')
+    .select('*')
+    .eq('is_active', true)
+    .order('priority_order', { ascending: true });
+  if (error) throw error;
+  return data || [];
+};
+
+export const getEssentialEquipmentGuides = async (): Promise<EquipmentScanGuide[]> => {
+  const { data, error } = await supabase
+    .from('equipment_scan_guides')
+    .select('*')
+    .eq('is_active', true)
+    .eq('every_home_should_have', true)
+    .order('priority_order', { ascending: true });
+  if (error) throw error;
+  return data || [];
+};
+
+export const getEquipmentChecklist = async (homeId: string): Promise<EquipmentChecklist[]> => {
+  const { data, error } = await supabase
+    .from('equipment_checklist')
+    .select('*')
+    .eq('home_id', homeId);
+  if (error) throw error;
+  return data || [];
+};
+
+export const upsertEquipmentChecklist = async (item: { user_id: string; home_id: string; equipment_type: string; status: string; equipment_id?: string }) => {
+  const { data, error } = await supabase
+    .from('equipment_checklist')
+    .upsert({
+      ...item,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'home_id,equipment_type' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const updateOnboardingStepStatus = async (
+  providerId: string,
+  stepId: string,
+  status: 'pending' | 'in_progress' | 'completed' | 'skipped',
+  notes?: string,
+  score?: number
+) => {
+  const update: Record<string, any> = {
+    status,
+    updated_at: new Date().toISOString(),
+  };
+  if (status === 'completed') {
+    update.completed_at = new Date().toISOString();
+  }
+  if (notes !== undefined) update.notes = notes;
+  if (score !== undefined) update.score = score;
+
+  const { data, error } = await supabase
+    .from('technician_onboarding')
+    .update(update)
+    .eq('provider_id', providerId)
+    .eq('step_id', stepId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+// ─── Agent QR Codes ───
+
+export interface AgentHomeQRCode {
+  id: string;
+  agent_id: string;
+  home_id: string | null;
+  qr_token: string;
+  gift_code_id: string | null;
+  status: 'active' | 'claimed' | 'expired' | 'revoked';
+  claimed_by: string | null;
+  claimed_at: string | null;
+  expires_at: string | null;
+  notes: string | null;
+  home_data: Record<string, unknown> | null;
+  buyer_name: string | null;
+  buyer_email: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const createAgentQRCode = async (
+  agentId: string,
+  homeData: Record<string, unknown>,
+  buyerName?: string,
+  buyerEmail?: string,
+  notes?: string,
+): Promise<AgentHomeQRCode> => {
+  const { data, error } = await supabase
+    .from('agent_home_qr_codes')
+    .insert({
+      agent_id: agentId,
+      home_data: homeData,
+      buyer_name: buyerName || null,
+      buyer_email: buyerEmail || null,
+      notes: notes || null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const getAgentQRCodes = async (agentId: string): Promise<AgentHomeQRCode[]> => {
+  const { data, error } = await supabase
+    .from('agent_home_qr_codes')
+    .select('*')
+    .eq('agent_id', agentId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+};
+
+export const getQRCodeByToken = async (token: string): Promise<AgentHomeQRCode | null> => {
+  const { data, error } = await supabase
+    .from('agent_home_qr_codes')
+    .select('*')
+    .eq('qr_token', token)
+    .eq('status', 'active')
+    .single();
+  if (error) {
+    if (error.code === 'PGRST116') return null; // not found
+    throw error;
+  }
+  return data;
+};
+
+export const claimQRCode = async (token: string, userId: string): Promise<AgentHomeQRCode> => {
+  const { data, error } = await supabase
+    .from('agent_home_qr_codes')
+    .update({
+      status: 'claimed',
+      claimed_by: userId,
+      claimed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('qr_token', token)
+    .eq('status', 'active')
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const revokeQRCode = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('agent_home_qr_codes')
+    .update({ status: 'revoked', updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw error;
 };

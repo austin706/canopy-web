@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertEquipment, deleteEquipment as deleteEquipApi, getEquipment, createTasks } from '@/services/supabase';
+import { upsertEquipment, deleteEquipment as deleteEquipApi, getEquipment, createTasks, getEquipmentScanGuides, getEquipmentChecklist, upsertEquipmentChecklist } from '@/services/supabase';
+import type { EquipmentScanGuide, EquipmentChecklist } from '@/services/supabase';
 import { getEquipmentLimit } from '@/services/subscriptionGate';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
 import EquipmentScanner from '@/components/EquipmentScanner';
@@ -63,6 +64,12 @@ export default function Equipment() {
   const [loading, setLoading] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+  // DB-backed scan guides and checklist
+  const [scanGuides, setScanGuides] = useState<EquipmentScanGuide[]>([]);
+  const [checklist, setChecklist] = useState<EquipmentChecklist[]>([]);
+  const [showChecklist, setShowChecklist] = useState(false);
+  const [selectedGuide, setSelectedGuide] = useState<EquipmentScanGuide | null>(null);
+
   const tier = user?.subscription_tier || 'free';
   const limit = getEquipmentLimit(tier);
   const atLimit = limit !== null && equipment.length >= limit;
@@ -85,7 +92,35 @@ export default function Equipment() {
       }
     };
     loadEquipment();
+
+    // Load scan guides and checklist
+    getEquipmentScanGuides().then(setScanGuides).catch(() => {});
+    if (home?.id) {
+      getEquipmentChecklist(home.id).then(setChecklist).catch(() => {});
+    }
   }, [home?.id]);
+
+  const essentialGuides = scanGuides.filter(g => g.every_home_should_have);
+  const checklistStatus = (type: string) => checklist.find(c => c.equipment_type === type)?.status || 'not_started';
+  const scannedEssentials = essentialGuides.filter(g => checklistStatus(g.equipment_type) === 'scanned').length;
+
+  const handleChecklistAction = async (type: string, status: 'scanned' | 'not_applicable' | 'skipped') => {
+    if (!user || !home) return;
+    try {
+      const result = await upsertEquipmentChecklist({ user_id: user.id, home_id: home.id, equipment_type: type, status });
+      setChecklist(prev => {
+        const existing = prev.findIndex(c => c.equipment_type === type);
+        if (existing >= 0) {
+          const updated = [...prev];
+          updated[existing] = result;
+          return updated;
+        }
+        return [...prev, result];
+      });
+    } catch (e) {
+      console.error('Error updating checklist:', e);
+    }
+  };
 
   const filtered = filter === 'all' ? equipment : equipment.filter(e => e.category === filter);
   const catAbbr = (cat: string) => CATEGORIES.find(c => c.value === cat)?.abbr || 'EQ';
@@ -289,31 +324,181 @@ export default function Equipment() {
             + Add Equipment
           </button>
 
-          {/* Where to look checklist */}
-          <div style={{
-            backgroundColor: 'var(--color-cream)',
-            borderRadius: 12,
-            padding: 20,
-            marginBottom: 20,
-          }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-charcoal)', marginBottom: 4 }}>
-              Not sure what to scan?
-            </p>
-            <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 14, lineHeight: 1.5 }}>
-              Start with these — each scan gives Canopy more data to protect your home.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {SCAN_SUGGESTIONS.map((item) => (
-                <div key={item.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                  <span style={{ fontSize: 18, lineHeight: '24px', flexShrink: 0 }}>{item.icon}</span>
+          {/* Essential Equipment Checklist */}
+          {essentialGuides.length > 0 && (
+            <div style={{
+              backgroundColor: 'var(--color-cream)',
+              borderRadius: 12,
+              padding: 20,
+              marginBottom: 20,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-charcoal)', margin: 0 }}>
+                  Every home should have these scanned
+                </p>
+                <span style={{ fontSize: 12, fontWeight: 700, color: Colors.sage }}>
+                  {scannedEssentials}/{essentialGuides.length}
+                </span>
+              </div>
+              {/* Progress bar */}
+              <div style={{ height: 4, borderRadius: 2, background: Colors.lightGray, marginBottom: 14 }}>
+                <div style={{
+                  width: `${essentialGuides.length > 0 ? (scannedEssentials / essentialGuides.length) * 100 : 0}%`,
+                  height: '100%', borderRadius: 2, background: Colors.sage, transition: 'width 0.3s',
+                }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {essentialGuides.map((guide) => {
+                  const status = checklistStatus(guide.equipment_type);
+                  return (
+                    <div
+                      key={guide.equipment_type}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '10px 12px', borderRadius: 8,
+                        background: status === 'scanned' ? '#f0faf5' : '#fff',
+                        border: `1px solid ${status === 'scanned' ? Colors.success + '30' : Colors.lightGray}`,
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => setSelectedGuide(guide)}
+                    >
+                      <span style={{ fontSize: 18, lineHeight: '24px', flexShrink: 0 }}>{guide.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <p style={{
+                          margin: 0, fontSize: 14, fontWeight: 500,
+                          color: status === 'scanned' ? Colors.medGray : 'var(--color-charcoal)',
+                          textDecoration: status === 'scanned' ? 'line-through' : 'none',
+                        }}>
+                          {guide.display_name}
+                        </p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                          {guide.nameplate_location}
+                        </p>
+                      </div>
+                      {status === 'scanned' ? (
+                        <span style={{ color: Colors.success, fontSize: 16 }}>✓</span>
+                      ) : status === 'not_applicable' ? (
+                        <span style={{ color: Colors.medGray, fontSize: 11 }}>N/A</span>
+                      ) : (
+                        <span style={{ fontSize: 11, color: Colors.sage, fontWeight: 600 }}>Tap for tips →</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* All scan guides (fallback to hardcoded if DB empty) */}
+          {scanGuides.length === 0 && (
+            <div style={{
+              backgroundColor: 'var(--color-cream)',
+              borderRadius: 12,
+              padding: 20,
+              marginBottom: 20,
+            }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-charcoal)', marginBottom: 4 }}>
+                Not sure what to scan?
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 14, lineHeight: 1.5 }}>
+                Start with these — each scan gives Canopy more data to protect your home.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {SCAN_SUGGESTIONS.map((item) => (
+                  <div key={item.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <span style={{ fontSize: 18, lineHeight: '24px', flexShrink: 0 }}>{item.icon}</span>
+                    <div>
+                      <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: 'var(--color-charcoal)' }}>{item.label}</p>
+                      <p style={{ margin: '2px 0 0 0', fontSize: 12, color: 'var(--color-text-secondary)' }}>{item.hint}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Scan Guide Detail Modal */}
+          {selectedGuide && (
+            <div className="modal-overlay" onClick={() => setSelectedGuide(null)}>
+              <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <span style={{ fontSize: 32 }}>{selectedGuide.icon}</span>
                   <div>
-                    <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: 'var(--color-charcoal)' }}>{item.label}</p>
-                    <p style={{ margin: '2px 0 0 0', fontSize: 12, color: 'var(--color-text-secondary)' }}>{item.hint}</p>
+                    <h2 style={{ margin: 0, fontSize: 18 }}>{selectedGuide.display_name}</h2>
+                    <p style={{ margin: '4px 0 0 0', fontSize: 12, color: Colors.medGray }}>{selectedGuide.category}</p>
                   </div>
                 </div>
-              ))}
+
+                <div style={{ padding: 16, borderRadius: 8, background: Colors.cream, marginBottom: 16 }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: 13, fontWeight: 700, color: Colors.charcoal }}>
+                    Where to find the label
+                  </p>
+                  <p style={{ margin: 0, fontSize: 13, color: Colors.charcoal, lineHeight: 1.6 }}>
+                    {selectedGuide.nameplate_description || selectedGuide.nameplate_location}
+                  </p>
+                </div>
+
+                {selectedGuide.tips && selectedGuide.tips.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <p style={{ margin: '0 0 8px 0', fontSize: 13, fontWeight: 700, color: Colors.charcoal }}>
+                      Tips
+                    </p>
+                    {selectedGuide.tips.map((tip, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                        <span style={{ color: Colors.sage, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>•</span>
+                        <p style={{ margin: 0, fontSize: 13, color: Colors.charcoal, lineHeight: 1.5 }}>{tip}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {selectedGuide.common_brands && selectedGuide.common_brands.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <p style={{ margin: '0 0 8px 0', fontSize: 13, fontWeight: 700, color: Colors.charcoal }}>
+                      Common brands
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {selectedGuide.common_brands.map(brand => (
+                        <span key={brand} style={{
+                          fontSize: 11, padding: '3px 8px', borderRadius: 4,
+                          background: '#f5f5f5', color: Colors.charcoal,
+                        }}>
+                          {brand}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="modal-actions">
+                  {checklistStatus(selectedGuide.equipment_type) !== 'scanned' && (
+                    <>
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => {
+                          handleChecklistAction(selectedGuide.equipment_type, 'scanned');
+                          setSelectedGuide(null);
+                          setShowScanner(true);
+                        }}
+                      >
+                        Scan This Equipment
+                      </button>
+                      <button
+                        className="btn btn-ghost"
+                        onClick={() => {
+                          handleChecklistAction(selectedGuide.equipment_type, 'not_applicable');
+                          setSelectedGuide(null);
+                        }}
+                      >
+                        I don't have this
+                      </button>
+                    </>
+                  )}
+                  <button className="btn btn-ghost" onClick={() => setSelectedGuide(null)}>Close</button>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       ) : (
         <>

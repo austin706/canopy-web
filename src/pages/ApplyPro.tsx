@@ -46,6 +46,7 @@ export default function ApplyPro() {
     serviceCategories: [] as ServiceCategory[],
     serviceAreaZips: '',
     bio: '',
+    requestedType: 'partner_pro' as 'canopy_technician' | 'partner_pro',
   });
 
   const handleServiceCategoryToggle = (category: ServiceCategory) => {
@@ -93,6 +94,7 @@ export default function ApplyPro() {
           bio: formData.bio,
           agreed_to_terms: true,
           status: 'pending',
+          requested_type: formData.requestedType,
         },
       ]);
 
@@ -214,6 +216,41 @@ export default function ApplyPro() {
             {error}
           </div>
         )}
+
+        {/* Provider Type Selection */}
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, marginTop: 32 }}>How would you like to work with Canopy?</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 32 }}>
+          <button
+            type="button"
+            onClick={() => setFormData({ ...formData, requestedType: 'canopy_technician' })}
+            style={{
+              padding: 20, borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+              border: `2px solid ${formData.requestedType === 'canopy_technician' ? '#1a6b4a' : Colors.lightGray}`,
+              background: formData.requestedType === 'canopy_technician' ? '#e6f5ee' : '#fff',
+              transition: 'all 0.15s',
+            }}
+          >
+            <p style={{ margin: '0 0 4px 0', fontSize: 15, fontWeight: 700, color: '#1a6b4a' }}>Canopy Technician</p>
+            <p style={{ margin: 0, fontSize: 12, color: Colors.medGray, lineHeight: 1.5 }}>
+              Join the Canopy team. Perform bimonthly home maintenance visits for subscribers. Steady schedule, training provided.
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFormData({ ...formData, requestedType: 'partner_pro' })}
+            style={{
+              padding: 20, borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+              border: `2px solid ${formData.requestedType === 'partner_pro' ? '#6b4a1a' : Colors.lightGray}`,
+              background: formData.requestedType === 'partner_pro' ? '#fdf3e6' : '#fff',
+              transition: 'all 0.15s',
+            }}
+          >
+            <p style={{ margin: '0 0 4px 0', fontSize: 15, fontWeight: 700, color: '#6b4a1a' }}>Partner Pro</p>
+            <p style={{ margin: 0, fontSize: 12, color: Colors.medGray, lineHeight: 1.5 }}>
+              Stay independent. Get matched with on-demand service jobs from Canopy homeowners. Set your own schedule.
+            </p>
+          </button>
+        </div>
 
         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, marginTop: 32 }}>Business Information</h3>
 

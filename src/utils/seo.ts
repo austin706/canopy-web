@@ -1,5 +1,5 @@
 /**
- * SEO utilities — dynamic canonical URL, Open Graph, and structured data
+ * SEO utilities -dynamic canonical URL, Open Graph, and structured data
  * for the Canopy SPA.
  */
 
@@ -45,38 +45,38 @@ interface PageMeta {
 
 const PAGE_META: Record<string, PageMeta> = {
   '/': {
-    title: 'Canopy — Smart Home Maintenance',
+    title: 'Canopy - Smart Home Maintenance',
     description: 'Track equipment, manage maintenance tasks, get weather alerts, and keep your home in peak condition with AI-powered insights.',
   },
   '/for-agents': {
-    title: 'Canopy for Real Estate Agents — Gift Home Maintenance to Buyers',
+    title: 'Canopy for Real Estate Agents - Gift Home Maintenance to Buyers',
     description: 'Give your buyers the gift of organized home maintenance. Create client gift codes, track engagement, and build lasting relationships after closing.',
   },
   '/for-pros': {
-    title: 'Canopy for Service Providers — Grow Your Home Maintenance Business',
+    title: 'Canopy for Service Providers - Grow Your Home Maintenance Business',
     description: 'Join the Canopy network as a certified pro. Get matched with homeowners, manage visits, and grow your service business.',
   },
   '/signup': {
-    title: 'Sign Up — Canopy Home',
+    title: 'Sign Up - Canopy Home',
     description: 'Create your free Canopy account and start organizing your home maintenance today.',
   },
   '/login': {
-    title: 'Log In — Canopy Home',
+    title: 'Log In - Canopy Home',
     description: 'Sign in to your Canopy account to manage your home maintenance, equipment, and tasks.',
   },
   '/support': {
-    title: 'Support — Canopy Home',
+    title: 'Support - Canopy Home',
     description: 'Get help with your Canopy account, report bugs, or contact our support team.',
   },
   '/apply-pro': {
-    title: 'Apply as a Pro — Canopy Home',
-    description: 'Apply to join the Canopy provider network. We're looking for skilled, reliable home maintenance professionals in Tulsa.',
+    title: 'Apply as a Pro - Canopy Home',
+    description: 'Apply to join the Canopy provider network. We\'re looking for skilled, reliable home maintenance professionals in Tulsa.',
   },
   '/terms': {
-    title: 'Terms of Service — Canopy Home',
+    title: 'Terms of Service - Canopy Home',
   },
   '/privacy': {
-    title: 'Privacy Policy — Canopy Home',
+    title: 'Privacy Policy - Canopy Home',
   },
 };
 
@@ -93,7 +93,7 @@ export function usePageMeta() {
       document.title = meta.title;
     } else if (!pathname.startsWith('/a/')) {
       // Reset to default for pages without specific meta
-      document.title = 'Canopy — Smart Home Maintenance';
+      document.title = 'Canopy - Smart Home Maintenance';
     }
 
     if (meta?.description) {

@@ -15,14 +15,14 @@ export function initGA() {
   initialized = true;
 
   // Global dataLayer
-  (window as Record<string, unknown>).dataLayer = (window as Record<string, unknown>).dataLayer || [];
+  const w = window as unknown as Record<string, unknown>;
+  w.dataLayer = (w.dataLayer as unknown[]) || [];
 
   // gtag helper
   function gtag(...args: unknown[]) {
-    // eslint-disable-next-line prefer-rest-params
-    ((window as Record<string, unknown>).dataLayer as unknown[]).push(args);
+    (w.dataLayer as unknown[]).push(args);
   }
-  (window as Record<string, unknown>).gtag = gtag;
+  w.gtag = gtag;
 
   gtag('js', new Date());
   gtag('config', GA_ID, { send_page_view: false }); // we send page views manually on route change
@@ -36,9 +36,10 @@ export function initGA() {
 
 /** Send a page_view event (call on every route change). */
 export function trackPageView(path: string) {
-  if (!GA_ID || typeof (window as Record<string, unknown>).gtag !== 'function') return;
-  const gtag = (window as Record<string, unknown>).gtag as (...args: unknown[]) => void;
-  gtag('event', 'page_view', {
+  const w = window as unknown as Record<string, unknown>;
+  if (!GA_ID || typeof w.gtag !== 'function') return;
+  const gtagFn = w.gtag as (...args: unknown[]) => void;
+  gtagFn('event', 'page_view', {
     page_path: path,
     page_title: document.title,
   });
@@ -46,7 +47,8 @@ export function trackPageView(path: string) {
 
 /** Send a custom event. */
 export function trackEvent(eventName: string, params?: Record<string, unknown>) {
-  if (!GA_ID || typeof (window as Record<string, unknown>).gtag !== 'function') return;
-  const gtag = (window as Record<string, unknown>).gtag as (...args: unknown[]) => void;
-  gtag('event', eventName, params);
+  const w = window as unknown as Record<string, unknown>;
+  if (!GA_ID || typeof w.gtag !== 'function') return;
+  const gtagFn = w.gtag as (...args: unknown[]) => void;
+  gtagFn('event', eventName, params);
 }

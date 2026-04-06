@@ -6,6 +6,7 @@ import logger from '@/utils/logger';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/theme';
+import { useCanonical, usePageMeta } from '@/utils/seo';
 // Layout shells stay eager — they wrap every route
 import Layout from '@/components/Layout';
 import AgentLayout from '@/components/AgentLayout';
@@ -98,6 +99,13 @@ function RoleRoute({ children, roles }: { children: React.ReactNode; roles: stri
   return <>{children}</>;
 }
 
+/** Runs SEO hooks (canonical URL, page titles) inside the router context. */
+function SEOManager() {
+  useCanonical();
+  usePageMeta();
+  return null;
+}
+
 function HomeRoute() {
   const { isAuthenticated } = useStore();
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Landing />;
@@ -151,6 +159,7 @@ export default function App() {
   return (
     <ThemeProvider>
     <BrowserRouter>
+      <SEOManager />
       <ErrorBoundary>
         <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: Colors.medGray }}>Loading…</div>}>
         <Routes>

@@ -17,11 +17,77 @@
     <meta name="twitter:title" content="Canopy — Smart Home Maintenance">
     <meta name="twitter:description" content="Track equipment, manage maintenance tasks, get weather alerts, and keep your home in peak condition with AI-powered insights.">
     <meta name="twitter:image" content="https://canopyhome.app/canopy-og-image.png">
+    <link rel="canonical" href="https://canopyhome.app/" />
     <title>Canopy — Smart Home Maintenance</title>
     <link rel="icon" type="image/svg+xml" href="/canopy-logo.svg" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/canopy-app-icon-1024.png">
     <link rel="manifest" href="/manifest.json">
+    <!-- Structured Data — SoftwareApplication + LocalBusiness -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SoftwareApplication",
+          "name": "Canopy Home",
+          "url": "https://canopyhome.app",
+          "applicationCategory": "LifestyleApplication",
+          "operatingSystem": "Web, iOS, Android",
+          "description": "Smart home maintenance platform with AI-powered task tracking, equipment management, weather alerts, and professional service scheduling for homeowners.",
+          "offers": [
+            {
+              "@type": "Offer",
+              "name": "Free",
+              "price": "0",
+              "priceCurrency": "USD",
+              "description": "Basic calendar, up to 5 equipment items, limited AI assistance"
+            },
+            {
+              "@type": "Offer",
+              "name": "Home",
+              "price": "6.99",
+              "priceCurrency": "USD",
+              "description": "97 AI-powered maintenance tasks, unlimited equipment, weather integration, document storage"
+            },
+            {
+              "@type": "Offer",
+              "name": "Pro",
+              "price": "149.00",
+              "priceCurrency": "USD",
+              "description": "Everything in Home plus bimonthly professional maintenance visits and service requests"
+            }
+          ],
+          "creator": {
+            "@type": "Organization",
+            "name": "Canopy Home",
+            "url": "https://canopyhome.app"
+          }
+        },
+        {
+          "@type": "LocalBusiness",
+          "name": "Canopy Home",
+          "url": "https://canopyhome.app",
+          "description": "Home maintenance management and professional service provider serving Tulsa, Oklahoma.",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Tulsa",
+            "addressRegion": "OK",
+            "addressCountry": "US"
+          },
+          "areaServed": {
+            "@type": "City",
+            "name": "Tulsa",
+            "containedInPlace": {
+              "@type": "State",
+              "name": "Oklahoma"
+            }
+          },
+          "priceRange": "$0 - $149/mo"
+        }
+      ]
+    }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
       #app-loader {

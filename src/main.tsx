@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import logger from './utils/logger';
+import { initGA } from './utils/analytics';
+import { initSentry } from './utils/sentry';
 import './index.css';
 
 // ─── Validate required environment variables on startup ───
@@ -36,6 +38,12 @@ if (missingOptional.length > 0) {
     'Some features (weather, AI assistant) may be unavailable.'
   );
 }
+
+// Initialize Google Analytics 4 (no-op if VITE_GA_MEASUREMENT_ID is not set)
+initGA();
+
+// Initialize Sentry error tracking (no-op if VITE_SENTRY_DSN is not set)
+initSentry();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

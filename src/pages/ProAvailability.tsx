@@ -257,6 +257,7 @@ export default function ProAvailability() {
             {day.enabled ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
                 <select
+                  aria-label={`${day.day} start time`}
                   value={day.start}
                   onChange={e => updateTime(index, 'start', e.target.value)}
                   style={{
@@ -271,6 +272,7 @@ export default function ProAvailability() {
                 </select>
                 <span style={{ fontSize: 13, color: Colors.medGray }}>to</span>
                 <select
+                  aria-label={`${day.day} end time`}
                   value={day.end}
                   onChange={e => updateTime(index, 'end', e.target.value)}
                   style={{

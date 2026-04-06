@@ -542,7 +542,7 @@ export default function Subscription() {
               ) : (
                 <button
                   className="btn btn-primary btn-full mt-md"
-                  onClick={() => tier === 'free' ? handleStripeCheckout(plan.value) : previewPlanChange(plan.value)}
+                  onClick={() => tier === 'free' ? handleStripeCheckout(plan.value!) : previewPlanChange(plan.value!)}
                   disabled={checkoutLoading === plan.value || planChangeModal.loading}
                 >
                   {checkoutLoading === plan.value || (planChangeModal.loading && planChangeModal.targetTier === plan.value)

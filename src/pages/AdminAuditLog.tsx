@@ -161,6 +161,7 @@ export default function AdminAuditLog() {
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
           <input
             type="text"
+            aria-label="Search audit log"
             placeholder="Search action, entity, admin..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -207,6 +208,7 @@ export default function AdminAuditLog() {
         {/* Action Type Filter */}
         {uniqueActions.length > 0 && (
           <select
+            aria-label="Filter by action type"
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
             className="admin-filter-select"

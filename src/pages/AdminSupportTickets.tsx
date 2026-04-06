@@ -182,6 +182,7 @@ export default function AdminSupportTickets() {
       <div className="admin-table-toolbar" style={{ marginBottom: 24 }}>
         <input
           type="text"
+          aria-label="Search support tickets"
           className="admin-search"
           placeholder="Search by name, email, or subject..."
           value={search}

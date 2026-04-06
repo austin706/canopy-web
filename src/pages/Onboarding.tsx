@@ -1405,7 +1405,7 @@ export default function Onboarding() {
               return (
                 <div
                   key={plan.id}
-                  onClick={() => { if (!isLocked) setSelectedPlan(plan.value); }}
+                  onClick={() => { if (!isLocked && plan.value) setSelectedPlan(plan.value); }}
                   style={{
                     border: `2px solid ${isSelected ? Colors.copper : 'transparent'}`,
                     borderRadius: 12, padding: 20,
@@ -1426,7 +1426,7 @@ export default function Onboarding() {
                   )}
                   {isLocked && (
                     <div style={{ fontSize: 12, marginBottom: 8 }}>
-                      {notifyMeSubmitted[plan.value] ? (
+                      {plan.value && notifyMeSubmitted[plan.value] ? (
                         <span style={{ color: Colors.sage, fontWeight: 600 }}>
                           <CheckIcon size={12} color={Colors.sage} /> We'll notify you when this is available in your area!
                         </span>

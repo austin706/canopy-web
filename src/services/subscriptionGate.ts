@@ -2,6 +2,8 @@
 // Subscription Tier Gating (shared logic with mobile)
 // ===============================================================
 import type { SubscriptionTier } from '@/types';
+import type { PlanInfo } from '@/constants/pricing';
+export { PLANS, PRICING, formatPrice, getEffectiveMonthly, getStripeSavings, ANNUAL_DISCOUNT_PERCENT } from '@/constants/pricing';
 
 export type Feature =
   | 'basic_calendar' | 'unlimited_equipment' | 'personalized_scheduling'
@@ -47,13 +49,6 @@ export const AI_LIMITS: Record<SubscriptionTier, Record<AiFeature, number | null
     ai_text_lookup: null,
   },
 };
-
-export const PLANS = [
-  { id: 'free', name: 'Free', price: 0, period: '/month', value: 'free' as SubscriptionTier, features: ['Basic calendar','5 equipment slots','Generic checklists'] },
-  { id: 'home', name: 'Home Plan', price: 6.99, period: '/month', value: 'home' as SubscriptionTier, features: ['80+ AI-powered maintenance tasks','Unlimited equipment','Personalized checklists','Weather alerts','Lawn & Pool & Deck care','Secure notes vault'] },
-  { id: 'pro', name: 'Home Pro', price: 149, period: '/month', value: 'pro' as SubscriptionTier, features: ['Everything in Home Plan','Monthly 2-hr pro maintenance visit','Checklist items completed for you','Reschedule or cancel visits','Pro service scheduler','Quotes & invoicing for add-on work'] },
-  { id: 'pro_plus', name: 'Home Pro+', price: null as number | null, period: '', value: 'pro_plus' as SubscriptionTier, inquireForPricing: true, features: ['Full home concierge service','Custom monthly rate after consultation','Routine maintenance of all systems','Bigger jobs quoted separately','Priority scheduling & support','Dedicated pro provider'] },
-];
 
 export function canAccess(tier: SubscriptionTier | undefined | null, feature: Feature): boolean {
   if (!tier) return TIER_FEATURES['free'].includes(feature);

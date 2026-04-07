@@ -542,7 +542,7 @@ export default function Landing() {
               background: Colors.copper, color: Colors.white, border: 'none',
               borderRadius: BorderRadius.lg, cursor: 'pointer', fontFamily: fontStack,
             }}>
-              Start Free Trial
+              Get Home Plan
             </button>
           </div>
 
@@ -641,7 +641,7 @@ export default function Landing() {
                 { label: 'Features', href: '#features' },
                 { label: 'How It Works', href: '#how-it-works' },
                 { label: 'Pricing', href: '#pricing' },
-                { label: 'Download App', href: '/signup' },
+                { label: 'Get Started', href: '/signup' },
               ],
             },
             {

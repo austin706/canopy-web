@@ -2,6 +2,7 @@ import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
+import { loadServiceAreas, subscribeToServiceAreaChanges } from '@/services/subscriptionGate';
 import logger from '@/utils/logger';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -88,6 +89,8 @@ const AgentLanding = lazy(() => import('@/pages/AgentLanding'));
 const ProLanding = lazy(() => import('@/pages/ProLanding'));
 const AgentRedeem = lazy(() => import('@/pages/AgentRedeem'));
 const AgentApplication = lazy(() => import('@/pages/AgentApplication'));
+const BuilderApplication = lazy(() => import('@/pages/BuilderApplication'));
+const AdminBuilders = lazy(() => import('@/pages/AdminBuilders'));
 const TechnicianOnboarding = lazy(() => import('@/pages/TechnicianOnboarding'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
@@ -157,7 +160,14 @@ export default function App() {
         }
       }
     });
-    return () => subscription.unsubscribe();
+    // Prime the service area cache and subscribe to realtime updates
+    loadServiceAreas().catch(() => {});
+    const unsubscribeServiceAreas = subscribeToServiceAreaChanges();
+
+    return () => {
+      subscription.unsubscribe();
+      unsubscribeServiceAreas();
+    };
   }, []);
 
   return (
@@ -190,6 +200,7 @@ export default function App() {
           <Route path="/for-pros" element={<ProLanding />} />
           <Route path="/a/:slug" element={<AgentRedeem />} />
           <Route path="/agent-application" element={<AgentApplication />} />
+          <Route path="/builder-application" element={<BuilderApplication />} />
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
           {/* ═══════════════════════════════════════════════════════
@@ -239,6 +250,7 @@ export default function App() {
             <Route path="/admin/support-tickets" element={<AdminSupportTickets />} />
             <Route path="/admin/reference-data" element={<AdminReferenceData />} />
             <Route path="/admin/technician-onboarding" element={<AdminTechnicianOnboarding />} />
+            <Route path="/admin/builders" element={<AdminBuilders />} />
           </Route>
 
           {/* ═══════════════════════════════════════════════════════

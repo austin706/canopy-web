@@ -58,7 +58,7 @@ export default function AgentLanding() {
               ← Home
             </a>
             <button
-              onClick={() => window.location.href = 'mailto:agents@canopyhome.app'}
+              onClick={() => window.location.href = '/agent-application'}
               style={{
                 padding: isMobile ? '8px 16px' : '8px 20px',
                 fontSize: 14,
@@ -71,7 +71,7 @@ export default function AgentLanding() {
                 fontFamily: fontStack,
               }}
             >
-              Get in Touch
+              Apply Now
             </button>
           </nav>
         </div>
@@ -112,7 +112,7 @@ export default function AgentLanding() {
             Give your clients a Canopy subscription as a closing gift. Stay connected, build loyalty, and stand out from other agents — long after the sale.
           </p>
           <button
-            onClick={() => window.location.href = 'mailto:agents@canopyhome.app'}
+            onClick={() => window.location.href = '/agent-application'}
             style={{
               padding: '14px 40px',
               fontSize: 16,
@@ -134,7 +134,7 @@ export default function AgentLanding() {
               (e.target as HTMLElement).style.transform = 'translateY(0)';
             }}
           >
-            Learn More About Partnership
+            Apply Now — Free
           </button>
         </div>
       </section>
@@ -312,10 +312,10 @@ export default function AgentLanding() {
             Ready to partner with Canopy?
           </h2>
           <p style={{ fontSize: 17, color: '#CCCCCC', margin: '0 0 32px 0', lineHeight: 1.6 }}>
-            Reach out and we'll get you set up with your agent portal.
+            Apply in about two minutes and we'll get you set up with your agent portal.
           </p>
           <button
-            onClick={() => window.location.href = 'mailto:agents@canopyhome.app'}
+            onClick={() => window.location.href = '/agent-application'}
             style={{
               padding: '14px 40px',
               fontSize: 16,
@@ -328,7 +328,7 @@ export default function AgentLanding() {
               fontFamily: fontStack,
             }}
           >
-            Contact Us
+            Apply Now
           </button>
         </div>
       </section>

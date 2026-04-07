@@ -150,6 +150,7 @@ export default function AdminLayout() {
       items: [
         { to: '/admin/users', label: 'Users', icon: <Icon.Users /> },
         { to: '/admin/agents', label: 'Agents', icon: <Icon.Agent /> },
+        { to: '/admin/builders', label: 'Builders', icon: <Icon.Home /> },
         { to: '/admin/pro-providers', label: 'Pro Providers', icon: <Icon.Wrench /> },
         { to: '/admin/provider-applications', label: 'Applications', icon: <Icon.Clipboard /> },
         { to: '/admin/technician-onboarding', label: 'Tech Onboarding', icon: <Icon.Clipboard /> },

@@ -132,6 +132,37 @@ export function invalidateServiceAreaCache(): void {
   _serviceAreaCacheTime = 0;
 }
 
+// ---- Realtime invalidation ---------------------------------
+// Subscribes to the `service_areas` table so any insert/update/delete
+// by any admin (or from another tab) invalidates the cache locally.
+// Returns an unsubscribe function. Safe to call once at app startup.
+
+let _serviceAreaRealtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+
+export function subscribeToServiceAreaChanges(): () => void {
+  if (_serviceAreaRealtimeChannel) {
+    // Already subscribed — return a no-op unsubscriber
+    return () => {};
+  }
+  _serviceAreaRealtimeChannel = supabase
+    .channel('service_areas_cache_invalidate')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'service_areas' },
+      () => {
+        invalidateServiceAreaCache();
+      },
+    )
+    .subscribe();
+
+  return () => {
+    if (_serviceAreaRealtimeChannel) {
+      supabase.removeChannel(_serviceAreaRealtimeChannel);
+      _serviceAreaRealtimeChannel = null;
+    }
+  };
+}
+
 // Synchronous check using cached data — returns false if cache not loaded yet
 export function isProAvailableInArea(
   _state?: string | null,

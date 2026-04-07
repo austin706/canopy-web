@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { signOut, updateProfile, redeemGiftCode, deleteUserAccount, lookupAgentByCode, linkAgent } from '@/services/supabase';
+import { signOut, updateProfile, redeemGiftCode, deleteUserAccount, exportUserData, lookupAgentByCode, linkAgent } from '@/services/supabase';
 import { PLANS } from '@/services/subscriptionGate';
 import MessageBanner from '@/components/MessageBanner';
 import { Colors } from '@/constants/theme';
@@ -21,6 +21,12 @@ export default function Profile() {
   const [message, setMessage] = useState('');
   const [agentCode, setAgentCode] = useState('');
   const [linkingAgent, setLinkingAgent] = useState(false);
+
+  // C12: Account deletion modal (typed-confirm pattern) + data export state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const tier = user?.subscription_tier || 'free';
   const plan = PLANS.find(p => p.value === tier);
@@ -76,8 +82,11 @@ export default function Profile() {
 
   const handleDeleteAccount = async () => {
     if (!user) return;
-    if (!confirm('Are you sure you want to delete your account? This will permanently remove all your data including your home, equipment, and maintenance history.')) return;
-    if (!confirm('This action cannot be undone. Are you absolutely sure?')) return;
+    if (deleteConfirmText !== 'DELETE') {
+      setMessage('Please type DELETE in all caps to confirm.');
+      return;
+    }
+    setDeleting(true);
     try {
       await deleteUserAccount(user.id);
       try { await signOut(); } catch {}
@@ -85,6 +94,34 @@ export default function Profile() {
       navigate('/login');
     } catch (e: any) {
       setMessage('Failed to delete account: ' + e.message);
+      setDeleting(false);
+    }
+  };
+
+  // C12: GDPR/CCPA data export — calls the export_user_data RPC and triggers a
+  // browser download of a canopy-data-export-{YYYY-MM-DD}.json file so the user
+  // has a portable copy of everything Canopy stores about them.
+  const handleExportData = async () => {
+    if (!user) return;
+    setExporting(true);
+    try {
+      const data = await exportUserData(user.id);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const date = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `canopy-data-export-${date}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setMessage('Your data has been exported. Check your downloads folder.');
+      setTimeout(() => setMessage(''), 5000);
+    } catch (e: any) {
+      setMessage('Failed to export data: ' + (e?.message || 'unknown error'));
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -195,12 +232,104 @@ export default function Profile() {
 
       <button className="btn btn-danger btn-full" onClick={handleLogout}>Sign Out</button>
 
-      {/* Delete Account */}
+      {/* C12: Data Export + Delete Account */}
+      <div className="card mt-lg">
+        <h3 style={{ fontSize: 16, marginBottom: 8 }}>Your Data</h3>
+        <p className="text-sm text-gray mb-md">
+          Download a complete copy of everything Canopy stores about you — profile, homes, equipment, maintenance logs, invoices, documents, and more — as a portable JSON file.
+        </p>
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={handleExportData}
+          disabled={exporting}
+        >
+          {exporting ? 'Preparing export…' : 'Export My Data'}
+        </button>
+      </div>
+
       <div className="card mt-lg" style={{ border: '1px solid var(--color-error)40' }}>
         <h3 style={{ fontSize: 16, marginBottom: 8, color: 'var(--color-error)' }}>Danger Zone</h3>
-        <p className="text-sm text-gray mb-md">Permanently delete your account and all associated data. This action cannot be undone.</p>
-        <button className="btn btn-danger btn-sm" onClick={handleDeleteAccount}>Delete My Account</button>
+        <p className="text-sm text-gray mb-md">
+          Permanently delete your account and all associated data — profile, homes, equipment, maintenance history, invoices, notifications, and support tickets. This action cannot be undone.
+        </p>
+        <button
+          className="btn btn-danger btn-sm"
+          onClick={() => { setDeleteConfirmText(''); setShowDeleteModal(true); }}
+        >
+          Delete My Account
+        </button>
       </div>
+
+      {/* C12: Account deletion confirmation modal (typed-confirm pattern) */}
+      {showDeleteModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-modal-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 16,
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget && !deleting) setShowDeleteModal(false); }}
+        >
+          <div
+            className="card"
+            style={{ maxWidth: 480, width: '100%', padding: 24 }}
+          >
+            <h3 id="delete-modal-title" style={{ fontSize: 18, marginBottom: 12, color: Colors.error }}>
+              Delete your Canopy account?
+            </h3>
+            <p className="text-sm" style={{ marginBottom: 12, lineHeight: 1.6 }}>
+              This will permanently delete everything associated with <strong>{user?.email}</strong>, including:
+            </p>
+            <ul className="text-sm text-gray" style={{ marginBottom: 16, paddingLeft: 20, lineHeight: 1.8 }}>
+              <li>Your profile and all home records</li>
+              <li>All equipment, maintenance logs, and tasks</li>
+              <li>Invoices, payments, and service history</li>
+              <li>Documents, notes, and notifications</li>
+              <li>Your Canopy subscription (cancel separately in Stripe/App Store if active)</li>
+            </ul>
+            <p className="text-sm" style={{ marginBottom: 8, lineHeight: 1.5 }}>
+              Consider exporting your data first — we won't be able to recover it afterward.
+            </p>
+            <p className="text-sm" style={{ marginBottom: 8 }}>
+              Type <strong>DELETE</strong> to confirm:
+            </p>
+            <input
+              type="text"
+              className="form-input"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="DELETE"
+              autoFocus
+              disabled={deleting}
+              style={{ width: '100%', marginBottom: 16 }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={handleDeleteAccount}
+                disabled={deleting || deleteConfirmText !== 'DELETE'}
+              >
+                {deleting ? 'Deleting…' : 'Delete Forever'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

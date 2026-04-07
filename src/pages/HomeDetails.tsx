@@ -4,6 +4,7 @@ import { useStore } from '@/store/useStore';
 import { upsertHome, updateProfile, uploadPhoto, getStructures, addStructure, deleteStructure, STRUCTURE_TYPES } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import HomeMembers from '@/components/HomeMembers';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 import type { Home } from '@/types';
 
 export default function HomeDetails() {
@@ -208,7 +209,20 @@ export default function HomeDetails() {
       {editing ? (
         <div className="card">
           <h2 style={{ fontSize: 18, marginBottom: 20 }}>{home ? 'Edit Home' : 'Set Up Your Home'}</h2>
-          <div className="form-group"><label>Address *</label><input className="form-input" value={form.address} onChange={e => setForm({...form, address: e.target.value})} /></div>
+          <div className="form-group">
+            <label>Address *</label>
+            <AddressAutocomplete
+              value={form.address}
+              onChange={(v) => setForm({...form, address: v})}
+              onPlaceSelected={(details) => setForm({
+                ...form,
+                address: details.address || form.address,
+                city: details.city || form.city,
+                state: details.state || form.state,
+                zip_code: details.zipCode || form.zip_code,
+              })}
+            />
+          </div>
           <div className="grid-3">
             <div className="form-group"><label>City</label><input className="form-input" value={form.city} onChange={e => setForm({...form, city: e.target.value})} /></div>
             <div className="form-group"><label>State</label><input className="form-input" value={form.state} onChange={e => setForm({...form, state: e.target.value})} /></div>

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase, createHomeJoinRequest, sendNotification, insertProInterest } from '@/services/supabase';
 import { verifyAddress, findExistingProperty } from '@/services/addressVerification';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
 import { PLANS, isProAvailableInArea, loadServiceAreas, getEquipmentLimit, isPremium } from '@/services/subscriptionGate';
 import { requestConsultation } from '@/services/proPlus';
@@ -188,6 +189,28 @@ export default function Onboarding() {
   const [redeeming, setRedeeming] = useState(false);
   const [planMessage, setPlanMessage] = useState('');
   const [planMessageType, setPlanMessageType] = useState<'success' | 'error'>('success');
+
+  // C11: Inline error banner (replaces alert() calls throughout onboarding)
+  const [inlineError, setInlineError] = useState<string | null>(null);
+  const inlineErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showInlineError = (msg: string) => {
+    setInlineError(msg);
+    if (inlineErrorTimer.current) clearTimeout(inlineErrorTimer.current);
+    // Auto-clear after 8 seconds so errors don't linger across steps
+    inlineErrorTimer.current = setTimeout(() => setInlineError(null), 8000);
+    // Scroll the banner into view so the user actually sees it
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+  // Clear the banner when the user changes steps
+  useEffect(() => {
+    setInlineError(null);
+    if (inlineErrorTimer.current) {
+      clearTimeout(inlineErrorTimer.current);
+      inlineErrorTimer.current = null;
+    }
+  }, [step]);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [requestingProPlus, setRequestingProPlus] = useState(false);
   const [notifyMeSubmitted, setNotifyMeSubmitted] = useState<Record<string, boolean>>({});
@@ -325,7 +348,7 @@ export default function Onboarding() {
   /** Step 1a: Verify address and show confirmation if USPS standardized it */
   const handleAddressSubmit = async () => {
     if (!user || !addressForm.address || !addressForm.city || !addressForm.state || !addressForm.zip_code) {
-      alert('Please fill in address, city, state, and zip code');
+      showInlineError('Please fill in address, city, state, and zip code.');
       return;
     }
     setSaving(true);
@@ -456,7 +479,7 @@ export default function Onboarding() {
       );
       setJoinRequestSent(true);
     } catch (err: any) {
-      alert(err?.message || 'Failed to send join request. Please try again.');
+      showInlineError(err?.message || 'Failed to send join request. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -539,9 +562,9 @@ export default function Onboarding() {
   const canUseAiScan = isPremium(effectiveTier);
 
   const handleAddEquipment = () => {
-    if (!equipmentForm.name) { alert('Please enter equipment name'); return; }
+    if (!equipmentForm.name) { showInlineError('Please enter an equipment name.'); return; }
     if (atEquipmentLimit) {
-      alert(`Free plan allows up to ${equipmentLimit} equipment items. Upgrade to Home or Pro for unlimited equipment.`);
+      showInlineError(`Free plan allows up to ${equipmentLimit} equipment items. Upgrade to Home or Pro for unlimited equipment.`);
       return;
     }
     setEquipmentList([...equipmentList, { ...equipmentForm }]);
@@ -550,7 +573,7 @@ export default function Onboarding() {
 
   const handleModelLookup = async () => {
     if (!equipmentForm.model?.trim() && !equipmentForm.serial_number?.trim()) {
-      alert('Please enter a model number or serial number to look up.');
+      showInlineError('Please enter a model number or serial number to look up.');
       return;
     }
     setLookingUpModel(true);
@@ -578,7 +601,7 @@ export default function Onboarding() {
       }));
     } catch (err) {
       console.warn('Model lookup failed:', err);
-      alert('Could not identify this model automatically. You can still enter details manually.');
+      showInlineError('Could not identify this model automatically. You can still enter details manually.');
     } finally {
       setLookingUpModel(false);
     }
@@ -590,7 +613,7 @@ export default function Onboarding() {
 
   const handleScannerComplete = (scannedData: any) => {
     if (atEquipmentLimit) {
-      alert(`Free plan allows up to ${equipmentLimit} equipment items. Upgrade to Home or Pro for unlimited equipment.`);
+      showInlineError(`Free plan allows up to ${equipmentLimit} equipment items. Upgrade to Home or Pro for unlimited equipment.`);
       setShowScanner(false);
       return;
     }
@@ -878,6 +901,46 @@ export default function Onboarding() {
         </div>
       )}
 
+      {/* C11: Inline error banner (replaces alert() dialogs) */}
+      {inlineError && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          style={{
+            backgroundColor: '#FDECEA',
+            border: '1px solid #E74C3C',
+            color: '#C0392B',
+            padding: '12px 16px',
+            borderRadius: 8,
+            marginBottom: 20,
+            fontSize: 14,
+            lineHeight: 1.5,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 12,
+          }}
+        >
+          <span aria-hidden="true" style={{ fontSize: 18, lineHeight: 1, marginTop: 1 }}>⚠️</span>
+          <span style={{ flex: 1 }}>{inlineError}</span>
+          <button
+            type="button"
+            onClick={() => setInlineError(null)}
+            aria-label="Dismiss error"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#C0392B',
+              cursor: 'pointer',
+              fontSize: 18,
+              lineHeight: 1,
+              padding: 0,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* ===== STEP 0: Welcome / What is Canopy ===== */}
       {step === 0 && (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
@@ -950,8 +1013,18 @@ export default function Onboarding() {
 
           <div className="form-group">
             <label>Street Address *</label>
-            <input className="form-input" placeholder="123 Oak Street" value={addressForm.address}
-              onChange={e => setAddressForm({ ...addressForm, address: e.target.value })} />
+            <AddressAutocomplete
+              value={addressForm.address}
+              onChange={(v) => setAddressForm({ ...addressForm, address: v })}
+              onPlaceSelected={(details) => setAddressForm({
+                ...addressForm,
+                address: details.address || addressForm.address,
+                city: details.city || addressForm.city,
+                state: details.state || addressForm.state,
+                zip_code: details.zipCode || addressForm.zip_code,
+              })}
+              placeholder="Start typing your address…"
+            />
           </div>
 
           <div className="grid-3">

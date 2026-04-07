@@ -5,8 +5,16 @@ import { describe, it, expect } from 'vitest';
 import { generateWeatherInsights } from './weatherInsights';
 import type { DayForecast, MaintenanceTask } from '@/types';
 
+// Use dynamic dates relative to today so the tests stay valid over time.
+// The engine filters forecast/tasks to "within next N days from now".
+const fromToday = (days: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+};
+
 const day = (overrides: Partial<DayForecast> = {}): DayForecast => ({
-  date: '2026-04-07',
+  date: fromToday(1),
   high: 72,
   low: 55,
   description: 'clear sky',
@@ -23,11 +31,11 @@ const task = (overrides: Partial<MaintenanceTask> = {}): MaintenanceTask => ({
   category: 'exterior' as any,
   priority: 'medium' as any,
   status: 'pending' as any,
-  scheduled_date: '2026-04-10',
+  due_date: fromToday(3),
   estimated_duration: 60,
   is_ai_generated: false,
-  created_at: '2026-04-01',
-  updated_at: '2026-04-01',
+  created_at: fromToday(-6),
+  updated_at: fromToday(-6),
   ...overrides,
 } as MaintenanceTask);
 
@@ -37,11 +45,18 @@ describe('generateWeatherInsights', () => {
   });
 
   it('surfaces a rain insight when rain is in the forecast and an outdoor task exists', () => {
+    // Task is due tomorrow, rain comes day after — engine should flag it.
     const forecast = [
-      day({ date: '2026-04-07', icon: '10d', description: 'light rain', precipitation_chance: 80 }),
-      day({ date: '2026-04-08' }),
+      day({ date: fromToday(1) }),
+      day({ date: fromToday(2), icon: '10d', description: 'light rain', precipitation_chance: 80 }),
     ];
-    const tasks = [task({ title: 'Clean gutters', category: 'general' as any })];
+    const tasks = [
+      task({
+        title: 'Clean gutters',
+        category: 'general' as any,
+        due_date: fromToday(1),
+      }),
+    ];
     const insights = generateWeatherInsights(forecast, tasks);
     expect(insights.length).toBeGreaterThan(0);
     expect(insights.some((i) => i.type === 'rain_coming')).toBe(true);
@@ -50,7 +65,7 @@ describe('generateWeatherInsights', () => {
   it('caps insights at 4 results across many triggers', () => {
     const forecast = Array.from({ length: 7 }).map((_, i) =>
       day({
-        date: `2026-04-${String(7 + i).padStart(2, '0')}`,
+        date: fromToday(i + 1),
         icon: ['10d', '13d', '01d', '50d', '10d', '01d', '01d'][i],
         description: ['rain', 'snow', 'clear', 'fog', 'rain', 'clear', 'clear'][i],
         high: i === 2 ? 99 : 70,

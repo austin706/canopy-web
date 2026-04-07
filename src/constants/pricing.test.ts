@@ -18,8 +18,8 @@ describe('pricing constants', () => {
   });
 
   it('applies the annual discount to the effective monthly cost', () => {
-    const monthlyCost = PRICING.home.monthly;
-    const effective = getEffectiveMonthly('home', 'yearly');
+    const monthlyCost = PRICING.home.stripe.monthly;
+    const effective = getEffectiveMonthly('home', 'stripe', 'yearly');
     // Yearly effective monthly should be lower than the plain monthly price
     expect(effective).toBeLessThan(monthlyCost);
     // And the discount should be roughly ANNUAL_DISCOUNT_PERCENT
@@ -27,8 +27,8 @@ describe('pricing constants', () => {
     expect(discount).toBeGreaterThanOrEqual((ANNUAL_DISCOUNT_PERCENT - 1) / 100);
   });
 
-  it('returns 0 savings for the monthly interval', () => {
-    expect(getStripeSavings('home', 'monthly')).toBe(0);
+  it('returns a positive Stripe-vs-IAP savings percentage for the monthly interval', () => {
+    expect(getStripeSavings('home', 'monthly')).toBeGreaterThan(0);
   });
 
   it('returns a positive savings number for the yearly interval', () => {

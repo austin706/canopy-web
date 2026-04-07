@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertHome, updateProfile, uploadPhoto } from '@/services/supabase';
+import { upsertHome, updateProfile, uploadPhoto, getStructures, addStructure, deleteStructure, STRUCTURE_TYPES } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import HomeMembers from '@/components/HomeMembers';
+import type { Home } from '@/types';
 
 export default function HomeDetails() {
   const navigate = useNavigate();
@@ -14,6 +15,11 @@ export default function HomeDetails() {
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [structures, setStructures] = useState<Home[]>([]);
+  const [showAddStructure, setShowAddStructure] = useState(false);
+  const [structureFormType, setStructureFormType] = useState<keyof typeof STRUCTURE_TYPES>('guest_house');
+  const [structureFormLabel, setStructureFormLabel] = useState('');
+  const [addingStructure, setAddingStructure] = useState(false);
   const [form, setForm] = useState({
     address: home?.address || '', city: home?.city || '', state: home?.state || '', zip_code: home?.zip_code || '',
     year_built: home?.year_built?.toString() || '', square_footage: home?.square_footage?.toString() || '',
@@ -51,6 +57,23 @@ export default function HomeDetails() {
       setTimeout(() => emergencySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
     }
   }, [editing]);
+
+  // Load structures for this home (only if it's a primary home)
+  useEffect(() => {
+    const loadStructures = async () => {
+      if (home && !home.parent_home_id) {
+        try {
+          const data = await getStructures(home.id);
+          setStructures(data);
+        } catch (err) {
+          console.warn('Failed to load structures:', err);
+        }
+      } else {
+        setStructures([]);
+      }
+    };
+    loadStructures();
+  }, [home?.id]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -134,6 +157,34 @@ export default function HomeDetails() {
       alert('Failed to upload photo. Please try again.');
     } finally {
       setUploadingPhoto(false);
+    }
+  };
+
+  const handleAddStructure = async () => {
+    if (!home || !structureFormLabel.trim()) return;
+    setAddingStructure(true);
+    try {
+      const newStructure = await addStructure(home.id, structureFormType, structureFormLabel);
+      setStructures([...structures, newStructure]);
+      setStructureFormType('guest_house');
+      setStructureFormLabel('');
+      setShowAddStructure(false);
+    } catch (err) {
+      console.error('Failed to add structure:', err);
+      alert('Failed to add structure. Please try again.');
+    } finally {
+      setAddingStructure(false);
+    }
+  };
+
+  const handleDeleteStructure = async (structureId: string) => {
+    if (!window.confirm('Are you sure you want to delete this structure? This cannot be undone.')) return;
+    try {
+      await deleteStructure(structureId);
+      setStructures(structures.filter(s => s.id !== structureId));
+    } catch (err) {
+      console.error('Failed to delete structure:', err);
+      alert('Failed to delete structure. Please try again.');
     }
   };
 
@@ -388,6 +439,141 @@ export default function HomeDetails() {
               {home.water_meter_location && <Field label="Water Meter"><p style={{ fontWeight: 500 }}>{home.water_meter_location}</p></Field>}
               {home.hose_bib_locations && <Field label="Hose Bibs"><p style={{ fontWeight: 500 }}>{home.hose_bib_locations}</p></Field>}
             </>
+          )}
+
+          {/* Additional Structures (only shown for primary homes) */}
+          {!home.parent_home_id && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 8 }}>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>Additional Structures</div>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowAddStructure(true)}
+                >
+                  + Add Structure
+                </button>
+              </div>
+
+              {structures.length === 0 ? (
+                <p className="text-sm text-gray" style={{ padding: '16px 0' }}>
+                  No additional structures yet. Add a guest house, garage, workshop, or other secondary building.
+                </p>
+              ) : (
+                <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
+                  {structures.map(struct => (
+                    <div
+                      key={struct.id}
+                      style={{
+                        padding: 12,
+                        border: `1px solid var(--light-gray)`,
+                        borderRadius: 8,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: 600, marginBottom: 4 }}>
+                          {STRUCTURE_TYPES[struct.structure_type as keyof typeof STRUCTURE_TYPES] || 'Structure'}
+                        </p>
+                        {struct.structure_label && <p className="text-sm text-gray">{struct.structure_label}</p>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => navigate(`/home-details?id=${struct.id}`)}
+                        >
+                          View Details
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ color: Colors.error }}
+                          onClick={() => handleDeleteStructure(struct.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {showAddStructure && (
+                <div style={{
+                  padding: 16,
+                  border: `2px solid ${Colors.copper}`,
+                  borderRadius: 8,
+                  marginBottom: 16,
+                  backgroundColor: Colors.warmWhite,
+                }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Add a Structure</h3>
+                  <div className="form-group" style={{ marginBottom: 12 }}>
+                    <label>Structure Type *</label>
+                    <select
+                      className="form-select"
+                      value={structureFormType}
+                      onChange={e => setStructureFormType(e.target.value as keyof typeof STRUCTURE_TYPES)}
+                    >
+                      {Object.entries(STRUCTURE_TYPES).map(([key, label]) => (
+                        <option key={key} value={key}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 12 }}>
+                    <label>Custom Label (optional)</label>
+                    <input
+                      className="form-input"
+                      type="text"
+                      placeholder="e.g., West Side Guest House"
+                      value={structureFormLabel}
+                      onChange={e => setStructureFormLabel(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-sm">
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() => {
+                        setShowAddStructure(false);
+                        setStructureFormLabel('');
+                        setStructureFormType('guest_house');
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleAddStructure}
+                      disabled={addingStructure || !structureFormLabel.trim()}
+                    >
+                      {addingStructure ? 'Adding...' : 'Add Structure'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Structure Banner (shown when viewing a structure) */}
+          {home.parent_home_id && (
+            <div style={{
+              padding: 12,
+              backgroundColor: Colors.copperMuted,
+              border: `1px solid ${Colors.copper}`,
+              borderRadius: 8,
+              marginBottom: 16,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <p style={{ fontWeight: 600 }}>
+                    {STRUCTURE_TYPES[home.structure_type as keyof typeof STRUCTURE_TYPES] || 'Structure'}
+                  </p>
+                  {home.structure_label && <p className="text-sm text-gray">{home.structure_label}</p>}
+                </div>
+                <button className="btn btn-secondary btn-sm" onClick={() => navigate(-1)}>
+                  ← Back to Main Home
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Home Members */}

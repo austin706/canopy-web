@@ -26,7 +26,10 @@ export default function SalePrep() {
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
 
   const loadPrep = useCallback(async () => {
-    if (!home?.id) return;
+    if (!home?.id) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const data = await getActiveSalePrep(home.id);
@@ -110,6 +113,22 @@ export default function SalePrep() {
       <div className="page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
         <div className="spinner"></div>
         <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!home?.id) {
+    return (
+      <div className="page" style={{ maxWidth: 600 }}>
+        <div className="page-header"><h1>Sale Prep</h1></div>
+        <div className="empty-state">
+          <div className="icon" style={{ fontSize: 48, fontWeight: 700, color: Colors.copper }} role="img" aria-label="Home">🏡</div>
+          <h3 style={{ fontSize: 22, color: Colors.charcoal }}>Set Up Your Home First</h3>
+          <p style={{ lineHeight: 1.6 }}>Please complete your home setup before using Sale Prep. We need your home details to create a personalized checklist.</p>
+          <button className="btn btn-primary" onClick={() => navigate('/dashboard')} style={{ marginTop: 16 }}>
+            Go to Dashboard
+          </button>
+        </div>
       </div>
     );
   }

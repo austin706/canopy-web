@@ -87,6 +87,8 @@ const ApplyPro = lazy(() => import('@/pages/ApplyPro'));
 const AgentLanding = lazy(() => import('@/pages/AgentLanding'));
 const ProLanding = lazy(() => import('@/pages/ProLanding'));
 const AgentRedeem = lazy(() => import('@/pages/AgentRedeem'));
+const AgentApplication = lazy(() => import('@/pages/AgentApplication'));
+const TechnicianOnboarding = lazy(() => import('@/pages/TechnicianOnboarding'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -187,6 +189,7 @@ export default function App() {
           <Route path="/for-agents" element={<AgentLanding />} />
           <Route path="/for-pros" element={<ProLanding />} />
           <Route path="/a/:slug" element={<AgentRedeem />} />
+          <Route path="/agent-application" element={<AgentApplication />} />
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
           {/* ═══════════════════════════════════════════════════════
@@ -214,6 +217,7 @@ export default function App() {
             <Route path="/pro-portal/quotes-invoices" element={<ProQuotesInvoices />} />
             <Route path="/pro-portal/job-queue" element={<ProJobQueue />} />
             <Route path="/pro-portal/inspection/:visitId" element={<ProInspection />} />
+            <Route path="/pro-portal/onboarding" element={<TechnicianOnboarding />} />
           </Route>
 
           {/* ═══════════════════════════════════════════════════════

@@ -342,6 +342,11 @@ export interface Home {
   climate_zone?: string;
   usda_zone?: string;
 
+  // ─── ADDITIONAL STRUCTURES ───
+  parent_home_id?: string;
+  structure_type?: 'guest_house' | 'detached_garage' | 'workshop' | 'adu' | 'barn' | 'pool_house' | 'shed' | 'other';
+  structure_label?: string;
+
   // ─── TIMESTAMPS ───
   created_at: string;
 }

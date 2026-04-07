@@ -11,6 +11,8 @@ import { fetchWeather } from '@/services/weather';
 import { Skeleton } from '@/components/Skeleton';
 import { HealthGauge } from '@/components/HealthGauge';
 import { generateTasksForHome, getDisplayStatus } from '@/services/taskEngine';
+import { generateWeatherInsights } from '@/services/weatherInsights';
+import { WeatherInsightCards } from '@/components/WeatherInsightCards';
 import { geocodeAddress } from '@/services/geocoding';
 import { upsertHome } from '@/services/supabase';
 import { CanopyLogo, NavWeather, NavHome } from '@/components/icons/CanopyLogo';
@@ -298,6 +300,11 @@ export default function Dashboard() {
               </div>
               <button className="btn btn-primary mt-md" onClick={() => navigate('/subscription')}>Upgrade to Home</button>
             </div>
+          )}
+
+          {/* Weather Insights (Smart Weather-to-Task Scheduling) */}
+          {hasWeather && weather && weather.forecast && weather.forecast.length > 0 && tier !== 'free' && (
+            <WeatherInsightCards insights={generateWeatherInsights(weather.forecast, displayTasks)} />
           )}
 
           {/* Health Score Gauge */}

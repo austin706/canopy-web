@@ -210,6 +210,85 @@ export const denyHomeJoinRequest = async (requestId: string) => {
   if (error) throw error;
 };
 
+// --- Additional Structures ---
+
+export const STRUCTURE_TYPES = {
+  guest_house: 'Guest House',
+  detached_garage: 'Detached Garage',
+  workshop: 'Workshop',
+  adu: 'ADU / In-Law Suite',
+  barn: 'Barn / Outbuilding',
+  pool_house: 'Pool House',
+  shed: 'Shed',
+  other: 'Other',
+} as const;
+
+export type StructureType = keyof typeof STRUCTURE_TYPES;
+
+/** Get all structures (child homes) for a parent home */
+export const getStructures = async (parentHomeId: string): Promise<Home[]> => {
+  const { data, error } = await supabase
+    .from('homes')
+    .select('*')
+    .eq('parent_home_id', parentHomeId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+};
+
+/** Add a new structure to a home */
+export const addStructure = async (
+  parentHomeId: string,
+  structureType: StructureType,
+  label: string
+): Promise<Home> => {
+  // Fetch parent home to copy address details
+  const { data: parentHome, error: parentErr } = await supabase
+    .from('homes')
+    .select('*')
+    .eq('id', parentHomeId)
+    .single();
+  if (parentErr || !parentHome) throw parentErr || new Error('Parent home not found');
+
+  // Create new structure record with parent's address and location data
+  const newStructure: Partial<Home> = {
+    user_id: parentHome.user_id,
+    address: parentHome.address,
+    city: parentHome.city,
+    state: parentHome.state,
+    zip_code: parentHome.zip_code,
+    latitude: parentHome.latitude,
+    longitude: parentHome.longitude,
+    parent_home_id: parentHomeId,
+    structure_type: structureType,
+    structure_label: label,
+    // Initialize default values
+    stories: 1,
+    bedrooms: 0,
+    bathrooms: 0,
+    garage_spaces: 0,
+    has_pool: false,
+    has_deck: false,
+    has_sprinkler_system: false,
+    has_fireplace: false,
+    created_at: new Date().toISOString(),
+  };
+
+  const { data: created, error } = await supabase
+    .from('homes')
+    .insert(newStructure)
+    .select()
+    .single();
+  if (error) throw error;
+  return created;
+};
+
+/** Delete a structure (child home) */
+export const deleteStructure = async (structureId: string): Promise<void> => {
+  const { error } = await supabase.from('homes').delete().eq('id', structureId);
+  if (error) throw error;
+};
+
 // --- Equipment ---
 export const getEquipment = async (homeId: string) => {
   const { data, error } = await supabase.from('equipment').select('*').eq('home_id', homeId).order('category');
@@ -1437,4 +1516,311 @@ export const revokeQRCode = async (id: string): Promise<void> => {
     .update({ status: 'revoked', updated_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw error;
+};
+
+// ─── Technician Documents ───
+
+export type TechDocumentType =
+  | 'contractor_agreement'
+  | 'safety_acknowledgment'
+  | 'w9'
+  | 'direct_deposit'
+  | 'insurance_verification'
+  | 'drivers_license'
+  | 'background_check_consent'
+  | 'background_check_result';
+
+export interface TechnicianDocument {
+  id: string;
+  provider_id: string;
+  document_type: TechDocumentType;
+  file_path: string | null;
+  signature_data_url: string | null;
+  agreement_version: string | null;
+  agreement_text_hash: string | null;
+  signed_at: string | null;
+  signer_name: string | null;
+  signer_ip: string | null;
+  status: 'pending' | 'signed' | 'verified' | 'expired' | 'rejected';
+  notes: string | null;
+  metadata: Record<string, unknown>;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const getTechnicianDocuments = async (providerId: string): Promise<TechnicianDocument[]> => {
+  const { data, error } = await supabase
+    .from('technician_documents')
+    .select('*')
+    .eq('provider_id', providerId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+};
+
+export const signTechnicianDocument = async (
+  providerId: string,
+  documentType: TechDocumentType,
+  signatureDataUrl: string,
+  signerName: string,
+  agreementVersion?: string,
+  agreementTextHash?: string,
+): Promise<TechnicianDocument> => {
+  const { data, error } = await supabase
+    .from('technician_documents')
+    .upsert({
+      provider_id: providerId,
+      document_type: documentType,
+      signature_data_url: signatureDataUrl,
+      signer_name: signerName,
+      agreement_version: agreementVersion || null,
+      agreement_text_hash: agreementTextHash || null,
+      signed_at: new Date().toISOString(),
+      status: 'signed',
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'provider_id,document_type' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const uploadTechnicianDocument = async (
+  providerId: string,
+  documentType: TechDocumentType,
+  file: File,
+): Promise<TechnicianDocument> => {
+  const ext = file.name.split('.').pop() || 'pdf';
+  const path = `${providerId}/${documentType}_${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('technician-documents')
+    .upload(path, file);
+  if (uploadError) throw uploadError;
+
+  const { data, error } = await supabase
+    .from('technician_documents')
+    .upsert({
+      provider_id: providerId,
+      document_type: documentType,
+      file_path: path,
+      status: 'signed',
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'provider_id,document_type' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+// ─── Stripe Connect for Technicians ───
+
+export const createStripeConnectAccount = async (providerId: string): Promise<{ accountId: string; onboardingUrl: string }> => {
+  const { data, error } = await supabase.functions.invoke('stripe-connect-onboard', {
+    body: { provider_id: providerId },
+  });
+  if (error) throw error;
+  return data;
+};
+
+export const getStripeConnectStatus = async (providerId: string): Promise<{
+  accountId: string | null;
+  onboardingComplete: boolean;
+  payoutsEnabled: boolean;
+}> => {
+  const { data, error } = await supabase
+    .from('pro_providers')
+    .select('stripe_connect_account_id, stripe_connect_onboarding_complete')
+    .eq('id', providerId)
+    .single();
+  if (error) throw error;
+  return {
+    accountId: data.stripe_connect_account_id,
+    onboardingComplete: data.stripe_connect_onboarding_complete || false,
+    payoutsEnabled: data.stripe_connect_onboarding_complete || false,
+  };
+};
+
+// ─── Background Check (Placeholder) ───
+
+export const initiateBackgroundCheck = async (providerId: string): Promise<{ checkId: string; status: string }> => {
+  // TODO: Integrate with Checkr API
+  // For now, update the provider's background_check_status to 'pending'
+  const { error } = await supabase
+    .from('pro_providers')
+    .update({
+      background_check_status: 'pending',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', providerId);
+  if (error) throw error;
+
+  // Note: caller should call logAdminAction separately
+  return { checkId: `placeholder_${providerId}`, status: 'pending' };
+};
+
+export const updateBackgroundCheckStatus = async (
+  providerId: string,
+  status: 'cleared' | 'failed',
+): Promise<void> => {
+  const { error } = await supabase
+    .from('pro_providers')
+    .update({
+      background_check_status: status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', providerId);
+  if (error) throw error;
+};
+
+// ─── Agent Applications ───
+
+export interface AgentApplication {
+  id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  brokerage?: string;
+  license_number?: string;
+  license_state?: string;
+  years_experience?: number;
+  bio?: string;
+  service_area_zips?: string[];
+  photo_url?: string;
+  referral_source?: string;
+  agreed_to_terms: boolean;
+  agreed_to_terms_at?: string;
+  status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
+  reviewed_by?: string;
+  reviewed_at?: string;
+  review_notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const submitAgentApplication = async (app: Partial<AgentApplication>): Promise<AgentApplication> => {
+  const { data, error } = await supabase
+    .from('agent_applications')
+    .insert(app)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const getAgentApplications = async (status?: string): Promise<AgentApplication[]> => {
+  let query = supabase
+    .from('agent_applications')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+};
+
+export const getAgentApplicationById = async (id: string): Promise<AgentApplication> => {
+  const { data, error } = await supabase
+    .from('agent_applications')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const reviewAgentApplication = async (
+  id: string,
+  decision: 'approved' | 'rejected',
+  reviewedBy: string,
+  notes?: string
+): Promise<void> => {
+  // First get the application data
+  const app = await getAgentApplicationById(id);
+
+  if (decision === 'approved') {
+    // Create agent record from application
+    const { data: agent, error: createErr } = await supabase
+      .from('agents')
+      .insert({
+        id: crypto.randomUUID(),
+        name: app.full_name,
+        email: app.email,
+        phone: app.phone || null,
+        brokerage: app.brokerage || null,
+        license_number: app.license_number || null,
+        license_state: app.license_state || null,
+        years_experience: app.years_experience || null,
+        bio: app.bio || null,
+        service_area_zips: app.service_area_zips || [],
+        photo_url: app.photo_url || null,
+        application_id: id,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (createErr) throw createErr;
+
+    // Update application to approved and link agent
+    const { error: updateErr } = await supabase
+      .from('agent_applications')
+      .update({
+        status: 'approved',
+        reviewed_by: reviewedBy,
+        reviewed_at: new Date().toISOString(),
+        review_notes: notes || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (updateErr) throw updateErr;
+
+    // Send approval email
+    try {
+      await sendDirectEmailNotification({
+        recipient_email: app.email,
+        title: 'Welcome to Canopy Agent Partner Program',
+        body: `Congratulations! Your application has been approved. You are now a Canopy Agent Partner and can start creating gift codes for your clients.\n\nSign in at canopyhome.app/agent-portal to get started.`,
+        subject: 'Application Approved - Canopy Agent Partner',
+        category: 'agent_application',
+        action_url: '/agent-portal',
+        action_label: 'Access Agent Portal',
+      });
+    } catch (emailErr) {
+      console.error('Failed to send approval email:', emailErr);
+    }
+  } else {
+    // Rejection
+    const { error: updateErr } = await supabase
+      .from('agent_applications')
+      .update({
+        status: 'rejected',
+        reviewed_by: reviewedBy,
+        reviewed_at: new Date().toISOString(),
+        review_notes: notes || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (updateErr) throw updateErr;
+
+    // Send rejection email
+    try {
+      await sendDirectEmailNotification({
+        recipient_email: app.email,
+        title: 'Application Status Update',
+        body: `Thank you for your interest in becoming a Canopy Agent Partner. Unfortunately, your application was not approved at this time.\n\n${notes ? `Feedback: ${notes}\n\n` : ''}We encourage you to reapply if circumstances change.`,
+        subject: 'Application Decision - Canopy Agent Partner',
+        category: 'agent_application',
+      });
+    } catch (emailErr) {
+      console.error('Failed to send rejection email:', emailErr);
+    }
+  }
 };

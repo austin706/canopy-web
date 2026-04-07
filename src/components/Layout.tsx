@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { signOut, resendVerificationEmail, supabase, getUserHomes } from '@/services/supabase';
+import { signOut, resendVerificationEmail, supabase, getUserHomes, STRUCTURE_TYPES } from '@/services/supabase';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { PLANS } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
+import type { Home } from '@/types';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
   CanopyLogo,
@@ -27,6 +28,13 @@ export default function Layout() {
       getUserHomes(user.id).then(setHomes).catch(() => {});
     }
   }, [user?.id]);
+
+  // Group homes by parent_home_id for display
+  const groupedHomes = useMemo(() => {
+    const primaryHomes = homes.filter(h => !h.parent_home_id);
+    const structures = homes.filter(h => h.parent_home_id);
+    return { primaryHomes, structures };
+  }, [homes]);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -120,22 +128,44 @@ export default function Layout() {
               <div style={{
                 position: 'absolute', left: 16, right: 16, top: '100%', background: 'var(--color-card-background)',
                 border: '1px solid var(--color-border)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                zIndex: 50, maxHeight: 200, overflowY: 'auto',
+                zIndex: 50, maxHeight: 300, overflowY: 'auto',
               }}>
-                {homes.map(h => (
-                  <button
-                    key={h.id}
-                    onClick={() => { switchHome(h.id); setShowHomeSwitcher(false); }}
-                    style={{
-                      width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none',
-                      background: h.id === home?.id ? 'var(--color-cream)' : 'transparent',
-                      cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--color-background)',
-                      fontWeight: h.id === home?.id ? 600 : 400,
-                    }}
-                  >
-                    <div style={{ fontWeight: 500 }}>{h.address || 'Unnamed Home'}</div>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{h.city}, {h.state} {h.zip_code}</div>
-                  </button>
+                {/* Primary homes */}
+                {groupedHomes.primaryHomes.map(h => (
+                  <div key={h.id}>
+                    <button
+                      onClick={() => { switchHome(h.id); setShowHomeSwitcher(false); }}
+                      style={{
+                        width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none',
+                        background: h.id === home?.id ? 'var(--color-cream)' : 'transparent',
+                        cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--color-background)',
+                        fontWeight: h.id === home?.id ? 600 : 400,
+                      }}
+                    >
+                      <div style={{ fontWeight: 500 }}>{h.address || 'Unnamed Home'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{h.city}, {h.state} {h.zip_code}</div>
+                    </button>
+                    {/* Structures under this home */}
+                    {groupedHomes.structures.filter(s => s.parent_home_id === h.id).map(struct => (
+                      <button
+                        key={struct.id}
+                        onClick={() => { switchHome(struct.id); setShowHomeSwitcher(false); }}
+                        style={{
+                          width: '100%', textAlign: 'left', padding: '8px 12px 8px 28px', border: 'none',
+                          background: struct.id === home?.id ? 'var(--color-cream)' : 'transparent',
+                          cursor: 'pointer', fontSize: 12, borderBottom: '1px solid var(--color-background)',
+                          fontWeight: struct.id === home?.id ? 600 : 400,
+                          color: 'var(--color-text-secondary)',
+                        }}
+                      >
+                        <span style={{ marginRight: 6 }}>↳</span>
+                        <span>
+                          {STRUCTURE_TYPES[struct.structure_type as keyof typeof STRUCTURE_TYPES] || 'Structure'}
+                          {struct.structure_label ? ` — ${struct.structure_label}` : ''}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 ))}
                 <button
                   onClick={() => { setShowHomeSwitcher(false); navigate('/onboarding?step=1'); }}

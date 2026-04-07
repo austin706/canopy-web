@@ -1,0 +1,197 @@
+.weather-insights-container {
+  margin: 24px 0;
+}
+
+.weather-insights-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c2c2c;
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.weather-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.weather-insight-card {
+  background: #ffffff;
+  border: 1px solid #e8e2d8;
+  border-left: 4px solid #8b9e7e;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.weather-insight-card:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.insight-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.insight-icon-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.insight-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.insight-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c2c2c;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.insight-dismiss-btn {
+  background: none;
+  border: none;
+  color: #b8b8b8;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.insight-dismiss-btn:hover {
+  background: #f5f0e8;
+  color: #4a4a4a;
+}
+
+.insight-description {
+  font-size: 13px;
+  color: #4a4a4a;
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}
+
+.insight-tasks {
+  margin: 12px 0;
+  padding: 8px 0;
+  border-top: 1px solid #f5f0e8;
+  border-bottom: 1px solid #f5f0e8;
+}
+
+.insight-tasks-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7a7a7a;
+  margin: 0 0 6px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.insight-tasks-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.insight-tasks-list li {
+  font-size: 13px;
+  color: #4a4a4a;
+  padding: 4px 0;
+  margin-left: 0;
+}
+
+.insight-tasks-list li::before {
+  content: '• ';
+  color: #8b9e7e;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.insight-action {
+  font-size: 12px;
+  color: #2c2c2c;
+  margin: 12px 0 0 0;
+  line-height: 1.5;
+  padding-top: 8px;
+  border-top: 1px solid #f5f0e8;
+}
+
+.insight-action strong {
+  color: #4a4a4a;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .weather-insights-title {
+    color: #e8e2d8;
+  }
+
+  .weather-insight-card {
+    background: #1e1c1a;
+    border-color: #3a3530;
+  }
+
+  .weather-insight-card:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+
+  .insight-title {
+    color: #e8e2d8;
+  }
+
+  .insight-dismiss-btn {
+    color: #6a6460;
+  }
+
+  .insight-dismiss-btn:hover {
+    background: #252220;
+    color: #c0bab0;
+  }
+
+  .insight-description {
+    color: #c0bab0;
+  }
+
+  .insight-tasks-label {
+    color: #9e9890;
+  }
+
+  .insight-tasks-list li {
+    color: #c0bab0;
+  }
+
+  .insight-tasks-list li::before {
+    color: #a8b89c;
+  }
+
+  .insight-action {
+    color: #e8e2d8;
+  }
+
+  .insight-action strong {
+    color: #c0bab0;
+  }
+
+  .insight-tasks,
+  .insight-action {
+    border-color: #252220;
+  }
+}

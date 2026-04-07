@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { signUp } from '@/services/supabase';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
 import { getErrorMessage } from '@/utils/errors';
+import { trackEvent } from '@/utils/analytics';
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -80,6 +81,8 @@ export default function Signup() {
     setLoading(true);
     try {
       await signUp(email, password, fullName);
+      // GA4: primary conversion event — new account created
+      trackEvent('sign_up', { method: 'email' });
       // Don't block — redirect to login with a success message
       navigate('/login?signup=success');
     } catch (err: any) {

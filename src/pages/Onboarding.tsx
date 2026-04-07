@@ -15,6 +15,7 @@ import { lookupByModelNumber } from '@/services/ai';
 import { Colors } from '@/constants/theme';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
+import { trackEvent } from '@/utils/analytics';
 import type { EquipmentCategory, Equipment as EquipmentType, SubscriptionTier } from '@/types';
 
 const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
@@ -127,8 +128,17 @@ export default function Onboarding() {
       if (user) {
         setUser({ ...user, subscription_tier: plan as SubscriptionTier });
       }
+      // GA4: upgrade completed via Stripe redirect
+      trackEvent('upgrade_complete', { plan, source: 'stripe_redirect', surface: 'onboarding' });
     }
   }, []);
+
+  // GA4: emit an onboarding_step_complete event whenever the step advances.
+  // Fires on mount with the starting step so we capture "step 0 viewed."
+  useEffect(() => {
+    trackEvent('onboarding_step_complete', { step, add_property_mode: isAddPropertyMode });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   // Prevent back button from logging user out — push state on step changes
   // In add-property mode, allow back button to return to dashboard

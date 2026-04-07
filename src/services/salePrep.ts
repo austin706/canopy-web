@@ -1,4 +1,5 @@
 import { supabase, sendNotification, sendDirectEmailNotification } from '@/services/supabase';
+import { SALE_PREP_TOTAL_ITEMS } from '@/constants/salePrep';
 
 export interface HomeSalePrep {
   id: string;
@@ -51,7 +52,7 @@ export async function toggleSalePrepItem(
   itemId: string,
   completed: boolean,
   currentItems: string[],
-  totalItems = 40
+  totalItems = SALE_PREP_TOTAL_ITEMS
 ): Promise<string[]> {
   const newItems = completed
     ? [...currentItems, itemId]

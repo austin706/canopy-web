@@ -11,6 +11,7 @@ import { Colors } from '@/constants/theme';
 import type { SubscriptionTier } from '@/types';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import ServiceAreaMap from '@/components/ServiceAreaMap';
+import { trackEvent } from '@/utils/analytics';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -200,6 +201,8 @@ export default function Subscription() {
 
       // Clean URL and replace history so back button doesn't go to Stripe
       window.history.replaceState({}, '', '/subscription');
+      // GA4: conversion — paid plan activated via Stripe redirect
+      trackEvent('upgrade_complete', { plan, source: 'stripe_redirect', surface: 'subscription' });
       setMessage(`Successfully upgraded to ${PLANS.find(p => p.value === plan)?.name || plan}! Your subscription is now active.`);
       // Refresh user profile to pick up new tier
       if (user?.id) {
@@ -254,6 +257,8 @@ export default function Subscription() {
   }, []);
 
   const handleStripeCheckout = async (plan: string) => {
+    // GA4: user clicked an upgrade CTA (fires regardless of payment config outcome)
+    trackEvent('upgrade_click', { plan, from_tier: tier, surface: 'subscription' });
     if (!user || !SUPABASE_URL) {
       setMessage('Payment system is not configured. Use a gift code to upgrade.');
       return;

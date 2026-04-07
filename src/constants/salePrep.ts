@@ -66,3 +66,13 @@ export const SALE_PREP_ITEMS: SalePrepItem[] = [
   { id: 'stg_closets', label: 'Organize closets (buyers look!)', description: 'Remove half the contents, use matching hangers, and organize neatly.', category: 'staging', diy: true },
   { id: 'stg_curb_photo', label: 'Take listing-ready photos', description: 'Professional photography makes a huge difference. Budget for it.', category: 'staging', estimatedCost: '$150–$400', diy: false },
 ];
+
+/**
+ * Canonical total — derived from SALE_PREP_ITEMS so web and mobile (and the
+ * milestone notification trigger) agree on the denominator. Adding/removing a
+ * checklist item automatically updates the total in both apps. The previous
+ * hard-coded defaults (web=40, mobile=26) caused milestones to fire at totally
+ * different completion percentages depending on which app the homeowner used,
+ * which made the agent's "client is X% sale-ready" attestation meaningless.
+ */
+export const SALE_PREP_TOTAL_ITEMS = SALE_PREP_ITEMS.length;

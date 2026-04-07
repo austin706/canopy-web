@@ -1,0 +1,55 @@
+# ──────────────────────────────────────────────────────────────────────────
+# Canopy-Web CI
+#
+# Minimal pre-merge gate: typecheck + unit tests on every push and PR.
+# Catches the type errors and broken tests that used to slip through
+# because everything was being verified by hand.
+#
+# Lint: not yet wired (eslint isn't installed in this repo). When we add
+# eslint, drop a `npm run lint` step between typecheck and test.
+# ──────────────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs of the same workflow on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Typecheck + Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+        env:
+          # Build needs at least empty values for Vite env substitution to
+          # not fail; CI doesn't deploy, so dummy values are fine.
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder
+
+      - name: Test
+        run: npm test

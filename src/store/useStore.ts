@@ -4,6 +4,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, Home, Equipment, MaintenanceTask, WeatherData, Agent, MaintenanceLog } from '@/types';
+import { trackEvent } from '@/utils/analytics';
 
 interface CanopyState {
   user: User | null;
@@ -78,9 +79,21 @@ export const useStore = create<CanopyState>()(
       })),
       addTask: (task) => set((s) => ({ tasks: [...s.tasks, task] })),
       removeTask: (id) => set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
-      completeTask: (id, notes, photoUrl) => set((s) => ({
-        tasks: s.tasks.map((t) => t.id === id ? { ...t, status: 'completed' as const, completed_date: new Date().toISOString(), completion_notes: notes, completion_photo_url: photoUrl } : t),
-      })),
+      completeTask: (id, notes, photoUrl) => set((s) => {
+        // GA4: fire first_task_complete once per user (before this completion, no tasks were completed)
+        const priorCompleted = s.tasks.filter((t) => t.status === 'completed').length;
+        if (priorCompleted === 0) {
+          const task = s.tasks.find((t) => t.id === id);
+          trackEvent('first_task_complete', {
+            task_id: id,
+            category: task?.category,
+            has_photo: !!photoUrl,
+          });
+        }
+        return {
+          tasks: s.tasks.map((t) => t.id === id ? { ...t, status: 'completed' as const, completed_date: new Date().toISOString(), completion_notes: notes, completion_photo_url: photoUrl } : t),
+        };
+      }),
       reopenTask: (id) => set((s) => ({
         tasks: s.tasks.map((t) => t.id === id ? { ...t, status: 'upcoming' as const, completed_date: undefined, completion_notes: undefined, completion_photo_url: undefined } : t),
       })),

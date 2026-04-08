@@ -79,7 +79,7 @@ export default function Terms() {
       <p>We reserve the right to modify these Terms at any time. We will notify users of material changes through the Service or via email. Your continued use of the Service after such notification constitutes acceptance of the updated Terms.</p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>12. Governing Law</h2>
-      <p>These Terms shall be governed by and construed in accordance with the laws of the State of Tennessee, without regard to its conflict of law provisions.</p>
+      <p>These Terms shall be governed by and construed in accordance with the laws of the State of Oklahoma, without regard to its conflict of law provisions. Canopy Home is offered throughout the United States; these Terms apply to all users regardless of the state in which they reside, and any dispute arising from your use of the Service shall be resolved in accordance with Oklahoma law.</p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>13. Contact</h2>
       <p>If you have questions about these Terms, please contact us at:</p>

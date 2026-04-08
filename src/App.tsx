@@ -57,6 +57,7 @@ const EquipmentDetail = lazy(() => import('@/pages/EquipmentDetail'));
 const Notifications = lazy(() => import('@/pages/Notifications'));
 const Documents = lazy(() => import('@/pages/Documents'));
 const Help = lazy(() => import('@/pages/Help'));
+const WhatsNew = lazy(() => import('@/pages/WhatsNew'));
 const Onboarding = lazy(() => import('@/pages/Onboarding'));
 const ProPortal = lazy(() => import('@/pages/ProPortal'));
 const ProLogin = lazy(() => import('@/pages/ProLogin'));
@@ -269,6 +270,7 @@ export default function App() {
             <Route path="/documents" element={<Documents />} />
             <Route path="/assistant" element={<HomeAssistant />} />
             <Route path="/help" element={<Help />} />
+            <Route path="/whats-new" element={<WhatsNew />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/pro-request" element={<ProRequest />} />

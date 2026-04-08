@@ -65,6 +65,19 @@ export default function Equipment() {
   const [loading, setLoading] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+  // Bulk selection mode
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const toggleSelected = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const exitSelectMode = () => { setSelectMode(false); setSelectedIds(new Set()); };
+
   // DB-backed scan guides and checklist
   const [scanGuides, setScanGuides] = useState<EquipmentScanGuide[]>([]);
   const [checklist, setChecklist] = useState<EquipmentChecklist[]>([]);
@@ -259,7 +272,16 @@ export default function Equipment() {
           <h1>Equipment</h1>
           <p className="subtitle">{equipment.length} items registered {limit ? `(max ${limit})` : ''}</p>
         </div>
-        <button className="btn btn-primary" onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowScanner(true)}>+ Add Equipment</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {equipment.length > 0 && (
+            selectMode ? (
+              <button className="btn btn-ghost" onClick={exitSelectMode}>Cancel</button>
+            ) : (
+              <button className="btn btn-ghost" onClick={() => setSelectMode(true)}>Select</button>
+            )
+          )}
+          <button className="btn btn-primary" onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowScanner(true)}>+ Add Equipment</button>
+        </div>
       </div>
 
       {loading ? (
@@ -575,13 +597,49 @@ export default function Equipment() {
           );
         })()}
 
+        {selectMode && (
+          <div style={{ marginBottom: 12 }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => {
+                const allIds = filtered.map(i => i.id);
+                const allSelected = allIds.every(id => selectedIds.has(id));
+                setSelectedIds(allSelected ? new Set() : new Set(allIds));
+              }}
+            >
+              {filtered.length > 0 && filtered.every(i => selectedIds.has(i.id)) ? 'Deselect all' : 'Select all'}
+            </button>
+          </div>
+        )}
         <div className="grid-2">
           {filtered.map(item => {
             const pct = getLifespanPct(item, home);
             const isReplacement = pct !== null && pct >= 95;
             const isInspect = pct !== null && pct >= 80 && pct < 95;
             return (
-            <div key={item.id} className="card" onClick={() => navigate(`/equipment/${item.id}`)} style={{ cursor: 'pointer', position: 'relative', borderLeft: isReplacement ? `4px solid var(--color-error)` : isInspect ? `4px solid var(--color-warning)` : undefined }}>
+            <div
+              key={item.id}
+              className="card"
+              onClick={() => selectMode ? toggleSelected(item.id) : navigate(`/equipment/${item.id}`)}
+              style={{
+                cursor: 'pointer',
+                position: 'relative',
+                borderLeft: isReplacement ? `4px solid var(--color-error)` : isInspect ? `4px solid var(--color-warning)` : undefined,
+                outline: selectMode && selectedIds.has(item.id) ? `2px solid var(--color-copper)` : undefined,
+              }}
+            >
+              {selectMode && (
+                <div style={{
+                  position: 'absolute', top: 8, right: 8, zIndex: 2,
+                  width: 22, height: 22, borderRadius: 4,
+                  border: `2px solid ${selectedIds.has(item.id) ? 'var(--color-copper)' : 'var(--color-border)'}`,
+                  background: selectedIds.has(item.id) ? 'var(--color-copper)' : 'var(--color-card-background)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontSize: 14, fontWeight: 700,
+                }} aria-label={selectedIds.has(item.id) ? 'Selected' : 'Not selected'}>
+                  {selectedIds.has(item.id) ? '✓' : ''}
+                </div>
+              )}
               {isReplacement && (
                 <div style={{
                   background: 'var(--color-error)',
@@ -694,6 +752,50 @@ export default function Equipment() {
               <button className="btn btn-primary" onClick={handleSave} disabled={saving || !form.name}>{saving ? 'Saving...' : 'Add Equipment'}</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Floating bulk action bar */}
+      {selectMode && selectedIds.size > 0 && (
+        <div
+          role="toolbar"
+          aria-label="Bulk actions"
+          style={{
+            position: 'fixed',
+            left: '50%',
+            bottom: 24,
+            transform: 'translateX(-50%)',
+            background: 'var(--color-card-background)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 12,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            zIndex: 50,
+          }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{selectedIds.size} selected</span>
+          <button
+            className="btn btn-danger btn-sm"
+            disabled={bulkDeleting}
+            onClick={async () => {
+              if (!confirm(`Delete ${selectedIds.size} equipment item${selectedIds.size === 1 ? '' : 's'}? This cannot be undone.`)) return;
+              setBulkDeleting(true);
+              const ids = Array.from(selectedIds);
+              const results = await Promise.allSettled(ids.map(id => deleteEquipApi(id)));
+              const succeeded = results.filter(r => r.status === 'fulfilled').length;
+              results.forEach((r, i) => { if (r.status === 'fulfilled') removeEquipment(ids[i]); });
+              setBulkDeleting(false);
+              exitSelectMode();
+              if (succeeded < ids.length) {
+                alert(`Deleted ${succeeded} of ${ids.length}. Some items could not be deleted.`);
+              }
+            }}
+          >
+            {bulkDeleting ? 'Deleting…' : 'Delete selected'}
+          </button>
         </div>
       )}
     </div>

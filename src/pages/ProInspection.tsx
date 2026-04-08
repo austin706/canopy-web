@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import { ImageViewer } from '@/components/ImageViewer';
+import { SignaturePad } from '@/components/SignaturePad';
 import type { ProMonthlyVisit, Home, Equipment } from '@/types';
 import type {
   VisitInspection,
@@ -45,6 +46,8 @@ export default function ProInspection() {
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [finalNotes, setFinalNotes] = useState('');
   const [generateAISummary, setGenerateAISummary] = useState(true);
+  const [homeownerSignature, setHomeownerSignature] = useState<string | null>(null);
+  const [homeownerName, setHomeownerName] = useState('');
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -278,6 +281,9 @@ export default function ProInspection() {
           completed_at: new Date().toISOString(),
           time_spent_minutes: timeSpentMinutes,
           pro_notes: finalNotes,
+          homeowner_signature_data_url: homeownerSignature,
+          homeowner_signature_name: homeownerSignature ? homeownerName.trim() : null,
+          homeowner_signed_at: homeownerSignature ? new Date().toISOString() : null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', visitId);
@@ -959,6 +965,42 @@ export default function ProInspection() {
                 resize: 'vertical',
               }}
             />
+
+            <label
+              style={{
+                display: 'block',
+                fontSize: FontSize.sm,
+                fontWeight: FontWeight.medium,
+                marginBottom: Spacing.sm,
+                color: Colors.charcoal,
+              }}
+            >
+              Homeowner Signature <span style={{ color: Colors.medGray, fontWeight: 400 }}>(optional — if homeowner is present)</span>
+            </label>
+            <input
+              type="text"
+              value={homeownerName}
+              onChange={(e) => setHomeownerName(e.target.value)}
+              placeholder="Homeowner's printed name"
+              style={{
+                width: '100%',
+                padding: Spacing.sm,
+                borderRadius: BorderRadius.md,
+                border: `1px solid ${Colors.lightGray}`,
+                fontSize: FontSize.sm,
+                fontFamily: 'inherit',
+                marginBottom: Spacing.sm,
+                boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ marginBottom: Spacing.md }}>
+              <SignaturePad
+                label="Homeowner sign here"
+                height={140}
+                onSave={(dataUrl) => setHomeownerSignature(dataUrl)}
+                onClear={() => setHomeownerSignature(null)}
+              />
+            </div>
 
             <label
               style={{

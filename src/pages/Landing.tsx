@@ -215,7 +215,7 @@ export default function Landing() {
           borderRadius: BorderRadius.full, padding: '6px 16px', marginBottom: 24,
         }}>
           <span style={{ fontSize: 13, fontWeight: FontWeight.semibold, color: Colors.sageDark }}>
-            Now available in Tulsa, OK
+            Pro services now available in Tulsa, OK
           </span>
         </div>
 
@@ -1122,7 +1122,6 @@ export default function Landing() {
               links: [
                 { label: 'For Agents', href: '/for-agents' },
                 { label: 'For Pros', href: '/for-pros' },
-                { label: 'Become a Pro', href: '/apply-pro' },
                 { label: 'Support', href: '/support' },
               ],
             },

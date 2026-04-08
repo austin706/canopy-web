@@ -294,6 +294,7 @@ export interface Home {
   has_fireplace: boolean;
   fireplace_type?: FireplaceType;
   fireplace_count?: number;
+  has_fountain?: boolean;
   has_gutters: boolean;
   has_fire_extinguisher: boolean;
   has_water_softener: boolean;
@@ -511,7 +512,7 @@ export const HOME_DETAIL_FIELDS = {
     'foundation_type', 'roof_type', 'roof_install_year', 'heating_type', 'cooling_type',
     'water_source', 'sewer_type', 'lawn_type',
     // Feature toggles
-    'has_pool', 'has_deck', 'has_sprinkler_system', 'has_fireplace', 'has_gutters',
+    'has_pool', 'has_deck', 'has_sprinkler_system', 'has_fireplace', 'has_fountain', 'has_gutters',
     'has_fire_extinguisher', 'has_water_softener', 'has_sump_pump', 'has_storm_shelter',
     'has_generator', 'has_solar_panels', 'has_ev_charger', 'has_fence',
   ],

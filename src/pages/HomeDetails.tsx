@@ -30,6 +30,7 @@ export default function HomeDetails() {
     heating_type: home?.heating_type || '', cooling_type: home?.cooling_type || '',
     has_pool: home?.has_pool || false, has_deck: home?.has_deck || false, has_sprinkler_system: home?.has_sprinkler_system || false,
     has_fireplace: home?.has_fireplace || false,
+    has_fountain: home?.has_fountain || false,
     fireplace_type: home?.fireplace_type || '',
     has_gutters: home?.has_gutters ?? true,
     has_fire_extinguisher: home?.has_fire_extinguisher || false,
@@ -287,7 +288,7 @@ export default function HomeDetails() {
             <div className="form-group"><label>&nbsp;</label><p className="text-xs text-gray" style={{ padding: '10px 0' }}>Used for seasonal lawn care tasks</p></div>
           </div>
           <div className="grid-2 mt-md">
-            {(['has_pool','has_deck','has_sprinkler_system','has_fireplace','has_gutters','has_fire_extinguisher','has_water_softener','has_sump_pump','has_storm_shelter'] as const).map(key => (
+            {(['has_pool','has_deck','has_sprinkler_system','has_fireplace','has_fountain','has_gutters','has_fire_extinguisher','has_water_softener','has_sump_pump','has_storm_shelter'] as const).map(key => (
               <label key={key} className="flex items-center gap-sm" style={{ cursor: 'pointer', padding: '8px 0' }}>
                 <input type="checkbox" checked={form[key] as boolean} onChange={e => setForm({...form, [key]: e.target.checked})} />
                 <span style={{ fontSize: 14 }}>{key.replace(/has_/,'').replace(/_/g,' ')}</span>
@@ -425,12 +426,13 @@ export default function HomeDetails() {
               {home.has_deck && <span className="badge badge-sage">Deck</span>}
               {home.has_sprinkler_system && <span className="badge badge-success">Sprinklers</span>}
               {home.has_fireplace && <span className="badge badge-warning">Fireplace{home.fireplace_type ? ` (${home.fireplace_type.replace(/_/g, ' ')})` : ''}{home.fireplace_count ? ` x${home.fireplace_count}` : ''}</span>}
+              {home.has_fountain && <span className="badge badge-info">Fountain</span>}
               {home.has_gutters && <span className="badge badge-info">Gutters</span>}
               {home.has_fire_extinguisher && <span className="badge badge-warning">Fire Extinguisher</span>}
               {home.has_water_softener && <span className="badge badge-sage">Water Softener</span>}
               {home.has_sump_pump && <span className="badge badge-info">Sump Pump</span>}
               {home.has_storm_shelter && <span className="badge badge-warning">Storm Shelter</span>}
-              {!home.has_pool && !home.has_deck && !home.has_sprinkler_system && !home.has_fireplace && !home.has_gutters && !home.has_fire_extinguisher && !home.has_water_softener && !home.has_sump_pump && !home.has_storm_shelter && <span className="text-sm text-gray">None selected</span>}
+              {!home.has_pool && !home.has_deck && !home.has_sprinkler_system && !home.has_fireplace && !home.has_fountain && !home.has_gutters && !home.has_fire_extinguisher && !home.has_water_softener && !home.has_sump_pump && !home.has_storm_shelter && <span className="text-sm text-gray">None selected</span>}
             </div>
           </Field>
           {home.number_of_hvac_filters && (

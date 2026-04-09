@@ -2,6 +2,7 @@ import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
+import { setUser as sentrySetUser } from '@/utils/sentry';
 import { loadServiceAreas, subscribeToServiceAreaChanges } from '@/services/subscriptionGate';
 import logger from '@/utils/logger';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -147,6 +148,12 @@ export default function App() {
         if (storeUser && storeUser.email_confirmed !== !!authUser.email_confirmed_at) {
           useStore.getState().setUser({ ...storeUser, email_confirmed: !!authUser.email_confirmed_at });
         }
+        // Tag Sentry events with the signed-in user's identity.
+        sentrySetUser({
+          id: authUser.id,
+          email: authUser.email ?? undefined,
+          role: storeUser?.role,
+        });
       }
     };
     validateSession();
@@ -154,6 +161,7 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         reset();
+        sentrySetUser(null);
       }
       if (event === 'TOKEN_REFRESHED' && session?.user) {
         // Sync email_confirmed on token refresh too
@@ -161,6 +169,11 @@ export default function App() {
         if (storeUser) {
           useStore.getState().setUser({ ...storeUser, email_confirmed: !!session.user.email_confirmed_at });
         }
+        sentrySetUser({
+          id: session.user.id,
+          email: session.user.email ?? undefined,
+          role: storeUser?.role,
+        });
       }
     });
     // Prime the service area cache and subscribe to realtime updates

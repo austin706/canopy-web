@@ -105,7 +105,6 @@ export default function Onboarding() {
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [claimInfo, setClaimInfo] = useState<{ homeId: string; ownerId: string } | null>(null);
   const [joinRequestSent, setJoinRequestSent] = useState(false);
-  const [pendingHomeData, setPendingHomeData] = useState<any>(null);
 
   // Address verification state
   const [verifiedAddress, setVerifiedAddress] = useState<{
@@ -113,6 +112,9 @@ export default function Onboarding() {
     latitude?: number; longitude?: number; isValid: boolean;
   } | null>(null);
   const [showVerifiedConfirm, setShowVerifiedConfirm] = useState(false);
+  // Google Places canonical identity — captured when the user picks a
+  // suggestion from AddressAutocomplete. This is the primary dedup key.
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
 
   // Detect "add property" mode — existing user coming back to add another home
   const isAddPropertyMode = !!(user?.onboarding_complete || home);
@@ -448,6 +450,9 @@ export default function Onboarding() {
       ...(verified?.zipCode && verified.zipCode.includes('-') && { zip_plus4: verified.zipCode }),
       ...(verified?.latitude && { latitude: verified.latitude }),
       ...(verified?.longitude && { longitude: verified.longitude }),
+      // Canonical identity key — Google Places ID, captured in onPlaceSelected.
+      // This is the primary dedup key; USPS normalized_address is secondary.
+      ...(selectedPlaceId && { google_place_id: selectedPlaceId }),
     };
 
     // Check if this property already exists
@@ -457,10 +462,10 @@ export default function Onboarding() {
         verified?.latitude,
         verified?.longitude,
         addressForm.address, addressForm.city, addressForm.state, addressForm.zip_code,
-        user.id
+        user.id,
+        selectedPlaceId || undefined,
       );
       if (match.found && match.homeId && match.ownerId) {
-        setPendingHomeData(homeData);
         setClaimInfo({ homeId: match.homeId, ownerId: match.ownerId });
         setShowClaimModal(true);
         return;
@@ -490,26 +495,6 @@ export default function Onboarding() {
       setJoinRequestSent(true);
     } catch (err: any) {
       showInlineError(err?.message || 'Failed to send join request. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  /** User chose to proceed with their own separate home record anyway */
-  const handleProceedAnyway = async () => {
-    if (!pendingHomeData) return;
-    setSaving(true);
-    try {
-      try {
-        const saved = await upsertHome(pendingHomeData);
-        setHome(saved);
-      } catch {
-        setHome(pendingHomeData);
-      }
-      setShowClaimModal(false);
-      setClaimInfo(null);
-      setPendingHomeData(null);
-      setStep(2);
     } finally {
       setSaving(false);
     }
@@ -1026,13 +1011,18 @@ export default function Onboarding() {
             <AddressAutocomplete
               value={addressForm.address}
               onChange={(v) => setAddressForm({ ...addressForm, address: v })}
-              onPlaceSelected={(details) => setAddressForm({
-                ...addressForm,
-                address: details.address || addressForm.address,
-                city: details.city || addressForm.city,
-                state: details.state || addressForm.state,
-                zip_code: details.zipCode || addressForm.zip_code,
-              })}
+              onPlaceSelected={(details) => {
+                // Capture the canonical Place ID for dedup — this is the
+                // primary identity key we'll store on the home record.
+                if (details.placeId) setSelectedPlaceId(details.placeId);
+                setAddressForm({
+                  ...addressForm,
+                  address: details.address || addressForm.address,
+                  city: details.city || addressForm.city,
+                  state: details.state || addressForm.state,
+                  zip_code: details.zipCode || addressForm.zip_code,
+                });
+              }}
               placeholder="Start typing your address…"
             />
           </div>
@@ -1137,7 +1127,6 @@ export default function Onboarding() {
                     setShowClaimModal(false);
                     setJoinRequestSent(false);
                     setClaimInfo(null);
-                    setPendingHomeData(null);
                     navigate('/');
                   }}
                 >
@@ -1150,11 +1139,11 @@ export default function Onboarding() {
                   <span style={{ fontSize: 48 }}>&#x1F3E0;</span>
                 </div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
-                  This Property Already Has an Account
+                  This Property Is Already Claimed
                 </h3>
                 <p style={{ color: Colors.medGray, fontSize: 14, lineHeight: 1.6, textAlign: 'center', marginBottom: 24 }}>
-                  <strong>{addressForm.address}, {addressForm.city}, {addressForm.state} {addressForm.zip_code}</strong> is already
-                  associated with a Canopy account. Would you like to request to join this home, or create a separate entry?
+                  An account has already been created for <strong>{addressForm.address}, {addressForm.city}, {addressForm.state} {addressForm.zip_code}</strong>.
+                  You can request to be added to the home, or contact support if you think this is a mistake.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <button
@@ -1163,15 +1152,18 @@ export default function Onboarding() {
                     onClick={handleJoinRequest}
                     disabled={saving}
                   >
-                    {saving ? 'Sending...' : 'Request to Join This Home'}
+                    {saving ? 'Sending...' : 'Request Access'}
                   </button>
                   <button
                     className="btn btn-ghost"
                     style={{ width: '100%', color: Colors.medGray }}
-                    onClick={handleProceedAnyway}
+                    onClick={() => {
+                      window.location.href = 'mailto:support@canopyhome.app?subject=Property%20Claim%20Dispute&body=' +
+                        encodeURIComponent(`I'm trying to claim ${addressForm.address}, ${addressForm.city}, ${addressForm.state} ${addressForm.zip_code} but it shows as already claimed.`);
+                    }}
                     disabled={saving}
                   >
-                    Create My Own Entry
+                    Contact Support
                   </button>
                   <button
                     className="btn btn-ghost"
@@ -1179,10 +1171,9 @@ export default function Onboarding() {
                     onClick={() => {
                       setShowClaimModal(false);
                       setClaimInfo(null);
-                      setPendingHomeData(null);
                     }}
                   >
-                    Go Back &amp; Edit Address
+                    Cancel
                   </button>
                 </div>
               </>

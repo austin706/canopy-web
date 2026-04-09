@@ -93,6 +93,8 @@ const AgentApplication = lazy(() => import('@/pages/AgentApplication'));
 const BuilderApplication = lazy(() => import('@/pages/BuilderApplication'));
 const AdminBuilders = lazy(() => import('@/pages/AdminBuilders'));
 const TechnicianOnboarding = lazy(() => import('@/pages/TechnicianOnboarding'));
+const ProOnboardingSuccess = lazy(() => import('@/pages/ProOnboardingSuccess'));
+const ProOnboardingRefresh = lazy(() => import('@/pages/ProOnboardingRefresh'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -230,6 +232,8 @@ export default function App() {
             <Route path="/pro-portal/job-queue" element={<ProJobQueue />} />
             <Route path="/pro-portal/inspection/:visitId" element={<ProInspection />} />
             <Route path="/pro-portal/onboarding" element={<TechnicianOnboarding />} />
+            <Route path="/pro-portal/onboarding/success" element={<ProOnboardingSuccess />} />
+            <Route path="/pro-portal/onboarding/refresh" element={<ProOnboardingRefresh />} />
           </Route>
 
           {/* ═══════════════════════════════════════════════════════

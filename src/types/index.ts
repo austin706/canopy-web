@@ -167,6 +167,8 @@ export interface Home {
   latitude?: number;
   longitude?: number;
   normalized_address?: string;
+  /** Google Places canonical identity — primary dedup key for this property. */
+  google_place_id?: string;
   zip_plus4?: string;
   photo_url?: string;
 

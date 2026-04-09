@@ -92,7 +92,8 @@ export async function verifyAddress(
 
 /**
  * Check if a property already exists in the database by:
- *   1. Exact normalized_address match (most reliable)
+ *   0. Google Places place_id (PRIMARY canonical identity — most reliable)
+ *   1. Exact normalized_address match
  *   2. Lat/lng proximity within ~30 meters (spatial fallback)
  *   3. Original ilike string match (last resort)
  * Returns the first match found.
@@ -105,8 +106,26 @@ export async function findExistingProperty(
   rawCity: string,
   rawState: string,
   rawZip: string,
-  excludeUserId?: string
+  excludeUserId?: string,
+  googlePlaceId?: string,
 ): Promise<{ found: boolean; homeId?: string; ownerId?: string }> {
+
+  // Strategy 0: Google Places ID is the canonical property identity.
+  // When present, this is deterministic — the same physical property
+  // always resolves to the same place_id.
+  if (googlePlaceId) {
+    let q = supabase
+      .from('homes')
+      .select('id, user_id')
+      .eq('google_place_id', googlePlaceId)
+      .limit(1);
+    if (excludeUserId) q = q.neq('user_id', excludeUserId);
+
+    const { data } = await q;
+    if (data && data.length > 0) {
+      return { found: true, homeId: data[0].id, ownerId: data[0].user_id };
+    }
+  }
 
   // Strategy 1: Exact match on normalized_address
   if (normalizedAddress) {

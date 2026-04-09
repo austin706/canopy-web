@@ -11,6 +11,8 @@ export interface PlacePrediction {
 }
 
 export interface PlaceDetails {
+  /** Canonical Google Places ID — stored as homes.google_place_id for dedup. */
+  placeId: string;
   address: string;
   city: string;
   state: string;

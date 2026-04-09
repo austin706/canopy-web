@@ -172,33 +172,41 @@ export const getHomeJoinRequests = async (ownerId: string) => {
   return data || [];
 };
 
-/** Approve a join request — creates a new home record for the requester linked to same address */
+/** Approve a join request — adds the requester as a home_member on the canonical home
+ *  (NO cloning — google_place_id is unique per physical property, so the requester
+ *   shares the single canonical home record via home_members). */
 export const approveHomeJoinRequest = async (requestId: string) => {
   // Get the request details
   const { data: request, error: reqErr } = await supabase
     .from('home_join_requests')
-    .select('*, homes(*)')
+    .select('id, home_id, requester_id, owner_id')
     .eq('id', requestId)
     .single();
   if (reqErr || !request) throw reqErr || new Error('Request not found');
 
-  // Create a home copy for the joining user (they get their own home record with same address)
-  const originalHome = request.homes;
-  const { id: _id, user_id: _uid, created_at: _ca, updated_at: _ua, ...homeFields } = originalHome;
-  const { data: newHome, error: homeErr } = await supabase
-    .from('homes')
-    .insert({ ...homeFields, user_id: request.requester_id })
-    .select()
-    .single();
-  if (homeErr) throw homeErr;
+  // Add requester as accepted home_member (upsert handles re-approval after a decline)
+  const { error: memberErr } = await supabase
+    .from('home_members')
+    .upsert(
+      {
+        home_id: request.home_id,
+        user_id: request.requester_id,
+        role: 'editor',
+        invite_status: 'accepted',
+        invited_by: request.owner_id,
+      },
+      { onConflict: 'home_id,user_id' },
+    );
+  if (memberErr) throw memberErr;
 
   // Mark request as approved
-  await supabase
+  const { error: updErr } = await supabase
     .from('home_join_requests')
     .update({ status: 'approved', responded_at: new Date().toISOString() })
     .eq('id', requestId);
+  if (updErr) throw updErr;
 
-  return newHome;
+  return { home_id: request.home_id, user_id: request.requester_id };
 };
 
 /** Deny a join request */
@@ -1627,16 +1635,55 @@ export const uploadTechnicianDocument = async (
   return data;
 };
 
-// ─── Stripe Connect for Technicians ───
+// ─── Stripe Connect for Certified Pros ───
+// All three helpers invoke the same stripe-connect-onboard edge function,
+// which expects { action, providerId } and returns shape per action.
 
-export const createStripeConnectAccount = async (providerId: string): Promise<{ accountId: string; onboardingUrl: string }> => {
+/** Kick off Express account creation + first onboarding link. */
+export const createStripeConnectAccount = async (
+  providerId: string,
+): Promise<{ accountId: string; onboardingUrl: string }> => {
   const { data, error } = await supabase.functions.invoke('stripe-connect-onboard', {
-    body: { provider_id: providerId },
+    body: { action: 'create', providerId },
   });
   if (error) throw error;
+  if (data?.error) throw new Error(data.error);
   return data;
 };
 
+/** Generate a fresh onboarding link for a pro whose prior link expired. */
+export const refreshStripeConnectOnboarding = async (
+  providerId: string,
+): Promise<{ accountId: string; onboardingUrl: string }> => {
+  const { data, error } = await supabase.functions.invoke('stripe-connect-onboard', {
+    body: { action: 'refresh', providerId },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+};
+
+/** Live status pulled from Stripe (truth for details_submitted / charges_enabled / payouts_enabled).
+ *  The edge function also syncs stripe_connect_onboarding_complete in the DB as a side effect. */
+export const getStripeConnectLiveStatus = async (
+  providerId: string,
+): Promise<{
+  hasAccount: boolean;
+  accountId?: string;
+  onboardingComplete: boolean;
+  detailsSubmitted?: boolean;
+  chargesEnabled?: boolean;
+  payoutsEnabled?: boolean;
+}> => {
+  const { data, error } = await supabase.functions.invoke('stripe-connect-onboard', {
+    body: { action: 'status', providerId },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+};
+
+/** Lightweight DB-only read — cheap, but can be stale until next status sync. */
 export const getStripeConnectStatus = async (providerId: string): Promise<{
   accountId: string | null;
   onboardingComplete: boolean;

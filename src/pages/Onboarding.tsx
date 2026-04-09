@@ -801,7 +801,7 @@ export default function Onboarding() {
               'apikey': SUPABASE_ANON_KEY,
             },
             body: JSON.stringify({
-              tier: selectedPlan,
+              plan: selectedPlan,
               success_url: `${window.location.origin}/onboarding?step=4&success=true&plan=${selectedPlan}`,
               cancel_url: `${window.location.origin}/onboarding?step=3&canceled=true`,
             }),
@@ -835,7 +835,7 @@ export default function Onboarding() {
             'apikey': SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
-            tier: selectedPlan,
+            plan: selectedPlan,
             ui_mode: 'embedded',
             return_url: `${window.location.origin}/onboarding?step=4&success=true&plan=${selectedPlan}&session_id={CHECKOUT_SESSION_ID}`,
           }),
@@ -1376,7 +1376,7 @@ export default function Onboarding() {
                   onChange={e => updateFireplaceCount(e.target.value)} />
               </div>
               {systemsForm.fireplaces.map((fp, i) => (
-                <div key={`fp-${i}-${fp.type}`} className="form-group" style={{ marginBottom: i < systemsForm.fireplaces.length - 1 ? 8 : 0 }}>
+                <div key={`fp-${i}`} className="form-group" style={{ marginBottom: i < systemsForm.fireplaces.length - 1 ? 8 : 0 }}>
                   <label style={{ fontSize: 13 }}>Fireplace {systemsForm.fireplaces.length > 1 ? `#${i + 1}` : ''} Type</label>
                   <select className="form-select" value={fp.type}
                     onChange={e => {
@@ -1404,7 +1404,7 @@ export default function Onboarding() {
                   onChange={e => updateFilterCount(e.target.value)} />
               </div>
               {systemsForm.filters.map((filter, i) => (
-                <div key={`filter-${i}-${filter.size}`} className="form-group" style={{ marginBottom: i < systemsForm.filters.length - 1 ? 8 : 0 }}>
+                <div key={`filter-${i}`} className="form-group" style={{ marginBottom: i < systemsForm.filters.length - 1 ? 8 : 0 }}>
                   <label style={{ fontSize: 13 }}>Filter {systemsForm.filters.length > 1 ? `#${i + 1}` : ''} Size</label>
                   <input className="form-input" placeholder='e.g., 20x25x1'
                     value={filter.size}

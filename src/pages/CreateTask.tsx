@@ -366,7 +366,7 @@ export default function CreateTask() {
           <div style={{ marginBottom: '16px' }}>
             <label style={labelStyle}>Instructions</label>
             {instructions.map((instruction, index) => (
-              <div key={`instruction-${index}-${instruction}`} style={listItemStyle}>
+              <div key={`instruction-${index}`} style={listItemStyle}>
                 <input
                   type="text"
                   value={instruction}
@@ -407,7 +407,7 @@ export default function CreateTask() {
           <div style={{ marginBottom: '16px' }}>
             <label style={labelStyle}>Items to Have on Hand</label>
             {itemsToHave.map((item, index) => (
-              <div key={`item-${index}-${item}`} style={listItemStyle}>
+              <div key={`item-${index}`} style={listItemStyle}>
                 <input
                   type="text"
                   value={item}

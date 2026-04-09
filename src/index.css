@@ -260,6 +260,11 @@ body {
   background: var(--white);
   box-shadow: 0 0 0 3px var(--copper-muted);
 }
+/* Ensure native <option> elements render opaque in dropdown popups (fixes transparent-with-shadow bug) */
+.form-input option, .form-select option, select.form-input option, select.form-select option {
+  background-color: var(--white);
+  color: var(--charcoal);
+}
 .form-textarea { min-height: 100px; resize: vertical; }
 
 /* Badge */

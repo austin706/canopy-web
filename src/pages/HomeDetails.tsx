@@ -253,29 +253,44 @@ export default function HomeDetails() {
       {editing ? (
         <div className="card">
           <h2 style={{ fontSize: 18, marginBottom: 20 }}>{home ? 'Edit Home' : 'Set Up Your Home'}</h2>
-          <div className="form-group">
-            <label>Address *</label>
-            <AddressAutocomplete
-              value={form.address}
-              onChange={(v) => setForm({...form, address: v})}
-              onPlaceSelected={(details) => setForm({
-                ...form,
-                address: details.address || form.address,
-                city: details.city || form.city,
-                state: details.state || form.state,
-                zip_code: details.zipCode || form.zip_code,
-              })}
-            />
-          </div>
-          <div className="grid-3">
-            <div className="form-group"><label>City</label><input className="form-input" value={form.city} onChange={e => setForm({...form, city: e.target.value})} /></div>
-            <div className="form-group"><label>State</label><input className="form-input" value={form.state} onChange={e => setForm({...form, state: e.target.value})} /></div>
-            <div className="form-group">
-              <label>Zip</label>
-              <input className="form-input" value={form.zip_code} onChange={e => setForm({...form, zip_code: e.target.value})} />
-              {errors.zip_code && <p style={{ color: 'var(--color-error)', fontSize: 13, marginTop: 4 }}>{errors.zip_code}</p>}
+
+          {/* Address fields — locked after initial setup (address = property identity) */}
+          {home ? (
+            <div style={{ padding: 14, background: 'var(--color-background, #f9f7f2)', border: '1px solid var(--border-color, #E8E2D8)', borderRadius: 8, marginBottom: 16 }}>
+              <p className="text-xs text-gray" style={{ marginBottom: 4 }}>Address</p>
+              <p style={{ fontWeight: 600, marginBottom: 2 }}>{form.address}</p>
+              <p style={{ fontSize: 13, color: 'var(--color-med-gray)' }}>{form.city}, {form.state} {form.zip_code}</p>
+              <p className="text-xs text-gray" style={{ marginTop: 8, fontStyle: 'italic' }}>
+                Address can't be changed — it's tied to your Home Token and verification. Moving? Transfer this home to the buyer, then set up your new address.
+              </p>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="form-group">
+                <label>Address *</label>
+                <AddressAutocomplete
+                  value={form.address}
+                  onChange={(v) => setForm({...form, address: v})}
+                  onPlaceSelected={(details) => setForm({
+                    ...form,
+                    address: details.address || form.address,
+                    city: details.city || form.city,
+                    state: details.state || form.state,
+                    zip_code: details.zipCode || form.zip_code,
+                  })}
+                />
+              </div>
+              <div className="grid-3">
+                <div className="form-group"><label>City</label><input className="form-input" value={form.city} onChange={e => setForm({...form, city: e.target.value})} /></div>
+                <div className="form-group"><label>State</label><input className="form-input" value={form.state} onChange={e => setForm({...form, state: e.target.value})} /></div>
+                <div className="form-group">
+                  <label>Zip</label>
+                  <input className="form-input" value={form.zip_code} onChange={e => setForm({...form, zip_code: e.target.value})} />
+                  {errors.zip_code && <p style={{ color: 'var(--color-error)', fontSize: 13, marginTop: 4 }}>{errors.zip_code}</p>}
+                </div>
+              </div>
+            </>
+          )}
           <div className="grid-2">
             <div className="form-group">
               <label>Year Built</label>

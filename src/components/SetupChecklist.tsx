@@ -171,23 +171,29 @@ export default function SetupChecklist({ home, equipment, inspectionCount, house
       ) : (
         <>
           {/* Expanded View */}
-          <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-            <div>
-              <h3 style={{ fontSize: 16, marginBottom: 4 }}>Finish setting up your home</h3>
-              <p className="text-xs text-gray" style={{ margin: 0 }}>
-                {completedCount} of {total} complete — these help Canopy give you the right reminders.
-              </p>
+          <button
+            onClick={() => setIsExpanded(false)}
+            style={{
+              width: '100%',
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              textAlign: 'left',
+              marginBottom: 12,
+            }}
+            aria-label="Collapse setup checklist"
+          >
+            <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h3 style={{ fontSize: 16, marginBottom: 4 }}>Finish setting up your home</h3>
+                <p className="text-xs text-gray" style={{ margin: 0 }}>
+                  {completedCount} of {total} complete — these help Canopy give you the right reminders.
+                </p>
+              </div>
+              <span style={{ fontSize: 18, color: 'var(--color-text-secondary)', flexShrink: 0, paddingTop: 2 }}>▾</span>
             </div>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => setIsExpanded(false)}
-              disabled={persisting}
-              aria-label="Collapse setup checklist"
-              title="Collapse"
-            >
-              ▾
-            </button>
-          </div>
+          </button>
 
           {/* Progress bar */}
           <div style={{ height: 4, background: 'var(--light-gray)', borderRadius: 2, overflow: 'hidden', marginBottom: 16 }}>

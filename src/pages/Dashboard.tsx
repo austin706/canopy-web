@@ -425,7 +425,9 @@ export default function Dashboard() {
                   <strong>{completedCount}</strong> of <strong>{totalCount}</strong> tasks complete
                 </p>
                 <p className="text-xs text-gray mt-sm">
-                  {totalCount > completedCount
+                  {totalCount === 0
+                    ? 'Set up your home to generate maintenance tasks'
+                    : totalCount > completedCount
                     ? `Complete ${totalCount - completedCount} more task${totalCount - completedCount > 1 ? 's' : ''} to improve your score`
                     : 'Great job! All tasks complete this month'}
                 </p>
@@ -518,9 +520,10 @@ export default function Dashboard() {
               </div>
             </div>
           ) : (
-            <div className="card" style={{ textAlign: 'center', padding: 32, border: '2px dashed var(--light-gray)', cursor: 'pointer' }} onClick={() => navigate('/home')}>
+            <div className="card card-clickable" style={{ textAlign: 'center', padding: 32, border: '2px dashed var(--color-copper)', cursor: 'pointer' }} onClick={() => navigate('/home')}>
               <NavHome size={28} />
               <p className="text-sm text-copper fw-600 mt-sm">{home ? 'Add a photo of your home' : 'Set up your home'}</p>
+              <p className="text-xs text-gray" style={{ marginTop: 4 }}>Tap to get started</p>
             </div>
           )}
 

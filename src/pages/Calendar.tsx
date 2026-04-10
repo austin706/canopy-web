@@ -589,7 +589,7 @@ export default function Calendar() {
               )}
               {['all', 'due', 'upcoming', 'completed', 'overdue', ...(visits.length > 0 ? ['visits'] : [])].map(f => (
                 <button key={f} className={`tab ${filter === f ? 'active' : ''}`} style={{ whiteSpace: 'nowrap', flexShrink: 0 }} onClick={() => setFilter(f)}>
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                  {f === 'completed' ? 'Done' : f.charAt(0).toUpperCase() + f.slice(1)}
                   {f !== 'all' && (
                     <span style={{ marginLeft: 4, fontSize: 11, opacity: 0.7 }}>
                       ({f === 'visits' ? displayVisits.length : displayTasks.filter(t => t.status === f).length})

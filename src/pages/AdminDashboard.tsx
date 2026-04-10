@@ -27,7 +27,7 @@ export default function AdminDashboard() {
 
   const loadData = async () => {
     try {
-      const [u, a, gc, gcr, h, e, t, tc, pr] = await Promise.all([
+      const results = await Promise.allSettled([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('agents').select('*', { count: 'exact', head: true }),
         supabase.from('gift_codes').select('*', { count: 'exact', head: true }).is('redeemed_by', null),
@@ -38,15 +38,18 @@ export default function AdminDashboard() {
         supabase.from('maintenance_tasks').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
         supabase.from('pro_requests').select('*', { count: 'exact', head: true }),
       ]);
-      setStats({ totalUsers: u.count||0, totalAgents: a.count||0, activeGiftCodes: gc.count||0, redeemedGiftCodes: gcr.count||0, totalHomes: h.count||0, totalEquipment: e.count||0, totalTasks: t.count||0, completedTasks: tc.count||0, proRequests: pr.count||0 });
+      const getCount = (i: number) => results[i].status === 'fulfilled' ? (results[i] as any).value?.count || 0 : 0;
+      setStats({ totalUsers: getCount(0), totalAgents: getCount(1), activeGiftCodes: getCount(2), redeemedGiftCodes: getCount(3), totalHomes: getCount(4), totalEquipment: getCount(5), totalTasks: getCount(6), completedTasks: getCount(7), proRequests: getCount(8) });
 
-      // Fetch recent audit log entries
-      const { data: auditData } = await supabase
-        .from('admin_audit_log')
-        .select('*')
-        .order('timestamp', { ascending: false })
-        .limit(5);
-      setRecentActivity(auditData || []);
+      // Fetch recent audit log entries (table may not exist yet)
+      try {
+        const { data: auditData } = await supabase
+          .from('admin_audit_log')
+          .select('*')
+          .order('timestamp', { ascending: false })
+          .limit(5);
+        setRecentActivity(auditData || []);
+      } catch { /* admin_audit_log may not exist yet */ }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };

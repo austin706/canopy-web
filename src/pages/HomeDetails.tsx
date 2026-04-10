@@ -340,7 +340,7 @@ export default function HomeDetails() {
             {(['has_pool','has_deck','has_sprinkler_system','has_fireplace','has_fountain','has_gutters','has_fire_extinguisher','has_water_softener','has_sump_pump','has_storm_shelter'] as const).map(key => (
               <label key={key} className="flex items-center gap-sm" style={{ cursor: 'pointer', padding: '8px 0' }}>
                 <input type="checkbox" checked={form[key] as boolean} onChange={e => setForm({...form, [key]: e.target.checked})} />
-                <span style={{ fontSize: 14 }}>{key.replace(/has_/,'').replace(/_/g,' ')}</span>
+                <span style={{ fontSize: 14 }}>{key.replace(/has_/,'').replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
               </label>
             ))}
           </div>

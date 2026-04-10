@@ -371,7 +371,19 @@ export default function ProServices() {
   if (!home) {
     return (
       <div className="page" style={{ maxWidth: 900 }}>
-        <p>Please set up your home first.</p>
+        <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: '50%',
+            background: 'linear-gradient(135deg, var(--color-sage) 0%, var(--color-copper) 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 16px', fontSize: 36, color: '#fff',
+          }}>🏠</div>
+          <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Set up your home first</h3>
+          <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.6, maxWidth: 360, margin: '0 auto 20px' }}>
+            Add your home details so we can match you with the right pros and services for your property.
+          </p>
+          <button className="btn btn-primary" onClick={() => navigate('/home')}>Set Up Home</button>
+        </div>
       </div>
     );
   }

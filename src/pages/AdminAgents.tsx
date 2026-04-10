@@ -371,7 +371,7 @@ export default function AdminAgents() {
                     </p>
                     {agent.phone && (
                       <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 4px 0', textAlign: 'center' }}>
-                        {agent.phone}
+                        {agent.phone.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3')}
                       </p>
                     )}
                     {agent.brokerage && (

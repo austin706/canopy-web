@@ -220,7 +220,7 @@ export default function AgentView() {
             </div>
             <div className="flex items-center gap-md" style={{ padding: '12px 0', borderBottom: '1px solid var(--light-gray)' }}>
               <span style={{ fontSize: 14, fontWeight: 600, color: Colors.copper }}>Tel</span>
-              <div><p className="text-xs text-gray">Phone</p><p style={{ fontSize: 14, fontWeight: 500 }}>{agent.phone}</p></div>
+              <div><p className="text-xs text-gray">Phone</p><p style={{ fontSize: 14, fontWeight: 500 }}>{agent.phone?.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3') || agent.phone}</p></div>
             </div>
           </div>
           <div className="flex gap-sm mt-lg">

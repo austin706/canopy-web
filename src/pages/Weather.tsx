@@ -78,7 +78,7 @@ export default function Weather() {
       <div className="page-header">
         <div>
           <h1>Weather Alerts</h1>
-          <p className="text-sm text-gray mt-sm">{home?.city || 'Your location'}</p>
+          <p className="text-sm text-gray mt-sm">{home?.city ? `${home.city}${home.state ? `, ${home.state}` : ''}` : home?.state || home?.zip_code || 'Your location'}</p>
         </div>
       </div>
 

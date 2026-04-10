@@ -357,37 +357,10 @@ export default function Calendar() {
               borderRadius: 8, whiteSpace: 'nowrap',
             }}
             onClick={() => setShowCalendarModal(true)}
-            title="Subscribe to calendar feed"
+            title="Link to your calendar app"
           >
-            📅 Subscribe
+            📅 Link Calendar
           </button>
-          {!selectMode && (
-            <button
-              className="btn btn-ghost btn-sm"
-              style={{
-                padding: '8px 16px', fontSize: 13, fontWeight: 600,
-                borderRadius: 8, whiteSpace: 'nowrap',
-              }}
-              onClick={() => setSelectMode(true)}
-            >
-              Select
-            </button>
-          )}
-          {selectMode && (
-            <button
-              className="btn btn-ghost btn-sm"
-              style={{
-                padding: '8px 16px', fontSize: 13, fontWeight: 600,
-                borderRadius: 8, whiteSpace: 'nowrap',
-              }}
-              onClick={() => {
-                setSelectMode(false);
-                setSelectedTaskIds(new Set());
-              }}
-            >
-              Done
-            </button>
-          )}
           <button
             className="btn btn-primary btn-sm"
             style={{
@@ -535,11 +508,30 @@ export default function Calendar() {
                   : `All ${MONTHS[month]} Tasks`
                 }
               </p>
-              {selectedDate && (
-                <button className="btn btn-ghost btn-sm" style={{ fontSize: 12 }} onClick={() => setSelectedDate(null)}>
-                  View All Month
-                </button>
-              )}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {!selectMode ? (
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    style={{ padding: '4px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6 }}
+                    onClick={() => setSelectMode(true)}
+                  >
+                    Select
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    style={{ padding: '4px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6 }}
+                    onClick={() => { setSelectMode(false); setSelectedTaskIds(new Set()); }}
+                  >
+                    Done
+                  </button>
+                )}
+                {selectedDate && (
+                  <button className="btn btn-ghost btn-sm" style={{ fontSize: 12 }} onClick={() => setSelectedDate(null)}>
+                    View All Month
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Search Bar */}
@@ -770,9 +762,9 @@ export default function Calendar() {
           onClick={(e) => { if (e.target === e.currentTarget) setShowCalendarModal(false); }}
         >
           <div className="card" style={{ maxWidth: 480, width: '100%', padding: 24 }}>
-            <h3 style={{ fontSize: 18, marginBottom: 12 }}>Subscribe to Calendar</h3>
+            <h3 style={{ fontSize: 18, marginBottom: 12 }}>Link Your Calendar</h3>
             <p className="text-sm text-gray" style={{ marginBottom: 16, lineHeight: 1.6 }}>
-              Subscribe your calendar app (Apple Calendar, Google Calendar, Outlook) to get maintenance tasks automatically with reminders. Updates every 15 minutes.
+              Link your calendar app (Apple Calendar, Google Calendar, Outlook) to get maintenance tasks automatically with reminders. Updates every 15 minutes.
             </p>
             {!calToken ? (
               <button className="btn btn-primary" onClick={handleEnableCalendar} disabled={calLoading} style={{ width: '100%' }}>

@@ -18,9 +18,11 @@ const DEMO_WEATHER: WeatherData = {
   low: 58,
   alerts: [],
   forecast: [
-    { date: new Date().toISOString(), high: 78, low: 58, description: 'partly cloudy', icon: '02d', precipitation_chance: 10 },
-    { date: new Date(Date.now() + 86400000).toISOString(), high: 75, low: 56, description: 'cloudy', icon: '04d', precipitation_chance: 20 },
-    { date: new Date(Date.now() + 2*86400000).toISOString(), high: 70, low: 54, description: 'rainy', icon: '10d', precipitation_chance: 60 },
+    { date: new Date(Date.now() + 86400000).toISOString(), high: 78, low: 58, description: 'partly cloudy', icon: '02d', precipitation_chance: 10 },
+    { date: new Date(Date.now() + 2*86400000).toISOString(), high: 75, low: 56, description: 'cloudy', icon: '04d', precipitation_chance: 20 },
+    { date: new Date(Date.now() + 3*86400000).toISOString(), high: 70, low: 54, description: 'rainy', icon: '10d', precipitation_chance: 60 },
+    { date: new Date(Date.now() + 4*86400000).toISOString(), high: 73, low: 55, description: 'partly cloudy', icon: '02d', precipitation_chance: 15 },
+    { date: new Date(Date.now() + 5*86400000).toISOString(), high: 76, low: 57, description: 'clear sky', icon: '01d', precipitation_chance: 5 },
   ],
 };
 
@@ -172,7 +174,7 @@ export default function Weather() {
 
         {/* 7-Day Forecast */}
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>7-Day Forecast</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>5-Day Forecast</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12 }}>
             {displayWeather.forecast.map((day) => (
               <div key={day.date} className="card" style={{ padding: '14px 12px', textAlign: 'center', border: '1px solid var(--color-border, #E8E2D8)' }}>

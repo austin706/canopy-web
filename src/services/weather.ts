@@ -91,7 +91,7 @@ export const fetchWeather = async (lat: number, lon: number): Promise<WeatherDat
   }
 
   const dailyForecast = Array.from(dailyMap.entries())
-    .slice(0, 7)
+    .slice(0, 5)
     .map(([dateStr, day]) => ({
       date: new Date(dateStr).toISOString(),
       high: Math.round(Math.max(...day.highs)),

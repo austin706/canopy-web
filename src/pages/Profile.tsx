@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { signOut, updateProfile, redeemGiftCode, deleteUserAccount, exportUserData, lookupAgentByCode, linkAgent } from '@/services/supabase';
+import { signOut, updateProfile, redeemGiftCode, deleteUserAccount, exportUserData, lookupAgentByCode, linkAgent, getCalendarToken, rotateCalendarToken, buildICalSubscribeUrl } from '@/services/supabase';
 import { PLANS } from '@/services/subscriptionGate';
 import MessageBanner from '@/components/MessageBanner';
 import { Colors } from '@/constants/theme';
@@ -28,6 +28,11 @@ export default function Profile() {
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  // iCal subscription
+  const [calToken, setCalToken] = useState<string | null>(user?.calendar_token ?? null);
+  const [calLoading, setCalLoading] = useState(false);
+  const [calCopied, setCalCopied] = useState(false);
+
   const tier = user?.subscription_tier || 'free';
   const plan = PLANS.find(p => p.value === tier);
 
@@ -43,6 +48,46 @@ export default function Profile() {
     } catch (e: any) {
       setMessage(e.message || 'Failed to update');
     } finally { setSaving(false); }
+  };
+
+  const handleEnableCalendar = async () => {
+    if (!user) return;
+    setCalLoading(true);
+    try {
+      let token = await getCalendarToken(user.id);
+      if (!token) token = await rotateCalendarToken(user.id);
+      setCalToken(token);
+      setUser({ ...user, calendar_token: token });
+      setMessage('Calendar subscription ready');
+    } catch (e: any) {
+      setMessage(e.message || 'Failed to set up calendar');
+    } finally { setCalLoading(false); setTimeout(() => setMessage(''), 3000); }
+  };
+
+  const handleRotateCalendar = async () => {
+    if (!user) return;
+    if (!confirm('Rotating will invalidate any calendar apps already subscribed with the old link. Continue?')) return;
+    setCalLoading(true);
+    try {
+      const token = await rotateCalendarToken(user.id);
+      setCalToken(token);
+      setUser({ ...user, calendar_token: token });
+      setMessage('New calendar link generated — update your calendar app');
+    } catch (e: any) {
+      setMessage(e.message || 'Failed to rotate token');
+    } finally { setCalLoading(false); setTimeout(() => setMessage(''), 4000); }
+  };
+
+  const handleCopyCalendarUrl = async () => {
+    if (!calToken) return;
+    try {
+      await navigator.clipboard.writeText(buildICalSubscribeUrl(calToken));
+      setCalCopied(true);
+      setTimeout(() => setCalCopied(false), 2500);
+    } catch {
+      setMessage('Copy failed — select the URL manually');
+      setTimeout(() => setMessage(''), 3000);
+    }
   };
 
   const handleRedeem = async () => {
@@ -179,6 +224,40 @@ export default function Profile() {
             {redeeming ? 'Redeeming...' : 'Redeem'}
           </button>
         </div>
+      </div>
+
+      {/* Calendar Subscription (iCal feed) */}
+      <div className="card mb-lg">
+        <h3 style={{ fontSize: 16, marginBottom: 4 }}>Calendar Subscription</h3>
+        <p className="text-xs text-gray mb-md">
+          Subscribe your calendar app (Apple Calendar, Google Calendar, Outlook) to get maintenance tasks automatically with 24-hour reminders. Updates every 15 minutes.
+        </p>
+        {!calToken ? (
+          <button className="btn btn-primary btn-sm" onClick={handleEnableCalendar} disabled={calLoading}>
+            {calLoading ? 'Setting up…' : 'Enable Calendar Feed'}
+          </button>
+        ) : (
+          <div className="flex-col gap-sm">
+            <input
+              className="form-input"
+              readOnly
+              value={buildICalSubscribeUrl(calToken)}
+              onFocus={(e) => e.currentTarget.select()}
+              style={{ fontSize: 12, fontFamily: 'monospace' }}
+            />
+            <div className="flex gap-sm">
+              <button className="btn btn-primary btn-sm" onClick={handleCopyCalendarUrl} disabled={calLoading}>
+                {calCopied ? 'Copied!' : 'Copy Link'}
+              </button>
+              <button className="btn btn-secondary btn-sm" onClick={handleRotateCalendar} disabled={calLoading}>
+                {calLoading ? 'Rotating…' : 'Rotate Link'}
+              </button>
+            </div>
+            <p className="text-xs text-gray" style={{ marginTop: 4 }}>
+              Paste this URL into your calendar app's "Subscribe to calendar" option. Rotating invalidates any calendar already subscribed with the old link.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Link Agent */}

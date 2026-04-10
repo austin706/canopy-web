@@ -315,6 +315,139 @@ export const deleteEquipment = async (id: string) => {
   if (error) throw error;
 };
 
+// --- Equipment Consumables (Migration 041) ---
+
+export const getHomeConsumables = async (homeId: string) => {
+  const { data, error } = await supabase
+    .from('equipment_consumables')
+    .select('*')
+    .eq('home_id', homeId)
+    .order('next_due_date', { ascending: true, nullsFirst: false });
+  if (error) throw error;
+  return data || [];
+};
+
+export const getEquipmentConsumables = async (equipmentId: string) => {
+  const { data, error } = await supabase
+    .from('equipment_consumables')
+    .select('*')
+    .eq('equipment_id', equipmentId);
+  if (error) throw error;
+  return data || [];
+};
+
+/**
+ * Bulk-replace consumables for a piece of equipment. Called after a
+ * re-scan: old rows are wiped and fresh rows inserted from scanner output.
+ */
+export const replaceEquipmentConsumables = async (
+  equipmentId: string,
+  homeId: string,
+  consumables: Array<{
+    consumable_type: string;
+    name: string;
+    part_number?: string;
+    spec?: string;
+    quantity?: number;
+    replacement_interval_months?: number;
+    confidence?: number;
+    notes?: string;
+  }>,
+) => {
+  const { error: delErr } = await supabase
+    .from('equipment_consumables')
+    .delete()
+    .eq('equipment_id', equipmentId);
+  if (delErr) throw delErr;
+
+  if (consumables.length === 0) return [];
+
+  const rows = consumables.map((c) => ({
+    equipment_id: equipmentId,
+    home_id: homeId,
+    consumable_type: c.consumable_type,
+    name: c.name,
+    part_number: c.part_number,
+    spec: c.spec,
+    quantity: c.quantity ?? 1,
+    replacement_interval_months: c.replacement_interval_months,
+    confidence: c.confidence,
+    notes: c.notes,
+    detected_by: 'scan' as const,
+  }));
+
+  const { data, error } = await supabase
+    .from('equipment_consumables')
+    .insert(rows)
+    .select();
+  if (error) throw error;
+  return data || [];
+};
+
+export const updateConsumable = async (
+  id: string,
+  updates: {
+    last_replaced_date?: string;
+    next_due_date?: string;
+    notes?: string;
+    spec?: string;
+    part_number?: string;
+  },
+) => {
+  const { data, error } = await supabase
+    .from('equipment_consumables')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+// --- Calendar token / iCal subscribe ---
+
+/**
+ * Fetch the user's current calendar subscription token. Returns null if
+ * none has been issued yet. The token is the sole credential for the
+ * public `ical-feed` edge function, so treat it like a password.
+ */
+export const getCalendarToken = async (userId: string): Promise<string | null> => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('calendar_token')
+    .eq('id', userId)
+    .single();
+  if (error) throw error;
+  return (data as { calendar_token: string | null } | null)?.calendar_token ?? null;
+};
+
+/**
+ * Generate a new calendar token and persist it to the user's profile.
+ * Rotating the token invalidates any previously subscribed calendar URLs.
+ * Uses the `generate_calendar_token` Postgres RPC defined in migration 042.
+ */
+export const rotateCalendarToken = async (userId: string): Promise<string> => {
+  const { data, error } = await supabase.rpc('generate_calendar_token');
+  if (error) throw error;
+  const token = data as string;
+  const { error: updateErr } = await supabase
+    .from('profiles')
+    .update({ calendar_token: token })
+    .eq('id', userId);
+  if (updateErr) throw updateErr;
+  return token;
+};
+
+/**
+ * Build the public webcal/https subscription URL for the ical-feed edge
+ * function. Calendar apps (Apple Calendar, Google Calendar, Outlook)
+ * accept https:// for one-time import or webcal:// for live subscription.
+ */
+export const buildICalSubscribeUrl = (token: string): string => {
+  const base = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? '';
+  return `${base}/functions/v1/ical-feed?token=${encodeURIComponent(token)}`;
+};
+
 // --- Tasks ---
 export const getTasks = async (homeId: string) => {
   const { data, error } = await supabase.from('maintenance_tasks').select('*').eq('home_id', homeId).is('deleted_at', null).order('due_date');

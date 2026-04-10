@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { signOut } from '@/services/supabase';
+// signOut removed — logout clears localStorage directly to avoid navigator.locks deadlock
 import logger from '@/utils/logger';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { Colors } from '@/constants/theme';
@@ -19,9 +19,11 @@ export default function AgentLayout() {
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
 
   const handleLogout = () => {
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+    } catch {}
     reset();
     navigate('/login');
-    signOut().catch(() => {});
   };
 
   const navItems = [

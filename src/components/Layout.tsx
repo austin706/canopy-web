@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { signOut, resendVerificationEmail, supabase, getUserHomes, STRUCTURE_TYPES } from '@/services/supabase';
+import { resendVerificationEmail, supabase, getUserHomes, STRUCTURE_TYPES } from '@/services/supabase';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { PLANS } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
@@ -52,11 +52,14 @@ export default function Layout() {
   }, [mobileMenuOpen]);
 
   const handleLogout = () => {
-    // Clear local state immediately — don't wait for the network call
+    // Clear Supabase session from localStorage directly to avoid
+    // navigator.locks deadlock (signOut() acquires a lock that blocks
+    // subsequent signIn() if the network request hangs).
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+    } catch {}
     reset();
     navigate('/login');
-    // Fire-and-forget the Supabase signOut (clears server session)
-    signOut().catch(() => {});
   };
 
   const isPro = tier === 'pro' || tier === 'pro_plus';

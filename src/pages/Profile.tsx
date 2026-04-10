@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { signOut, updateProfile, redeemGiftCode, deleteUserAccount, exportUserData, lookupAgentByCode, linkAgent, getCalendarToken, rotateCalendarToken, buildICalSubscribeUrl } from '@/services/supabase';
+import { updateProfile, redeemGiftCode, deleteUserAccount, exportUserData, lookupAgentByCode, linkAgent, getCalendarToken, rotateCalendarToken, buildICalSubscribeUrl } from '@/services/supabase';
 import { PLANS } from '@/services/subscriptionGate';
 import MessageBanner from '@/components/MessageBanner';
 import { Colors } from '@/constants/theme';
@@ -157,9 +157,11 @@ export default function Profile() {
   };
 
   const handleLogout = () => {
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+    } catch {}
     reset();
     navigate('/login');
-    signOut().catch(() => {});
   };
 
   const handleDeleteAccount = async () => {
@@ -171,7 +173,9 @@ export default function Profile() {
     setDeleting(true);
     try {
       await deleteUserAccount(user.id);
-      try { await signOut(); } catch {}
+      try {
+        Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+      } catch {}
       reset();
       navigate('/login');
     } catch (e: any) {

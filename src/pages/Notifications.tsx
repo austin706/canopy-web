@@ -92,18 +92,25 @@ export default function Notifications() {
     }
 
     const loadData = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
-        setError(null);
-        const [notifs, storedPrefs] = await Promise.all([
+        // Fetch independently so one failure doesn't block the other
+        const [notifsResult, prefsResult] = await Promise.allSettled([
           supabaseService.getNotifications(user.id),
           supabaseService.getNotificationPreferences(user.id),
         ]);
-        setNotifications(notifs);
-        if (storedPrefs) setPrefs(storedPrefs);
+        if (notifsResult.status === 'fulfilled') {
+          setNotifications(notifsResult.value);
+        } else {
+          console.warn('Failed to load notifications:', notifsResult.reason);
+          // Don't show error — just show empty feed
+        }
+        if (prefsResult.status === 'fulfilled' && prefsResult.value) {
+          setPrefs(prefsResult.value);
+        }
       } catch (err) {
         console.error('Failed to load notification data:', err);
-        setError('Failed to load notifications');
       } finally {
         setLoading(false);
       }
@@ -211,7 +218,7 @@ export default function Notifications() {
 
             {/* Notification Feed */}
             {notifications.length === 0 ? (
-              <div className="empty-state" style={{ padding: 48 }}>
+              <div className="card" style={{ padding: 48, textAlign: 'center' }}>
                 <div style={{ marginBottom: 12 }}><BellIcon size={40} color={'var(--color-text-secondary)'} /></div>
                 <h3 style={{ marginBottom: 6 }}>No Notifications Yet</h3>
                 <p className="text-gray">Notifications about maintenance, weather, equipment, and billing will appear here.</p>

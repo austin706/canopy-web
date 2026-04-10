@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { updatePassword } from '@/services/supabase';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
+import { Colors } from '@/constants/theme';
 import { getErrorMessage } from '@/utils/errors';
 
 export default function ResetPassword() {
@@ -169,7 +170,7 @@ export default function ResetPassword() {
                 {loading ? <span className="spinner" /> : 'Update Password'}
               </button>
             </form>
-          ) : null}
+          )}
 
           {!success && (
             <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: 'var(--color-text-secondary)' }}>

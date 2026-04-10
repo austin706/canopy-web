@@ -703,7 +703,7 @@ export default function Onboarding() {
           task_reminder_days_before: 3,
           weather_alerts_enabled: true,
         };
-        const generatedTasks = generateTasksForHome(home, allEquipment, existingTasks, userPreferences);
+        const generatedTasks = generateTasksForHome(home, allEquipment, existingTasks, [], userPreferences);
         const lifecycleAlerts = generateEquipmentLifecycleAlerts(allEquipment, home);
         const allNewTasks = [...generatedTasks, ...lifecycleAlerts];
         if (allNewTasks.length > 0) {

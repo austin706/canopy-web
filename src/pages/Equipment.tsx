@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { upsertEquipment, deleteEquipment as deleteEquipApi, getEquipment, createTasks, getEquipmentScanGuides, getEquipmentChecklist, upsertEquipmentChecklist } from '@/services/supabase';
 import type { EquipmentScanGuide, EquipmentChecklist } from '@/services/supabase';
-import { getEquipmentLimit } from '@/services/subscriptionGate';
+import { getEquipmentLimit, PLANS } from '@/services/subscriptionGate';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
 import EquipmentScanner from '@/components/EquipmentScanner';
 import { Colors } from '@/constants/theme';

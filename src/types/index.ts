@@ -729,7 +729,6 @@ export interface MaintenanceTask {
   // Custom task support
   is_custom?: boolean;
   created_by_user?: boolean;
-  template_id?: string;
 
   // Pro service scheduler fields
   service_purpose?: string;

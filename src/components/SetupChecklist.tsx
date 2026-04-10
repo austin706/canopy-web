@@ -76,7 +76,7 @@ function deriveState(
     inspection_uploaded: base.inspection_uploaded || inspectionCount > 0,
     roof_year_added:     base.roof_year_added     || !!(home?.roof_install_year || home?.roof_age_years),
     fireplace_details:   base.fireplace_details   || (Array.isArray(home?.fireplace_details) && home!.fireplace_details!.length > 0),
-    pool_details:        base.pool_details        || (!!home?.pool_type && home.pool_type !== 'none') || !!home?.pool_chemical_treatment,
+    pool_details:        base.pool_details        || (!!home?.pool_type && home.pool_type !== 'none'),
     filter_sizes:        base.filter_sizes        || (Array.isArray(home?.hvac_filter_returns) && home!.hvac_filter_returns!.length > 0),
     invited_partner:     base.invited_partner     || householdMemberCount > 1,
     connected_agent:     base.connected_agent     || !!agentId,

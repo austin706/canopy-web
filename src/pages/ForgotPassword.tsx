@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { resetPassword } from '@/services/supabase';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
+import { Colors } from '@/constants/theme';
 import { getErrorMessage } from '@/utils/errors';
 
 export default function ForgotPassword() {

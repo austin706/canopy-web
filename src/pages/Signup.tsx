@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signUp } from '@/services/supabase';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
+import { Colors } from '@/constants/theme';
 import { getErrorMessage } from '@/utils/errors';
 import { trackEvent } from '@/utils/analytics';
 

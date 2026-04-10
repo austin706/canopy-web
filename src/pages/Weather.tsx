@@ -86,7 +86,7 @@ export default function Weather() {
 
       <div className="flex-col gap-lg">
         {/* Current Weather Card */}
-        <div className="card" style={{ background: `linear-gradient(135deg, var(--color-sage, #8B9E7E)20, var(--color-cream, #F5F0E8))` }}>
+        <div className="card" style={{ background: 'linear-gradient(135deg, rgba(139,158,126,0.12), var(--color-card-background, #FFFFFF))', border: '1px solid var(--color-border, #E8E2D8)' }}>
           <div className="flex items-center justify-between mb-md">
             <div>
               <p className="text-sm fw-600 text-gray">Current Conditions</p>
@@ -163,7 +163,7 @@ export default function Weather() {
         )}
 
         {visibleAlerts.length === 0 && (
-          <div className="empty-state" style={{ padding: 48 }}>
+          <div className="card" style={{ textAlign: 'center', padding: 48, border: '1px solid var(--color-border, #E8E2D8)' }}>
             <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--color-success, #4CAF50)', marginBottom: 12 }}>&#10003;</div>
             <h3 style={{ marginBottom: 6 }}>All Clear</h3>
             <p className="text-gray">No active weather alerts for your area.</p>
@@ -175,7 +175,7 @@ export default function Weather() {
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>7-Day Forecast</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12 }}>
             {displayWeather.forecast.map((day) => (
-              <div key={day.date} className="card" style={{ padding: '14px 12px', textAlign: 'center' }}>
+              <div key={day.date} className="card" style={{ padding: '14px 12px', textAlign: 'center', border: '1px solid var(--color-border, #E8E2D8)' }}>
                 <p className="text-xs text-gray fw-600">
                   {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                 </p>
@@ -196,7 +196,7 @@ export default function Weather() {
         </div>
 
         {/* Maintenance Tips */}
-        <div className="card" style={{ background: 'var(--color-copper-muted, #FFF3E0)' }}>
+        <div className="card" style={{ background: 'var(--color-copper-muted, #FFF3E0)', border: '1px solid var(--color-border, #E8E2D8)' }}>
           <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-copper, #C4844E)', marginBottom: 12 }}>Weather-Based Maintenance</h3>
           <p className="text-sm text-gray">
             Current weather conditions may affect your scheduled maintenance. Check the action items in any active alerts for specific tasks to protect your home.

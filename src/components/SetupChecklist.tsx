@@ -76,7 +76,7 @@ function deriveState(
     inspection_uploaded: base.inspection_uploaded || inspectionCount > 0,
     roof_year_added:     base.roof_year_added     || !!(home?.roof_install_year || home?.roof_age_years),
     fireplace_details:   base.fireplace_details   || (Array.isArray(home?.fireplace_details) && home!.fireplace_details!.length > 0),
-    pool_details:        base.pool_details        || (!!home?.pool_type && home.pool_type !== 'none'),
+    pool_details:        base.pool_details        || (!!home?.pool_type && home.pool_type !== 'none') || !!home?.pool_chemical_treatment,
     filter_sizes:        base.filter_sizes        || (Array.isArray(home?.hvac_filter_returns) && home!.hvac_filter_returns!.length > 0),
     invited_partner:     base.invited_partner     || householdMemberCount > 1,
     connected_agent:     base.connected_agent     || !!agentId,
@@ -88,6 +88,7 @@ export default function SetupChecklist({ home, equipment, inspectionCount, house
   const navigate = useNavigate();
   const { user, setUser } = useStore();
   const [persisting, setPersisting] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const baseState: SetupChecklistState = user?.setup_checklist_state ?? DEFAULT_SETUP_CHECKLIST_STATE;
 
@@ -99,6 +100,7 @@ export default function SetupChecklist({ home, equipment, inspectionCount, house
   const completedCount = ITEMS.filter((i) => derived[i.key]).length;
   const total = ITEMS.length;
   const allDone = completedCount === total;
+  const hasIncompleteItems = completedCount < total;
 
   // Persist newly-derived completions + auto-dismiss when all done
   useEffect(() => {
@@ -120,7 +122,7 @@ export default function SetupChecklist({ home, equipment, inspectionCount, house
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [derived.equipment_scanned, derived.inspection_uploaded, derived.roof_year_added, derived.fireplace_details, derived.pool_details, derived.filter_sizes, derived.invited_partner, derived.connected_agent, derived.phone_added]);
 
-  const handleDismiss = async () => {
+  const handleMinimize = async () => {
     if (!user) return;
     const next: SetupChecklistState = {
       ...derived,
@@ -139,84 +141,128 @@ export default function SetupChecklist({ home, equipment, inspectionCount, house
 
   return (
     <div className="card mb-lg" style={{ border: '1px solid var(--color-primary)30' }}>
-      <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-        <div>
-          <h3 style={{ fontSize: 16, marginBottom: 4 }}>Finish setting up your home</h3>
-          <p className="text-xs text-gray" style={{ margin: 0 }}>
-            {completedCount} of {total} complete — these help Canopy give you the right reminders.
-          </p>
-        </div>
+      {/* Collapsed Progress Bar View */}
+      {!isExpanded ? (
         <button
-          className="btn btn-ghost btn-sm"
-          onClick={handleDismiss}
-          disabled={persisting}
-          aria-label="Hide setup checklist"
-          title="Hide"
+          onClick={() => setIsExpanded(true)}
+          style={{
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+          aria-label="Expand setup checklist"
         >
-          ✕
-        </button>
-      </div>
-
-      {/* Progress bar */}
-      <div style={{ height: 4, background: 'var(--light-gray)', borderRadius: 2, overflow: 'hidden', marginBottom: 16 }}>
-        <div style={{ height: '100%', width: `${(completedCount / total) * 100}%`, background: 'var(--color-primary)', transition: 'width .3s' }} />
-      </div>
-
-      <div className="flex-col" style={{ gap: 8 }}>
-        {ITEMS.map((item) => {
-          const done = derived[item.key];
-          return (
-            <div
-              key={item.key}
-              className="flex"
-              style={{
-                alignItems: 'center',
-                padding: '8px 10px',
-                borderRadius: 6,
-                background: done ? 'var(--light-gray)' : 'transparent',
-                opacity: done ? 0.6 : 1,
-              }}
-            >
-              <div
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 10,
-                  border: done ? 'none' : '2px solid var(--color-primary)',
-                  background: done ? 'var(--color-primary)' : 'transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  marginRight: 12,
-                  color: '#fff',
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
-              >
-                {done ? '✓' : ''}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, textDecoration: done ? 'line-through' : 'none' }}>
-                  {item.title}
+          <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <p className="text-sm fw-600" style={{ margin: 0, marginBottom: 6, color: 'var(--color-text-secondary)' }}>Setup Progress</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ height: 6, background: 'var(--light-gray)', borderRadius: 3, overflow: 'hidden', flex: 1 }}>
+                  <div style={{ height: '100%', width: `${(completedCount / total) * 100}%`, background: 'var(--color-primary)', transition: 'width .3s' }} />
                 </div>
-                {!done && (
-                  <div className="text-xs text-gray" style={{ marginTop: 2 }}>{item.description}</div>
-                )}
+                <span style={{ fontSize: 14, fontWeight: 600, minWidth: '3ch' }}>{completedCount}/{total}</span>
               </div>
-              {!done && (
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => navigate(item.route)}
-                  style={{ marginLeft: 8, flexShrink: 0 }}
-                >
-                  {item.action}
-                </button>
-              )}
             </div>
-          );
-        })}
-      </div>
+            <span style={{ fontSize: 18, color: 'var(--color-text-secondary)' }}>▸</span>
+          </div>
+        </button>
+      ) : (
+        <>
+          {/* Expanded View */}
+          <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+            <div>
+              <h3 style={{ fontSize: 16, marginBottom: 4 }}>Finish setting up your home</h3>
+              <p className="text-xs text-gray" style={{ margin: 0 }}>
+                {completedCount} of {total} complete — these help Canopy give you the right reminders.
+              </p>
+            </div>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setIsExpanded(false)}
+              disabled={persisting}
+              aria-label="Collapse setup checklist"
+              title="Collapse"
+            >
+              ▾
+            </button>
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ height: 4, background: 'var(--light-gray)', borderRadius: 2, overflow: 'hidden', marginBottom: 16 }}>
+            <div style={{ height: '100%', width: `${(completedCount / total) * 100}%`, background: 'var(--color-primary)', transition: 'width .3s' }} />
+          </div>
+
+          <div className="flex-col" style={{ gap: 8 }}>
+            {ITEMS.map((item) => {
+              const done = derived[item.key];
+              return (
+                <div
+                  key={item.key}
+                  className="flex"
+                  style={{
+                    alignItems: 'center',
+                    padding: '8px 10px',
+                    borderRadius: 6,
+                    background: done ? 'var(--light-gray)' : 'transparent',
+                    opacity: done ? 0.6 : 1,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      border: done ? 'none' : '2px solid var(--color-primary)',
+                      background: done ? 'var(--color-primary)' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      marginRight: 12,
+                      color: '#fff',
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {done ? '✓' : ''}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, textDecoration: done ? 'line-through' : 'none' }}>
+                      {item.title}
+                    </div>
+                    {!done && (
+                      <div className="text-xs text-gray" style={{ marginTop: 2 }}>{item.description}</div>
+                    )}
+                  </div>
+                  {!done && (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => navigate(item.route)}
+                      style={{ marginLeft: 8, flexShrink: 0 }}
+                    >
+                      {item.action}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Minimize button */}
+          <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--light-gray)' }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={handleMinimize}
+              disabled={persisting}
+              style={{ fontSize: 12 }}
+            >
+              Hide for now
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

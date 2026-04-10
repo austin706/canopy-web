@@ -17,8 +17,11 @@ import type {
   MaintenanceTask,
   TaskPriority,
   EquipmentCategory,
+  UserPreferences,
+  EquipmentConsumable,
 } from '@/types';
 import { TASK_TEMPLATES, type TaskTemplate, getClimateRegion } from '@/constants/maintenance';
+import { DEFAULT_USER_PREFERENCES, isTaskVisible } from '@/types';
 import {
   addMonths,
   addDays,
@@ -81,6 +84,12 @@ export function getDisplayStatus(task: MaintenanceTask): MaintenanceTask['status
 }
 
 /**
+ * Concurrency control: prevents multiple simultaneous task generation calls
+ * that could result in duplicate or conflicting task creation.
+ */
+let taskGenerationInProgress = false;
+
+/**
  * Generates initial set of maintenance tasks for a home.
  *
  * SEASONAL tasks: scheduled to their next applicable calendar month
@@ -92,14 +101,43 @@ export function getDisplayStatus(task: MaintenanceTask): MaintenanceTask['status
  * - Home features the user has (matches requires_home_feature)
  * - Countertop type (matches requires_countertop_type)
  * - Climate region (matches applicable_regions)
+ * - User preferences (maintenance_depth, cleaning tasks, pro tasks, category overrides)
  * - Skips tasks that already exist in existingTasks
  *
  * Generates tasks for the next 12 months to ensure full calendar coverage.
+ *
+ * @param userPreferences - User maintenance preferences (defaults to DEFAULT_USER_PREFERENCES)
  */
 export function generateTasksForHome(
   home: Home,
   equipment: Equipment[],
-  existingTasks: MaintenanceTask[]
+  existingTasks: MaintenanceTask[],
+  consumables: EquipmentConsumable[] = [],
+  userPreferences: UserPreferences = DEFAULT_USER_PREFERENCES
+): MaintenanceTask[] {
+  // Guard against concurrent task generation that could cause race conditions
+  // or duplicate task creation
+  if (taskGenerationInProgress) {
+    return [];
+  }
+
+  taskGenerationInProgress = true;
+  try {
+    return generateTasksForHomeImpl(home, equipment, existingTasks, consumables, userPreferences);
+  } finally {
+    taskGenerationInProgress = false;
+  }
+}
+
+/**
+ * Internal implementation of generateTasksForHome (called with lock held).
+ */
+function generateTasksForHomeImpl(
+  home: Home,
+  equipment: Equipment[],
+  existingTasks: MaintenanceTask[],
+  consumables: EquipmentConsumable[] = [],
+  userPreferences: UserPreferences = DEFAULT_USER_PREFERENCES
 ): MaintenanceTask[] {
   const newTasks: MaintenanceTask[] = [];
   const today = new Date();
@@ -114,9 +152,13 @@ export function generateTasksForHome(
     equipment.map((eq) => eq.category)
   );
 
-  // Build a set of existing task template IDs for deduplication
-  const existingTaskTitles = new Set<string>(
-    existingTasks.map((task) => task.title)
+  // Build a composite key set for deduplication: title|month|year
+  // This allows recurring tasks to be regenerated in different months/years
+  const existingTaskKeys = new Set<string>(
+    existingTasks.map((task) => {
+      const d = new Date(task.due_date);
+      return `${task.title}|${d.getMonth()+1}|${d.getFullYear()}`;
+    })
   );
 
   // Process each template
@@ -152,11 +194,78 @@ export function generateTasksForHome(
       }
     }
 
+    // Skip if this template is pool_type-restricted and doesn't match
+    if (template.requires_pool_type && template.requires_pool_type.length > 0) {
+      const homePoolType = (home.pool_type ?? (home.has_pool ? 'chlorine' : 'none')) as
+        | 'chlorine' | 'salt' | 'mineral' | 'none';
+      if (!template.requires_pool_type.includes(homePoolType)) {
+        return;
+      }
+    }
+
+    // Skip if this template requires specific water source and doesn't match
+    if (template.requires_water_source && template.requires_water_source.length > 0) {
+      const homeWaterSource = home.water_source || 'municipal';
+      if (!template.requires_water_source.includes(homeWaterSource)) {
+        return;
+      }
+    }
+
+    // Skip if this template requires specific sewer type and doesn't match
+    if (template.requires_sewer_type && template.requires_sewer_type.length > 0) {
+      const homeSewType = home.sewer_type || 'municipal';
+      if (!template.requires_sewer_type.includes(homeSewType)) {
+        return;
+      }
+    }
+
+    // Skip if this template requires specific home type and doesn't match
+    if (template.requires_home_type && template.requires_home_type.length > 0) {
+      // Get home type from stories_type or home characteristics
+      let homeType = home.stories_type || 'single_family';
+      if (!template.requires_home_type.includes(homeType)) {
+        return;
+      }
+    }
+
+    // Check user preferences before generating task
+    const isProTask = template.pro_responsible ?? false;
+    if (!isTaskVisible(template.id, template.category, userPreferences, isProTask)) {
+      return;
+    }
+
+    // Equipment-keyed templates fan out: one task per matching consumable
+    if (template.equipment_keyed && template.consumable_spec) {
+      const matchingConsumables = consumables.filter((c) => {
+        if (c.consumable_type !== template.consumable_spec) return false;
+        // If the template also requires_equipment, filter by parent category
+        if (template.requires_equipment) {
+          const parent = equipment.find((eq) => eq.id === c.equipment_id);
+          if (!parent || parent.category !== template.requires_equipment) return false;
+        }
+        return true;
+      });
+
+      matchingConsumables.forEach((consumable) => {
+        generateConsumableTask(
+          template,
+          home,
+          equipment,
+          consumable,
+          existingTaskKeys,
+          newTasks,
+          today,
+          userPreferences,
+        );
+      });
+      return; // Skip normal dynamic/seasonal flow for equipment_keyed templates
+    }
+
     // Route to appropriate scheduling logic
     if (template.scheduling_type === 'dynamic') {
-      generateDynamicTask(template, home, equipment, existingTaskTitles, newTasks, today);
+      generateDynamicTask(template, home, equipment, existingTaskKeys, newTasks, today, userPreferences);
     } else {
-      generateSeasonalTasks(template, home, equipment, existingTaskTitles, newTasks, currentMonth, currentYear, today);
+      generateSeasonalTasks(template, home, equipment, existingTaskKeys, newTasks, currentMonth, currentYear, today, userPreferences);
     }
   });
 
@@ -172,14 +281,13 @@ function generateDynamicTask(
   template: TaskTemplate,
   home: Home,
   equipment: Equipment[],
-  existingTaskTitles: Set<string>,
+  existingTaskKeys: Set<string>,
   newTasks: MaintenanceTask[],
-  today: Date
+  today: Date,
+  userPreferences: UserPreferences = DEFAULT_USER_PREFERENCES
 ) {
-  // Skip if a task with this title already exists (any occurrence)
-  if (existingTaskTitles.has(template.title)) {
-    return;
-  }
+  // Note: We don't pre-check for existing tasks here because dynamic tasks
+  // should be generated for each month/year combo and deduped individually
 
   const intervalDays = template.interval_days || 90;
 
@@ -191,8 +299,16 @@ function generateDynamicTask(
   let nextDue = addDays(today, intervalDays + hashOffset);
 
   while (nextDue <= eighteenMonthsOut) {
-    const task = createTaskFromTemplate(template, home, equipment, nextDue);
-    newTasks.push(task);
+    // Check composite key to avoid duplication within same month/year
+    const taskMonth = getMonth(nextDue) + 1;
+    const taskYear = getYear(nextDue);
+    const dedupKey = `${template.title}|${taskMonth}|${taskYear}`;
+
+    if (!existingTaskKeys.has(dedupKey)) {
+      const task = createTaskFromTemplate(template, home, equipment, nextDue);
+      newTasks.push(task);
+    }
+
     nextDue = addDays(nextDue, intervalDays);
   }
 }
@@ -205,11 +321,12 @@ function generateSeasonalTasks(
   template: TaskTemplate,
   home: Home,
   equipment: Equipment[],
-  existingTaskTitles: Set<string>,
+  existingTaskKeys: Set<string>,
   newTasks: MaintenanceTask[],
   currentMonth: number,
   currentYear: number,
-  today: Date
+  today: Date,
+  userPreferences: UserPreferences = DEFAULT_USER_PREFERENCES
 ) {
   // For seasonal tasks, generate for each applicable month in the next 18 months
   const generatedMonths = new Set<string>();
@@ -227,8 +344,8 @@ function generateSeasonalTasks(
     if (generatedMonths.has(dedupKey)) continue;
     generatedMonths.add(dedupKey);
 
-    // Check if this specific month already has this task — skip to avoid duplicates
-    if (existingTaskTitles.has(template.title)) {
+    // Skip if this month/year combo already has this task
+    if (existingTaskKeys.has(dedupKey)) {
       continue;
     }
 
@@ -253,6 +370,77 @@ function generateSeasonalTasks(
     if (template.frequency === 'biannual' && generatedMonths.size >= 2) {
       break;
     }
+  }
+}
+
+/**
+ * Generate one task per matching equipment consumable. Interval pulled
+ * from the consumable row when present, else template default, else 90 days.
+ * One unique task per (template.id, consumable.id) — the consumable.name
+ * is suffixed to the title so the dashboard shows distinct entries.
+ */
+function generateConsumableTask(
+  template: TaskTemplate,
+  home: Home,
+  equipment: Equipment[],
+  consumable: EquipmentConsumable,
+  existingTaskKeys: Set<string>,
+  newTasks: MaintenanceTask[],
+  today: Date,
+  userPreferences: UserPreferences = DEFAULT_USER_PREFERENCES
+) {
+  // Dynamic scheduling for consumables: every N months
+  const intervalMonths = consumable.replacement_interval_months ?? template.consumable_replacement_months ?? 3;
+  const intervalDays = intervalMonths * 30.44; // Approximate month to days
+
+  // Dedup key for consumables: unique per (template, consumable)
+  const dedupKey = `${template.id}|${consumable.id}`;
+
+  // Generate multiple occurrences over next 18 months
+  const eighteenMonthsOut = addDays(today, 548);
+  let nextDue = addDays(today, intervalDays);
+
+  // Find parent equipment for this consumable
+  const parentEquipment = equipment.find((eq) => eq.id === consumable.equipment_id);
+
+  while (nextDue <= eighteenMonthsOut) {
+    // Create title that includes consumable name for uniqueness
+    const consumableTitle = consumable.name ? `${template.title} (${consumable.name})` : template.title;
+
+    // Dedup by consumable within same month/year
+    const taskMonth = getMonth(nextDue) + 1;
+    const taskYear = getYear(nextDue);
+    const consumableKey = `${dedupKey}|${taskMonth}|${taskYear}`;
+
+    if (!existingTaskKeys.has(consumableKey)) {
+      const task: MaintenanceTask = {
+        id: generateUUID(),
+        home_id: home.id,
+        equipment_id: consumable.equipment_id,
+        title: consumableTitle,
+        description: template.description,
+        instructions: template.instructions,
+        category: template.category,
+        priority: template.priority,
+        status: 'upcoming',
+        frequency: template.frequency,
+        due_date: format(nextDue, 'yyyy-MM-dd'),
+        estimated_minutes: template.estimated_minutes,
+        estimated_cost: template.estimated_cost,
+        is_weather_triggered: false,
+        applicable_months: template.applicable_months,
+        scheduling_type: 'dynamic', // Consumable tasks are always dynamic
+        interval_days: Math.round(intervalDays),
+        template_id: template.id,
+        items_to_have_on_hand: template.items_to_have_on_hand,
+        service_purpose: template.service_purpose,
+        created_at: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      };
+      newTasks.push(task);
+      existingTaskKeys.add(consumableKey);
+    }
+
+    nextDue = addDays(nextDue, intervalDays);
   }
 }
 
@@ -352,7 +540,8 @@ export function generateEquipmentLifecycleAlerts(
   equipment.forEach((item) => {
     // Special handling for roof
     if (item.category === 'roof' && home.roof_type) {
-      const lifespan = ROOF_LIFESPANS[home.roof_type];
+      // Validate that roof_type key exists in ROOF_LIFESPANS before accessing
+      const lifespan = ROOF_LIFESPANS[home.roof_type as string];
       if (!lifespan) return;
 
       const roofAge = home.roof_install_year

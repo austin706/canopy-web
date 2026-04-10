@@ -28,6 +28,7 @@ export default function HomeDetails() {
     garage_spaces: home?.garage_spaces?.toString() || '2',
     roof_type: home?.roof_type || '', roof_install_year: home?.roof_install_year?.toString() || '',
     heating_type: home?.heating_type || '', cooling_type: home?.cooling_type || '',
+    water_source: home?.water_source || '', sewer_type: home?.sewer_type || '',
     has_pool: home?.has_pool || false, has_deck: home?.has_deck || false, has_sprinkler_system: home?.has_sprinkler_system || false,
     has_fireplace: home?.has_fireplace || false,
     has_fountain: home?.has_fountain || false,
@@ -50,6 +51,20 @@ export default function HomeDetails() {
     gas_meter_location: home?.gas_meter_location || '',
     water_meter_location: home?.water_meter_location || '',
     hose_bib_locations: home?.hose_bib_locations || '',
+    // Advanced Home Details (InterNACHI Building Standards) — H-3
+    structure_type: home?.structure_type || '',
+    frame_size: home?.frame_size || '',
+    siding_type: home?.siding_type || '',
+    window_frame_material: home?.window_frame_material || '',
+    window_glazing: home?.window_glazing || '',
+    exterior_door_material: home?.exterior_door_material || '',
+    plumbing_supply_type: home?.plumbing_supply_type || '',
+    electrical_wiring_type: home?.electrical_wiring_type || '',
+    insulation_wall_type: home?.insulation_wall_type || '',
+    insulation_attic_type: home?.insulation_attic_type || '',
+    ductwork_type: home?.ductwork_type || '',
+    electrical_panel_amps: home?.electrical_panel_amps?.toString() || '',
+    construction_type: home?.construction_type || '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -132,6 +147,20 @@ export default function HomeDetails() {
         has_storm_shelter: form.has_storm_shelter,
         countertop_type: form.countertop_type || null,
         fireplace_count: form.has_fireplace ? (parseInt(form.fireplace_count) || 1) : null,
+        // Advanced Home Details (InterNACHI Building Standards) — H-3
+        structure_type: form.structure_type || null,
+        frame_size: form.frame_size || null,
+        siding_type: form.siding_type || null,
+        window_frame_material: form.window_frame_material || null,
+        window_glazing: form.window_glazing || null,
+        exterior_door_material: form.exterior_door_material || null,
+        plumbing_supply_type: form.plumbing_supply_type || null,
+        electrical_wiring_type: form.electrical_wiring_type || null,
+        insulation_wall_type: form.insulation_wall_type || null,
+        insulation_attic_type: form.insulation_attic_type || null,
+        ductwork_type: form.ductwork_type || null,
+        electrical_panel_amps: form.electrical_panel_amps ? parseInt(form.electrical_panel_amps) : null,
+        construction_type: form.construction_type || null,
         created_at: home?.created_at || new Date().toISOString(),
       };
       try { const saved = await upsertHome(homeData); setHome(saved); } catch { setHome(homeData); }
@@ -277,6 +306,26 @@ export default function HomeDetails() {
               </select>
             </div>
           </div>
+
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Water Source</label>
+              <select className="form-select" value={form.water_source} onChange={e => setForm({...form, water_source: e.target.value})}>
+                <option value="">Select...</option>
+                <option value="municipal">Municipal</option>
+                <option value="well">Well</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Sewer Type</label>
+              <select className="form-select" value={form.sewer_type} onChange={e => setForm({...form, sewer_type: e.target.value})}>
+                <option value="">Select...</option>
+                <option value="municipal">Public sewer</option>
+                <option value="septic">Septic</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
           <div className="grid-2">
             <div className="form-group">
               <label>Lawn Type</label>
@@ -383,6 +432,126 @@ export default function HomeDetails() {
             </div>
           </div>
 
+          {/* Advanced Home Details (InterNACHI Building Standards) — H-3 */}
+          <details style={{ marginTop: 24, border: '1px solid var(--light-gray)', borderRadius: 8, padding: 16 }}>
+            <summary style={{ fontWeight: 600, fontSize: 16, cursor: 'pointer', marginBottom: 16 }}>Advanced Home Details</summary>
+            <p className="text-xs text-gray" style={{ marginBottom: 12 }}>Building standards and system specifications for reference.</p>
+
+            {/* Structure & Frame */}
+            <h4 style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 8 }}>Structure & Frame</h4>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Construction Type</label>
+                <select className="form-select" value={form.construction_type} onChange={e => setForm({...form, construction_type: e.target.value})}>
+                  <option value="">Select...</option>
+                  {['wood_frame','steel_frame','masonry','concrete'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Structure Type</label>
+                <select className="form-select" value={form.structure_type} onChange={e => setForm({...form, structure_type: e.target.value})}>
+                  <option value="">Select...</option>
+                  {['single_family','multi_family','townhouse','custom'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Frame Size</label>
+                <select className="form-select" value={form.frame_size} onChange={e => setForm({...form, frame_size: e.target.value})}>
+                  <option value="">Select...</option>
+                  {['2x4','2x6','2x8','2x10','other'].map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Siding Type</label>
+                <select className="form-select" value={form.siding_type} onChange={e => setForm({...form, siding_type: e.target.value})}>
+                  <option value="">Select...</option>
+                  {['wood','vinyl','brick','fiber_cement','metal','stucco','stone'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Windows & Doors */}
+            <h4 style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 8 }}>Windows & Doors</h4>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Window Frame Material</label>
+                <select className="form-select" value={form.window_frame_material} onChange={e => setForm({...form, window_frame_material: e.target.value})}>
+                  <option value="">Select...</option>
+                  {['wood','vinyl','aluminum','fiberglass','composite'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Window Glazing</label>
+                <select className="form-select" value={form.window_glazing} onChange={e => setForm({...form, window_glazing: e.target.value})}>
+                  <option value="">Select...</option>
+                  {['single_pane','double_pane','triple_pane','low_e'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Exterior Door Material</label>
+                <select className="form-select" value={form.exterior_door_material} onChange={e => setForm({...form, exterior_door_material: e.target.value})}>
+                  <option value="">Select...</option>
+                  {['wood','metal','vinyl','fiberglass','glass'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Insulation */}
+            <h4 style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 8 }}>Insulation</h4>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Wall Insulation Type</label>
+                <select className="form-select" value={form.insulation_wall_type} onChange={e => setForm({...form, insulation_wall_type: e.target.value})}>
+                  <option value="">Select...</option>
+                  {['fiberglass','cellulose','foam','mineral_wool','none'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Attic Insulation Type</label>
+                <select className="form-select" value={form.insulation_attic_type} onChange={e => setForm({...form, insulation_attic_type: e.target.value})}>
+                  <option value="">Select...</option>
+                  {['fiberglass','cellulose','foam','mineral_wool','none'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Systems */}
+            <h4 style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 8 }}>Plumbing & Electrical</h4>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Plumbing Supply Type</label>
+                <select className="form-select" value={form.plumbing_supply_type} onChange={e => setForm({...form, plumbing_supply_type: e.target.value})}>
+                  <option value="">Select...</option>
+                  {['copper','pvc','pex','galvanized','pvc_pex_mix'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Electrical Wiring Type</label>
+                <select className="form-select" value={form.electrical_wiring_type} onChange={e => setForm({...form, electrical_wiring_type: e.target.value})}>
+                  <option value="">Select...</option>
+                  {['knob_tube','armored','pvc_conduit','romex'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Electrical Panel Amps</label>
+                <input className="form-input" type="number" value={form.electrical_panel_amps} onChange={e => setForm({...form, electrical_panel_amps: e.target.value})} placeholder="e.g., 200" />
+              </div>
+              <div className="form-group">
+                <label>Ductwork Type</label>
+                <select className="form-select" value={form.ductwork_type} onChange={e => setForm({...form, ductwork_type: e.target.value})}>
+                  <option value="">Select...</option>
+                  {['fiberglass','metal','flex','sealed','unsealed','none'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}
+                </select>
+              </div>
+            </div>
+          </details>
+
           <div className="flex gap-sm mt-lg">
             {home && <button className="btn btn-ghost" onClick={() => setEditing(false)}>Cancel</button>}
             <button className="btn btn-primary" onClick={handleSave} disabled={saving || !form.address}>{saving ? 'Saving...' : 'Save Home'}</button>
@@ -455,6 +624,26 @@ export default function HomeDetails() {
               {home.water_meter_location && <Field label="Water Meter"><p style={{ fontWeight: 500 }}>{home.water_meter_location}</p></Field>}
               {home.hose_bib_locations && <Field label="Hose Bibs"><p style={{ fontWeight: 500 }}>{home.hose_bib_locations}</p></Field>}
             </>
+          )}
+
+          {/* Advanced Home Details Display (InterNACHI Building Standards) — H-3 */}
+          {(home.structure_type || home.frame_size || home.siding_type || home.window_frame_material || home.window_glazing || home.exterior_door_material || home.plumbing_supply_type || home.electrical_wiring_type || home.insulation_wall_type || home.insulation_attic_type || home.ductwork_type || home.electrical_panel_amps || home.construction_type) && (
+            <details style={{ marginTop: 20, border: '1px solid var(--light-gray)', borderRadius: 8, padding: 12 }}>
+              <summary style={{ fontWeight: 600, fontSize: 15, cursor: 'pointer', marginBottom: 8 }}>Advanced Home Details</summary>
+              {home.construction_type && <Field label="Construction Type"><p style={{ fontWeight: 500 }}>{home.construction_type.replace(/_/g,' ')}</p></Field>}
+              {home.structure_type && <Field label="Structure Type"><p style={{ fontWeight: 500 }}>{home.structure_type.replace(/_/g,' ')}</p></Field>}
+              {home.frame_size && <Field label="Frame Size"><p style={{ fontWeight: 500 }}>{home.frame_size}</p></Field>}
+              {home.siding_type && <Field label="Siding Type"><p style={{ fontWeight: 500 }}>{home.siding_type.replace(/_/g,' ')}</p></Field>}
+              {home.window_frame_material && <Field label="Window Frame Material"><p style={{ fontWeight: 500 }}>{home.window_frame_material.replace(/_/g,' ')}</p></Field>}
+              {home.window_glazing && <Field label="Window Glazing"><p style={{ fontWeight: 500 }}>{home.window_glazing.replace(/_/g,' ')}</p></Field>}
+              {home.exterior_door_material && <Field label="Exterior Door Material"><p style={{ fontWeight: 500 }}>{home.exterior_door_material.replace(/_/g,' ')}</p></Field>}
+              {home.insulation_wall_type && <Field label="Wall Insulation Type"><p style={{ fontWeight: 500 }}>{home.insulation_wall_type.replace(/_/g,' ')}</p></Field>}
+              {home.insulation_attic_type && <Field label="Attic Insulation Type"><p style={{ fontWeight: 500 }}>{home.insulation_attic_type.replace(/_/g,' ')}</p></Field>}
+              {home.plumbing_supply_type && <Field label="Plumbing Supply Type"><p style={{ fontWeight: 500 }}>{home.plumbing_supply_type.replace(/_/g,' ')}</p></Field>}
+              {home.electrical_wiring_type && <Field label="Electrical Wiring Type"><p style={{ fontWeight: 500 }}>{home.electrical_wiring_type.replace(/_/g,' ')}</p></Field>}
+              {home.electrical_panel_amps && <Field label="Electrical Panel Amps"><p style={{ fontWeight: 500 }}>{home.electrical_panel_amps}</p></Field>}
+              {home.ductwork_type && <Field label="Ductwork Type"><p style={{ fontWeight: 500 }}>{home.ductwork_type.replace(/_/g,' ')}</p></Field>}
+            </details>
           )}
 
           {/* Additional Structures (only shown for primary homes) */}

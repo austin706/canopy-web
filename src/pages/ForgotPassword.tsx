@@ -32,8 +32,8 @@ export default function ForgotPassword() {
       <div className="auth-hero">
         <div className="auth-hero-content">
           <div style={{ marginBottom: 16 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 56, width: 'auto', objectFit: 'contain' }} /></div>
-          <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Canopy</h1>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 32 }}>Smart home maintenance, powered by AI</p>
+          <h1 style={{ fontSize: 36, fontWeight: 700, color: Colors.white, marginBottom: 8 }}>Canopy</h1>
+          <p style={{ fontSize: 16, color: 'rgba(255, 255, 255, 0.85)', marginBottom: 32 }}>Smart home maintenance, powered by AI</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {['AI-powered maintenance schedules', 'Equipment lifecycle tracking', 'Weather-triggered task alerts', 'Pro service coordination'].map(f => (
               <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.9)', fontSize: 14 }}>
@@ -86,7 +86,7 @@ export default function ForgotPassword() {
             </form>
           ) : (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <p style={{ fontSize: 14, color: '#7A7A7A', marginBottom: 20 }}>Check your email for further instructions.</p>
+              <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 20 }}>Check your email for further instructions.</p>
               <button className="btn btn-primary btn-lg btn-full" onClick={() => setSuccess(false)} style={{ marginBottom: 12 }}>
                 Send Another Email
               </button>

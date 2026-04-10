@@ -29,6 +29,7 @@ interface NextVisit {
   status: string;
   homeowner_notes: string;
   is_first_visit?: boolean;
+  pro_provider_id?: string;
 }
 
 interface VisitProgress {
@@ -200,6 +201,7 @@ export default function ProServices() {
           status: visit.status,
           homeowner_notes: visit.homeowner_notes || '',
           is_first_visit: visit.is_first_visit || false,
+          pro_provider_id: visit.pro_provider_id,
         });
         setVisitNotes(visit.homeowner_notes || '');
       } else {
@@ -235,7 +237,17 @@ export default function ProServices() {
         .eq('home_id', home.id)
         .order('created_at', { ascending: false });
 
-      const requests: ServiceRequest[] = (reqData || []).map((r: any) => ({
+      interface ProRequestRecord {
+        id: string;
+        category: string;
+        scheduled_date: string | null;
+        created_at: string;
+        status: string;
+        description: string;
+        provider?: { business_name: string };
+      }
+
+      const requests: ServiceRequest[] = ((reqData || []) as ProRequestRecord[]).map((r) => ({
         id: `req-${r.id}`,
         title: `${r.category.charAt(0).toUpperCase() + r.category.slice(1)} Service`,
         date: r.scheduled_date || r.created_at,
@@ -251,7 +263,17 @@ export default function ProServices() {
         .eq('home_id', home.id)
         .order('scheduled_date', { ascending: false });
 
-      const appts: ServiceRequest[] = (apptData || []).map((a: any) => ({
+      interface AppointmentRecord {
+        id: string;
+        title: string;
+        scheduled_date: string | null;
+        created_at: string;
+        status: string;
+        service_purpose?: string;
+        description?: string;
+      }
+
+      const appts: ServiceRequest[] = ((apptData || []) as AppointmentRecord[]).map((a) => ({
         id: a.id,
         title: a.title,
         date: a.scheduled_date || a.created_at,
@@ -280,8 +302,8 @@ export default function ProServices() {
       setTimeout(() => setNotesSaved(false), 3000);
 
       // Notify the provider that the homeowner added notes
-      if (visitNotes.trim() && (nextVisit as any).pro_provider_id) {
-        const { data: provider } = await supabase.from('pro_providers').select('user_id').eq('id', (nextVisit as any).pro_provider_id).single();
+      if (visitNotes.trim() && nextVisit.pro_provider_id) {
+        const { data: provider } = await supabase.from('pro_providers').select('user_id').eq('id', nextVisit.pro_provider_id).single();
         if (provider?.user_id) {
           const userName = user?.full_name || user?.email || 'Homeowner';
           sendNotification({
@@ -439,7 +461,7 @@ export default function ProServices() {
           {nextVisit ? (
             <div className="card" style={{ padding: '20px 24px' }}>
               {/* First Visit Orientation Banner */}
-              {(nextVisit as any).is_first_visit && (
+              {nextVisit.is_first_visit && (
                 <div style={{
                   padding: '14px 18px', borderRadius: 8, marginBottom: 16,
                   background: `linear-gradient(135deg, ${Colors.copperMuted}, ${Colors.sageMuted})`,

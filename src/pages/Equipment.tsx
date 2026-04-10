@@ -88,6 +88,10 @@ export default function Equipment() {
   const limit = getEquipmentLimit(tier);
   const atLimit = limit !== null && equipment.length >= limit;
 
+  // Get the plan name for the error message
+  const planName = PLANS.find(p => p.value === tier)?.name || 'Free';
+  const limitMessage = `${planName} plan allows ${limit} items. Upgrade for unlimited.`;
+
   // Fetch equipment on mount if not already loaded
   useEffect(() => {
     const loadEquipment = async () => {
@@ -183,7 +187,7 @@ export default function Equipment() {
       // Auto-generate tasks for the new equipment
       try {
         const updatedEquipment = [...equipment, newItem];
-        const newTasks = generateTasksForHome(home, updatedEquipment, tasks);
+        const newTasks = generateTasksForHome(home, updatedEquipment, tasks, undefined, user?.user_preferences);
         const lifecycleAlerts = generateEquipmentLifecycleAlerts([newItem], home);
         const allNewTasks = [...newTasks, ...lifecycleAlerts];
         if (allNewTasks.length > 0) {
@@ -280,7 +284,7 @@ export default function Equipment() {
               <button className="btn btn-ghost" onClick={() => setSelectMode(true)}>Select</button>
             )
           )}
-          <button className="btn btn-primary" onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowScanner(true)}>+ Add Equipment</button>
+          <button className="btn btn-primary" onClick={() => atLimit ? alert(limitMessage) : setShowScanner(true)}>+ Add Equipment</button>
         </div>
       </div>
 
@@ -367,7 +371,7 @@ export default function Equipment() {
               <div key={item.step} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: i < 2 ? 14 : 0 }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: '50%',
-                  background: 'var(--color-copper)', color: '#fff',
+                  background: 'var(--color-copper)', color: Colors.white,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 13, fontWeight: 700, flexShrink: 0,
                 }}>
@@ -385,7 +389,7 @@ export default function Equipment() {
           {/* CTA */}
           <button
             className="btn btn-primary"
-            onClick={() => atLimit ? alert(`Free plan allows ${limit} items. Upgrade for unlimited.`) : setShowScanner(true)}
+            onClick={() => atLimit ? alert(limitMessage) : setShowScanner(true)}
             style={{ width: '100%', padding: '14px 0', fontSize: 15, marginBottom: 20 }}
           >
             + Add Equipment
@@ -423,7 +427,7 @@ export default function Equipment() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 12,
                         padding: '10px 12px', borderRadius: 8,
-                        background: status === 'scanned' ? '#f0faf5' : '#fff',
+                        background: status === 'scanned' ? Colors.success + '15' : Colors.white,
                         border: `1px solid ${status === 'scanned' ? Colors.success + '30' : Colors.lightGray}`,
                         cursor: 'pointer',
                       }}
@@ -528,7 +532,7 @@ export default function Equipment() {
                       {selectedGuide.common_brands.map(brand => (
                         <span key={brand} style={{
                           fontSize: 11, padding: '3px 8px', borderRadius: 4,
-                          background: '#f5f5f5', color: Colors.charcoal,
+                          background: Colors.inputBackground, color: Colors.charcoal,
                         }}>
                           {brand}
                         </span>
@@ -626,6 +630,31 @@ export default function Equipment() {
                 position: 'relative',
                 borderLeft: isReplacement ? `4px solid var(--color-error)` : isInspect ? `4px solid var(--color-warning)` : undefined,
                 outline: selectMode && selectedIds.has(item.id) ? `2px solid var(--color-copper)` : undefined,
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget;
+                if (!selectMode) {
+                  el.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.1)';
+                  el.style.transform = 'translateY(-2px)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget;
+                el.style.boxShadow = '';
+                el.style.transform = '';
+              }}
+              onMouseDown={(e) => {
+                const el = e.currentTarget;
+                if (!selectMode) {
+                  el.style.transform = 'scale(0.98)';
+                }
+              }}
+              onMouseUp={(e) => {
+                const el = e.currentTarget;
+                if (!selectMode) {
+                  el.style.transform = 'translateY(-2px)';
+                }
               }}
             >
               {selectMode && (
@@ -635,7 +664,7 @@ export default function Equipment() {
                   border: `2px solid ${selectedIds.has(item.id) ? 'var(--color-copper)' : 'var(--color-border)'}`,
                   background: selectedIds.has(item.id) ? 'var(--color-copper)' : 'var(--color-card-background)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontSize: 14, fontWeight: 700,
+                  color: Colors.white, fontSize: 14, fontWeight: 700,
                 }} aria-label={selectedIds.has(item.id) ? 'Selected' : 'Not selected'}>
                   {selectedIds.has(item.id) ? '✓' : ''}
                 </div>
@@ -643,7 +672,7 @@ export default function Equipment() {
               {isReplacement && (
                 <div style={{
                   background: 'var(--color-error)',
-                  color: '#fff',
+                  color: Colors.white,
                   fontSize: 11,
                   fontWeight: 700,
                   padding: '3px 8px',
@@ -656,7 +685,7 @@ export default function Equipment() {
               {isInspect && !isReplacement && (
                 <div style={{
                   background: 'var(--color-warning)',
-                  color: '#fff',
+                  color: Colors.white,
                   fontSize: 11,
                   fontWeight: 700,
                   padding: '3px 8px',

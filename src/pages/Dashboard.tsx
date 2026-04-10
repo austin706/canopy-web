@@ -1,12 +1,13 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import logger from '@/utils/logger';
 import { canAccess, getTaskLimit, PLANS } from '@/services/subscriptionGate';
 import { Colors, PriorityColors, StatusColors } from '@/constants/theme';
 import DashboardChat from '@/components/DashboardChat';
 import { quickCompleteTask } from '@/services/utils';
 import { ImageViewer } from '@/components/ImageViewer';
-import { getTasks, createTasks, getHomeJoinRequests, approveHomeJoinRequest, denyHomeJoinRequest } from '@/services/supabase';
+import { getTasks, createTasks, getHomeJoinRequests, approveHomeJoinRequest, denyHomeJoinRequest, getNotifications, markNotificationRead } from '@/services/supabase';
 import { fetchWeather } from '@/services/weather';
 import { Skeleton } from '@/components/Skeleton';
 import { HealthGauge } from '@/components/HealthGauge';
@@ -20,7 +21,7 @@ import { generateCostForecast, FORECAST_DISCLAIMER } from '@/services/costForeca
 import PendingInvites from '@/components/PendingInvites';
 import SetupChecklist from '@/components/SetupChecklist';
 import { getDocuments, getHomeMembers } from '@/services/supabase';
-import type { MaintenanceTask } from '@/types';
+import type { MaintenanceTask, HomeJoinRequest } from '@/types';
 
 const DEMO_TASKS = [
   { id: 'd1', home_id: '1', title: 'Replace HVAC Air Filters', description: 'Check and replace monthly.', category: 'hvac' as const, priority: 'high' as const, status: 'due' as const, frequency: 'monthly' as const, due_date: new Date().toISOString(), is_weather_triggered: false, applicable_months: [1,2,3,4,5,6,7,8,9,10,11,12], estimated_minutes: 10, created_at: '' },
@@ -37,7 +38,7 @@ export default function Dashboard() {
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
   const [tasksLoading, setTasksLoading] = useState(false);
-  const [joinRequests, setJoinRequests] = useState<any[]>([]);
+  const [joinRequests, setJoinRequests] = useState<HomeJoinRequest[]>([]);
   const [processingRequest, setProcessingRequest] = useState<string | null>(null);
 
   // Image viewer state
@@ -45,10 +46,33 @@ export default function Dashboard() {
   const [viewerImages, setViewerImages] = useState<string[]>([]);
   const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
 
+  // Notification state
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+
+  // Load notifications
+  useEffect(() => {
+    if (!user?.id) return;
+    const loadNotifications = async () => {
+      try {
+        setNotificationsLoading(true);
+        const data = await getNotifications(user.id, 5);
+        setNotifications(data || []);
+      } catch (err) {
+        console.warn('Failed to fetch notifications:', err);
+      } finally {
+        setNotificationsLoading(false);
+      }
+    };
+    loadNotifications();
+  }, [user?.id]);
+
   // Load pending home join requests
   useEffect(() => {
     if (user?.id) {
-      getHomeJoinRequests(user.id).then(setJoinRequests).catch(() => {});
+      getHomeJoinRequests(user.id).then(setJoinRequests).catch((err) => {
+        logger.warn('Failed to fetch home join requests:', err?.message);
+      });
     }
   }, [user?.id]);
 
@@ -59,10 +83,14 @@ export default function Dashboard() {
     if (!home?.id) return;
     getDocuments(home.id)
       .then((docs) => setInspectionCount((docs || []).filter((d: any) => d.type === 'inspection').length))
-      .catch(() => {});
+      .catch((err) => {
+        logger.warn('Failed to fetch documents:', err?.message);
+      });
     getHomeMembers(home.id)
       .then((members) => setMemberCount(Math.max(1, (members || []).length)))
-      .catch(() => {});
+      .catch((err) => {
+        logger.warn('Failed to fetch home members:', err?.message);
+      });
   }, [home?.id]);
 
   // Redirect new users who haven't set up their home yet
@@ -89,7 +117,7 @@ export default function Dashboard() {
         } else {
           // No tasks in DB — generate from home profile and persist
           // Pass empty array as existingTasks since DB confirmed empty
-          const generated = generateTasksForHome(home, equipment, []);
+          const generated = generateTasksForHome(home, equipment, [], undefined, user?.user_preferences);
           if (generated.length > 0) {
             try {
               const saved = await createTasks(generated);
@@ -152,10 +180,12 @@ export default function Dashboard() {
   const hasAI = canAccess(tier, 'ai_task_generation');
   const taskLimit = getTaskLimit(tier);
 
-  const isDemo = tasks.length === 0;
+  const isDemo = !user?.onboarding_complete && (!tasks || tasks.length === 0);
   const displayTasks = isDemo ? DEMO_TASKS : tasks.map(t => ({ ...t, status: getDisplayStatus(t) }));
   const tasksToShow = taskLimit ? displayTasks.slice(0, taskLimit) : displayTasks;
   const displayWeather = weather || DEMO_WEATHER;
+  const unreadNotifications = notifications.filter(n => !n.read);
+  const recentNotifications = unreadNotifications.slice(0, 2);
 
   const currentMonth = new Date().toLocaleString('default', { month: 'long' });
   const now = new Date();
@@ -189,6 +219,60 @@ export default function Dashboard() {
         <img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 40, width: 'auto', objectFit: 'contain' }} />
       </div>
 
+      {/* Notification Banner */}
+      {!notificationsLoading && unreadNotifications.length > 0 && (
+        <div style={{
+          background: 'var(--color-cream)',
+          border: `1px solid var(--color-copper)40`,
+          borderRadius: 12,
+          padding: '14px 18px',
+          marginBottom: 20,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
+                {unreadNotifications.length} notification{unreadNotifications.length > 1 ? 's' : ''}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {recentNotifications.map((notif) => (
+                  <button
+                    key={notif.id}
+                    onClick={() => {
+                      if (!notif.read) {
+                        markNotificationRead(notif.id).catch((err) => {
+                          logger.warn('Failed to mark notification as read:', err?.message);
+                        });
+                      }
+                      navigate('/notifications');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      padding: 0,
+                      fontSize: 13,
+                      color: 'var(--color-copper)',
+                      textDecoration: 'underline',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {notif.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => navigate('/notifications')}
+              style={{ whiteSpace: 'nowrap', fontSize: 12 }}
+            >
+              View all &rarr;
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Pending Home Join Requests */}
       {joinRequests.length > 0 && (
         <div style={{ marginBottom: 20 }}>
@@ -211,7 +295,7 @@ export default function Dashboard() {
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   className="btn btn-sm"
-                  style={{ background: 'var(--color-sage)', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  style={{ background: 'var(--color-sage)', color: 'var(--color-white)', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                   disabled={processingRequest === req.id}
                   onClick={async () => {
                     setProcessingRequest(req.id);
@@ -386,7 +470,7 @@ export default function Dashboard() {
                     width: 72, height: 72, borderRadius: '50%',
                     background: `linear-gradient(135deg, var(--color-sage) 0%, var(--color-copper) 100%)`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    margin: '0 auto 16px', fontSize: 36, color: '#fff',
+                    margin: '0 auto 16px', fontSize: 36, color: 'var(--color-white)',
                   }}>&#127881;</div>
                   <h3 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: 8 }}>All tasks complete!</h3>
                   <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.6, maxWidth: 320, margin: '0 auto' }}>
@@ -496,7 +580,7 @@ export default function Dashboard() {
           <div className="card" style={{ background: 'var(--color-copper-muted, #FFF3E0)' }}>
             <p className="text-xs fw-600 text-copper mb-sm">YOUR PLAN</p>
             <p style={{ fontWeight: 700 }}>{PLANS.find(p => p.value === tier)?.name || 'Free'}</p>
-            <p className="text-sm text-gray">{(PLANS.find(p => p.value === tier) as any)?.inquireForPricing ? 'Concierge Plan' : `$${PLANS.find(p => p.value === tier)?.price || 0}${PLANS.find(p => p.value === tier)?.period}`}</p>
+            <p className="text-sm text-gray">{PLANS.find(p => p.value === tier)?.inquireForPricing ? 'Concierge Plan' : `$${PLANS.find(p => p.value === tier)?.price || 0}${PLANS.find(p => p.value === tier)?.period}`}</p>
             {tier === 'free' && <button className="btn btn-primary btn-sm mt-md" onClick={() => navigate('/subscription')}>Upgrade</button>}
           </div>
 

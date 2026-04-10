@@ -238,7 +238,7 @@ export default function TaskDetail() {
             </div>
             <div>
               <p className="text-xs text-gray">Status</p>
-              <span className="badge" style={{ background: (StatusColors[task.status] || '#ccc') + '20', color: StatusColors[task.status] }}>
+              <span className="badge" style={{ background: (StatusColors[task.status] || Colors.silver) + '20', color: StatusColors[task.status] }}>
                 {task.status}
               </span>
             </div>
@@ -413,7 +413,7 @@ export default function TaskDetail() {
                 <button
                   className="btn btn-ghost"
                   onClick={handleDelete}
-                  style={{ width: '100%', color: '#c0392b' }}
+                  style={{ width: '100%', color: Colors.error }}
                 >
                   Delete
                 </button>
@@ -440,7 +440,7 @@ export default function TaskDetail() {
               <button className="btn btn-outline" onClick={handleReopen} style={{ borderColor: Colors.copper, color: Colors.copper }}>
                 Reopen Task
               </button>
-              <button className="btn btn-outline" onClick={handleDelete} style={{ borderColor: '#c0392b', color: '#c0392b' }}>
+              <button className="btn btn-outline" onClick={handleDelete} style={{ borderColor: Colors.error, color: Colors.error }}>
                 Delete
               </button>
             </div>

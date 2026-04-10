@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import logger from '@/utils/logger';
 import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase, createHomeJoinRequest, sendNotification, insertProInterest } from '@/services/supabase';
 import { verifyAddress, findExistingProperty } from '@/services/addressVerification';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
@@ -9,15 +10,13 @@ import { PLANS, isProAvailableInArea, loadServiceAreas, getEquipmentLimit, isPre
 import { requestConsultation } from '@/services/proPlus';
 import { findProviderForZip } from '@/services/proEnrollment';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
-// Phase E (2026-04-09): EquipmentScanner + InspectionUploader moved out of onboarding.
-// They are now accessible from the dashboard SetupChecklist and Equipment tab.
-// import EquipmentScanner from '@/components/EquipmentScanner';
-// import InspectionUploader from '@/components/InspectionUploader';
 import { lookupByModelNumber } from '@/services/ai';
 import { Colors } from '@/constants/theme';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import { trackEvent } from '@/utils/analytics';
+import EquipmentScanner from '@/components/EquipmentScanner';
+import InspectionUploader from '@/components/InspectionUploader';
 import type { EquipmentCategory, Equipment as EquipmentType, SubscriptionTier } from '@/types';
 
 const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
@@ -91,9 +90,16 @@ function loadStripe(): Promise<any> {
   return stripePromise;
 }
 
-// Total onboarding steps (0-indexed): Welcome(0), Address(1), Systems(2), Plan(3), Equipment(4), Done(5)
-const TOTAL_STEPS = 6;
-const PROGRESS_STEPS = 4; // Steps shown in progress bar (Address, Systems, Plan, Finish). Equipment scanning + inspection upload are post-onboarding items tracked by SetupChecklist (Phase E, 2026-04-09).
+// Total onboarding steps (0-indexed): Welcome(0), Address(1), Systems(2), Plan(3), Equipment+Inspection(4), Ready(5), Done(6)
+const STEP_WELCOME = 0;
+const STEP_ADDRESS = 1;
+const STEP_SYSTEMS = 2;
+const STEP_PLAN = 3;
+const STEP_EQUIPMENT = 4;
+const STEP_READY = 5;
+const STEP_DONE = 6;
+const TOTAL_STEPS = 7;
+const PROGRESS_STEPS = 5; // Steps shown in progress bar (Address, Systems, Plan, Equipment, Finish). H-4: Equipment scan + inspection upload restored as optional onboarding step.
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -149,7 +155,7 @@ export default function Onboarding() {
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
-      if (step > 1 || (step === 1 && !isAddPropertyMode)) {
+      if (step > STEP_ADDRESS || (step === STEP_ADDRESS && !isAddPropertyMode)) {
         setStep(s => s - 1);
         window.history.pushState(null, '', '/onboarding');
       } else if (isAddPropertyMode) {
@@ -192,10 +198,21 @@ export default function Onboarding() {
     number_of_hvac_filters: '1',
     hvac_filter_size: '',
     filters: [{ size: '' }] as { size: string }[],
+    // Pool details tracking
+    pool_type: 'in-ground',
+    pool_lining: 'vinyl',
+    has_hot_tub: false,
+    pool_heating: 'none',
+    pool_chemical_treatment: 'chlorine',
+    has_pool_fencing: false,
     // Hose bib tracking
     hose_bib_count: '0',
     hose_bib_locations: '',
   });
+
+  // Step 2b: User Preferences
+  const [maintenanceDepth, setMaintenanceDepth] = useState<'simple' | 'standard' | 'comprehensive'>('standard');
+  const [showCleaningTasks, setShowCleaningTasks] = useState(true);
 
   // Step 3: Plan Selection
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionTier>('free');
@@ -306,7 +323,9 @@ export default function Onboarding() {
               body: `${user.full_name || user.email} at ${home.address || 'their home'}, ${home.city || ''} ${home.state || ''} ${home.zip_code || ''} is interested in Pro+ but no provider is matched to their area yet.`,
               category: 'pro_plus',
               action_url: '/admin/users',
-            }).catch(() => {});
+            }).catch((err) => {
+              logger.warn('Failed to send Pro+ notification:', err?.message);
+            });
           }
         }
         setPlanMessage('Consultation request submitted! Our team will reach out to discuss Pro+ options for your area.');
@@ -344,6 +363,9 @@ export default function Onboarding() {
   const [skipFireplaceDetails, setSkipFireplaceDetails] = useState(false);
   const [skipFilterDetails, setSkipFilterDetails] = useState(false);
   const [skipPoolDetails, setSkipPoolDetails] = useState(false);
+  const [skipAllSystemsDetails, setSkipAllSystemsDetails] = useState(false);
+  // H-4: Equipment scan + inspection upload optional step
+  const [skipEquipmentScanning, setSkipEquipmentScanning] = useState(false);
 
   // Helpers for fireplace/filter arrays
   const updateFireplaceCount = (count: string) => {
@@ -546,6 +568,8 @@ export default function Onboarding() {
         number_of_hvac_filters: skipFilterDetails ? null : (parseInt(systemsForm.number_of_hvac_filters) || null),
         hvac_filter_size: skipFilterDetails ? null : (systemsForm.filters.map(f => f.size).filter(Boolean).join(', ') || null),
         hvac_filter_returns: skipFilterDetails ? null : (systemsForm.filters.filter(f => f.size).length > 0 ? systemsForm.filters : null),
+        // Pool details — only save if has_pool && !skipPoolDetails
+        pool_type: systemsForm.has_pool && !skipPoolDetails ? (systemsForm.pool_chemical_treatment || null) : null,
         hose_bib_locations: systemsForm.hose_bib_locations || null,
       };
 
@@ -666,11 +690,20 @@ export default function Onboarding() {
         }
       }
 
-      // Generate maintenance tasks
+      // Generate maintenance tasks with user preferences
       setGeneratingTasks(true);
       try {
         const { tasks: existingTasks } = useStore.getState();
-        const generatedTasks = generateTasksForHome(home, allEquipment, existingTasks);
+        const userPreferences = {
+          maintenance_depth: maintenanceDepth,
+          show_cleaning_tasks: showCleaningTasks,
+          home_detail_depth: 'detailed' as const,
+          task_category_overrides: {},
+          show_pro_tasks: true,
+          task_reminder_days_before: 3,
+          weather_alerts_enabled: true,
+        };
+        const generatedTasks = generateTasksForHome(home, allEquipment, existingTasks, userPreferences);
         const lifecycleAlerts = generateEquipmentLifecycleAlerts(allEquipment, home);
         const allNewTasks = [...generatedTasks, ...lifecycleAlerts];
         if (allNewTasks.length > 0) {
@@ -695,8 +728,21 @@ export default function Onboarding() {
         setGeneratingTasks(false);
       }
 
-      // Mark onboarding complete
-      try { await updateProfile(user.id, { onboarding_complete: true }); } catch {}
+      // Mark onboarding complete and save user preferences
+      try {
+        await updateProfile(user.id, {
+          onboarding_complete: true,
+          user_preferences: {
+            maintenance_depth: maintenanceDepth,
+            show_cleaning_tasks: showCleaningTasks,
+            home_detail_depth: 'detailed',
+            task_category_overrides: {},
+            show_pro_tasks: true,
+            task_reminder_days_before: 3,
+            weather_alerts_enabled: true,
+          },
+        });
+      } catch {}
 
       // Send welcome notification (for all tiers)
       const tier = user.subscription_tier || selectedPlan || 'free';
@@ -714,7 +760,9 @@ export default function Onboarding() {
         body: welcomeBody,
         category: 'onboarding',
         action_url: '/dashboard',
-      }).catch(() => {});
+      }).catch((err) => {
+        logger.warn('Failed to send welcome notification:', err?.message);
+      });
 
       // Send branded welcome email (fire-and-forget)
       const totalTasks = useStore.getState().tasks?.length || 0;
@@ -731,13 +779,15 @@ export default function Onboarding() {
               equipment_count: allEquipment.length,
               task_count: totalTasks,
             }),
-          }).catch(() => {});
+          }).catch((err) => {
+            logger.warn('Failed to send welcome email:', err?.message);
+          });
         }
       } catch {
         // Welcome email is non-blocking — don't fail onboarding
       }
 
-      setStep(5);
+      setStep(6);
     } finally {
       setSaving(false);
     }
@@ -797,8 +847,8 @@ export default function Onboarding() {
             },
             body: JSON.stringify({
               plan: selectedPlan,
-              success_url: `${window.location.origin}/onboarding?step=4&success=true&plan=${selectedPlan}`,
-              cancel_url: `${window.location.origin}/onboarding?step=3&canceled=true`,
+              success_url: `${window.location.origin}/onboarding?step=${STEP_EQUIPMENT}&success=true&plan=${selectedPlan}`,
+              cancel_url: `${window.location.origin}/onboarding?step=${STEP_PLAN}&canceled=true`,
             }),
           });
           const data = await res.json();
@@ -832,7 +882,7 @@ export default function Onboarding() {
           body: JSON.stringify({
             plan: selectedPlan,
             ui_mode: 'embedded',
-            return_url: `${window.location.origin}/onboarding?step=4&success=true&plan=${selectedPlan}&session_id={CHECKOUT_SESSION_ID}`,
+            return_url: `${window.location.origin}/onboarding?step=${STEP_EQUIPMENT}&success=true&plan=${selectedPlan}&session_id={CHECKOUT_SESSION_ID}`,
           }),
         });
         const data = await res.json();
@@ -879,7 +929,7 @@ export default function Onboarding() {
 
   // Progress bar: steps 1-4 (Address through Equipment), welcome and done don't count
   const progressStep = Math.max(0, Math.min(step - 1, PROGRESS_STEPS));
-  const showProgress = step >= 1 && step <= 4;
+  const showProgress = step >= STEP_ADDRESS && step <= STEP_EQUIPMENT;
 
   return (
     <SectionErrorBoundary sectionName="Onboarding">
@@ -912,9 +962,9 @@ export default function Onboarding() {
           role="alert"
           aria-live="assertive"
           style={{
-            backgroundColor: '#FDECEA',
-            border: '1px solid #E74C3C',
-            color: '#C0392B',
+            backgroundColor: 'var(--color-error-muted, #E539351A)',
+            border: `1px solid var(--color-error)`,
+            color: 'var(--color-error)',
             padding: '12px 16px',
             borderRadius: 8,
             marginBottom: 20,
@@ -934,7 +984,7 @@ export default function Onboarding() {
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#C0392B',
+              color: 'var(--color-error)',
               cursor: 'pointer',
               fontSize: 18,
               lineHeight: 1,
@@ -947,7 +997,7 @@ export default function Onboarding() {
       )}
 
       {/* ===== STEP 0: Welcome / What is Canopy ===== */}
-      {step === 0 && (
+      {step === STEP_WELCOME && (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <div style={{
             width: 80, height: 80, borderRadius: '50%',
@@ -1009,7 +1059,7 @@ export default function Onboarding() {
       )}
 
       {/* ===== STEP 1: Address ===== */}
-      {step === 1 && (
+      {step === STEP_ADDRESS && (
         <div className="card">
           <h2 style={{ fontSize: 20, marginBottom: 8 }}>Where is your home?</h2>
           <p style={{ color: Colors.medGray, marginBottom: 20, fontSize: 14, lineHeight: 1.5 }}>
@@ -1227,8 +1277,8 @@ export default function Onboarding() {
                 </p>
               </div>
               <div style={{
-                padding: 14, backgroundColor: '#f9f9f7', borderRadius: 10,
-                border: '1px solid #eee',
+                padding: 14, backgroundColor: 'var(--color-input-background, #F5F0E8)', borderRadius: 10,
+                border: `1px solid var(--color-light-gray)`,
               }}>
                 <p style={{ fontSize: 11, color: Colors.medGray, fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase' }}>You entered</p>
                 <p style={{ margin: 0, fontSize: 14, color: Colors.medGray }}>
@@ -1263,12 +1313,24 @@ export default function Onboarding() {
       )}
 
       {/* ===== STEP 2: Home Systems ===== */}
-      {step === 2 && (
+      {step === STEP_SYSTEMS && (
         <div className="card">
-          <h2 style={{ fontSize: 20, marginBottom: 8 }}>What systems does your home have?</h2>
-          <p style={{ color: Colors.medGray, marginBottom: 20, fontSize: 14, lineHeight: 1.5 }}>
-            This helps us generate the right maintenance tasks for your specific home.
-          </p>
+          <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+            <div>
+              <h2 style={{ fontSize: 20, marginBottom: 8 }}>What systems does your home have?</h2>
+              <p style={{ color: Colors.medGray, marginBottom: 0, fontSize: 14, lineHeight: 1.5 }}>
+                This helps us generate the right maintenance tasks for your specific home.
+              </p>
+            </div>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => {
+              setSkipAllSystemsDetails(true);
+              setSkipFireplaceDetails(true);
+              setSkipFilterDetails(true);
+              setSkipPoolDetails(true);
+            }} style={{ whiteSpace: 'nowrap' }}>
+              Skip details for now
+            </button>
+          </div>
 
           {/* Foundation */}
           <div className="form-group">
@@ -1442,6 +1504,80 @@ export default function Onboarding() {
             </div>
           )}
 
+          {/* Pool details — show if has_pool is checked */}
+          {systemsForm.has_pool && !skipPoolDetails && (
+            <div style={{ backgroundColor: 'var(--color-background)', borderRadius: 12, padding: 16, marginTop: 16 }}>
+              <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: Colors.charcoal }}>Pool details</p>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSkipPoolDetails(true)}>
+                  Skip for now
+                </button>
+              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Pool Type</label>
+                  <select className="form-select" value={systemsForm.pool_type}
+                    onChange={e => setSystemsForm({ ...systemsForm, pool_type: e.target.value })}>
+                    <option value="in-ground">In-ground</option>
+                    <option value="above-ground">Above-ground</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Pool Lining</label>
+                  <select className="form-select" value={systemsForm.pool_lining}
+                    onChange={e => setSystemsForm({ ...systemsForm, pool_lining: e.target.value })}>
+                    <option value="vinyl">Vinyl</option>
+                    <option value="fiberglass">Fiberglass</option>
+                    <option value="concrete">Concrete/Gunite</option>
+                    <option value="plaster">Plaster</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid-2">
+                <label className="flex items-center gap-sm" style={{ cursor: 'pointer', padding: '8px 0' }}>
+                  <input type="checkbox" checked={systemsForm.has_hot_tub}
+                    onChange={e => setSystemsForm({ ...systemsForm, has_hot_tub: e.target.checked })} />
+                  <span style={{ fontSize: 14 }}>Has hot tub</span>
+                </label>
+              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Pool Heating</label>
+                  <select className="form-select" value={systemsForm.pool_heating}
+                    onChange={e => setSystemsForm({ ...systemsForm, pool_heating: e.target.value })}>
+                    <option value="none">None</option>
+                    <option value="gas">Gas</option>
+                    <option value="electric">Electric</option>
+                    <option value="solar">Solar</option>
+                    <option value="heat_pump">Heat Pump</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Chemical Treatment</label>
+                  <select className="form-select" value={systemsForm.pool_chemical_treatment}
+                    onChange={e => setSystemsForm({ ...systemsForm, pool_chemical_treatment: e.target.value })}>
+                    <option value="chlorine">Chlorine</option>
+                    <option value="salt">Salt</option>
+                    <option value="mineral">Mineral</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid-2">
+                <label className="flex items-center gap-sm" style={{ cursor: 'pointer', padding: '8px 0' }}>
+                  <input type="checkbox" checked={systemsForm.has_pool_fencing}
+                    onChange={e => setSystemsForm({ ...systemsForm, has_pool_fencing: e.target.checked })} />
+                  <span style={{ fontSize: 14 }}>Has pool fencing</span>
+                </label>
+              </div>
+            </div>
+          )}
+          {systemsForm.has_pool && skipPoolDetails && (
+            <div className="text-xs text-gray" style={{ marginTop: 8 }}>
+              Pool details skipped — you'll finish from your dashboard.{' '}
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSkipPoolDetails(false)}>Undo</button>
+            </div>
+          )}
+
           {/* Hose bibs */}
           <div style={{ backgroundColor: 'var(--color-background)', borderRadius: 12, padding: 16, marginTop: 16 }}>
             <div className="grid-2">
@@ -1474,6 +1610,74 @@ export default function Onboarding() {
             </select>
           </div>
 
+          {/* Maintenance Preferences */}
+          <div style={{ borderTop: `1px solid ${Colors.lightGray}`, marginTop: 24, paddingTop: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4, color: Colors.charcoal }}>How much maintenance detail do you want?</h3>
+            <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>
+              We'll customize your task list based on your preference. You can change this anytime in settings.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+              {[
+                { value: 'simple' as const, title: 'Just the Essentials', desc: 'Focus on the most important maintenance tasks. Perfect if you\'re just getting started.' },
+                { value: 'standard' as const, title: 'Recommended', desc: 'A complete maintenance plan tailored to your home. Our recommendation for most homeowners.', recommended: true },
+                { value: 'comprehensive' as const, title: 'Everything', desc: 'Every possible maintenance task, including detailed cleaning and specialty items.' },
+              ].map(option => (
+                <div
+                  key={option.value}
+                  onClick={() => setMaintenanceDepth(option.value)}
+                  style={{
+                    border: `2px solid ${maintenanceDepth === option.value ? Colors.copper : Colors.lightGray}`,
+                    borderRadius: 12, padding: 16,
+                    backgroundColor: maintenanceDepth === option.value ? Colors.copperMuted : Colors.white,
+                    cursor: 'pointer', transition: 'all 0.2s ease',
+                    position: 'relative',
+                  }}
+                >
+                  {option.recommended && (
+                    <span style={{
+                      position: 'absolute', top: -12, right: 16,
+                      background: Colors.copper, color: Colors.white,
+                      fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6,
+                    }}>
+                      Recommended
+                    </span>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, color: maintenanceDepth === option.value ? Colors.copper : Colors.charcoal, marginBottom: 4 }}>
+                        {option.title}
+                      </div>
+                      <p style={{ fontSize: 13, color: Colors.medGray, margin: 0, lineHeight: 1.4 }}>
+                        {option.desc}
+                      </p>
+                    </div>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: 10, border: `2px solid ${maintenanceDepth === option.value ? Colors.copper : Colors.lightGray}`,
+                      background: maintenanceDepth === option.value ? Colors.copper : 'transparent',
+                      marginLeft: 12, marginTop: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {maintenanceDepth === option.value && (
+                        <span style={{ color: Colors.white, fontSize: 12, fontWeight: 'bold' }}>✓</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <label className="flex items-center gap-sm" style={{ cursor: 'pointer', padding: '12px 0' }}>
+              <input
+                type="checkbox"
+                checked={showCleaningTasks}
+                onChange={e => setShowCleaningTasks(e.target.checked)}
+              />
+              <span style={{ fontSize: 14, color: Colors.charcoal, fontWeight: 500 }}>
+                Show cleaning tasks (deep clean, pressure washing, etc.)
+              </span>
+            </label>
+          </div>
+
           <div className="flex gap-sm mt-lg">
             <button className="btn btn-ghost" onClick={() => setStep(1)}>Back</button>
             <button className="btn btn-primary" onClick={handleSystemsSubmit} disabled={saving}>
@@ -1484,7 +1688,7 @@ export default function Onboarding() {
       )}
 
       {/* ===== STEP 3: Choose Your Plan ===== */}
-      {step === 3 && (
+      {step === STEP_PLAN && (
         <div className="card">
           <h2 style={{ fontSize: 20, marginBottom: 8 }}>Choose your plan</h2>
           <p style={{ color: Colors.medGray, marginBottom: 24, fontSize: 14, lineHeight: 1.5 }}>
@@ -1516,7 +1720,7 @@ export default function Onboarding() {
                   style={{
                     border: `2px solid ${isSelected ? Colors.copper : 'transparent'}`,
                     borderRadius: 12, padding: 20,
-                    backgroundColor: isSelected ? Colors.copperMuted : '#fff',
+                    backgroundColor: isSelected ? Colors.copperMuted : Colors.white,
                     cursor: isLocked ? 'not-allowed' : 'pointer',
                     opacity: isLocked ? 0.55 : 1,
                     position: 'relative', transition: 'all 0.2s ease',
@@ -1525,7 +1729,7 @@ export default function Onboarding() {
                   {plan.value === 'home' && (
                     <span style={{
                       position: 'absolute', top: -10, right: 16,
-                      background: Colors.copper, color: '#fff',
+                      background: Colors.copper, color: Colors.white,
                       fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10,
                     }}>
                       Most Popular
@@ -1572,7 +1776,7 @@ export default function Onboarding() {
                         width: 24, height: 24, borderRadius: 12,
                         background: Colors.copper, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
-                        <CheckIcon size={14} color="#fff" />
+                        <CheckIcon size={14} color={Colors.white} />
                       </div>
                     )}
                   </div>
@@ -1631,16 +1835,122 @@ export default function Onboarding() {
         </div>
       )}
 
-      {/* ===== STEP 4: Ready to Build Your Plan ===== */}
-      {/* Phase E (2026-04-09): Equipment scanning + inspection upload removed from this step.
-          Those actions are now in the post-onboarding SetupChecklist on the dashboard,
-          so users reach their first tasks faster and can complete deeper setup at their pace. */}
-      {step === 4 && (
+      {/* ===== STEP 4: Equipment Scan + Inspection Upload (Optional) — H-4 ===== */}
+      {step === STEP_EQUIPMENT && (
+        <div className="card">
+          <h2 style={{ fontSize: 20, marginBottom: 8 }}>Help us tailor your plan (optional)</h2>
+          <p style={{ color: Colors.medGray, marginBottom: 24, fontSize: 14, lineHeight: 1.6 }}>
+            Scan equipment labels or upload an inspection report to get more personalized maintenance suggestions. You can do this now or skip and add them later from your dashboard.
+          </p>
+
+          {/* Equipment Scanner + Inspection Uploader */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+            {/* Equipment Scanner */}
+            <div style={{
+              border: '1px solid var(--color-border)',
+              borderRadius: 12,
+              padding: 16,
+              textAlign: 'center',
+            }}>
+              <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Scan Equipment Labels</p>
+              <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>
+                Photograph your HVAC, water heater, and other equipment to track warranties and maintenance schedules.
+              </p>
+              {showScanner ? (
+                <SectionErrorBoundary>
+                  <EquipmentScanner
+                    onScanComplete={(data) => {
+                      if (data.make && data.model) {
+                        setEquipmentForm(prev => ({
+                          ...prev,
+                          make: data.make,
+                          model: data.model,
+                          category: data.category,
+                          equipment_subtype: data.equipment_subtype,
+                        }));
+                        setShowScanner(false);
+                      }
+                    }}
+                    onClose={() => setShowScanner(false)}
+                  />
+                </SectionErrorBoundary>
+              ) : (
+                <button
+                  className="btn btn-outline"
+                  onClick={() => setShowScanner(true)}
+                  style={{ width: '100%' }}
+                >
+                  📸 Start Scanning
+                </button>
+              )}
+            </div>
+
+            {/* Inspection Uploader */}
+            <div style={{
+              border: '1px solid var(--color-border)',
+              borderRadius: 12,
+              padding: 16,
+              textAlign: 'center',
+            }}>
+              <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Upload Inspection Report</p>
+              <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>
+                Upload your home inspection report so we can extract issues and generate a prioritized punch list.
+              </p>
+              <SectionErrorBoundary>
+                <InspectionUploader
+                  onTasksCreated={(count) => {
+                    // Tasks created from inspection; they will be visible on dashboard
+                  }}
+                />
+              </SectionErrorBoundary>
+            </div>
+          </div>
+
+          {/* Skip button */}
+          <div className="flex gap-sm">
+            <button className="btn btn-ghost" onClick={() => setStep(3)} disabled={saving || generatingTasks}>Back</button>
+            <button className="btn btn-primary" onClick={() => setStep(5)} disabled={saving || generatingTasks} style={{ flex: 1 }}>
+              {skipEquipmentScanning ? 'Continue' : 'Continue to Next'}
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => { setSkipEquipmentScanning(true); setStep(5); }}
+              style={{ fontSize: 12 }}
+            >
+              Skip for now
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== STEP 5: Ready to Build Your Plan ===== */}
+      {step === STEP_READY && (
         <div className="card">
           <h2 style={{ fontSize: 20, marginBottom: 8 }}>You're all set!</h2>
           <p style={{ color: Colors.medGray, marginBottom: 24, fontSize: 14, lineHeight: 1.6 }}>
             We have everything we need to build your personalized maintenance plan. Click below to generate your tasks — it takes just a few seconds.
           </p>
+
+          {/* Pro/Pro+ checkout success messaging — H-7 */}
+          {(selectedPlan === 'pro' || user?.subscription_tier === 'pro') && (
+            <div style={{
+              backgroundColor: Colors.copperMuted,
+              borderRadius: 12,
+              padding: 20,
+              marginBottom: 24,
+              borderLeft: `4px solid ${Colors.copper}`,
+            }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal, marginBottom: 12 }}>
+                ✓ Your first home visit
+              </p>
+              <p style={{ fontSize: 13, color: Colors.charcoal, marginBottom: 8, lineHeight: 1.5 }}>
+                We'll email you within 24 hours to schedule your first professional consultation. Our team will walk through your home and create a customized maintenance plan specifically for your property.
+              </p>
+              <p style={{ fontSize: 13, color: Colors.medGray, lineHeight: 1.5, margin: 0 }}>
+                Watch for an email from our scheduling team with available times in your area.
+              </p>
+            </div>
+          )}
 
           <div style={{
             backgroundColor: 'var(--color-background)',
@@ -1669,7 +1979,7 @@ export default function Onboarding() {
           {/* Scan equipment + inspection upload moved to post-onboarding SetupChecklist (Phase E, 2026-04-09) */}
 
           <div className="flex gap-sm mt-lg">
-            <button className="btn btn-ghost" onClick={() => setStep(3)} disabled={saving || generatingTasks}>Back</button>
+            <button className="btn btn-ghost" onClick={() => setStep(4)} disabled={saving || generatingTasks}>Back</button>
             <button className="btn btn-primary" onClick={handleFinish} disabled={saving || generatingTasks} style={{ flex: 1 }}>
               {generatingTasks ? 'Generating your plan...' : saving ? 'Finishing...' : 'Build My Plan'}
             </button>
@@ -1680,8 +1990,8 @@ export default function Onboarding() {
         </div>
       )}
 
-      {/* ===== STEP 5: Personalized Welcome ===== */}
-      {step === 5 && (
+      {/* ===== STEP 6: Personalized Welcome ===== */}
+      {step === STEP_DONE && (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <div style={{
             width: 100, height: 100, borderRadius: '50%',

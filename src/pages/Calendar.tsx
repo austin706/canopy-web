@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/utils';
-import { getTasks, reopenTask as reopenTaskApi } from '@/services/supabase';
+import { getTasks, reopenTask as reopenTaskApi, getCalendarToken, rotateCalendarToken, buildICalSubscribeUrl } from '@/services/supabase';
 import { getDisplayStatus } from '@/services/taskEngine';
 import { supabase } from '@/services/supabase';
 import type { MaintenanceTask, ProMonthlyVisit } from '@/types';
@@ -24,8 +24,8 @@ const DEMO_TASKS: MaintenanceTask[] = [
 export default function Calendar() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { home, tasks: storeTasks, setTasks, reopenTask } = useStore();
-  const isDemo = storeTasks.length === 0;
+  const { home, user, tasks: storeTasks, setTasks, reopenTask } = useStore();
+  const isDemo = !user?.onboarding_complete && !storeTasks.length;
   const [activeTab, setActiveTab] = useState<CalendarTab>(
     searchParams.get('tab') === 'log' ? 'log' : 'calendar'
   );
@@ -40,6 +40,36 @@ export default function Calendar() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
+
+  // Calendar subscription state
+  const [calToken, setCalToken] = useState<string | null>(user?.calendar_token ?? null);
+  const [calLoading, setCalLoading] = useState(false);
+  const [calCopied, setCalCopied] = useState(false);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+
+  // Handle calendar subscription setup
+  const handleEnableCalendar = async () => {
+    if (!user) return;
+    setCalLoading(true);
+    try {
+      let token = await getCalendarToken(user.id);
+      if (!token) token = await rotateCalendarToken(user.id);
+      setCalToken(token);
+    } catch (e: any) {
+      console.error('Failed to set up calendar:', e);
+    } finally { setCalLoading(false); }
+  };
+
+  const handleCopyCalendarUrl = async () => {
+    if (!calToken) return;
+    try {
+      await navigator.clipboard.writeText(buildICalSubscribeUrl(calToken));
+      setCalCopied(true);
+      setTimeout(() => setCalCopied(false), 2500);
+    } catch {
+      console.error('Copy failed');
+    }
+  };
 
   // Fetch tasks on mount if not already loaded
   useEffect(() => {
@@ -320,6 +350,17 @@ export default function Calendar() {
           <p className="subtitle">Tasks, visits & maintenance history</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{
+              padding: '8px 16px', fontSize: 13, fontWeight: 600,
+              borderRadius: 8, whiteSpace: 'nowrap',
+            }}
+            onClick={() => setShowCalendarModal(true)}
+            title="Subscribe to calendar feed"
+          >
+            📅 Subscribe
+          </button>
           {!selectMode && (
             <button
               className="btn btn-ghost btn-sm"
@@ -637,11 +678,11 @@ export default function Calendar() {
                           )}
                         </p>
                       </div>
-                      <span className="badge" style={{ background: `${StatusColors[task.status] || '#ccc'}20`, color: StatusColors[task.status] }}>{task.status}</span>
+                      <span className="badge" style={{ background: `${StatusColors[task.status] || Colors.silver}20`, color: StatusColors[task.status] }}>{task.status}</span>
                     </div>
                     {!selectMode && task.status !== 'completed' && task.status !== 'skipped' && !isDemo && (
                       <div className="flex gap-sm mt-sm" style={{ marginLeft: 20, position: 'relative' }}>
-                        <button className="btn btn-sm" style={{ background: 'var(--color-sage)', color: '#fff', border: 'none' }} onClick={() => quickCompleteTask(task)}>Complete</button>
+                        <button className="btn btn-sm" style={{ background: 'var(--color-sage)', color: Colors.white, border: 'none' }} onClick={() => quickCompleteTask(task)}>Complete</button>
                         <button className="btn btn-ghost btn-sm" onClick={() => setSnoozeMenuId(snoozeMenuId === task.id ? null : task.id)}>Snooze</button>
                         {snoozeMenuId === task.id && (
                           <div style={{
@@ -708,6 +749,69 @@ export default function Calendar() {
           >
             {bulkProcessing ? 'Completing...' : 'Mark Complete'}
           </button>
+        </div>
+      )}
+
+      {/* Calendar Subscription Modal */}
+      {showCalendarModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 16,
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowCalendarModal(false); }}
+        >
+          <div className="card" style={{ maxWidth: 480, width: '100%', padding: 24 }}>
+            <h3 style={{ fontSize: 18, marginBottom: 12 }}>Subscribe to Calendar</h3>
+            <p className="text-sm text-gray" style={{ marginBottom: 16, lineHeight: 1.6 }}>
+              Subscribe your calendar app (Apple Calendar, Google Calendar, Outlook) to get maintenance tasks automatically with reminders. Updates every 15 minutes.
+            </p>
+            {!calToken ? (
+              <button className="btn btn-primary" onClick={handleEnableCalendar} disabled={calLoading} style={{ width: '100%' }}>
+                {calLoading ? 'Setting up…' : 'Enable Calendar Feed'}
+              </button>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <input
+                  className="form-input"
+                  readOnly
+                  value={buildICalSubscribeUrl(calToken)}
+                  onFocus={(e) => e.currentTarget.select()}
+                  style={{ fontSize: 12, fontFamily: 'monospace' }}
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-primary btn-sm" onClick={handleCopyCalendarUrl} disabled={calLoading} style={{ flex: 1 }}>
+                    {calCopied ? 'Copied!' : 'Copy Link'}
+                  </button>
+                  <a
+                    href={`webcal://${buildICalSubscribeUrl(calToken).replace(/^https?:\/\//, '')}`}
+                    className="btn btn-secondary btn-sm"
+                    style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}
+                  >
+                    Add to Calendar
+                  </a>
+                </div>
+                <p className="text-xs text-gray" style={{ marginTop: 4 }}>
+                  Paste the URL into your calendar app's "Subscribe to calendar" option, or click "Add to Calendar" for one-click setup.
+                </p>
+              </div>
+            )}
+            <button
+              className="btn btn-ghost"
+              onClick={() => setShowCalendarModal(false)}
+              style={{ width: '100%', marginTop: 12 }}
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
     </div>

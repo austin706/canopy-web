@@ -1,7 +1,7 @@
 import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { supabase } from '@/services/supabase';
+import { supabase, getProfile, getHome, getEquipment, getTasks, getAgent } from '@/services/supabase';
 import { setUser as sentrySetUser } from '@/utils/sentry';
 import { loadServiceAreas, subscribeToServiceAreaChanges } from '@/services/subscriptionGate';
 import logger from '@/utils/logger';
@@ -123,7 +123,7 @@ function HomeRoute() {
 }
 
 export default function App() {
-  const { reset } = useStore();
+  const { reset, setUser, setHome, setEquipment, setTasks, setAgent } = useStore();
 
   useEffect(() => {
     // Validate Supabase session on app mount.
@@ -158,11 +158,127 @@ export default function App() {
     };
     validateSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
         reset();
         sentrySetUser(null);
       }
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        // User just signed in — load full profile and home data
+        try {
+          const authUser = session.user;
+          const profile = await getProfile(authUser.id);
+          const userData = {
+            id: authUser.id,
+            email: authUser.email || '',
+            full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
+            subscription_tier: profile?.subscription_tier || 'free',
+            onboarding_complete: profile?.onboarding_complete || false,
+            email_confirmed: !!authUser.email_confirmed_at,
+            created_at: authUser.created_at,
+            role: profile?.role || 'user',
+            agent_id: profile?.agent_id,
+            phone: profile?.phone,
+          };
+          setUser(userData);
+
+          // Load home data
+          try {
+            const homeData = await getHome(authUser.id);
+            if (homeData) {
+              setHome(homeData);
+              const [equip, tasks] = await Promise.all([getEquipment(homeData.id), getTasks(homeData.id)]);
+              setEquipment(equip);
+              setTasks(tasks);
+            }
+          } catch {}
+
+          // Load agent
+          if (userData.agent_id) {
+            try {
+              const a = await getAgent(userData.agent_id);
+              setAgent(a);
+            } catch {}
+          }
+
+          sentrySetUser({
+            id: authUser.id,
+            email: authUser.email ?? undefined,
+            role: userData.role,
+          });
+        } catch (err) {
+          logger.error('[Auth] SIGNED_IN event handler failed:', err);
+        }
+      }
+
+      if (event === 'USER_UPDATED' && session?.user) {
+        // User data changed — sync updated fields
+        const storeUser = useStore.getState().user;
+        if (storeUser) {
+          const updated = {
+            ...storeUser,
+            email_confirmed: !!session.user.email_confirmed_at,
+            full_name: session.user.user_metadata?.full_name || storeUser.full_name,
+          };
+          setUser(updated);
+          sentrySetUser({
+            id: session.user.id,
+            email: session.user.email ?? undefined,
+            role: updated.role,
+          });
+        }
+      }
+
+      if (event === 'INITIAL_SESSION' && session?.user) {
+        // Initial session detected (e.g., magic link from URL hash)
+        // Load profile and home data like SIGNED_IN
+        try {
+          const authUser = session.user;
+          const profile = await getProfile(authUser.id);
+          const userData = {
+            id: authUser.id,
+            email: authUser.email || '',
+            full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
+            subscription_tier: profile?.subscription_tier || 'free',
+            onboarding_complete: profile?.onboarding_complete || false,
+            email_confirmed: !!authUser.email_confirmed_at,
+            created_at: authUser.created_at,
+            role: profile?.role || 'user',
+            agent_id: profile?.agent_id,
+            phone: profile?.phone,
+          };
+          setUser(userData);
+
+          // Load home data
+          try {
+            const homeData = await getHome(authUser.id);
+            if (homeData) {
+              setHome(homeData);
+              const [equip, tasks] = await Promise.all([getEquipment(homeData.id), getTasks(homeData.id)]);
+              setEquipment(equip);
+              setTasks(tasks);
+            }
+          } catch {}
+
+          // Load agent
+          if (userData.agent_id) {
+            try {
+              const a = await getAgent(userData.agent_id);
+              setAgent(a);
+            } catch {}
+          }
+
+          sentrySetUser({
+            id: authUser.id,
+            email: authUser.email ?? undefined,
+            role: userData.role,
+          });
+        } catch (err) {
+          logger.error('[Auth] INITIAL_SESSION event handler failed:', err);
+        }
+      }
+
       if (event === 'TOKEN_REFRESHED' && session?.user) {
         // Sync email_confirmed on token refresh too
         const storeUser = useStore.getState().user;

@@ -178,7 +178,7 @@ export default function ProRequest() {
             &larr; Back
           </button>
           <h1>Request Details</h1>
-          <span className="badge" style={{ marginLeft: 'auto', background: (StatusColors[selectedRequest.status] || '#ccc') + '20', color: StatusColors[selectedRequest.status] || '#666' }}>
+          <span className="badge" style={{ marginLeft: 'auto', background: (StatusColors[selectedRequest.status] || Colors.silver) + '20', color: StatusColors[selectedRequest.status] || Colors.darkGray }}>
             {isCancelled ? 'Cancelled' : selectedRequest.status?.charAt(0).toUpperCase() + selectedRequest.status?.slice(1)}
           </span>
         </div>
@@ -206,7 +206,7 @@ export default function ProRequest() {
                       }}>
                         {isActive ? '✓' : ''}
                       </div>
-                      {index < STATUS_STEPS.length - 1 && <div style={{ flex: 1, height: 2, background: (index < currentStepIndex) ? Colors.copper : '#E8E2D8' }} />}
+                      {index < STATUS_STEPS.length - 1 && <div style={{ flex: 1, height: 2, background: (index < currentStepIndex) ? Colors.copper : Colors.lightGray }} />}
                     </div>
                     <span style={{ fontSize: 11, color: isActive ? Colors.charcoal : Colors.silver, fontWeight: isCurrent ? 700 : 400, textAlign: 'center' }}>
                       {STATUS_LABELS[step]}
@@ -229,11 +229,11 @@ export default function ProRequest() {
             )}
           </div>
           <p style={{ color: Colors.darkGray, fontSize: 14, lineHeight: 1.6 }}>{selectedRequest.description}</p>
-          <p style={{ color: '#B8B8B8', fontSize: 12, marginTop: 8 }}>
+          <p style={{ color: Colors.silver, fontSize: 12, marginTop: 8 }}>
             Submitted {new Date(selectedRequest.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
           {selectedRequest.preferred_date && (
-            <p style={{ color: '#B8B8B8', fontSize: 12, marginTop: 4 }}>
+            <p style={{ color: Colors.silver, fontSize: 12, marginTop: 4 }}>
               Preferred: {new Date(selectedRequest.preferred_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
           )}
@@ -312,7 +312,7 @@ export default function ProRequest() {
                     height: 80,
                     borderRadius: 8,
                     objectFit: 'cover',
-                    background: '#E8E2D8',
+                    background: Colors.lightGray,
                     cursor: 'pointer',
                     transition: 'opacity 0.2s',
                   }}
@@ -322,7 +322,7 @@ export default function ProRequest() {
               ))}
             </div>
           ) : (
-            <p style={{ color: '#B8B8B8', fontSize: 13 }}>No photos yet. Add photos to help your provider.</p>
+            <p style={{ color: Colors.silver, fontSize: 13 }}>No photos yet. Add photos to help your provider.</p>
           )}
         </div>
 
@@ -393,7 +393,7 @@ export default function ProRequest() {
                   <p style={{ fontWeight: 600 }}>{r.service_type || r.category}</p>
                   <p className="text-xs text-gray mt-xs">Submitted: {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                 </div>
-                <span className="badge" style={{ background: (StatusColors[r.status] || '#ccc') + '20', color: StatusColors[r.status] }}>{r.status}</span>
+                <span className="badge" style={{ background: (StatusColors[r.status] || Colors.silver) + '20', color: StatusColors[r.status] }}>{r.status}</span>
               </div>
               <p className="text-sm text-gray">{r.description}</p>
 

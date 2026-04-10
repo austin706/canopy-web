@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { signIn, getProfile, getHome, getEquipment, getTasks, getAgent, supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
-import { getMessageVariant, messageColors } from '@/utils/messageType';
+import type { User, SubscriptionTier } from '@/types';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -18,12 +18,16 @@ export default function Login() {
   const [passwordError, setPasswordError] = useState('');
   const isNewSignup = searchParams.get('signup') === 'success';
 
-  // OTP verification state
-  const [showOtpInput, setShowOtpInput] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
-  const [verifying, setVerifying] = useState(false);
-  const [resending, setResending] = useState(false);
-  const [verifyMessage, setVerifyMessage] = useState('');
+  // Check for existing session on mount (M-8)
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        navigate('/');
+      }
+    };
+    checkSession();
+  }, [navigate]);
 
   const validateForm = (): boolean => {
     setEmailError('');
@@ -49,8 +53,6 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setShowOtpInput(false);
-    setVerifyMessage('');
 
     if (!validateForm()) {
       return;
@@ -62,19 +64,19 @@ export default function Login() {
       if (!authUser) throw new Error('Login failed');
 
       const profile = await getProfile(authUser.id);
-      const userData = {
+      const userData: User = {
         id: authUser.id,
         email: authUser.email || '',
         full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
-        subscription_tier: profile?.subscription_tier || 'free',
+        subscription_tier: (profile?.subscription_tier || 'free') as SubscriptionTier,
         onboarding_complete: profile?.onboarding_complete || false,
         email_confirmed: !!authUser.email_confirmed_at,
         created_at: authUser.created_at,
-        role: profile?.role || 'user',
+        role: (profile?.role || 'user') as 'user' | 'agent' | 'admin' | 'pro_provider',
         agent_id: profile?.agent_id,
         phone: profile?.phone,
       };
-      setUser(userData as any);
+      setUser(userData);
 
       // Load home data
       let homeData = null;
@@ -102,8 +104,7 @@ export default function Login() {
     } catch (err: any) {
       const msg = err.message || 'Login failed';
       if (msg.toLowerCase().includes('email not confirmed')) {
-        setShowOtpInput(true);
-        setError('');
+        setError('Please check your email for a verification link to complete signup.');
       } else {
         setError(msg);
       }
@@ -112,57 +113,6 @@ export default function Login() {
     }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otpCode.trim()) return;
-    setVerifying(true);
-    setVerifyMessage('');
-    try {
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        email,
-        token: otpCode.trim(),
-        type: 'email',
-      });
-      if (verifyError) throw verifyError;
-      setVerifyMessage('Email verified! Signing you in...');
-      // Now sign in normally
-      setTimeout(() => {
-        setShowOtpInput(false);
-        setOtpCode('');
-        // Trigger login again
-        const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-        handleLogin(fakeEvent);
-      }, 1000);
-    } catch (err: any) {
-      setVerifyMessage(err.message || 'Invalid code. Please try again.');
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  const handleResendVerification = async () => {
-    if (!email.trim()) {
-      setVerifyMessage('Enter your email address above first.');
-      return;
-    }
-    setResending(true);
-    setVerifyMessage('');
-    try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: email.trim(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/login?verified=true`,
-        },
-      });
-      if (error) throw error;
-      setVerifyMessage('Verification email sent! Check your inbox.');
-    } catch (err: any) {
-      setVerifyMessage(err.message || 'Failed to resend. Please try again.');
-    } finally {
-      setResending(false);
-    }
-  };
 
   return (
     <div className="auth-layout">
@@ -171,11 +121,11 @@ export default function Login() {
         <div className="auth-hero-content">
           <div style={{ marginBottom: 16 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 56, width: 'auto', objectFit: 'contain' }} /></div>
           <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Canopy</h1>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 32 }}>Smart home maintenance, powered by AI</p>
+          <p style={{ fontSize: 16, color: 'rgba(255, 255, 255, 0.85)', marginBottom: 32 }}>Smart home maintenance, powered by AI</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {['AI-powered maintenance schedules', 'Equipment lifecycle tracking', 'Weather-triggered task alerts', 'Pro service coordination'].map(f => (
-              <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.9)', fontSize: 14 }}>
-                <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>&#10003;</span>
+              <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255, 255, 255, 0.9)', fontSize: 14 }}>
+                <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>&#10003;</span>
                 {f}
               </div>
             ))}
@@ -192,55 +142,9 @@ export default function Login() {
             <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Canopy</h1>
             <p className="subtitle">Sign in to your account</p>
           </div>
-          {isNewSignup && !showOtpInput && (
+          {isNewSignup && (
             <div style={{ background: 'var(--color-success-muted, #4CAF5020)', color: 'var(--color-success)', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
               <strong>Account created!</strong> Check your email for a verification link — verify your email to sign in.
-            </div>
-          )}
-
-          {/* OTP Verification Panel */}
-          {showOtpInput && (
-            <div style={{ background: 'var(--color-warning-muted, #FFF8E1)', border: '1px solid var(--color-warning)', padding: '16px 20px', borderRadius: 10, marginBottom: 16 }}>
-              <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-warning)', margin: '0 0 8px' }}>Email verification required</p>
-              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.5, margin: '0 0 12px' }}>
-                Check your email for a verification link, or enter the code from the email below.
-              </p>
-              <form onSubmit={handleVerifyOtp}>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    className="form-input"
-                    type="text"
-                    aria-label="Enter verification code from email"
-                    value={otpCode}
-                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                    placeholder="Enter code from email"
-                    style={{ flex: 1, fontWeight: 600, letterSpacing: 2, textAlign: 'center', fontSize: 16 }}
-                    maxLength={8}
-                    autoFocus
-                  />
-                  <button className="btn btn-primary" type="submit" disabled={verifying || !otpCode.trim()}>
-                    {verifying ? 'Verifying...' : 'Verify'}
-                  </button>
-                </div>
-              </form>
-              {verifyMessage && (
-                <p style={{
-                  fontSize: 13, marginTop: 8, marginBottom: 0,
-                  color: messageColors(getMessageVariant(verifyMessage)).fg,
-                }}>
-                  {verifyMessage}
-                </p>
-              )}
-              <button
-                onClick={handleResendVerification}
-                disabled={resending}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: 13, color: 'var(--color-copper)', fontWeight: 500, padding: '8px 0 0', textDecoration: 'underline',
-                }}
-              >
-                {resending ? 'Sending...' : 'Resend verification email'}
-              </button>
             </div>
           )}
 

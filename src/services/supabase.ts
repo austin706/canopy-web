@@ -7,6 +7,14 @@ import type { Home, Equipment, MaintenanceTask, MaintenanceLog, ProProvider } fr
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
+// Guard against missing environment variables
+if (!SUPABASE_URL) {
+  console.error('VITE_SUPABASE_URL is not configured — Supabase client will not function');
+}
+if (!SUPABASE_ANON_KEY) {
+  console.error('VITE_SUPABASE_ANON_KEY is not configured — Supabase client will not function');
+}
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     autoRefreshToken: true,

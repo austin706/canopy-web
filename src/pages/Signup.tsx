@@ -101,7 +101,7 @@ export default function Signup() {
       <div className="auth-hero">
         <div className="auth-hero-content">
           <div style={{ marginBottom: 16 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 56, width: 'auto', objectFit: 'contain' }} /></div>
-          <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Canopy</h1>
+          <h1 style={{ fontSize: 36, fontWeight: 700, color: Colors.white, marginBottom: 8 }}>Canopy</h1>
           <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 32 }}>Smart home maintenance, powered by AI</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {['AI-powered maintenance schedules', 'Equipment lifecycle tracking', 'Weather-triggered task alerts', 'Pro service coordination'].map(f => (
@@ -141,7 +141,7 @@ export default function Signup() {
               {passwordError && <p style={{ color: 'var(--color-error)', fontSize: 13, marginTop: 4 }}>{passwordError}</p>}
               {password.length > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                  <div style={{ flex: 1, height: 4, borderRadius: 2, background: '#E8E2D8' }}>
+                  <div style={{ flex: 1, height: 4, borderRadius: 2, background: Colors.lightGray }}>
                     <div style={{ width: `${(pwStrength / 3) * 100}%`, height: '100%', borderRadius: 2, background: pwColors[pwStrength], transition: 'width 0.3s' }} />
                   </div>
                   <span style={{ fontSize: 11, color: pwColors[pwStrength], fontWeight: 600 }}>{pwLabels[pwStrength]}</span>

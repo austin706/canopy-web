@@ -27,6 +27,62 @@ export interface TaskTemplate {
   items_to_have_on_hand?: string[];
   applicable_regions?: ClimateRegion[]; // undefined = all regions
   pro_responsible?: boolean; // true = pro provider handles this during visits; false/undefined = homeowner DIY
+
+  // ─── Consumable-aware scheduling (Migration 041) ───
+  /**
+   * If true, this template is keyed off an equipment_consumables row
+   * rather than the parent equipment. One task is generated per
+   * matching consumable (e.g., one per HVAC return filter).
+   */
+  equipment_keyed?: boolean;
+  /**
+   * Consumable type this template corresponds to. When
+   * equipment_keyed=true, only generate for consumables with this
+   * `consumable_type` value (e.g., 'filter', 'belt', 'anode_rod').
+   */
+  consumable_spec?:
+    | 'filter'
+    | 'belt'
+    | 'igniter'
+    | 'anode_rod'
+    | 'battery'
+    | 'bulb'
+    | 'blade'
+    | 'gasket'
+    | 'fuse'
+    | 'other';
+  /**
+   * Default replacement interval in months when the consumable row
+   * doesn't specify one. Overridden by
+   * equipment_consumables.replacement_interval_months when present.
+   */
+  consumable_replacement_months?: number;
+
+  // ─── Branched scheduling (Migration 040) ───
+  /**
+   * Restricts this template to homes with a specific pool_type.
+   * e.g., ['chlorine','salt'] for general pool tasks,
+   * ['salt'] for "check salt cell" tasks,
+   * ['chlorine'] for "shock pool" tasks.
+   */
+  requires_pool_type?: Array<'chlorine' | 'salt' | 'mineral' | 'none'>;
+
+  // ─── Infrastructure type filtering ───
+  /**
+   * Restricts this template to homes with a specific water source.
+   * e.g., ['well'] for well-only tasks
+   */
+  requires_water_source?: Array<'municipal' | 'well'>;
+  /**
+   * Restricts this template to homes with a specific sewer type.
+   * e.g., ['septic'] for septic-only tasks
+   */
+  requires_sewer_type?: Array<'municipal' | 'septic'>;
+  /**
+   * Restricts this template to homes with a specific home type.
+   * e.g., ['single_family', 'townhome'] to exclude condos/apartments
+   */
+  requires_home_type?: string[];
 }
 
 /**
@@ -864,7 +920,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     frequency: 'quarterly',
     scheduling_type: 'dynamic',
     interval_days: 90,
-    applicable_months: [1, 4, 7, 10],
+    applicable_months: [2, 5, 8, 11],
     estimated_minutes: 10,
     estimated_cost: 0,
     estimated_pro_cost: 75,
@@ -889,7 +945,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     frequency: 'quarterly',
     scheduling_type: 'dynamic',
     interval_days: 90,
-    applicable_months: [1, 4, 7, 10],
+    applicable_months: [3, 6, 9, 12],
     estimated_minutes: 20,
     estimated_cost: 0,
     estimated_pro_cost: 75,
@@ -915,7 +971,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     frequency: 'quarterly',
     scheduling_type: 'dynamic',
     interval_days: 90,
-    applicable_months: [1, 4, 7, 10],
+    applicable_months: [2, 5, 8, 11],
     estimated_minutes: 15,
     estimated_cost: 0,
     estimated_pro_cost: 75,
@@ -968,7 +1024,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     frequency: 'quarterly',
     scheduling_type: 'dynamic',
     interval_days: 90,
-    applicable_months: [1, 4, 7, 10],
+    applicable_months: [3, 6, 9, 12],
     estimated_minutes: 15,
     estimated_cost: 0,
     estimated_pro_cost: 75,
@@ -994,7 +1050,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     frequency: 'quarterly',
     scheduling_type: 'dynamic',
     interval_days: 90,
-    applicable_months: [1, 4, 7, 10],
+    applicable_months: [3, 6, 9, 12],
     estimated_minutes: 20,
     estimated_cost: 0,
     estimated_pro_cost: 0,
@@ -1075,7 +1131,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     frequency: 'quarterly',
     scheduling_type: 'dynamic',
     interval_days: 90,
-    applicable_months: [1, 4, 7, 10],
+    applicable_months: [3, 6, 9, 12],
     estimated_minutes: 15,
     estimated_cost: 10,
     estimated_pro_cost: 10,
@@ -1130,7 +1186,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     frequency: 'quarterly',
     scheduling_type: 'dynamic',
     interval_days: 90,
-    applicable_months: [1, 4, 7, 10],
+    applicable_months: [2, 5, 8, 11],
     estimated_minutes: 25,
     estimated_cost: 0,
     estimated_pro_cost: 0,
@@ -2010,7 +2066,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     frequency: 'quarterly',
     scheduling_type: 'dynamic',
     interval_days: 90,
-    applicable_months: [1, 4, 7, 10],
+    applicable_months: [3, 6, 9, 12],
     estimated_minutes: 120,
     estimated_cost: 150,
     estimated_pro_cost: 150,
@@ -2036,7 +2092,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     frequency: 'quarterly',
     scheduling_type: 'dynamic',
     interval_days: 90,
-    applicable_months: [1, 4, 7, 10],
+    applicable_months: [3, 6, 9, 12],
     estimated_minutes: 90,
     estimated_cost: 100,
     estimated_pro_cost: 100,
@@ -2142,7 +2198,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     frequency: 'quarterly',
     scheduling_type: 'dynamic',
     interval_days: 90,
-    applicable_months: [1, 4, 7, 10],
+    applicable_months: [3, 6, 9, 12],
     estimated_minutes: 10,
     estimated_cost: 30,
     estimated_pro_cost: 30,
@@ -2200,6 +2256,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 350,
     estimated_pro_cost: 350,
     items_to_have_on_hand: ['Septic service company contact info', 'Diagram of septic system location if available'],
+    requires_sewer_type: ['septic'],
   },
   {
     id: 'septic-aerobic-inspect',
@@ -2220,10 +2277,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     frequency: 'quarterly',
     scheduling_type: 'dynamic',
     interval_days: 90,
-    applicable_months: [1, 4, 7, 10],
+    applicable_months: [2, 5, 8, 11],
     estimated_minutes: 30,
     estimated_cost: 150,
     estimated_pro_cost: 150,
+    requires_sewer_type: ['septic'],
     items_to_have_on_hand: ['Septic service company contact info', 'Previous inspection reports if available'],
   },
   {
@@ -2250,6 +2308,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 100,
     estimated_pro_cost: 100,
     items_to_have_on_hand: ['Testing kit from certified lab', 'Ice cooler for sample transport'],
+    requires_water_source: ['well'],
   },
 
   // ═══ ELECTRICAL ═══

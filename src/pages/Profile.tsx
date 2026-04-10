@@ -7,7 +7,8 @@ import MessageBanner from '@/components/MessageBanner';
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { ThemeMode } from '@/constants/theme';
-import type { SubscriptionTier } from '@/types';
+import type { SubscriptionTier, UserPreferences, MaintenanceDepth } from '@/types';
+import { DEFAULT_USER_PREFERENCES } from '@/types';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -33,6 +34,19 @@ export default function Profile() {
   const [calLoading, setCalLoading] = useState(false);
   const [calCopied, setCalCopied] = useState(false);
 
+  // Maintenance Preferences
+  const [editingPreferences, setEditingPreferences] = useState(false);
+  const [preferencesLoading, setPreferencesLoading] = useState(false);
+  const [maintenanceDepth, setMaintenanceDepth] = useState<MaintenanceDepth>(
+    user?.user_preferences?.maintenance_depth || DEFAULT_USER_PREFERENCES.maintenance_depth
+  );
+  const [showCleaningTasks, setShowCleaningTasks] = useState(
+    user?.user_preferences?.show_cleaning_tasks ?? DEFAULT_USER_PREFERENCES.show_cleaning_tasks
+  );
+  const [showProTasks, setShowProTasks] = useState(
+    user?.user_preferences?.show_pro_tasks ?? DEFAULT_USER_PREFERENCES.show_pro_tasks
+  );
+
   const tier = user?.subscription_tier || 'free';
   const plan = PLANS.find(p => p.value === tier);
 
@@ -48,6 +62,29 @@ export default function Profile() {
     } catch (e: any) {
       setMessage(e.message || 'Failed to update');
     } finally { setSaving(false); }
+  };
+
+  const handleSavePreferences = async () => {
+    if (!user) return;
+    setPreferencesLoading(true);
+    try {
+      const updatedPreferences: UserPreferences = {
+        ...DEFAULT_USER_PREFERENCES,
+        ...(user.user_preferences || {}),
+        maintenance_depth: maintenanceDepth,
+        show_cleaning_tasks: showCleaningTasks,
+        show_pro_tasks: showProTasks,
+      };
+      await updateProfile(user.id, { user_preferences: updatedPreferences });
+      setUser({ ...user, user_preferences: updatedPreferences });
+      setEditingPreferences(false);
+      setMessage('Preferences updated');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (e: any) {
+      setMessage(e.message || 'Failed to update preferences');
+    } finally {
+      setPreferencesLoading(false);
+    }
   };
 
   const handleEnableCalendar = async () => {
@@ -181,7 +218,7 @@ export default function Profile() {
       {/* Profile Card */}
       <div className="card mb-lg">
         <div className="flex items-center gap-lg mb-lg">
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-copper)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 24, fontWeight: 700 }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-copper)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: Colors.white, fontSize: 24, fontWeight: 700 }}>
             {user?.full_name?.charAt(0) || '?'}
           </div>
           <div style={{ flex: 1 }}>
@@ -215,6 +252,109 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* Maintenance Preferences */}
+      <div className="card mb-lg">
+        <div className="flex items-center justify-between mb-lg">
+          <h3 style={{ fontSize: 18 }}>Maintenance Preferences</h3>
+          <button className="btn btn-secondary btn-sm" onClick={() => setEditingPreferences(!editingPreferences)}>
+            {editingPreferences ? 'Cancel' : 'Edit'}
+          </button>
+        </div>
+
+        {!editingPreferences && user?.user_preferences && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 4px 0' }}>Maintenance Depth</p>
+              <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: Colors.charcoal }}>
+                {maintenanceDepth === 'simple' ? 'Just the Essentials' : maintenanceDepth === 'standard' ? 'Recommended' : 'Everything'}
+              </p>
+            </div>
+            <div>
+              <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 4px 0' }}>Cleaning Tasks</p>
+              <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: Colors.charcoal }}>
+                {showCleaningTasks ? 'Enabled' : 'Disabled'}
+              </p>
+            </div>
+            <div>
+              <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 4px 0' }}>Pro Tasks</p>
+              <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: Colors.charcoal }}>
+                {showProTasks ? 'Enabled' : 'Disabled'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {editingPreferences && (
+          <div>
+            <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal, marginBottom: 12 }}>Maintenance Depth</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+              {[
+                { value: 'simple' as const, title: 'Just the Essentials', desc: 'Focus on the most important maintenance tasks. Perfect if you\'re just getting started.' },
+                { value: 'standard' as const, title: 'Recommended', desc: 'A complete maintenance plan tailored to your home. Our recommendation for most homeowners.', recommended: true },
+                { value: 'comprehensive' as const, title: 'Everything', desc: 'Every possible maintenance task, including detailed cleaning and specialty items.' },
+              ].map(option => (
+                <div
+                  key={option.value}
+                  onClick={() => setMaintenanceDepth(option.value)}
+                  style={{
+                    border: `2px solid ${maintenanceDepth === option.value ? Colors.copper : Colors.lightGray}`,
+                    borderRadius: 12, padding: 16,
+                    backgroundColor: maintenanceDepth === option.value ? Colors.copperMuted : Colors.white,
+                    cursor: 'pointer', transition: 'all 0.2s ease',
+                    position: 'relative',
+                  }}
+                >
+                  {option.recommended && (
+                    <span style={{
+                      position: 'absolute', top: -12, right: 16,
+                      background: Colors.copper, color: Colors.white,
+                      fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6,
+                    }}>
+                      Recommended
+                    </span>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, color: maintenanceDepth === option.value ? Colors.copper : Colors.charcoal, marginBottom: 4 }}>
+                        {option.title}
+                      </div>
+                      <p style={{ fontSize: 13, color: Colors.medGray, margin: 0, lineHeight: 1.4 }}>
+                        {option.desc}
+                      </p>
+                    </div>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: 10, border: `2px solid ${maintenanceDepth === option.value ? Colors.copper : Colors.lightGray}`,
+                      background: maintenanceDepth === option.value ? Colors.copper : 'transparent',
+                      marginLeft: 12, marginTop: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {maintenanceDepth === option.value && <span style={{ color: Colors.white, fontSize: 14, fontWeight: 700 }}>✓</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label className="flex items-center gap-sm" style={{ cursor: 'pointer', padding: '8px 0' }}>
+                <input type="checkbox" checked={showCleaningTasks} onChange={e => setShowCleaningTasks(e.target.checked)} />
+                <span style={{ fontSize: 14 }}>Show cleaning tasks (deep clean, pressure washing, etc.)</span>
+              </label>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label className="flex items-center gap-sm" style={{ cursor: 'pointer', padding: '8px 0' }}>
+                <input type="checkbox" checked={showProTasks} onChange={e => setShowProTasks(e.target.checked)} />
+                <span style={{ fontSize: 14 }}>Show pro service recommendations</span>
+              </label>
+            </div>
+
+            <button className="btn btn-primary" onClick={handleSavePreferences} disabled={preferencesLoading}>
+              {preferencesLoading ? 'Saving...' : 'Save Preferences'}
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Gift Code */}
       <div className="card mb-lg">
         <h3 style={{ fontSize: 16, marginBottom: 12 }}>Redeem Gift Code</h3>
@@ -246,15 +386,22 @@ export default function Profile() {
               style={{ fontSize: 12, fontFamily: 'monospace' }}
             />
             <div className="flex gap-sm">
-              <button className="btn btn-primary btn-sm" onClick={handleCopyCalendarUrl} disabled={calLoading}>
+              <button className="btn btn-primary btn-sm" onClick={handleCopyCalendarUrl} disabled={calLoading} style={{ flex: 1 }}>
                 {calCopied ? 'Copied!' : 'Copy Link'}
               </button>
+              <a
+                href={`webcal://${buildICalSubscribeUrl(calToken).replace(/^https?:\/\//, '')}`}
+                className="btn btn-secondary btn-sm"
+                style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}
+              >
+                Add to Calendar
+              </a>
               <button className="btn btn-secondary btn-sm" onClick={handleRotateCalendar} disabled={calLoading}>
-                {calLoading ? 'Rotating…' : 'Rotate Link'}
+                {calLoading ? 'Rotating…' : 'Rotate'}
               </button>
             </div>
             <p className="text-xs text-gray" style={{ marginTop: 4 }}>
-              Paste this URL into your calendar app's "Subscribe to calendar" option. Rotating invalidates any calendar already subscribed with the old link.
+              Paste this URL into your calendar app's "Subscribe to calendar" option, or click "Add to Calendar" for one-click setup. Rotating invalidates any calendar already subscribed with the old link.
             </p>
           </div>
         )}

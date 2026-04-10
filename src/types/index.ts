@@ -115,6 +115,7 @@ export interface User {
   setup_checklist_state?: SetupChecklistState;
   /** Secret token for iCal feed subscription URL. Rotatable. */
   calendar_token?: string;
+  user_preferences?: UserPreferences;
   created_at: string;
   role?: 'user' | 'agent' | 'admin' | 'pro_provider';
 }
@@ -193,6 +194,15 @@ export interface ProProvider {
   partner_since?: string;
 }
 
+/**
+ * Home represents a property managed in Canopy.
+ *
+ * NOTE (L-13): This TypeScript interface defines 97+ fields, but the Postgres
+ * schema currently has approximately 60 columns. On save operations (upsertHome),
+ * any fields present in the interface but not in the schema are silently dropped.
+ * This is a known gap being addressed in an ongoing schema migration effort.
+ * See: Product/schema-migrations for pending column additions.
+ */
 export interface Home {
   id: string;
   user_id: string;
@@ -254,7 +264,7 @@ export interface Home {
 
   // ─── HVAC DETAILS ───
   number_of_hvac_filters?: number;
-  /** @deprecated Use hvac_filter_returns[] instead. First entry's size is mirrored for back-compat. */
+  /** @deprecated (M-14) Deprecated — Use hvac_filter_returns[] instead. First entry's size is mirrored for back-compat. Maintained for legacy UI compatibility only. New features should use hvac_filter_returns[]. */
   hvac_filter_size?: string;
   /** Array of return vents: [{size, location}]. Drives per-filter reminders. */
   hvac_filter_returns?: Array<{ size: string; location?: string }>;
@@ -693,6 +703,7 @@ export interface MaintenanceTask {
   id: string;
   home_id: string;
   equipment_id?: string;
+  template_id?: string; // M-10: tracks which template generated this task for dedup & analytics
   title: string;
   description: string;
   instructions?: string[];
@@ -1126,6 +1137,28 @@ export interface AuditLogEntry {
   entity_id?: string;
   details?: Record<string, any>;
   created_at: string;
+}
+
+// ─── Home Join Request ───
+
+export interface HomeJoinRequest {
+  id: string;
+  home_id: string;
+  requester_id: string;
+  owner_id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  message?: string | null;
+  created_at: string;
+  // Joined relations from getHomeJoinRequests query
+  homes?: {
+    address?: string;
+    city?: string;
+    state?: string;
+  };
+  requester?: {
+    full_name?: string | null;
+    email?: string | null;
+  };
 }
 
 // ─── Pro Service Area ───

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { supabase } from '@/services/supabase';
 import { updatePassword } from '@/services/supabase';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
 import { getErrorMessage } from '@/utils/errors';
@@ -13,6 +14,26 @@ export default function ResetPassword() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sessionValid, setSessionValid] = useState<boolean | null>(null);
+
+  // Verify session on component mount (M-7: session validation)
+  useEffect(() => {
+    const verifySession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) {
+          setSessionValid(false);
+          setError('This reset link has expired. Please request a new one.');
+        } else {
+          setSessionValid(true);
+        }
+      } catch {
+        setSessionValid(false);
+        setError('Unable to verify session. Please try again.');
+      }
+    };
+    verifySession();
+  }, []);
 
   const validatePassword = () => {
     if (password.length < 8) {
@@ -52,8 +73,8 @@ export default function ResetPassword() {
       <div className="auth-hero">
         <div className="auth-hero-content">
           <div style={{ marginBottom: 16 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 56, width: 'auto', objectFit: 'contain' }} /></div>
-          <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Canopy</h1>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 32 }}>Smart home maintenance, powered by AI</p>
+          <h1 style={{ fontSize: 36, fontWeight: 700, color: Colors.white, marginBottom: 8 }}>Canopy</h1>
+          <p style={{ fontSize: 16, color: 'rgba(255, 255, 255, 0.85)', marginBottom: 32 }}>Smart home maintenance, powered by AI</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {['AI-powered maintenance schedules', 'Equipment lifecycle tracking', 'Weather-triggered task alerts', 'Pro service coordination'].map(f => (
               <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.9)', fontSize: 14 }}>
@@ -82,13 +103,21 @@ export default function ResetPassword() {
             </div>
           )}
 
-          {error && (
+          {sessionValid === false && !success && (
+            <div style={{ background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 20, textAlign: 'center' }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>Reset Link Expired</div>
+              <div style={{ fontSize: 12, marginBottom: 8 }}>{error}</div>
+              <Link to="/forgot-password" style={{ color: 'var(--color-error)', fontWeight: 600, textDecoration: 'none' }}>Request a new reset link</Link>
+            </div>
+          )}
+
+          {error && sessionValid !== false && (
             <div style={{ background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 20 }}>
               {error}
             </div>
           )}
 
-          {!success ? (
+          {!success && sessionValid && (
             <form onSubmit={handleResetPassword}>
               <div className="form-group">
                 <label>New Password</label>
@@ -105,7 +134,7 @@ export default function ResetPassword() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#7A7A7A', padding: '4px 8px' }}
+                    style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: Colors.medGray, padding: '4px 8px' }}
                     title={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? 'Hide' : 'Show'}
@@ -128,7 +157,7 @@ export default function ResetPassword() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#7A7A7A', padding: '4px 8px' }}
+                    style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: Colors.medGray, padding: '4px 8px' }}
                     title={showConfirmPassword ? 'Hide password' : 'Show password'}
                   >
                     {showConfirmPassword ? 'Hide' : 'Show'}

@@ -193,6 +193,13 @@ export default function Layout() {
               {item.label}
             </NavLink>
           ))}
+          {/* Setup completion link — shown if onboarding is done but setup checklist is incomplete */}
+          {user && user.onboarding_complete && user.setup_checklist_state && !user.setup_checklist_state.dismissed && (
+            <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'active' : ''} style={{ color: 'var(--color-copper)', fontWeight: 500 }}>
+              <span style={{ fontSize: 18 }}>✓</span>
+              Complete Setup
+            </NavLink>
+          )}
           {/* Admin users see admin portal link + standalone portal links */}
           {user?.role === 'admin' && (
             <>

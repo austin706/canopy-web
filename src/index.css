@@ -29,6 +29,35 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
   --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
   --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
+  /* color-prefixed aliases for backwards compatibility */
+  --color-copper: #C4844E;
+  --color-copper-light: #D4A373;
+  --color-copper-dark: #A66B3A;
+  --color-copper-muted: #C4844E20;
+  --color-sage: #8B9E7E;
+  --color-sage-light: #A8B89C;
+  --color-sage-dark: #6B7E5E;
+  --color-sage-muted: #8B9E7E15;
+  --color-charcoal: #2C2C2C;
+  --color-dark-gray: #4A4A4A;
+  --color-med-gray: #7A7A7A;
+  --color-silver: #B8B8B8;
+  --color-light-gray: #E8E2D8;
+  --color-warm-white: #FAF8F5;
+  --color-cream: #F5F0E8;
+  --color-white: #FFFFFF;
+  --color-success: #4CAF50;
+  --color-success-muted: #4CAF5020;
+  --color-warning: #FF9800;
+  --color-warning-muted: #FF980020;
+  --color-error: #E53935;
+  --color-error-muted: #E5393520;
+  --color-info: #2196F3;
+  --color-info-muted: #2196F320;
+  --color-card-background: #FFFFFF;
+  --color-text-secondary: #7A7A7A;
+  --color-background: #FAF8F5;
+  --color-primary: #8B9E7E;
 }
 
 /* Dark Mode overrides */
@@ -56,6 +85,35 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
   --shadow-md: 0 2px 8px rgba(0,0,0,0.4);
   --shadow-lg: 0 4px 16px rgba(0,0,0,0.5);
+  /* color-prefixed aliases for dark mode */
+  --color-copper: #D4A373;
+  --color-copper-light: #E0BC94;
+  --color-copper-dark: #C4844E;
+  --color-copper-muted: #D4A37320;
+  --color-sage: #A8B89C;
+  --color-sage-light: #BCC9B2;
+  --color-sage-dark: #8B9E7E;
+  --color-sage-muted: #A8B89C15;
+  --color-charcoal: #E8E2D8;
+  --color-dark-gray: #C0BAB0;
+  --color-med-gray: #9E9890;
+  --color-silver: #6A6460;
+  --color-light-gray: #3A3530;
+  --color-warm-white: #1A1816;
+  --color-cream: #252220;
+  --color-white: #1E1C1A;
+  --color-success: #66BB6A;
+  --color-success-muted: #66BB6A20;
+  --color-warning: #FFB74D;
+  --color-warning-muted: #FFB74D20;
+  --color-error: #EF5350;
+  --color-error-muted: #EF535020;
+  --color-info: #42A5F5;
+  --color-info-muted: #42A5F520;
+  --color-card-background: #1E1C1A;
+  --color-text-secondary: #9E9890;
+  --color-background: #1A1816;
+  --color-primary: #A8B89C;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

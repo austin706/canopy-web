@@ -18,19 +18,20 @@ export default function Login() {
   const [passwordError, setPasswordError] = useState('');
   const isNewSignup = searchParams.get('signup') === 'success';
 
-  // On mount: if the Zustand store says logged-out, force-clear the
-  // Supabase client's in-memory + localStorage session so no stale
-  // navigator.locks lock can block the next signIn().
-  // Then check for a genuine existing session.
+  // On mount: clear any stale Supabase tokens if the Zustand store says
+  // logged-out, then check for a genuine existing session.
+  // NOTE: logout uses window.location.href (hard navigate) which destroys
+  // the Supabase client's in-memory state, so we only need to clean up
+  // localStorage here as a safety net.
   useEffect(() => {
-    const init = async () => {
-      const { isAuthenticated } = useStore.getState();
-      if (!isAuthenticated) {
-        // scope:'local' clears in-memory + localStorage without a network
-        // request, so the lock is acquired & released instantly.
-        try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
-      }
+    const { isAuthenticated } = useStore.getState();
+    if (!isAuthenticated) {
+      try {
+        Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+      } catch {}
+    }
 
+    const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
@@ -38,7 +39,7 @@ export default function Login() {
         }
       } catch {}
     };
-    init();
+    checkSession();
   }, [navigate]);
 
   const validateForm = (): boolean => {

@@ -156,10 +156,12 @@ export default function Profile() {
     } finally { setLinkingAgent(false); setTimeout(() => setMessage(''), 5000); }
   };
 
-  const handleLogout = async () => {
-    try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
+  const handleLogout = () => {
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+    } catch {}
     reset();
-    navigate('/login');
+    window.location.href = '/login';
   };
 
   const handleDeleteAccount = async () => {
@@ -171,9 +173,11 @@ export default function Profile() {
     setDeleting(true);
     try {
       await deleteUserAccount(user.id);
-      try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
+      try {
+        Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+      } catch {}
       reset();
-      navigate('/login');
+      window.location.href = '/login';
     } catch (e: any) {
       setMessage('Failed to delete account: ' + e.message);
       setDeleting(false);

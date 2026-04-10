@@ -51,13 +51,15 @@ export default function Layout() {
     return () => { document.body.style.overflow = ''; };
   }, [mobileMenuOpen]);
 
-  const handleLogout = async () => {
-    // scope:'local' clears in-memory + localStorage WITHOUT a network
-    // request, so the navigator.locks lock is acquired & released instantly
-    // (no hang risk unlike the default scope:'global' which POSTs to /logout).
-    try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
+  const handleLogout = () => {
+    // Clear auth tokens from localStorage directly, then hard-navigate
+    // to /login. A full page reload destroys the Supabase client's
+    // in-memory state and navigator.locks — no deadlock possible.
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+    } catch {}
     reset();
-    navigate('/login');
+    window.location.href = '/login';
   };
 
   const isPro = tier === 'pro' || tier === 'pro_plus';
@@ -192,13 +194,7 @@ export default function Layout() {
               {item.label}
             </NavLink>
           ))}
-          {/* Setup completion link — shown if onboarding is done but setup checklist is incomplete */}
-          {user && user.onboarding_complete && user.setup_checklist_state && !user.setup_checklist_state.dismissed && (
-            <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'active' : ''} style={{ color: 'var(--color-copper)', fontWeight: 500 }}>
-              <span style={{ fontSize: 18 }}>✓</span>
-              Complete Setup
-            </NavLink>
-          )}
+          {/* Setup checklist lives on the Dashboard as a widget — no sidebar link needed */}
           {/* Admin users see admin portal link + standalone portal links */}
           {user?.role === 'admin' && (
             <>

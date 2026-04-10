@@ -18,10 +18,12 @@ export default function AgentLayout() {
 
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
 
-  const handleLogout = async () => {
-    try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
+  const handleLogout = () => {
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+    } catch {}
     reset();
-    navigate('/login');
+    window.location.href = '/login';
   };
 
   const navItems = [

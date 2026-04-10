@@ -111,9 +111,47 @@ export interface User {
   subscription_expires_at?: string;
   onboarding_complete: boolean;
   email_confirmed?: boolean;
+  /** Persisted state for the Set Up Your Home dashboard checklist. */
+  setup_checklist_state?: SetupChecklistState;
+  /** Secret token for iCal feed subscription URL. Rotatable. */
+  calendar_token?: string;
   created_at: string;
   role?: 'user' | 'agent' | 'admin' | 'pro_provider';
 }
+
+/**
+ * Dashboard Set Up Your Home checklist state. Each step is a boolean
+ * indicating completion. The checklist can be dismissed as a whole
+ * via `dismissed: true` which hides it until manually re-opened.
+ */
+export interface SetupChecklistState {
+  equipment_scanned: boolean;
+  inspection_uploaded: boolean;
+  roof_year_added: boolean;
+  fireplace_details: boolean;
+  pool_details: boolean;
+  filter_sizes: boolean;
+  invited_partner: boolean;
+  connected_agent: boolean;
+  phone_added: boolean;
+  dismissed: boolean;
+  dismissed_at: string | null;
+}
+
+/** Default setup checklist state for new profiles. */
+export const DEFAULT_SETUP_CHECKLIST_STATE: SetupChecklistState = {
+  equipment_scanned: false,
+  inspection_uploaded: false,
+  roof_year_added: false,
+  fireplace_details: false,
+  pool_details: false,
+  filter_sizes: false,
+  invited_partner: false,
+  connected_agent: false,
+  phone_added: false,
+  dismissed: false,
+  dismissed_at: null,
+};
 
 export interface ProProvider {
   id: string;
@@ -216,7 +254,10 @@ export interface Home {
 
   // ─── HVAC DETAILS ───
   number_of_hvac_filters?: number;
+  /** @deprecated Use hvac_filter_returns[] instead. First entry's size is mirrored for back-compat. */
   hvac_filter_size?: string;
+  /** Array of return vents: [{size, location}]. Drives per-filter reminders. */
+  hvac_filter_returns?: Array<{ size: string; location?: string }>;
   hvac_return_location?: HvacReturnLocation;
   ductwork_type?: DuctworkType;
   ductwork_insulated?: boolean;
@@ -282,6 +323,8 @@ export interface Home {
   // ─── EXTERIOR & LANDSCAPING ───
   lawn_type?: LawnType;
   has_pool: boolean;
+  /** Chemical treatment type — drives pool task branching */
+  pool_type?: 'chlorine' | 'salt' | 'mineral' | 'none';
   has_deck: boolean;
   has_sprinkler_system: boolean;
   has_patio?: boolean;
@@ -296,6 +339,13 @@ export interface Home {
   has_fireplace: boolean;
   fireplace_type?: FireplaceType;
   fireplace_count?: number;
+  /** Per-fireplace detail entries. Drives one annual sweep task per fireplace. */
+  fireplace_details?: Array<{
+    type: 'wood_burning' | 'gas' | 'electric';
+    location?: string;
+    fuel?: 'wood' | 'natural_gas' | 'propane' | 'electric';
+    last_swept_date?: string;
+  }>;
   has_fountain?: boolean;
   has_gutters: boolean;
   has_fire_extinguisher: boolean;
@@ -587,6 +637,49 @@ export interface Equipment {
   /** Where the replacement cost came from: 'pro_quote' = a Canopy Pro gave a real quote, 'homeowner' = user entered, 'estimate' = national average */
   replacement_quote_source?: 'estimate' | 'pro_quote' | 'homeowner';
 
+  /**
+   * Freeform technician-facing metadata populated by scan-equipment.
+   * Examples: parts_diagram_url, refrigerant_charge_oz, service_bulletins,
+   * common_failure_modes, recall_notices, access_notes.
+   */
+  tech_metadata?: Record<string, unknown>;
+
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Per-equipment replaceable part (filter, belt, igniter, anode rod,
+ * battery, etc.). Populated by scan-equipment and drives
+ * per-consumable task generation.
+ */
+export interface EquipmentConsumable {
+  id: string;
+  equipment_id: string;
+  home_id: string;
+  consumable_type:
+    | 'filter'
+    | 'belt'
+    | 'igniter'
+    | 'anode_rod'
+    | 'battery'
+    | 'bulb'
+    | 'blade'
+    | 'gasket'
+    | 'fuse'
+    | 'other';
+  name: string;
+  part_number?: string;
+  spec?: string;
+  quantity: number;
+  replacement_interval_months?: number;
+  last_replaced_date?: string;
+  next_due_date?: string;
+  detected_by: 'scan' | 'manual' | 'tech';
+  confidence?: number;
+  notes?: string;
+  purchase_url?: string;
+  estimated_cost?: number;
   created_at: string;
   updated_at: string;
 }

@@ -9,8 +9,10 @@ import { PLANS, isProAvailableInArea, loadServiceAreas, getEquipmentLimit, isPre
 import { requestConsultation } from '@/services/proPlus';
 import { findProviderForZip } from '@/services/proEnrollment';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
-import EquipmentScanner from '@/components/EquipmentScanner';
-import InspectionUploader from '@/components/InspectionUploader';
+// Phase E (2026-04-09): EquipmentScanner + InspectionUploader moved out of onboarding.
+// They are now accessible from the dashboard SetupChecklist and Equipment tab.
+// import EquipmentScanner from '@/components/EquipmentScanner';
+// import InspectionUploader from '@/components/InspectionUploader';
 import { lookupByModelNumber } from '@/services/ai';
 import { Colors } from '@/constants/theme';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
@@ -91,7 +93,7 @@ function loadStripe(): Promise<any> {
 
 // Total onboarding steps (0-indexed): Welcome(0), Address(1), Systems(2), Plan(3), Equipment(4), Done(5)
 const TOTAL_STEPS = 6;
-const PROGRESS_STEPS = 4; // Steps shown in progress bar (Address, Systems, Plan, Equipment)
+const PROGRESS_STEPS = 4; // Steps shown in progress bar (Address, Systems, Plan, Finish). Equipment scanning + inspection upload are post-onboarding items tracked by SetupChecklist (Phase E, 2026-04-09).
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -338,6 +340,11 @@ export default function Onboarding() {
   const [showScanner, setShowScanner] = useState(false);
   const [lookingUpModel, setLookingUpModel] = useState(false);
 
+  // Phase E — skip-for-now flags for deep home fields (deferred to SetupChecklist)
+  const [skipFireplaceDetails, setSkipFireplaceDetails] = useState(false);
+  const [skipFilterDetails, setSkipFilterDetails] = useState(false);
+  const [skipPoolDetails, setSkipPoolDetails] = useState(false);
+
   // Helpers for fireplace/filter arrays
   const updateFireplaceCount = (count: string) => {
     const n = Math.max(1, Math.min(10, parseInt(count) || 1));
@@ -508,7 +515,8 @@ export default function Onboarding() {
       if (!home) return;
 
       // Determine primary fireplace type (most common among the list)
-      const primaryFireplaceType = systemsForm.has_fireplace
+      // Phase E: if user skipped fireplace details, leave blank and SetupChecklist will prompt later
+      const primaryFireplaceType = systemsForm.has_fireplace && !skipFireplaceDetails
         ? systemsForm.fireplaces[0]?.type || ''
         : '';
 
@@ -527,15 +535,17 @@ export default function Onboarding() {
         has_sprinkler_system: systemsForm.has_sprinkler_system,
         has_fireplace: systemsForm.has_fireplace,
         fireplace_type: primaryFireplaceType || null,
-        fireplace_count: systemsForm.has_fireplace ? (parseInt(systemsForm.fireplace_count) || 1) : null,
+        fireplace_count: systemsForm.has_fireplace && !skipFireplaceDetails ? (parseInt(systemsForm.fireplace_count) || 1) : null,
+        fireplace_details: systemsForm.has_fireplace && !skipFireplaceDetails ? systemsForm.fireplaces : null,
         has_gutters: systemsForm.has_gutters,
         has_fire_extinguisher: systemsForm.has_fire_extinguisher,
         has_water_softener: systemsForm.has_water_softener,
         has_sump_pump: systemsForm.has_sump_pump,
         has_storm_shelter: systemsForm.has_storm_shelter,
         countertop_type: systemsForm.countertop_type || null,
-        number_of_hvac_filters: parseInt(systemsForm.number_of_hvac_filters) || null,
-        hvac_filter_size: systemsForm.filters.map(f => f.size).filter(Boolean).join(', ') || null,
+        number_of_hvac_filters: skipFilterDetails ? null : (parseInt(systemsForm.number_of_hvac_filters) || null),
+        hvac_filter_size: skipFilterDetails ? null : (systemsForm.filters.map(f => f.size).filter(Boolean).join(', ') || null),
+        hvac_filter_returns: skipFilterDetails ? null : (systemsForm.filters.filter(f => f.size).length > 0 ? systemsForm.filters : null),
         hose_bib_locations: systemsForm.hose_bib_locations || null,
       };
 
@@ -976,7 +986,7 @@ export default function Onboarding() {
           </div>
 
           <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 24, lineHeight: 1.5 }}>
-            Setup takes about 3 minutes. We'll ask about your home, then you can scan your equipment labels for a personalized maintenance plan.
+            Setup takes about 3 minutes. We'll ask about your home, then generate your personalized maintenance plan. You can add equipment, inspections, and deeper details later from your dashboard.
           </p>
 
           <button
@@ -1358,8 +1368,14 @@ export default function Onboarding() {
           </div>
 
           {/* Per-fireplace details */}
-          {systemsForm.has_fireplace && (
+          {systemsForm.has_fireplace && !skipFireplaceDetails && (
             <div style={{ backgroundColor: 'var(--color-background)', borderRadius: 12, padding: 16, marginTop: 16 }}>
+              <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: Colors.charcoal }}>Fireplace details</p>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSkipFireplaceDetails(true)}>
+                  Skip for now
+                </button>
+              </div>
               <div className="form-group" style={{ marginBottom: 12 }}>
                 <label>Number of Fireplaces</label>
                 <input className="form-input" type="number" min="1" max="10"
@@ -1383,11 +1399,22 @@ export default function Onboarding() {
               ))}
             </div>
           )}
+          {systemsForm.has_fireplace && skipFireplaceDetails && (
+            <div className="text-xs text-gray" style={{ marginTop: 8 }}>
+              Fireplace details skipped — you'll finish from your dashboard.{' '}
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSkipFireplaceDetails(false)}>Undo</button>
+            </div>
+          )}
 
           {/* HVAC filter details — show if heating or cooling is set */}
-          {(systemsForm.heating_type || systemsForm.cooling_type) && (
+          {(systemsForm.heating_type || systemsForm.cooling_type) && !skipFilterDetails && (
             <div style={{ backgroundColor: 'var(--color-background)', borderRadius: 12, padding: 16, marginTop: 16 }}>
-              <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: Colors.charcoal }}>HVAC Filters</p>
+              <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: Colors.charcoal }}>HVAC Filters</p>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSkipFilterDetails(true)}>
+                  Skip for now
+                </button>
+              </div>
               <div className="form-group" style={{ marginBottom: 12 }}>
                 <label>Number of HVAC Filters/Returns</label>
                 <input className="form-input" type="number" min="1" max="10"
@@ -1406,6 +1433,12 @@ export default function Onboarding() {
                     }} />
                 </div>
               ))}
+            </div>
+          )}
+          {(systemsForm.heating_type || systemsForm.cooling_type) && skipFilterDetails && (
+            <div className="text-xs text-gray" style={{ marginTop: 8 }}>
+              Filter sizes skipped — add them later from your dashboard.{' '}
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSkipFilterDetails(false)}>Undo</button>
             </div>
           )}
 
@@ -1598,215 +1631,51 @@ export default function Onboarding() {
         </div>
       )}
 
-      {/* ===== STEP 4: Scan Equipment ===== */}
+      {/* ===== STEP 4: Ready to Build Your Plan ===== */}
+      {/* Phase E (2026-04-09): Equipment scanning + inspection upload removed from this step.
+          Those actions are now in the post-onboarding SetupChecklist on the dashboard,
+          so users reach their first tasks faster and can complete deeper setup at their pace. */}
       {step === 4 && (
         <div className="card">
-          <h2 style={{ fontSize: 20, marginBottom: 8 }}>Scan your equipment</h2>
+          <h2 style={{ fontSize: 20, marginBottom: 8 }}>You're all set!</h2>
           <p style={{ color: Colors.medGray, marginBottom: 24, fontSize: 14, lineHeight: 1.6 }}>
-            Scanning your equipment labels lets Canopy build a personalized maintenance schedule, track warranty info, and alert you to issues like phased-out refrigerants.
+            We have everything we need to build your personalized maintenance plan. Click below to generate your tasks — it takes just a few seconds.
           </p>
 
-          {showScanner && canUseAiScan ? (
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <h3 style={{ fontSize: 16, margin: 0 }}>Scan Equipment Label</h3>
-                <button className="btn btn-ghost btn-sm" onClick={() => setShowScanner(false)}>Back to list</button>
-              </div>
-              <EquipmentScanner onScanComplete={handleScannerComplete} onClose={() => setShowScanner(false)} />
+          <div style={{
+            backgroundColor: 'var(--color-background)',
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 24,
+          }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal, marginBottom: 12 }}>
+              What happens next:
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                { icon: '🧠', label: 'Canopy generates your custom task list from your home profile' },
+                { icon: '📋', label: 'You\'ll land on your dashboard with a "Finish Setting Up" checklist' },
+                { icon: '📸', label: 'Scan equipment labels any time from the Equipment tab (optional but recommended)' },
+                { icon: '📄', label: 'Upload your inspection report any time for extra task suggestions' },
+              ].map((item) => (
+                <div key={item.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <span style={{ fontSize: 18, lineHeight: '22px', flexShrink: 0 }}>{item.icon}</span>
+                  <span style={{ fontSize: 13, color: Colors.charcoal, lineHeight: 1.5 }}>{item.label}</span>
+                </div>
+              ))}
             </div>
-          ) : (
-            <>
-              {/* Scanned items list */}
-              {equipmentList.length > 0 && (
-                <div style={{ marginBottom: 24 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal, marginBottom: 12 }}>
-                    {equipmentList.length} item{equipmentList.length !== 1 ? 's' : ''} added{equipmentLimit ? ` (${equipmentLimit - equipmentList.length} remaining on Free plan)` : ''}
-                  </p>
-                  {equipmentList.map((item, i) => (
-                    <div key={(item as any).id || item.name} style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '12px 16px', backgroundColor: 'var(--color-background)', borderRadius: 10,
-                      marginBottom: 8, borderLeft: `3px solid ${Colors.sage}`,
-                    }}>
-                      <div>
-                        <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: Colors.charcoal }}>{item.name}</p>
-                        <p style={{ margin: '2px 0 0 0', fontSize: 12, color: Colors.medGray }}>
-                          {item.equipment_subtype || item.category}{item.make ? ` · ${item.make}` : ''}
-                        </p>
-                      </div>
-                      <button className="btn btn-ghost btn-sm" onClick={() => handleRemoveEquipment(i)} style={{ fontSize: 12 }}>
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+          </div>
 
-              {/* AI Photo Scan — paid users only */}
-              {canUseAiScan ? (
-                <>
-                  <button className="btn btn-primary" onClick={() => setShowScanner(true)}
-                    disabled={atEquipmentLimit}
-                    style={{ width: '100%', marginBottom: atEquipmentLimit ? 8 : 24, padding: '14px 0', fontSize: 15, opacity: atEquipmentLimit ? 0.5 : 1 }}>
-                    {atEquipmentLimit ? `Equipment limit reached (${equipmentLimit})` : equipmentList.length > 0 ? '+ Scan Another Label' : 'Scan Equipment Label'}
-                  </button>
-                  {atEquipmentLimit && (
-                    <p style={{ fontSize: 12, color: Colors.copper, marginBottom: 24, textAlign: 'center' }}>
-                      Upgrade to Home or Pro for unlimited equipment tracking.
-                    </p>
-                  )}
-                </>
-              ) : (
-                <div style={{
-                  padding: 20, backgroundColor: 'var(--color-background)', borderRadius: 12,
-                  border: `1px dashed ${Colors.copper}40`, marginBottom: 24, textAlign: 'center',
-                }}>
-                  <span style={{ fontSize: 28, display: 'block', marginBottom: 8 }}>📸</span>
-                  <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px' }}>
-                    AI Label Scanning
-                  </p>
-                  <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 12px', lineHeight: 1.5 }}>
-                    Snap a photo of any equipment label and our AI will extract make, model, serial number, and more automatically.
-                  </p>
-                  <p style={{ fontSize: 12, color: Colors.copper, fontWeight: 600, margin: 0 }}>
-                    Available on Home, Pro, and Pro+ plans
-                  </p>
-                </div>
-              )}
-
-              {/* Equipment suggestions */}
-              <div style={{ backgroundColor: 'var(--color-background)', borderRadius: 12, padding: 20, marginBottom: 24 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
-                  {equipmentList.length > 0 ? 'What else can you scan?' : 'What should I scan?'}
-                </p>
-                <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 16, lineHeight: 1.5 }}>
-                  Look for stickers or nameplates on these common items. Each scan gives Canopy more data to work with.
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {SCAN_SUGGESTIONS.map((item) => (
-                    <div key={item.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                      <span style={{ fontSize: 18, lineHeight: '24px', flexShrink: 0 }}>{item.icon}</span>
-                      <div>
-                        <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: Colors.charcoal }}>{item.label}</p>
-                        <p style={{ margin: '2px 0 0 0', fontSize: 12, color: Colors.medGray }}>{item.hint}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Manual entry */}
-              <details style={{ marginBottom: 24 }}>
-                <summary style={{ fontSize: 13, color: Colors.copper, cursor: 'pointer', fontWeight: 500, marginBottom: 12 }}>
-                  Or enter model/serial number manually
-                </summary>
-                <div style={{ paddingTop: 12 }}>
-                  <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 16, lineHeight: 1.5 }}>
-                    Enter the model number from the label and we'll try to identify the equipment automatically.
-                  </p>
-                  <div className="grid-2">
-                    <div className="form-group">
-                      <label>Model Number</label>
-                      <input className="form-input" placeholder="e.g., CAPF3743C6" value={equipmentForm.model}
-                        onChange={e => setEquipmentForm({ ...equipmentForm, model: e.target.value })} />
-                    </div>
-                    <div className="form-group">
-                      <label>Serial Number <span style={{ color: Colors.medGray, fontWeight: 400 }}>(optional)</span></label>
-                      <input className="form-input" placeholder="e.g., 1911123456" value={equipmentForm.serial_number || ''}
-                        onChange={e => setEquipmentForm({ ...equipmentForm, serial_number: e.target.value })} />
-                    </div>
-                  </div>
-
-                  {(equipmentForm.model?.trim() || equipmentForm.serial_number?.trim()) && (
-                    <button
-                      className="btn btn-primary"
-                      onClick={handleModelLookup}
-                      disabled={lookingUpModel}
-                      style={{ width: '100%', marginBottom: 16, backgroundColor: Colors.charcoal }}
-                    >
-                      {lookingUpModel ? 'Looking up...' : 'Auto-identify from model #'}
-                    </button>
-                  )}
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '12px 0' }}>
-                    <div style={{ flex: 1, height: 1, backgroundColor: 'var(--color-border)' }} />
-                    <span style={{ fontSize: 11, color: Colors.medGray }}>or fill in manually</span>
-                    <div style={{ flex: 1, height: 1, backgroundColor: 'var(--color-border)' }} />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Equipment Name *</label>
-                    <input className="form-input" placeholder="e.g., Central AC Unit" value={equipmentForm.name}
-                      onChange={e => setEquipmentForm({ ...equipmentForm, name: e.target.value })} />
-                  </div>
-                  <div className="grid-2">
-                    <div className="form-group">
-                      <label>Category</label>
-                      <select className="form-select" value={equipmentForm.category}
-                        onChange={e => setEquipmentForm({ ...equipmentForm, category: e.target.value as EquipmentCategory })}>
-                        {EQUIPMENT_CATEGORIES.map(c => (
-                          <option key={c.value} value={c.value}>{c.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Make / Brand</label>
-                      <input className="form-input" placeholder="Carrier, Trane, Goodman" value={equipmentForm.make}
-                        onChange={e => setEquipmentForm({ ...equipmentForm, make: e.target.value })} />
-                    </div>
-                  </div>
-                  <button className="btn btn-secondary" onClick={handleAddEquipment} style={{ width: '100%' }}>
-                    + Add Equipment
-                  </button>
-                </div>
-              </details>
-
-              {/* Inspection report upload — paid users only */}
-              {canUseAiScan ? (
-                <details style={{ marginBottom: 24 }}>
-                  <summary style={{ fontSize: 13, color: Colors.copper, cursor: 'pointer', fontWeight: 500, marginBottom: 12 }}>
-                    Have a home inspection report?
-                  </summary>
-                  <div style={{ paddingTop: 12 }}>
-                    <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 16, lineHeight: 1.5 }}>
-                      Upload your inspection report and Canopy will extract maintenance items and add them to your plan automatically.
-                    </p>
-                    <InspectionUploader onTasksCreated={(count) => {
-                      if (count > 0) {
-                        const { tasks } = useStore.getState();
-                        supabase.from('tasks').select('*').eq('home_id', home?.id).then(({ data }) => {
-                          if (data) setTasks(data);
-                        });
-                      }
-                    }} />
-                  </div>
-                </details>
-              ) : (
-                <details style={{ marginBottom: 24 }}>
-                  <summary style={{ fontSize: 13, color: Colors.medGray, cursor: 'pointer', fontWeight: 500, marginBottom: 12 }}>
-                    Have a home inspection report?
-                  </summary>
-                  <div style={{ paddingTop: 12, textAlign: 'center' }}>
-                    <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 8, lineHeight: 1.5 }}>
-                      AI-powered inspection report analysis is available on Home, Pro, and Pro+ plans.
-                    </p>
-                    <p style={{ fontSize: 12, color: Colors.copper, fontWeight: 600, margin: 0 }}>
-                      Upgrade in Settings to unlock this feature.
-                    </p>
-                  </div>
-                </details>
-              )}
-            </>
-          )}
+          {/* Scan equipment + inspection upload moved to post-onboarding SetupChecklist (Phase E, 2026-04-09) */}
 
           <div className="flex gap-sm mt-lg">
             <button className="btn btn-ghost" onClick={() => setStep(3)} disabled={saving || generatingTasks}>Back</button>
             <button className="btn btn-primary" onClick={handleFinish} disabled={saving || generatingTasks} style={{ flex: 1 }}>
-              {generatingTasks ? 'Generating your plan...' : saving ? 'Finishing...' : equipmentList.length > 0 ? "Done — Build My Plan" : "Skip — I'll Add Later"}
+              {generatingTasks ? 'Generating your plan...' : saving ? 'Finishing...' : 'Build My Plan'}
             </button>
           </div>
           <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 12, textAlign: 'center' }}>
-            You can always scan more equipment later from the Equipment tab.
+            You'll finish setup from your dashboard — no rush.
           </p>
         </div>
       )}

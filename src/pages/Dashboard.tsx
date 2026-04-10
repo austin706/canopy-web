@@ -18,6 +18,8 @@ import { upsertHome } from '@/services/supabase';
 import { CanopyLogo, NavWeather, NavHome } from '@/components/icons/CanopyLogo';
 import { generateCostForecast, FORECAST_DISCLAIMER } from '@/services/costForecast';
 import PendingInvites from '@/components/PendingInvites';
+import SetupChecklist from '@/components/SetupChecklist';
+import { getDocuments, getHomeMembers } from '@/services/supabase';
 import type { MaintenanceTask } from '@/types';
 
 const DEMO_TASKS = [
@@ -49,6 +51,19 @@ export default function Dashboard() {
       getHomeJoinRequests(user.id).then(setJoinRequests).catch(() => {});
     }
   }, [user?.id]);
+
+  // Load inspection-doc count + household member count for the SetupChecklist.
+  const [inspectionCount, setInspectionCount] = useState(0);
+  const [memberCount, setMemberCount] = useState(1);
+  useEffect(() => {
+    if (!home?.id) return;
+    getDocuments(home.id)
+      .then((docs) => setInspectionCount((docs || []).filter((d: any) => d.type === 'inspection').length))
+      .catch(() => {});
+    getHomeMembers(home.id)
+      .then((members) => setMemberCount(Math.max(1, (members || []).length)))
+      .catch(() => {});
+  }, [home?.id]);
 
   // Redirect new users who haven't set up their home yet
   useEffect(() => {
@@ -238,6 +253,14 @@ export default function Dashboard() {
 
       {/* Pending Home Member Invites */}
       <PendingInvites />
+
+      {/* Post-onboarding setup checklist */}
+      <SetupChecklist
+        home={home}
+        equipment={equipment}
+        inspectionCount={inspectionCount}
+        householdMemberCount={memberCount}
+      />
 
       <div className="dashboard-layout">
         <div className="flex-col gap-lg">

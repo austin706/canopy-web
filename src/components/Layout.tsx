@@ -51,14 +51,12 @@ export default function Layout() {
     return () => { document.body.style.overflow = ''; };
   }, [mobileMenuOpen]);
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
+  const handleLogout = () => {
+    // Clear local state immediately — don't wait for the network call
     reset();
     navigate('/login');
+    // Fire-and-forget the Supabase signOut (clears server session)
+    signOut().catch(() => {});
   };
 
   const isPro = tier === 'pro' || tier === 'pro_plus';

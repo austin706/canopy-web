@@ -18,14 +18,10 @@ export default function AgentLayout() {
 
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-    } catch (err) {
-      logger.error('Logout failed:', err);
-    }
+  const handleLogout = () => {
     reset();
     navigate('/login');
+    signOut().catch(() => {});
   };
 
   const navItems = [

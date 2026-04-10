@@ -17,14 +17,10 @@ export default function ProLayout() {
 
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
+  const handleLogout = () => {
     reset();
     navigate('/login');
+    signOut().catch(() => {});
   };
 
   const navItems = [

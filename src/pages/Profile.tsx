@@ -156,10 +156,10 @@ export default function Profile() {
     } finally { setLinkingAgent(false); setTimeout(() => setMessage(''), 5000); }
   };
 
-  const handleLogout = async () => {
-    try { await signOut(); } catch {}
+  const handleLogout = () => {
     reset();
     navigate('/login');
+    signOut().catch(() => {});
   };
 
   const handleDeleteAccount = async () => {

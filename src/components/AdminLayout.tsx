@@ -131,10 +131,10 @@ export default function AdminLayout() {
     return () => { document.body.style.overflow = ''; };
   }, [mobileMenuOpen]);
 
-  const handleLogout = async () => {
-    try { await signOut(); } catch (err) { console.error('Logout failed:', err); }
+  const handleLogout = () => {
     reset();
     navigate('/login');
+    signOut().catch(() => {});
   };
 
   const navSections: NavSection[] = [

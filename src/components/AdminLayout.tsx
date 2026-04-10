@@ -131,10 +131,8 @@ export default function AdminLayout() {
     return () => { document.body.style.overflow = ''; };
   }, [mobileMenuOpen]);
 
-  const handleLogout = () => {
-    try {
-      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
-    } catch {}
+  const handleLogout = async () => {
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
     reset();
     window.location.href = '/login';
   };

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { signIn, getProfile, getHome, getEquipment, getTasks, getAgent, supabase } from '@/services/supabase';
+import { signIn, getProfile, getHome, getEquipment, getTasks, getAgent } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
 import type { User, SubscriptionTier } from '@/types';
@@ -18,28 +18,25 @@ export default function Login() {
   const [passwordError, setPasswordError] = useState('');
   const isNewSignup = searchParams.get('signup') === 'success';
 
-  // On mount: clear any stale Supabase tokens if the Zustand store says
-  // logged-out, then check for a genuine existing session.
-  // NOTE: logout uses window.location.href (hard navigate) which destroys
-  // the Supabase client's in-memory state, so we only need to clean up
-  // localStorage here as a safety net.
+  // On mount: if the Zustand store says logged-out, clear any stale
+  // Supabase localStorage tokens. If the store says logged-in, redirect
+  // to the dashboard.
+  //
+  // IMPORTANT: We do NOT call supabase.auth.getSession() here because
+  // the global Supabase client uses navigator.locks internally, and a
+  // stale lock from a previous signOut/getSession can deadlock forever.
+  // Checking Zustand + localStorage is sufficient and lock-free.
   useEffect(() => {
     const { isAuthenticated } = useStore.getState();
-    if (!isAuthenticated) {
-      try {
-        Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
-      } catch {}
+    if (isAuthenticated) {
+      // Already logged in — redirect to dashboard
+      navigate('/');
+      return;
     }
-
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          navigate('/');
-        }
-      } catch {}
-    };
-    checkSession();
+    // Clear any stale Supabase tokens so they don't interfere with sign-in
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+    } catch {}
   }, [navigate]);
 
   const validateForm = (): boolean => {

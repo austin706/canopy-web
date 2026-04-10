@@ -156,10 +156,8 @@ export default function Profile() {
     } finally { setLinkingAgent(false); setTimeout(() => setMessage(''), 5000); }
   };
 
-  const handleLogout = () => {
-    try {
-      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
-    } catch {}
+  const handleLogout = async () => {
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
     reset();
     window.location.href = '/login';
   };
@@ -173,9 +171,7 @@ export default function Profile() {
     setDeleting(true);
     try {
       await deleteUserAccount(user.id);
-      try {
-        Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
-      } catch {}
+      try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
       reset();
       window.location.href = '/login';
     } catch (e: any) {

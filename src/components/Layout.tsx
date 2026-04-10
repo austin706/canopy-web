@@ -51,13 +51,10 @@ export default function Layout() {
     return () => { document.body.style.overflow = ''; };
   }, [mobileMenuOpen]);
 
-  const handleLogout = () => {
-    // Clear auth tokens from localStorage directly, then hard-navigate
-    // to /login. A full page reload destroys the Supabase client's
-    // in-memory state and navigator.locks — no deadlock possible.
-    try {
-      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
-    } catch {}
+  const handleLogout = async () => {
+    // scope:'local' clears in-memory + localStorage without a network request.
+    // navigator.locks are disabled on our Supabase client so no deadlock risk.
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
     reset();
     window.location.href = '/login';
   };

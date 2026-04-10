@@ -20,6 +20,16 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    // Disable navigator.locks — Supabase uses Web Locks API to serialize
+    // auth operations, but if any operation (e.g. signOut network POST)
+    // hangs, the lock is held forever and ALL subsequent auth calls
+    // (getSession, signIn, onAuthStateChange) deadlock permanently.
+    // With flowType 'implicit' and a custom lock that's a simple no-op
+    // wrapper, we avoid this class of bugs entirely.
+    lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => {
+      // Execute the callback directly without acquiring navigator.locks
+      return fn();
+    },
   },
 });
 

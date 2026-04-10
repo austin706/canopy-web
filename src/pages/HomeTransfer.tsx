@@ -209,11 +209,39 @@ export default function HomeTransfer() {
           <div className="card" style={{ padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
               <div style={{ fontSize: 32 }} role="img" aria-label="Home">🏡</div>
-              <div>
+              <div style={{ flex: 1 }}>
                 <p style={{ fontWeight: 600, color: Colors.charcoal }}>{home.address}</p>
                 <p style={{ fontSize: 13, color: Colors.medGray }}>{home.city}, {home.state} {home.zip_code}</p>
               </div>
+              {home.ownership_verified ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: 'rgba(139,158,126,0.15)', color: Colors.sageDark, whiteSpace: 'nowrap' }}>
+                  &#x2713; Verified Owner
+                </span>
+              ) : (
+                <span
+                  onClick={() => navigate('/home-details')}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: 'rgba(0,0,0,0.06)', color: Colors.medGray, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  title="Verify ownership in Home Details to add trust to your Home Token"
+                >
+                  Not Verified
+                </span>
+              )}
             </div>
+
+            {/* Verification prompt */}
+            {!home.ownership_verified && (
+              <div style={{ padding: 12, background: 'rgba(245,158,11,0.08)', borderRadius: 8, marginBottom: 20, fontSize: 13, color: '#92400e', lineHeight: 1.6, border: '1px solid rgba(245,158,11,0.2)' }}>
+                <strong>Tip:</strong> Verify your ownership in Home Details to add a trust badge to your Home Token.
+                Verified tokens carry more credibility with buyers.
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => navigate('/home-details')}
+                  style={{ marginLeft: 8, color: Colors.copper, fontWeight: 600, fontSize: 12 }}
+                >
+                  Verify Now →
+                </button>
+              </div>
+            )}
 
             <div style={{
               padding: 14, background: Colors.cream, borderRadius: 8, marginBottom: 20,

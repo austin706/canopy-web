@@ -269,6 +269,93 @@ function generateTasksForHomeImpl(
     }
   });
 
+  // ─── TRASH / RECYCLING / YARD WASTE recurring tasks ───
+  // These are pinned weekly tasks (like pro visits) that don't get
+  // rescheduled by the task engine. Reminder = night before.
+  const DAY_MAP: Record<string, number> = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
+
+  const generateWeeklyPickupTasks = (
+    dayName: string | undefined | null,
+    title: string,
+    description: string,
+    category: string,
+    frequency: 'weekly' | 'biweekly',
+    seasonal: boolean,
+  ) => {
+    if (!dayName || !DAY_MAP.hasOwnProperty(dayName)) return;
+    const targetDay = DAY_MAP[dayName];
+    const endDate = addDays(today, 90); // generate 3 months out
+    let date = new Date(today);
+    // Advance to the next occurrence of the target day
+    while (date.getDay() !== targetDay) date = addDays(date, 1);
+    let weekCount = 0;
+
+    while (date <= endDate) {
+      const taskMonth = getMonth(date) + 1;
+      const taskYear = getYear(date);
+      const dedupKey = `${title}|${taskMonth}|${taskYear}|${date.getDate()}`;
+
+      // Skip yard waste in winter months if seasonal
+      const isWinter = taskMonth === 12 || taskMonth === 1 || taskMonth === 2;
+      if (seasonal && isWinter) {
+        date = addDays(date, 7);
+        weekCount++;
+        continue;
+      }
+
+      // Biweekly: skip every other week
+      if (frequency === 'biweekly' && weekCount % 2 === 1) {
+        date = addDays(date, 7);
+        weekCount++;
+        continue;
+      }
+
+      if (!existingTaskKeys.has(dedupKey)) {
+        newTasks.push({
+          id: generateUUID(),
+          home_id: home.id,
+          title,
+          description,
+          category: category as any,
+          priority: 'medium' as TaskPriority,
+          status: 'upcoming',
+          frequency: frequency === 'weekly' ? 'weekly' : 'biweekly' as any,
+          due_date: format(date, "yyyy-MM-dd'T'06:00:00"),
+          is_weather_triggered: false,
+          applicable_months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+          estimated_minutes: 5,
+          reminder_days_before: 1,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      date = addDays(date, 7);
+      weekCount++;
+    }
+  };
+
+  if (home.trash_day) {
+    generateWeeklyPickupTasks(
+      home.trash_day, 'Take Out Trash',
+      `Move trash bins to the curb for pickup${home.trash_provider ? ` (${home.trash_provider})` : ''}.`,
+      'general', 'weekly', false,
+    );
+  }
+  if (home.recycling_day) {
+    generateWeeklyPickupTasks(
+      home.recycling_day, 'Put Out Recycling',
+      'Move recycling bins to the curb for pickup.',
+      'general', home.recycling_frequency || 'weekly', false,
+    );
+  }
+  if (home.yard_waste_day) {
+    generateWeeklyPickupTasks(
+      home.yard_waste_day, 'Yard Waste Pickup',
+      'Set out yard waste bags or bins for pickup.',
+      'general', 'weekly', home.yard_waste_seasonal ?? true,
+    );
+  }
+
   return newTasks;
 }
 

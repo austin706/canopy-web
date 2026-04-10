@@ -3,6 +3,7 @@ import { getAllAgents, createAgentRecord, updateAgent, uploadPhoto, deleteAgent,
 import type { AgentApplication } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { AgentAvatar } from '@/components/AgentAvatar';
+import PhotoCropModal from '@/components/PhotoCropModal';
 import { logAdminAction } from '@/services/auditLog';
 import { useStore } from '@/store/useStore';
 
@@ -37,6 +38,7 @@ export default function AdminAgents() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
   // ─── Applications Tab State ───
   const [applications, setApplications] = useState<AgentApplication[]>([]);
@@ -752,10 +754,24 @@ export default function AdminAgents() {
               accept="image/*"
               onChange={e => {
                 const file = e.target.files?.[0];
-                if (file) handlePhotoUpload(file);
+                if (file) setCropFile(file);
+                if (fileInputRef.current) fileInputRef.current.value = '';
               }}
               style={{ display: 'none' }}
             />
+            {cropFile && (
+              <PhotoCropModal
+                imageFile={cropFile}
+                shape="circle"
+                outputSize={500}
+                onCancel={() => setCropFile(null)}
+                onCrop={async (blob) => {
+                  setCropFile(null);
+                  const croppedFile = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
+                  await handlePhotoUpload(croppedFile);
+                }}
+              />
+            )}
             <div className="modal-actions">
               <button className="btn btn-ghost" onClick={() => setShowPhotoModal(false)}>
                 Cancel

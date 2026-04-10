@@ -396,10 +396,25 @@ export interface Home {
   sub_panel_locations?: string;
   hose_bib_locations?: string;
 
+  // ─── TRASH & RECYCLING SERVICE ───
+  trash_provider?: string;
+  trash_day?: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
+  recycling_day?: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
+  recycling_frequency?: 'weekly' | 'biweekly';
+  yard_waste_day?: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
+  yard_waste_seasonal?: boolean;  // true = only during growing season
+
   // ─── HOME TOKEN / VERIFICATION ───
   agent_attested_at?: string;
   agent_attestation_note?: string;
   record_completeness_score?: number;
+  // Homeownership verification
+  ownership_verified?: boolean;
+  ownership_verification_status?: 'none' | 'pending' | 'verified' | 'rejected';
+  ownership_verification_method?: 'document_upload' | 'title_company' | 'manual';
+  ownership_verification_date?: string;
+  ownership_verification_notes?: string;
+  ownership_documents_url?: string;
 
   // ─── ENVIRONMENTAL ───
   climate_zone?: string;

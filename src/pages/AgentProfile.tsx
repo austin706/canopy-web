@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase, getAllAgents, updateAgent, uploadPhoto } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { AgentAvatar } from '@/components/AgentAvatar';
+import PhotoCropModal from '@/components/PhotoCropModal';
 
 interface Agent {
   id: string;
@@ -29,6 +30,7 @@ export default function AgentProfile() {
   const [message, setMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
   useEffect(() => {
     loadAgent();
@@ -192,10 +194,25 @@ export default function AgentProfile() {
           accept="image/*"
           onChange={e => {
             const file = e.target.files?.[0];
-            if (file) handlePhotoUpload(file);
+            if (file) setCropFile(file);
+            if (fileInputRef.current) fileInputRef.current.value = '';
           }}
           style={{ display: 'none' }}
         />
+
+        {cropFile && (
+          <PhotoCropModal
+            imageFile={cropFile}
+            shape="circle"
+            outputSize={500}
+            onCancel={() => setCropFile(null)}
+            onCrop={async (blob) => {
+              setCropFile(null);
+              const croppedFile = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
+              await handlePhotoUpload(croppedFile);
+            }}
+          />
+        )}
 
         <button
           className="btn btn-secondary"

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertHome, updateProfile, uploadPhoto, getStructures, addStructure, deleteStructure, STRUCTURE_TYPES } from '@/services/supabase';
+import { upsertHome, updateProfile, uploadPhoto, getStructures, addStructure, deleteStructure, STRUCTURE_TYPES, submitOwnershipVerification, uploadVerificationDocument } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import HomeMembers from '@/components/HomeMembers';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
@@ -51,6 +51,13 @@ export default function HomeDetails() {
     gas_meter_location: home?.gas_meter_location || '',
     water_meter_location: home?.water_meter_location || '',
     hose_bib_locations: home?.hose_bib_locations || '',
+    // Trash & recycling service
+    trash_provider: home?.trash_provider || '',
+    trash_day: home?.trash_day || '',
+    recycling_day: home?.recycling_day || '',
+    recycling_frequency: home?.recycling_frequency || 'weekly',
+    yard_waste_day: home?.yard_waste_day || '',
+    yard_waste_seasonal: home?.yard_waste_seasonal ?? true,
     // Advanced Home Details (InterNACHI Building Standards) — H-3
     structure_type: home?.structure_type || '',
     frame_size: home?.frame_size || '',
@@ -161,6 +168,13 @@ export default function HomeDetails() {
         ductwork_type: form.ductwork_type || null,
         electrical_panel_amps: form.electrical_panel_amps ? parseInt(form.electrical_panel_amps) : null,
         construction_type: form.construction_type || null,
+        // Trash & recycling
+        trash_provider: form.trash_provider || null,
+        trash_day: form.trash_day || null,
+        recycling_day: form.recycling_day || null,
+        recycling_frequency: form.recycling_day ? form.recycling_frequency : null,
+        yard_waste_day: form.yard_waste_day || null,
+        yard_waste_seasonal: form.yard_waste_day ? form.yard_waste_seasonal : null,
         created_at: home?.created_at || new Date().toISOString(),
       };
       try { const saved = await upsertHome(homeData); setHome(saved); } catch { setHome(homeData); }
@@ -430,6 +444,55 @@ export default function HomeDetails() {
               <label>Hose Bib Locations</label>
               <input className="form-input" value={form.hose_bib_locations} onChange={e => setForm({...form, hose_bib_locations: e.target.value})} placeholder="e.g., Front, back, garage side" />
             </div>
+          </div>
+
+          {/* Trash & Recycling Service */}
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 24, marginBottom: 12 }}>Trash & Recycling</h3>
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Trash Provider</label>
+              <input className="form-input" value={form.trash_provider} onChange={e => setForm({...form, trash_provider: e.target.value})} placeholder="e.g., Waste Management, City of Tulsa" />
+            </div>
+            <div className="form-group">
+              <label>Trash Pickup Day</label>
+              <select className="form-select" value={form.trash_day} onChange={e => setForm({...form, trash_day: e.target.value})}>
+                <option value="">Select day...</option>
+                {['monday','tuesday','wednesday','thursday','friday','saturday'].map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Recycling Pickup Day</label>
+              <select className="form-select" value={form.recycling_day} onChange={e => setForm({...form, recycling_day: e.target.value})}>
+                <option value="">Select day...</option>
+                {['monday','tuesday','wednesday','thursday','friday','saturday'].map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Recycling Frequency</label>
+              <select className="form-select" value={form.recycling_frequency} onChange={e => setForm({...form, recycling_frequency: e.target.value as 'weekly' | 'biweekly'})}>
+                <option value="weekly">Every week</option>
+                <option value="biweekly">Every other week</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Yard Waste Pickup Day</label>
+              <select className="form-select" value={form.yard_waste_day} onChange={e => setForm({...form, yard_waste_day: e.target.value})}>
+                <option value="">No yard waste service</option>
+                {['monday','tuesday','wednesday','thursday','friday','saturday'].map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
+              </select>
+            </div>
+            {form.yard_waste_day && (
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', paddingTop: 24 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={form.yard_waste_seasonal} onChange={e => setForm({...form, yard_waste_seasonal: e.target.checked})} />
+                  Seasonal only (spring through fall)
+                </label>
+              </div>
+            )}
           </div>
 
           {/* Advanced Home Details (InterNACHI Building Standards) — H-3 */}
@@ -781,10 +844,180 @@ export default function HomeDetails() {
             </div>
           )}
 
+          {/* Ownership Verification */}
+          <OwnershipVerification home={home} onUpdate={(updated) => setHome(updated)} />
+
           {/* Home Members */}
           <HomeMembers homeId={home.id} />
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// ── Ownership Verification sub-component ──────────────────────
+function OwnershipVerification({ home, onUpdate }: { home: Home; onUpdate: (h: Home) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [docFiles, setDocFiles] = useState<File[]>([]);
+  const [message, setMessage] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const status = home.ownership_verification_status || 'none';
+  const isVerified = status === 'verified';
+  const isPending = status === 'pending';
+  const isRejected = status === 'rejected';
+
+  const handleAddDoc = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) setDocFiles(prev => [...prev, ...files]);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const handleSubmitVerification = async () => {
+    if (docFiles.length === 0) {
+      setMessage('Please upload at least one document');
+      return;
+    }
+    setSubmitting(true);
+    setMessage('');
+    try {
+      // Upload all documents
+      const urls: string[] = [];
+      for (const file of docFiles) {
+        const url = await uploadVerificationDocument(home.id, file);
+        urls.push(url);
+      }
+      // Submit for review
+      const updated = await submitOwnershipVerification(home.id, urls);
+      onUpdate(updated);
+      setDocFiles([]);
+      setMessage('Verification submitted! Our team will review your documents.');
+    } catch (err: any) {
+      setMessage('Failed to submit: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const statusBadge = () => {
+    if (isVerified) return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600, background: 'rgba(139,158,126,0.15)', color: Colors.sageDark }}>Verified</span>;
+    if (isPending) return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600, background: 'rgba(245,158,11,0.12)', color: '#b45309' }}>Pending Review</span>;
+    if (isRejected) return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600, background: 'rgba(220,38,38,0.1)', color: '#dc2626' }}>Rejected</span>;
+    return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600, background: 'rgba(0,0,0,0.06)', color: Colors.medGray }}>Not Verified</span>;
+  };
+
+  return (
+    <div style={{ marginTop: 24 }}>
+      <div className="card" style={{ borderLeft: `4px solid ${isVerified ? Colors.sage : isPending ? '#f59e0b' : Colors.copper}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Ownership Verification</h3>
+          {statusBadge()}
+        </div>
+
+        {isVerified && (
+          <div>
+            <p style={{ fontSize: 13, color: Colors.sageDark, lineHeight: 1.6 }}>
+              Your ownership of this home has been verified. This activates your Home Token for transfer and adds a trust badge to your home record.
+            </p>
+            {home.ownership_verification_date && (
+              <p className="text-xs text-gray" style={{ marginTop: 8 }}>
+                Verified on {new Date(home.ownership_verification_date).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+        )}
+
+        {isPending && (
+          <div>
+            <p style={{ fontSize: 13, color: '#92400e', lineHeight: 1.6 }}>
+              Your verification documents are under review. This typically takes 1–2 business days.
+            </p>
+            {home.ownership_verification_date && (
+              <p className="text-xs text-gray" style={{ marginTop: 8 }}>
+                Submitted on {new Date(home.ownership_verification_date).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+        )}
+
+        {isRejected && (
+          <div>
+            <p style={{ fontSize: 13, color: '#dc2626', lineHeight: 1.6, marginBottom: 8 }}>
+              Your verification was not approved. Please review the notes below and resubmit.
+            </p>
+            {home.ownership_verification_notes && (
+              <div style={{ padding: 12, background: 'rgba(220,38,38,0.06)', borderRadius: 8, marginBottom: 12 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Review Notes:</p>
+                <p style={{ fontSize: 13 }}>{home.ownership_verification_notes}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {(status === 'none' || isRejected) && (
+          <div style={{ marginTop: status === 'none' ? 0 : 12 }}>
+            {status === 'none' && (
+              <p style={{ fontSize: 13, color: Colors.medGray, lineHeight: 1.6, marginBottom: 16 }}>
+                Verify your ownership to activate your Home Token. Upload a copy of your ID along with a document showing your name at this address (utility bill, tax statement, or closing documents).
+              </p>
+            )}
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*,.pdf"
+              multiple
+              onChange={handleAddDoc}
+              style={{ display: 'none' }}
+            />
+
+            {docFiles.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                {docFiles.map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--color-background)', borderRadius: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>{f.name}</span>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ color: Colors.error, fontSize: 12, padding: '2px 6px' }}
+                      onClick={() => setDocFiles(prev => prev.filter((_, idx) => idx !== i))}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                style={{ flex: 1 }}
+              >
+                + Add Document
+              </button>
+              {docFiles.length > 0 && (
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSubmitVerification}
+                  disabled={submitting}
+                  style={{ flex: 1 }}
+                >
+                  {submitting ? 'Submitting...' : 'Submit for Review'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {message && (
+          <p style={{ marginTop: 12, fontSize: 13, color: message.includes('Failed') ? Colors.error : Colors.sageDark }}>
+            {message}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

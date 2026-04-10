@@ -93,6 +93,7 @@ const AgentRedeem = lazy(() => import('@/pages/AgentRedeem'));
 const AgentApplication = lazy(() => import('@/pages/AgentApplication'));
 const BuilderApplication = lazy(() => import('@/pages/BuilderApplication'));
 const AdminBuilders = lazy(() => import('@/pages/AdminBuilders'));
+const AdminVerifications = lazy(() => import('@/pages/AdminVerifications'));
 const TechnicianOnboarding = lazy(() => import('@/pages/TechnicianOnboarding'));
 const ProOnboardingSuccess = lazy(() => import('@/pages/ProOnboardingSuccess'));
 const ProOnboardingRefresh = lazy(() => import('@/pages/ProOnboardingRefresh'));
@@ -385,6 +386,7 @@ export default function App() {
             <Route path="/admin/reference-data" element={<AdminReferenceData />} />
             <Route path="/admin/technician-onboarding" element={<AdminTechnicianOnboarding />} />
             <Route path="/admin/builders" element={<AdminBuilders />} />
+            <Route path="/admin/verifications" element={<AdminVerifications />} />
           </Route>
 
           {/* ═══════════════════════════════════════════════════════

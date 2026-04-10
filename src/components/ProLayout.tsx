@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-// signOut removed — logout clears localStorage directly to avoid navigator.locks deadlock
+import { supabase } from '@/services/supabase';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { Colors } from '@/constants/theme';
 
@@ -17,10 +17,8 @@ export default function ProLayout() {
 
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
 
-  const handleLogout = () => {
-    try {
-      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
-    } catch {}
+  const handleLogout = async () => {
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
     reset();
     navigate('/login');
   };

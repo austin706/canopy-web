@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { updateProfile, redeemGiftCode, deleteUserAccount, exportUserData, lookupAgentByCode, linkAgent, getCalendarToken, rotateCalendarToken, buildICalSubscribeUrl } from '@/services/supabase';
+import { supabase, updateProfile, redeemGiftCode, deleteUserAccount, exportUserData, lookupAgentByCode, linkAgent, getCalendarToken, rotateCalendarToken, buildICalSubscribeUrl } from '@/services/supabase';
 import { PLANS } from '@/services/subscriptionGate';
 import MessageBanner from '@/components/MessageBanner';
 import { Colors } from '@/constants/theme';
@@ -156,10 +156,8 @@ export default function Profile() {
     } finally { setLinkingAgent(false); setTimeout(() => setMessage(''), 5000); }
   };
 
-  const handleLogout = () => {
-    try {
-      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
-    } catch {}
+  const handleLogout = async () => {
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
     reset();
     navigate('/login');
   };
@@ -173,9 +171,7 @@ export default function Profile() {
     setDeleting(true);
     try {
       await deleteUserAccount(user.id);
-      try {
-        Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
-      } catch {}
+      try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
       reset();
       navigate('/login');
     } catch (e: any) {

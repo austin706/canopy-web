@@ -51,13 +51,11 @@ export default function Layout() {
     return () => { document.body.style.overflow = ''; };
   }, [mobileMenuOpen]);
 
-  const handleLogout = () => {
-    // Clear Supabase session from localStorage directly to avoid
-    // navigator.locks deadlock (signOut() acquires a lock that blocks
-    // subsequent signIn() if the network request hangs).
-    try {
-      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
-    } catch {}
+  const handleLogout = async () => {
+    // scope:'local' clears in-memory + localStorage WITHOUT a network
+    // request, so the navigator.locks lock is acquired & released instantly
+    // (no hang risk unlike the default scope:'global' which POSTs to /logout).
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
     reset();
     navigate('/login');
   };

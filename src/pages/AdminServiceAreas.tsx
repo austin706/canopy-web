@@ -521,7 +521,7 @@ export default function AdminServiceAreas() {
                                       cursor: 'pointer',
                                       padding: '0 2px',
                                       fontSize: 12,
-                                      color: '#ccc',
+                                      color: 'var(--color-silver)',
                                     }}
                                     title="Delete"
                                   >

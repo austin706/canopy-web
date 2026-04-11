@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { logAdminAction } from '@/services/auditLog';
+import { PageSkeleton } from '@/components/Skeleton';
 import type { SubscriptionTier } from '@/types';
 
 interface NotificationRecord {
@@ -387,8 +388,8 @@ export default function AdminNotifications() {
           </h2>
           <div className="admin-table-wrapper">
             {loading ? (
-              <div style={{ textAlign: 'center', padding: 32 }}>
-                <div className="spinner" />
+              <div className="page-wide">
+                <PageSkeleton rows={4} />
               </div>
             ) : notifications.length === 0 ? (
               <div className="admin-empty">

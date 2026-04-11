@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
+import logger from '@/utils/logger';
 
 interface Job {
   id: string;
@@ -59,7 +60,7 @@ export default function ProJobs() {
         await loadJobs(provider.id, provider.service_categories || []);
       }
     } catch (err) {
-      console.error('Error loading provider:', err);
+      logger.error('Error loading provider:', err);
     } finally {
       setLoading(false);
     }
@@ -73,7 +74,7 @@ export default function ProJobs() {
         .order('created_at', { ascending: false });
       setJobs(data || []);
     } catch (err) {
-      console.error('Error loading all jobs:', err);
+      logger.error('Error loading all jobs:', err);
     } finally {
       setLoading(false);
     }
@@ -105,7 +106,7 @@ export default function ProJobs() {
 
       setJobs(uniqueJobs);
     } catch (err) {
-      console.error('Error loading jobs:', err);
+      logger.error('Error loading jobs:', err);
     }
   };
 
@@ -134,7 +135,7 @@ export default function ProJobs() {
         return;
       }
     } catch (err) {
-      console.error('Error checking capacity:', err);
+      logger.error('Error checking capacity:', err);
     }
 
     if (!window.confirm('Accept this service request?')) return;
@@ -192,7 +193,7 @@ export default function ProJobs() {
           notes: `Matched from service request`,
         });
 
-      if (apptError) console.warn('Failed to create linked appointment:', apptError);
+      if (apptError) logger.warn('Failed to create linked appointment:', apptError);
 
       setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, status: 'scheduled', scheduled_date: dateStr } : j)));
       alert('Job scheduled successfully.');

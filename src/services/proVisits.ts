@@ -1,6 +1,7 @@
 import { supabase, sendNotification } from '@/services/supabase';
 import type { ProMonthlyVisit, VisitAllocation } from '@/types';
 import { TASK_TEMPLATES } from '@/constants/maintenance';
+import logger from '@/utils/logger';
 
 // ─── Internal Helpers ───
 
@@ -107,7 +108,7 @@ export async function confirmVisit(visitId: string): Promise<void> {
         }).catch(() => {});
       }
     }
-  } catch (e) { console.warn('Failed to send visit confirmation notification:', e); }
+  } catch (e) { logger.warn('Failed to send visit confirmation notification:', e); }
 }
 
 export async function cancelVisit(visitId: string, reason: string): Promise<{ rebookable: boolean }> {
@@ -147,7 +148,7 @@ export async function cancelVisit(visitId: string, reason: string): Promise<{ re
       p_visit_month: visitMonth,
     });
     if (rpcError) {
-      console.error('Failed to increment forfeited visits:', rpcError);
+      logger.error('Failed to increment forfeited visits:', rpcError);
       throw new Error('Visit was cancelled but allocation update failed. Please contact support.');
     }
   }
@@ -168,7 +169,7 @@ export async function cancelVisit(visitId: string, reason: string): Promise<{ re
         action_url: '/pro-portal',
       }).catch(() => {});
     }
-  } catch (e) { console.warn('Failed to send cancellation notification:', e); }
+  } catch (e) { logger.warn('Failed to send cancellation notification:', e); }
 
   return { rebookable };
 }
@@ -206,7 +207,7 @@ export async function rescheduleVisit(visitId: string, newDate: string, newTimeS
           action_url: '/pro-portal',
         }).catch(() => {});
       }
-    } catch (e) { console.warn('Failed to send reschedule notification:', e); }
+    } catch (e) { logger.warn('Failed to send reschedule notification:', e); }
   }
 }
 
@@ -260,7 +261,7 @@ export async function proposeVisit(
       category: 'pro_service',
       action_url: '/pro-services',
     }).catch(() => {});
-  } catch (e) { console.warn('Failed to send visit proposal notification:', e); }
+  } catch (e) { logger.warn('Failed to send visit proposal notification:', e); }
 
   return data;
 }
@@ -315,7 +316,7 @@ export async function completeVisit(
         category: 'pro_service',
         action_url: '/pro-services',
       }).catch(() => {});
-    } catch (e) { console.warn('Failed to send visit completion notification:', e); }
+    } catch (e) { logger.warn('Failed to send visit completion notification:', e); }
   }
 
   // Trigger payout processing (fire-and-forget — payout failure
@@ -323,7 +324,7 @@ export async function completeVisit(
   try {
     await triggerVisitPayout(visitId);
   } catch (payoutErr) {
-    console.warn(`Payout trigger failed for visit ${visitId} — admin can retry:`, payoutErr);
+    logger.warn(`Payout trigger failed for visit ${visitId} — admin can retry:`, payoutErr);
   }
 }
 
@@ -384,7 +385,7 @@ export async function rateVisit(
         }).catch(() => {});
       }
     }
-  } catch (e) { console.warn('Failed to send rating notification:', e); }
+  } catch (e) { logger.warn('Failed to send rating notification:', e); }
 }
 
 export async function getProviderVisits(providerId: string, month?: string): Promise<ProMonthlyVisit[]> {

@@ -8,6 +8,7 @@ import { Colors } from '@/constants/theme';
 import type { MaintenanceTask } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
 import { useProgress } from '@/components/ProgressBar';
+import logger from '@/utils/logger';
 
 const MAX_FILE_SIZE_MB = 250; // Supabase bucket limit — also check project-level Storage settings
 const RESUMABLE_THRESHOLD_MB = 5; // Use resumable upload for files > 5MB
@@ -39,6 +40,7 @@ async function uploadToStorage(
 
   const projectRef = import.meta.env.VITE_SUPABASE_URL?.match(/\/\/([^.]+)\./)?.[1] || '';
   const tusEndpoint = `https://${projectRef}.supabase.co/storage/v1/upload/resumable`;
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
   const CHUNK_SIZE = 6 * 1024 * 1024; // 6MB — required by Supabase TUS
 
   try {
@@ -47,7 +49,7 @@ async function uploadToStorage(
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
-        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+        'apikey': anonKey,
         'Tus-Resumable': '1.0.0',
         'Upload-Length': String(file.size),
         'Upload-Metadata': [
@@ -77,7 +79,7 @@ async function uploadToStorage(
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+          'apikey': anonKey,
           'Tus-Resumable': '1.0.0',
           'Upload-Offset': String(offset),
           'Content-Type': 'application/offset+octet-stream',
@@ -355,7 +357,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           }
         }
       } catch (err) {
-        console.warn('Failed to check existing inspection:', err);
+        logger.warn('Failed to check existing inspection:', err);
       } finally {
         setCheckingExisting(false);
       }
@@ -543,7 +545,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                 const batchResult = await parseHomeInspection(context, stitchedBase64);
                 allTasks.push(...batchResult);
               } catch (err: any) {
-                console.warn(`Pass ${pass} batch ${b + 1} failed:`, err.message);
+                logger.warn(`Pass ${pass} batch ${b + 1} failed:`, err.message);
               }
             }
           }
@@ -639,7 +641,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
       setSelectedTasks(new Set(result.map((_, i) => i)));
       setStep('review');
     } catch (err: any) {
-      console.error('Error parsing inspection:', err);
+      logger.error('Error parsing inspection:', err);
       hideProgress();
       setError(getErrorMessage(err) || 'Failed to parse inspection document');
     } finally {
@@ -702,13 +704,13 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
           const { error: uploadError } = await uploadToStorage(fileToUpload, storagePath);
 
           if (uploadError) {
-            console.warn('Storage upload failed:', uploadError.message);
+            logger.warn('Storage upload failed:', uploadError.message);
             // Still save the document record without file_url so the summary view works
           } else {
             fileUploadSucceeded = true;
           }
         } catch (storageErr: any) {
-          console.warn('Storage upload exception:', storageErr?.message);
+          logger.warn('Storage upload exception:', storageErr?.message);
         }
 
         // Always save the document record — with or without the file URL
@@ -728,7 +730,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
             });
           }
         } catch (docErr: any) {
-          console.warn('Document record insert failed:', docErr?.message);
+          logger.warn('Document record insert failed:', docErr?.message);
         }
 
         if (!fileUploadSucceeded) {
@@ -808,7 +810,7 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
       setStep('done');
       onTasksCreated?.(selectedTasks.size);
     } catch (err: any) {
-      console.error('Error creating tasks:', err);
+      logger.error('Error creating tasks:', err);
       setError(getErrorMessage(err) || 'Failed to create tasks');
     } finally {
       setSaving(false);

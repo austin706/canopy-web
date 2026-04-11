@@ -9,6 +9,8 @@
  * When VITE_SENTRY_DSN is missing, everything is a no-op.
  */
 
+import logger from '@/utils/logger';
+
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN as string | undefined;
 
 let sentryModule: typeof import('@sentry/react') | null = null;
@@ -45,7 +47,7 @@ export async function initSentry() {
     });
   } catch {
     // @sentry/react not installed — graceful degradation
-    console.warn('[Sentry] @sentry/react not installed. Error tracking disabled.');
+    logger.warn('[Sentry] @sentry/react not installed. Error tracking disabled.');
   }
 }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { getPendingInvites, acceptHomeInvite, declineHomeInvite } from '@/services/supabase';
+import { showToast } from '@/components/Toast';
 import { Colors } from '@/constants/theme';
 import { supabase } from '@/services/supabase';
 
@@ -34,7 +35,7 @@ export default function PendingInvites() {
         .eq('id', invite.id);
       setInvites(prev => prev.filter(i => i.id !== invite.id));
     } catch (err: any) {
-      alert(err.message || 'Failed to accept invite.');
+      showToast({ message: err.message || 'Failed to accept invite.' });
     } finally {
       setActing(null);
     }
@@ -46,7 +47,7 @@ export default function PendingInvites() {
       await declineHomeInvite(invite.id);
       setInvites(prev => prev.filter(i => i.id !== invite.id));
     } catch (err: any) {
-      alert(err.message || 'Failed to decline invite.');
+      showToast({ message: err.message || 'Failed to decline invite.' });
     } finally {
       setActing(null);
     }

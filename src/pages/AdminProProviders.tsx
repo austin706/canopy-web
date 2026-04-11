@@ -4,6 +4,7 @@ import {
 } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { supabase } from '@/services/supabase';
+import { PageSkeleton } from '@/components/Skeleton';
 import { logAdminAction } from '@/services/auditLog';
 
 const SERVICE_CATEGORIES = [
@@ -346,9 +347,7 @@ export default function AdminProProviders() {
       )}
 
       {loading ? (
-        <div className="text-center" style={{ padding: '40px 0' }}>
-          <div className="spinner" />
-        </div>
+        <div className="page-wide"><PageSkeleton rows={6} /></div>
       ) : (
         <div className="admin-card-grid">
           {filtered.map(p => {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PageSkeleton } from '@/components/Skeleton';
 import {
   getReferenceData,
   getAllReferenceTypes,
@@ -206,7 +207,7 @@ export default function AdminReferenceData() {
           )}
 
           {loading ? (
-            <div className="text-center" style={{ padding: 32 }}><div className="spinner" /></div>
+            <div className="page-wide"><PageSkeleton rows={6} /></div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -336,7 +337,7 @@ export default function AdminReferenceData() {
           )}
 
           {loading ? (
-            <div className="text-center" style={{ padding: 32 }}><div className="spinner" /></div>
+            <div className="page-wide"><PageSkeleton rows={6} /></div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>

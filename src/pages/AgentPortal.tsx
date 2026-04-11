@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore';
 import { Colors, StatusColors } from '@/constants/theme';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import AdminPreviewBanner from '@/components/AdminPreviewBanner';
+import { PageSkeleton } from '@/components/Skeleton';
 
 function generateCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -503,7 +504,7 @@ export default function AgentPortal() {
         </button>
       </div>
 
-      {loading ? <div className="text-center"><div className="spinner" /></div> :
+      {loading ? <div className="page-wide"><PageSkeleton rows={4} /></div> :
 
       // ═══ Clients Tab ═══
       tab === 'clients' ? (

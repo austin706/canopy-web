@@ -40,7 +40,7 @@ export default function NotFound() {
         {/* Subtext */}
         <p style={{
           fontSize: 16,
-          color: '#666',
+          color: 'var(--color-dark-gray)',
           margin: '0 0 40px 0',
           lineHeight: 1.6,
         }}>

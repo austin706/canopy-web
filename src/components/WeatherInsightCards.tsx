@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { Colors } from '@/constants/theme';
 import type { WeatherInsight } from '@/services/weatherInsights';
+import logger from '@/utils/logger';
 import './WeatherInsightCards.css';
 
 interface Props {
@@ -43,7 +44,7 @@ export function WeatherInsightCards({ insights }: Props) {
           ));
         }
       } catch (e) {
-        console.warn('Failed to parse dismissed insights:', e);
+        logger.warn('Failed to parse dismissed insights:', e);
       }
     }
   }, []);
@@ -60,7 +61,7 @@ export function WeatherInsightCards({ insights }: Props) {
       items.push({ id, dismissedAt: Date.now() });
       localStorage.setItem(DISMISS_STORAGE_KEY, JSON.stringify(items));
     } catch (e) {
-      console.warn('Failed to save dismissed insights:', e);
+      logger.warn('Failed to save dismissed insights:', e);
     }
   };
 

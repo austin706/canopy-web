@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { logAdminAction } from '@/services/auditLog';
 import { Colors, StatusColors } from '@/constants/theme';
+import { PageSkeleton } from '@/components/Skeleton';
 
 interface SupportTicket {
   id: string;
@@ -205,9 +206,7 @@ export default function AdminSupportTickets() {
 
       {/* Tickets Table */}
       {loading ? (
-        <div className="admin-empty" style={{ textAlign: 'center', padding: 40 }}>
-          <p>Loading tickets...</p>
-        </div>
+        <div className="page-wide"><PageSkeleton rows={6} /></div>
       ) : sorted.length === 0 ? (
         <div className="admin-empty" style={{ textAlign: 'center', padding: 40 }}>
           <p>No tickets found.</p>

@@ -6,6 +6,7 @@ import { AgentAvatar } from '@/components/AgentAvatar';
 import PhotoCropModal from '@/components/PhotoCropModal';
 import { logAdminAction } from '@/services/auditLog';
 import { useStore } from '@/store/useStore';
+import { PageSkeleton } from '@/components/Skeleton';
 
 const STATUS_COLORS: Record<string, string> = {
   pending: Colors.warning,
@@ -332,9 +333,7 @@ export default function AdminAgents() {
 
           {/* Agent Cards Grid */}
           {agentsLoading ? (
-            <div className="text-center" style={{ padding: '32px 16px' }}>
-              <div className="spinner" />
-            </div>
+            <div className="page-wide"><PageSkeleton rows={6} /></div>
           ) : filtered.length === 0 ? (
             <div className="admin-empty">
               <p>No agents found</p>
@@ -454,9 +453,7 @@ export default function AdminAgents() {
 
           {/* Applications List */}
           {applicationsLoading ? (
-            <div className="text-center" style={{ padding: '32px 16px' }}>
-              <div className="spinner" />
-            </div>
+            <div className="page-wide"><PageSkeleton rows={6} /></div>
           ) : applications.length === 0 ? (
             <div className="admin-empty">
               <p>No applications found</p>

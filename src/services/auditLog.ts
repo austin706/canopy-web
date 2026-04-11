@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import logger from '@/utils/logger';
 
 export async function logAdminAction(
   action: string,
@@ -20,6 +21,6 @@ export async function logAdminAction(
       details,
     });
   } catch (error) {
-    console.error('Failed to log admin action:', error);
+    logger.error('Failed to log admin action:', error);
   }
 }

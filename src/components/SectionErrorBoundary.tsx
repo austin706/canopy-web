@@ -1,4 +1,5 @@
 import React, { ErrorInfo, ReactNode } from 'react';
+import logger from '@/utils/logger';
 
 interface Props {
   children: ReactNode;
@@ -22,7 +23,7 @@ export default class SectionErrorBoundary extends React.Component<Props, State> 
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error(`SectionErrorBoundary (${this.props.sectionName || 'Unknown'}) caught an error:`, error, errorInfo);
+    logger.error(`SectionErrorBoundary (${this.props.sectionName || 'Unknown'}) caught an error:`, error, errorInfo);
     this.setState(prev => ({ errorCount: prev.errorCount + 1 }));
   }
 

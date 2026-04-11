@@ -55,9 +55,9 @@ export default function AdminVerifications() {
       case 'verified':
         return <span style={{ padding: '3px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'rgba(139,158,126,0.15)', color: Colors.sageDark }}>Verified</span>;
       case 'pending':
-        return <span style={{ padding: '3px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'rgba(245,158,11,0.12)', color: '#b45309' }}>Pending</span>;
+        return <span style={{ padding: '3px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'rgba(245,158,11,0.12)', color: Colors.warning }}>Pending</span>;
       case 'rejected':
-        return <span style={{ padding: '3px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'rgba(220,38,38,0.1)', color: '#dc2626' }}>Rejected</span>;
+        return <span style={{ padding: '3px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'rgba(220,38,38,0.1)', color: Colors.error }}>Rejected</span>;
       default:
         return null;
     }
@@ -237,7 +237,7 @@ export default function AdminVerifications() {
                           className="btn btn-secondary"
                           onClick={() => handleReview(home.id, 'rejected')}
                           disabled={actionId === home.id || !reviewNotes.trim()}
-                          style={{ flex: 1, color: '#dc2626', borderColor: '#dc2626' }}
+                          style={{ flex: 1, color: Colors.error, borderColor: Colors.error }}
                         >
                           Reject
                         </button>

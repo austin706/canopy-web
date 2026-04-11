@@ -7,7 +7,9 @@ import {
   updateHomeMemberRole,
   type HomeMember,
 } from '@/services/supabase';
+import { showToast } from '@/components/Toast';
 import { Colors } from '@/constants/theme';
+import logger from '@/utils/logger';
 
 const ROLE_LABELS: Record<string, string> = {
   owner: 'Owner',
@@ -39,7 +41,7 @@ export default function HomeMembers({ homeId }: { homeId: string }) {
       const data = await getHomeMembers(homeId);
       setMembers(data);
     } catch (err) {
-      console.error('Failed to load members:', err);
+      logger.error('Failed to load members:', err);
     } finally {
       setLoading(false);
     }
@@ -54,7 +56,7 @@ export default function HomeMembers({ homeId }: { homeId: string }) {
       setShowInvite(false);
       await loadMembers();
     } catch (err: any) {
-      alert(err.message || 'Failed to send invite.');
+      showToast({ message: err.message || 'Failed to send invite.' });
     } finally {
       setInviting(false);
     }
@@ -67,7 +69,7 @@ export default function HomeMembers({ homeId }: { homeId: string }) {
       await removeHomeMember(member.id);
       setMembers(prev => prev.filter(m => m.id !== member.id));
     } catch (err: any) {
-      alert(err.message || 'Failed to remove member.');
+      showToast({ message: err.message || 'Failed to remove member.' });
     }
   };
 
@@ -76,7 +78,7 @@ export default function HomeMembers({ homeId }: { homeId: string }) {
       await updateHomeMemberRole(memberId, role);
       setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role } : m));
     } catch (err: any) {
-      alert(err.message || 'Failed to update role.');
+      showToast({ message: err.message || 'Failed to update role.' });
     }
   };
 

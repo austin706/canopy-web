@@ -13,6 +13,7 @@
 // - VITE_AI_API_KEY: Anthropic API key (fallback for direct client calls)
 
 import { supabase } from './supabase';
+import logger from '@/utils/logger';
 
 const CLAUDE_API_KEY = import.meta.env.VITE_AI_API_KEY || '';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
@@ -127,7 +128,7 @@ const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[AI] Edge Function error:', response.status, errorText);
+      logger.error('[AI] Edge Function error:', response.status, errorText);
       throw new Error(`AI scan failed: ${errorText || response.statusText}`);
     }
 
@@ -140,7 +141,7 @@ const callAI = async (payload: Record<string, unknown>): Promise<Response> => {
     )) {
       throw error;
     }
-    console.error('[AI] Edge Function call failed:', error);
+    logger.error('[AI] Edge Function call failed:', error);
     throw new Error(
       `AI scan failed: Failed to send a request to the Edge Function. ${error instanceof Error ? error.message : 'Please try again later.'}`
     );
@@ -224,7 +225,7 @@ Return ONLY valid JSON, no other text.`,
     const errorDetail = data.anthropic_error
       ? JSON.stringify(data.anthropic_error)
       : data.message || 'Unknown AI error';
-    console.error('[AI] Anthropic error details:', data);
+    logger.error('[AI] Anthropic error details:', data);
     throw new Error(`AI scan error: ${errorDetail}`);
   }
 
@@ -238,7 +239,7 @@ Return ONLY valid JSON, no other text.`,
     try {
       result = JSON.parse(text);
     } catch {
-      console.error('[AI] Failed to parse response text:', text.slice(0, 200));
+      logger.error('[AI] Failed to parse response text:', text.slice(0, 200));
       throw new Error('Failed to parse AI response');
     }
   } else {
@@ -418,7 +419,7 @@ export const parseHomeInspection = async (
     const errorDetail = data.anthropic_error
       ? JSON.stringify(data.anthropic_error)
       : data.message || 'Unknown AI error';
-    console.error('[AI] Anthropic error details:', data);
+    logger.error('[AI] Anthropic error details:', data);
     throw new Error(`AI analysis error: ${errorDetail}`);
   }
 

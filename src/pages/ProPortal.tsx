@@ -4,6 +4,7 @@ import { supabase, getNotifications, markNotificationRead } from '@/services/sup
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
+import { PageSkeleton } from '@/components/Skeleton';
 
 interface ProProvider {
   id: string;
@@ -460,8 +461,8 @@ export default function ProPortal() {
 
   if (loading) {
     return (
-      <div className="page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <div className="spinner" />
+      <div className="page-wide">
+        <PageSkeleton rows={4} />
       </div>
     );
   }

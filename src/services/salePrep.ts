@@ -1,5 +1,6 @@
 import { supabase, sendNotification, sendDirectEmailNotification } from '@/services/supabase';
 import { SALE_PREP_TOTAL_ITEMS } from '@/constants/salePrep';
+import logger from '@/utils/logger';
 
 export interface HomeSalePrep {
   id: string;
@@ -113,7 +114,7 @@ export async function toggleSalePrepItem(
             }
           }
         }
-      } catch (e) { console.warn('Failed to send sale prep milestone notification:', e); }
+      } catch (e) { logger.warn('Failed to send sale prep milestone notification:', e); }
     }
   }
 
@@ -172,7 +173,7 @@ export async function notifyAgentSalePrep(
       }
     }
   } catch {
-    console.error('Agent notification: could not resolve profile ID for agent', agentId);
+    logger.error('Agent notification: could not resolve profile ID for agent', agentId);
   }
 
   const notifTitle = 'Client preparing to sell';
@@ -194,10 +195,10 @@ export async function notifyAgentSalePrep(
         action_label: 'View in Canopy',
       });
     } catch (e) {
-      console.warn('Failed to save agent sale prep notification:', e);
+      logger.warn('Failed to save agent sale prep notification:', e);
     }
   } else {
-    console.warn('Agent notification: no email found for agent', agentId);
+    logger.warn('Agent notification: no email found for agent', agentId);
   }
 
   // Mark that the agent was notified on the sale prep record
@@ -206,5 +207,5 @@ export async function notifyAgentSalePrep(
     .update({ agent_notified_at: new Date().toISOString() })
     .eq('user_id', userId)
     .eq('status', 'active');
-  if (updateError) console.warn('Failed to update agent_notified_at:', updateError);
+  if (updateError) logger.warn('Failed to update agent_notified_at:', updateError);
 }

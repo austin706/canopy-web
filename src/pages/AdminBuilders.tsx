@@ -169,7 +169,7 @@ export default function AdminBuilders() {
                             </button>
                             <button
                               className="btn"
-                              style={{ backgroundColor: Colors.error, color: '#fff' }}
+                              style={{ backgroundColor: Colors.error, color: 'var(--color-white)' }}
                               onClick={() => handleReview(app.id, 'rejected')}
                             >
                               Reject

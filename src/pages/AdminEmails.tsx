@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PageSkeleton } from '@/components/Skeleton';
 import { Colors } from '@/constants/theme';
 import {
   getEmailTemplates,
@@ -170,10 +171,7 @@ export default function AdminEmails() {
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', paddingTop: 100 }}>
-          <div className="spinner" style={{ width: 40, height: 40 }} />
-          <p className="mt-md text-gray">Loading email templates...</p>
-        </div>
+        <div className="page-wide"><PageSkeleton rows={4} /></div>
       ) : (
         <>
           {/* Tabs */}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllGiftCodes, createGiftCodes, getAllAgents } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
+import { PageSkeleton } from '@/components/Skeleton';
 import { PLANS } from '@/services/subscriptionGate';
 import { logAdminAction } from '@/services/auditLog';
 import type { SubscriptionTier } from '@/types';
@@ -171,9 +172,7 @@ export default function AdminGiftCodes() {
       )}
 
       {loading ? (
-        <div className="text-center" style={{ padding: '40px 0' }}>
-          <div className="spinner" />
-        </div>
+        <div className="page-wide"><PageSkeleton rows={6} /></div>
       ) : (
         <>
           {/* Bulk Selection Bar */}

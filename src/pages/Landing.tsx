@@ -1068,7 +1068,7 @@ export default function Landing() {
           Your home deserves better than a junk drawer
         </h2>
         <p style={{
-          fontSize: isMobile ? 16 : 18, color: '#CCCCCC', lineHeight: 1.6, margin: '0 0 36px 0',
+          fontSize: isMobile ? 16 : 18, color: 'var(--color-silver)', lineHeight: 1.6, margin: '0 0 36px 0',
         }}>
           Set up in 5 minutes. Free forever. Upgrade when you're ready.
         </p>
@@ -1102,7 +1102,7 @@ export default function Landing() {
         }}>
           <div>
             <h3 style={{ fontSize: 18, fontWeight: FontWeight.bold, margin: '0 0 12px 0' }}>Canopy</h3>
-            <p style={{ fontSize: 14, color: '#CCCCCC', margin: 0, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 14, color: 'var(--color-silver)', margin: 0, lineHeight: 1.5 }}>
               AI-powered home maintenance. Understand, maintain, and protect your biggest investment.
             </p>
           </div>
@@ -1142,7 +1142,7 @@ export default function Landing() {
                 {section.links.map((link) => (
                   <li key={link.label} style={{ marginBottom: 8 }}>
                     <a href={link.href}
-                      style={{ color: '#CCCCCC', textDecoration: 'none', fontSize: 14, transition: 'color 0.3s' }}
+                      style={{ color: 'var(--color-silver)', textDecoration: 'none', fontSize: 14, transition: 'color 0.3s' }}
                       onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.copper; }}
                       onMouseLeave={(e) => { (e.target as HTMLElement).style.color = '#CCCCCC'; }}>
                       {link.label}
@@ -1155,14 +1155,14 @@ export default function Landing() {
           <div>
             <h4 style={{ fontSize: 14, fontWeight: FontWeight.semibold, margin: '0 0 16px 0' }}>Contact</h4>
             <a href="mailto:support@canopyhome.app"
-              style={{ color: '#CCCCCC', textDecoration: 'none', fontSize: 14, transition: 'color 0.3s', display: 'block' }}
+              style={{ color: 'var(--color-silver)', textDecoration: 'none', fontSize: 14, transition: 'color 0.3s', display: 'block' }}
               onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.copper; }}
               onMouseLeave={(e) => { (e.target as HTMLElement).style.color = '#CCCCCC'; }}>
               support@canopyhome.app
             </a>
           </div>
         </div>
-        <div style={{ textAlign: 'center', fontSize: 13, color: '#999999' }}>
+        <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-med-gray)' }}>
           <p style={{ margin: 0 }}>© 2026 Canopy. All rights reserved.</p>
         </div>
       </div>

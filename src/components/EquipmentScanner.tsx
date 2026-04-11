@@ -4,6 +4,7 @@ import { Colors } from '@/constants/theme';
 import type { EquipmentCategory } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
 import { useProgress } from '@/components/ProgressBar';
+import logger from '@/utils/logger';
 
 interface EquipmentScannerProps {
   onScanComplete?: (data: ScanResult & { name: string; category: EquipmentCategory }) => void;
@@ -94,7 +95,7 @@ async function compressImageFromFile(file: File, previewDataUrl: string, maxWidt
     bitmap.close();
     if (result) return result;
   } catch (e) {
-    console.warn('[Scanner] createImageBitmap(file) failed:', e);
+    logger.warn('[Scanner] createImageBitmap(file) failed:', e);
   }
 
   // Strategy 2: createImageBitmap from re-fetched blob
@@ -108,7 +109,7 @@ async function compressImageFromFile(file: File, previewDataUrl: string, maxWidt
     bitmap.close();
     if (result) return result;
   } catch (e) {
-    console.warn('[Scanner] createImageBitmap(blob) failed:', e);
+    logger.warn('[Scanner] createImageBitmap(blob) failed:', e);
   }
 
   // Strategy 3: Image() with blob URL
@@ -126,7 +127,7 @@ async function compressImageFromFile(file: File, previewDataUrl: string, maxWidt
     });
     if (result) return result;
   } catch (e) {
-    console.warn('[Scanner] Image(blobUrl) failed:', e);
+    logger.warn('[Scanner] Image(blobUrl) failed:', e);
   }
 
   // Strategy 4: Image() with the preview data URL
@@ -143,7 +144,7 @@ async function compressImageFromFile(file: File, previewDataUrl: string, maxWidt
       });
       if (result) return result;
     } catch (e) {
-      console.warn('[Scanner] Image(previewDataUrl) failed:', e);
+      logger.warn('[Scanner] Image(previewDataUrl) failed:', e);
     }
   }
 
@@ -154,7 +155,7 @@ async function compressImageFromFile(file: File, previewDataUrl: string, maxWidt
 
   // Strategy 5: Last resort — extract base64 from preview data URL
   if (previewDataUrl && previewDataUrl.includes(',')) {
-    console.warn('[Scanner] All conversion failed, sending raw preview base64');
+    logger.warn('[Scanner] All conversion failed, sending raw preview base64');
     return previewDataUrl.split(',')[1];
   }
 
@@ -302,7 +303,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
         setError(errorMsg);
         setShowScanFailurePopup(true);
       }
-      console.error('Scan error:', err);
+      logger.error('Scan error:', err);
     }
   };
 
@@ -380,7 +381,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
       setScanned(true);
       setManualMode(false);
     } catch (err: any) {
-      console.error('Manual lookup error:', err);
+      logger.error('Manual lookup error:', err);
       if (err instanceof AiUsageLimitError) {
         setUsageLimitHit(true);
         setError(getErrorMessage(err));

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getAllUsers, updateProfile, deleteUserAccount, getUserDetailData } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { logAdminAction } from '@/services/auditLog';
+import { PageSkeleton } from '@/components/Skeleton';
 
 const TIER_COLORS: Record<string, string> = {
   free: '#6B7280',
@@ -245,8 +246,8 @@ export default function AdminUsers() {
 
         {/* Users Table */}
         {loading ? (
-          <div className="text-center" style={{ padding: '32px 16px' }}>
-            <div className="spinner" />
+          <div className="page-wide">
+            <PageSkeleton rows={6} />
           </div>
         ) : filtered.length === 0 ? (
           <div className="admin-empty">

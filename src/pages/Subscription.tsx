@@ -12,6 +12,7 @@ import type { SubscriptionTier } from '@/types';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import ServiceAreaMap from '@/components/ServiceAreaMap';
 import { trackEvent } from '@/utils/analytics';
+import { PageSkeleton } from '@/components/Skeleton';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -410,8 +411,10 @@ export default function Subscription() {
 
       {/* Pro Enrollment Progress */}
       {enrolling && (
-        <div className="card mb-lg" style={{ background: Colors.sageMuted, padding: '20px 24px', textAlign: 'center' }}>
-          <div className="spinner" style={{ margin: '0 auto 12px' }} />
+        <div className="card mb-lg" style={{ background: Colors.sageMuted, padding: '20px 24px' }}>
+          <div style={{ textAlign: 'center', marginBottom: 12 }}>
+            <PageSkeleton rows={2} />
+          </div>
           <p style={{ fontWeight: 600, fontSize: 16, color: Colors.sage, margin: '0 0 4px' }}>Setting up your Pro experience...</p>
           <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>Finding your local Canopy pro and scheduling your first visit.</p>
         </div>
@@ -669,7 +672,9 @@ export default function Subscription() {
             <div style={{ padding: '20px 24px' }}>
               {planChangeModal.loading ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 0' }}>
-                  <div className="spinner" style={{ marginBottom: 12 }} />
+                  <div style={{ marginBottom: 12 }}>
+                    <PageSkeleton rows={2} />
+                  </div>
                   <p style={{ fontSize: 14, color: Colors.medGray, margin: 0 }}>Calculating your plan change...</p>
                 </div>
               ) : planChangeModal.preview ? (
@@ -818,7 +823,9 @@ export default function Subscription() {
             <div ref={checkoutRef} style={{ minHeight: 300 }}>
               {checkoutLoading && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px' }}>
-                  <div className="spinner" style={{ marginBottom: 16 }} />
+                  <div style={{ marginBottom: 16 }}>
+                    <PageSkeleton rows={2} />
+                  </div>
                   <p style={{ fontSize: 14, color: Colors.medGray, margin: 0 }}>Loading secure checkout...</p>
                 </div>
               )}

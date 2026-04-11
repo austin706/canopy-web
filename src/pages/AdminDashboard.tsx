@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
+import { PageSkeleton } from '@/components/Skeleton';
 
 interface Stats {
   totalUsers: number; totalAgents: number; activeGiftCodes: number; redeemedGiftCodes: number;
@@ -54,7 +55,7 @@ export default function AdminDashboard() {
     finally { setLoading(false); }
   };
 
-  if (loading) return <div className="page text-center" style={{ paddingTop: 100 }}><div className="spinner" style={{ width: 40, height: 40 }} /><p className="mt-md text-gray">Loading admin data...</p></div>;
+  if (loading) return <div className="page-wide"><PageSkeleton rows={4} /></div>;
 
   const rate = stats && stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0;
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });

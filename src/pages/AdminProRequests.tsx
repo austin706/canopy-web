@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PageSkeleton } from '@/components/Skeleton';
 import { getAllProRequests, updateProRequest, getAllProProviders, sendNotification, supabase } from '@/services/supabase';
 import { logAdminAction } from '@/services/auditLog';
 import { StatusColors, Colors } from '@/constants/theme';
@@ -239,9 +240,7 @@ export default function AdminProRequests() {
       )}
 
       {loading ? (
-        <div className="text-center" style={{ padding: '40px 0' }}>
-          <div className="spinner" />
-        </div>
+        <div className="page-wide"><PageSkeleton rows={6} /></div>
       ) : (
         <div className="admin-table-wrapper">
           <table>

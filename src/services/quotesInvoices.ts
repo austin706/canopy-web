@@ -1,5 +1,6 @@
 import { supabase, sendNotification } from '@/services/supabase';
 import type { Quote, Invoice, InvoicePayment, LineItem } from '@/types';
+import logger from '@/utils/logger';
 
 // ─── Quote Functions ───
 
@@ -216,7 +217,7 @@ export async function sendInvoice(invoiceId: string): Promise<void> {
         action_url: `/invoices/${invoiceId}`,
       }).catch(() => {});
     }
-  } catch (e) { console.warn('Failed to send invoice notification:', e); }
+  } catch (e) { logger.warn('Failed to send invoice notification:', e); }
 }
 
 export async function payInvoice(invoiceId: string): Promise<{ clientSecret?: string; url?: string }> {

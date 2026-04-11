@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
+import { PageSkeleton } from '@/components/Skeleton';
 import { SALE_PREP_CATEGORIES, SALE_PREP_ITEMS, type SalePrepCategory } from '@/constants/salePrep';
 import {
   getActiveSalePrep,
@@ -110,9 +111,8 @@ export default function SalePrep() {
 
   if (loading) {
     return (
-      <div className="page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <div className="spinner"></div>
-        <p>Loading...</p>
+      <div className="page-wide">
+        <PageSkeleton rows={4} />
       </div>
     );
   }

@@ -307,7 +307,7 @@ export default function HomeAssistant() {
             style={{
               width: 40, height: 40, borderRadius: '50%', border: 'none',
               backgroundColor: input.trim() && !isLoading ? Colors.sage : Colors.cream,
-              color: '#fff', cursor: input.trim() && !isLoading ? 'pointer' : 'default',
+              color: 'var(--color-white)', cursor: input.trim() && !isLoading ? 'pointer' : 'default',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 18, flexShrink: 0,
             }}

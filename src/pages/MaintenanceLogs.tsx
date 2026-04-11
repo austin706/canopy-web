@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { getMaintenanceLogs, addMaintenanceLog as addLogApi, updateMaintenanceLog as updateLogApi } from '@/services/supabase';
 import { trackLogEdit, getLogEditHistory } from '@/services/homeTransfer';
+import { PageSkeleton } from '@/components/Skeleton';
 import { Colors } from '@/constants/theme';
 
 const CATEGORIES = ['general','hvac','plumbing','electrical','roof','appliance','outdoor','safety','pool','garage','fireplace','pest_control'];
@@ -112,9 +113,7 @@ export default function MaintenanceLogs() {
       </div>
 
       {loading ? (
-        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-          <p className="text-sm text-gray">Loading maintenance logs...</p>
-        </div>
+        <div className="page-wide"><PageSkeleton rows={4} /></div>
       ) : maintenanceLogs.length === 0 ? (
         <div className="empty-state"><div className="icon" style={{ fontSize: 32, fontWeight: 700, color: 'var(--copper)' }}>--</div><h3>No entries yet</h3><p>Track your maintenance activities and costs.</p></div>
       ) : (

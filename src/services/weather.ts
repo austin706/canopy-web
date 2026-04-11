@@ -12,6 +12,7 @@
 // - VITE_OPENWEATHER_API_KEY: OpenWeatherMap key (fallback only — NOT needed in production)
 
 import type { WeatherData, WeatherAlert } from '@/types';
+import logger from '@/utils/logger';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -41,15 +42,15 @@ export const fetchWeather = async (lat: number, lon: number): Promise<WeatherDat
       if (res.ok) {
         return await res.json() as WeatherData;
       }
-      console.warn(`Weather Edge Function returned ${res.status}, falling back to direct API`);
+      logger.warn(`Weather Edge Function returned ${res.status}, falling back to direct API`);
     } catch (err) {
-      console.warn('Weather Edge Function unreachable, falling back to direct API:', err);
+      logger.warn('Weather Edge Function unreachable, falling back to direct API:', err);
     }
   }
 
   // ─── Fallback: direct OpenWeatherMap + NWS (exposes API key on client) ───
   if (!API_KEY) {
-    console.warn(
+    logger.warn(
       'VITE_OPENWEATHER_API_KEY not configured and Edge Function unavailable. ' +
       'Set OPENWEATHER_API_KEY secret on the Supabase weather Edge Function.'
     );
@@ -144,7 +145,7 @@ const fetchNWSAlerts = async (lat: number, lon: number): Promise<WeatherAlert[]>
       } as WeatherAlert;
     });
   } catch (err) {
-    console.warn('NWS alerts fetch failed (non-US location?):', err);
+    logger.warn('NWS alerts fetch failed (non-US location?):', err);
     return [];
   }
 };

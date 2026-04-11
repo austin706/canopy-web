@@ -1,4 +1,5 @@
 import { supabase, sendNotification, sendDirectEmailNotification } from '@/services/supabase';
+import logger from '@/utils/logger';
 
 export interface HomeTransfer {
   id: string;
@@ -85,7 +86,7 @@ export async function acceptTransfer(transferId: string, newOwnerId: string): Pr
     p_new_owner_id: newOwnerId,
   });
   if (rpcErr) {
-    console.error('Atomic transfer failed:', rpcErr);
+    logger.error('Atomic transfer failed:', rpcErr);
     throw new Error(rpcErr.message || 'Home transfer failed. Please try again or contact support.');
   }
 
@@ -105,7 +106,7 @@ export async function acceptTransfer(transferId: string, newOwnerId: string): Pr
         action_url: '/dashboard',
       }).catch(() => {});
     }
-  } catch (e) { console.warn('Failed to send transfer accepted notification:', e); }
+  } catch (e) { logger.warn('Failed to send transfer accepted notification:', e); }
 }
 
 /** Decline a transfer */
@@ -135,7 +136,7 @@ export async function declineTransfer(transferId: string): Promise<void> {
         category: 'general',
         action_url: '/home-transfer',
       }).catch(() => {});
-    } catch (e) { console.warn('Failed to send transfer declined notification:', e); }
+    } catch (e) { logger.warn('Failed to send transfer declined notification:', e); }
   }
 }
 
@@ -189,7 +190,7 @@ export async function notifyBuyerOfTransfer(
         category: 'general',
       });
     } catch (e) {
-      console.warn('Failed to save transfer email notification:', e);
+      logger.warn('Failed to save transfer email notification:', e);
     }
   }
 }
@@ -211,7 +212,7 @@ export async function trackLogEdit(
       old_value: oldValue,
       new_value: newValue,
     });
-  if (error) console.warn('Failed to track edit:', error);
+  if (error) logger.warn('Failed to track edit:', error);
 }
 
 /** Get edit history for a maintenance log entry */

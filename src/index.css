@@ -871,7 +871,8 @@ a:hover { opacity: 0.85; }
   background: var(--white);
   border-radius: var(--radius-md);
   border: 1px solid var(--light-gray);
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .admin-table-toolbar {
   display: flex;
@@ -1136,6 +1137,11 @@ a:hover { opacity: 0.85; }
   .admin-table-toolbar .admin-search { max-width: 100%; }
   .admin-stat-row { flex-wrap: wrap; }
   .admin-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 768px) {
+  .admin-table-wrapper table {
+    min-width: 700px;
+  }
 }
 @media (max-width: 480px) {
   .admin-kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; }

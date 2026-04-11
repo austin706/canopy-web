@@ -3,6 +3,7 @@
 // ===============================================================
 import type { SubscriptionTier } from '@/types';
 import type { PlanInfo } from '@/constants/pricing';
+import logger from '@/utils/logger';
 export { PLANS, PRICING, formatPrice, getEffectiveMonthly, getStripeSavings, ANNUAL_DISCOUNT_PERCENT } from '@/constants/pricing';
 
 export type Feature =
@@ -117,7 +118,7 @@ export async function loadServiceAreas(): Promise<Set<string>> {
     _serviceAreaCache = new Set((data || []).map(row => row.zip_code));
     _serviceAreaCacheTime = now;
   } catch (err) {
-    console.error('Failed to load service areas:', err);
+    logger.error('Failed to load service areas:', err);
     // If cache exists but is stale, keep using it rather than failing
     if (_serviceAreaCache) return _serviceAreaCache;
     _serviceAreaCache = new Set();

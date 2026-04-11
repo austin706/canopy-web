@@ -311,7 +311,7 @@ export default function AgentLanding() {
           >
             Ready to partner with Canopy?
           </h2>
-          <p style={{ fontSize: 17, color: '#CCCCCC', margin: '0 0 32px 0', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 17, color: 'var(--color-silver)', margin: '0 0 32px 0', lineHeight: 1.6 }}>
             Apply in about two minutes and we'll get you set up with your agent portal.
           </p>
           <button
@@ -343,7 +343,7 @@ export default function AgentLanding() {
           fontFamily: fontStack,
         }}
       >
-        <p style={{ fontSize: 13, color: '#999999', margin: 0 }}>
+        <p style={{ fontSize: 13, color: 'var(--color-med-gray)', margin: 0 }}>
           © 2026 Canopy. All rights reserved.
         </p>
       </footer>

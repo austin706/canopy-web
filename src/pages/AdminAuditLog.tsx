@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
+import { PageSkeleton } from '@/components/Skeleton';
 
 interface AuditLog {
   id: string;
@@ -231,9 +232,8 @@ export default function AdminAuditLog() {
 
       {/* Table */}
       {loading && offset === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60 }}>
-          <div className="spinner" style={{ width: 40, height: 40 }} />
-          <p style={{ marginTop: 16, color: Colors.medGray }}>Loading audit logs...</p>
+        <div className="page-wide">
+          <PageSkeleton rows={6} />
         </div>
       ) : filteredLogs.length === 0 ? (
         <div className="admin-empty">

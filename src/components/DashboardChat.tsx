@@ -3,6 +3,7 @@ import { Colors } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
 import { useNavigate } from 'react-router-dom';
+import logger from '@/utils/logger';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -147,7 +148,7 @@ export default function DashboardChat() {
       setMessages([...newMessages, assistantMessage]);
     } catch (err) {
       setError('Failed to connect to AI assistant. Please try again.');
-      console.warn('Chat error:', err);
+      logger.warn('Chat error:', err);
     } finally {
       setIsLoading(false);
     }

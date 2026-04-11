@@ -2,6 +2,7 @@
 // so the API key stays server-side.
 
 import { supabase } from '@/services/supabase';
+import logger from '@/utils/logger';
 
 export interface PlacePrediction {
   placeId: string;
@@ -37,12 +38,12 @@ export async function fetchPlacePredictions(
       body: { mode: 'autocomplete', input, sessionToken },
     });
     if (error) {
-      console.warn('[placesAutocomplete] fetch failed:', error);
+      logger.warn('[placesAutocomplete] fetch failed:', error);
       return [];
     }
     return (data?.predictions ?? []) as PlacePrediction[];
   } catch (err) {
-    console.warn('[placesAutocomplete] exception:', err);
+    logger.warn('[placesAutocomplete] exception:', err);
     return [];
   }
 }
@@ -60,12 +61,12 @@ export async function fetchPlaceDetails(
       body: { mode: 'details', placeId, sessionToken },
     });
     if (error || !data || data.error) {
-      console.warn('[placeDetails] fetch failed:', error || data?.error);
+      logger.warn('[placeDetails] fetch failed:', error || data?.error);
       return null;
     }
     return data as PlaceDetails;
   } catch (err) {
-    console.warn('[placeDetails] exception:', err);
+    logger.warn('[placeDetails] exception:', err);
     return null;
   }
 }

@@ -230,7 +230,7 @@ export default function ApplyPro() {
               transition: 'all 0.15s',
             }}
           >
-            <p style={{ margin: '0 0 4px 0', fontSize: 15, fontWeight: 700, color: '#1a6b4a' }}>Canopy Technician</p>
+            <p style={{ margin: '0 0 4px 0', fontSize: 15, fontWeight: 700, color: Colors.sage }}>Canopy Technician</p>
             <p style={{ margin: 0, fontSize: 12, color: Colors.medGray, lineHeight: 1.5 }}>
               Join the Canopy team. Perform bimonthly home maintenance visits for subscribers. Steady schedule, training provided.
             </p>
@@ -245,7 +245,7 @@ export default function ApplyPro() {
               transition: 'all 0.15s',
             }}
           >
-            <p style={{ margin: '0 0 4px 0', fontSize: 15, fontWeight: 700, color: '#6b4a1a' }}>Partner Pro</p>
+            <p style={{ margin: '0 0 4px 0', fontSize: 15, fontWeight: 700, color: Colors.copper }}>Partner Pro</p>
             <p style={{ margin: 0, fontSize: 12, color: Colors.medGray, lineHeight: 1.5 }}>
               Stay independent. Get matched with on-demand service jobs from Canopy homeowners. Set your own schedule.
             </p>

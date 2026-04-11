@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
+import { PageSkeleton } from '@/components/Skeleton';
 
 interface AnalyticsData {
   // User Growth
@@ -241,12 +242,7 @@ export default function AdminAnalytics() {
   };
 
   if (loading) {
-    return (
-      <div style={{ textAlign: 'center', paddingTop: 100 }}>
-        <div style={{ display: 'inline-block', width: 40, height: 40 }} className="spinner" />
-        <p style={{ marginTop: 16, color: Colors.medGray }}>Loading analytics...</p>
-      </div>
-    );
+    return <div className="page-wide"><PageSkeleton rows={4} /></div>;
   }
 
   if (!data) {

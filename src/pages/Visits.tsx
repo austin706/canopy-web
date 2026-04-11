@@ -400,7 +400,7 @@ export default function Visits() {
                     <p style={{ fontWeight: 600, marginBottom: 4 }}>{formatDate(visit.confirmed_date || visit.proposed_date || '')}</p>
                     <p className="text-xs text-gray">{visit.provider?.business_name}</p>
                   </div>
-                  <span className="badge" style={{ background: '#4CAF5020', color: '#2E7D32' }}>Completed</span>
+                  <span className="badge" style={{ background: Colors.success + '20', color: Colors.success }}>Completed</span>
                 </div>
                 {visit.selected_task_ids && visit.selected_task_ids.length > 0 && (
                   <p className="text-sm text-gray mb-sm">Tasks: {visit.selected_task_ids.length} completed</p>
@@ -599,7 +599,7 @@ export default function Visits() {
                                       borderRadius: 4,
                                       border: `1px solid #dc3545`,
                                       background: 'transparent',
-                                      color: '#dc3545',
+                                      color: Colors.error,
                                       cursor: 'pointer',
                                       fontSize: 12,
                                       fontWeight: 600,
@@ -806,7 +806,7 @@ export default function Visits() {
           <div className="card" style={{ maxWidth: 400, padding: 24 }}>
             <h2 style={{ marginBottom: 16 }}>Cancel Visit?</h2>
             <div style={{ padding: 12, background: '#FFF3CD', borderRadius: 8, marginBottom: 16, borderLeft: `4px solid #FFC107` }}>
-              <p className="text-sm" style={{ margin: 0, color: '#856404' }}>
+              <p className="text-sm" style={{ margin: 0, color: Colors.warning }}>
                 <strong>Cancellation Policy:</strong> If cancelled 48+ hours before your visit, you can rebook in the same month. Cancellations within 48 hours may forfeit this month's visit.
               </p>
             </div>

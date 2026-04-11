@@ -373,7 +373,7 @@ export default function AdminTechnicianOnboarding() {
                       } catch (e: any) { alert(e.message); }
                     }} style={{
                       fontSize: 10, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
-                      background: Colors.copper, color: '#fff', border: 'none', cursor: 'pointer',
+                      background: Colors.copper, color: 'var(--color-white)', border: 'none', cursor: 'pointer',
                     }}>Initiate</button>
                   ) : (
                     <span style={{
@@ -501,7 +501,7 @@ export default function AdminTechnicianOnboarding() {
                                       onClick={() => { setEditingNotes(null); setNotesDraft(''); }}
                                       style={{
                                         padding: '4px 12px', fontSize: 11, borderRadius: 4,
-                                        border: `1px solid ${Colors.lightGray}`, background: '#fff',
+                                        border: `1px solid ${Colors.lightGray}`, background: Colors.white,
                                         cursor: 'pointer', color: Colors.medGray,
                                       }}
                                     >Cancel</button>
@@ -513,7 +513,7 @@ export default function AdminTechnicianOnboarding() {
                                       }}
                                       style={{
                                         padding: '4px 12px', fontSize: 11, borderRadius: 4,
-                                        border: 'none', background: Colors.sage, color: '#fff',
+                                        border: 'none', background: Colors.sage, color: 'var(--color-white)',
                                         cursor: 'pointer', fontWeight: 600,
                                       }}
                                     >Save</button>
@@ -581,7 +581,7 @@ export default function AdminTechnicianOnboarding() {
         <div className="admin-card-grid">
           {materials.map(mat => (
             <div key={mat.id} onClick={() => setSelectedMaterial(mat)} style={{
-              padding: 16, borderRadius: 8, border: `1px solid ${Colors.lightGray}`, background: '#fff',
+              padding: 16, borderRadius: 8, border: `1px solid ${Colors.lightGray}`, background: Colors.white,
               cursor: 'pointer', transition: 'border-color 0.15s, box-shadow 0.15s',
             }}
             onMouseOver={e => { e.currentTarget.style.borderColor = Colors.sage; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'; }}
@@ -607,7 +607,7 @@ export default function AdminTechnicianOnboarding() {
                   </span>
                 )}
                 {(mat.required_for_level || []).map(level => (
-                  <span key={level} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#fff3cd', color: '#856404' }}>
+                  <span key={level} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#fff3cd', color: Colors.warning }}>
                     {level}
                   </span>
                 ))}
@@ -624,7 +624,7 @@ export default function AdminTechnicianOnboarding() {
           background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000,
         }} onClick={() => setSelectedMaterial(null)}>
           <div style={{
-            background: '#fff', borderRadius: 12, padding: 32, maxWidth: 560, width: '90%', maxHeight: '80vh', overflow: 'auto',
+            background: Colors.white, borderRadius: 12, padding: 32, maxWidth: 560, width: '90%', maxHeight: '80vh', overflow: 'auto',
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -661,7 +661,7 @@ export default function AdminTechnicianOnboarding() {
                 <p style={{ fontSize: 12, fontWeight: 600, color: Colors.charcoal, marginBottom: 6 }}>Required for levels:</p>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {(selectedMaterial.required_for_level || []).map(level => (
-                    <span key={level} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, background: '#fff3cd', color: '#856404', fontWeight: 600 }}>
+                    <span key={level} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, background: '#fff3cd', color: Colors.warning, fontWeight: 600 }}>
                       {level}
                     </span>
                   ))}
@@ -697,7 +697,7 @@ export default function AdminTechnicianOnboarding() {
           background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000,
         }} onClick={() => setSelectedStep(null)}>
           <div style={{
-            background: '#fff', borderRadius: 12, padding: 32, maxWidth: 480, width: '90%', maxHeight: '80vh', overflow: 'auto',
+            background: Colors.white, borderRadius: 12, padding: 32, maxWidth: 480, width: '90%', maxHeight: '80vh', overflow: 'auto',
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 20, color: Colors.charcoal }}>Step {selectedStep.sort_order}: {selectedStep.title}</h2>

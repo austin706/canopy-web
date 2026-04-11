@@ -4,6 +4,7 @@ import { useStore } from '@/store/useStore';
 import { resendVerificationEmail, supabase, getUserHomes, STRUCTURE_TYPES } from '@/services/supabase';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import RescheduleModal from '@/components/RescheduleModal';
+import { showToast } from '@/components/Toast';
 import { PLANS } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
 import type { Home } from '@/types';
@@ -251,13 +252,13 @@ export default function Layout() {
                     // Already verified — update store and dismiss banner
                     const storeUser = useStore.getState().user;
                     if (storeUser) useStore.getState().setUser({ ...storeUser, email_confirmed: true });
-                    alert('Your email is already verified!');
+                    showToast({ message: 'Your email is already verified!' });
                     return;
                   }
                   await resendVerificationEmail();
-                  alert('Verification email sent! Check your inbox.');
+                  showToast({ message: 'Verification email sent! Check your inbox.' });
                 } catch (err: any) {
-                  alert(err?.message || 'Failed to send. Please try again.');
+                  showToast({ message: err?.message || 'Failed to send. Please try again.' });
                 }
               }}
               style={{

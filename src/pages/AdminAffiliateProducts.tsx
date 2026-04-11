@@ -229,7 +229,7 @@ export default function AdminAffiliateProducts() {
           style={{
             padding: '10px 20px',
             backgroundColor: Colors.sage,
-            color: '#fff',
+            color: 'var(--color-white)',
             border: 'none',
             borderRadius: 8,
             fontWeight: 600,
@@ -309,7 +309,7 @@ export default function AdminAffiliateProducts() {
         >
           <div
             style={{
-              background: '#fff', borderRadius: 12, padding: 28,
+              background: Colors.white, borderRadius: 12, padding: 28,
               width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
@@ -478,7 +478,7 @@ export default function AdminAffiliateProducts() {
                 onClick={() => setEditing(null)}
                 style={{
                   padding: '10px 20px', borderRadius: 8,
-                  border: `1px solid ${Colors.lightGray}`, background: '#fff',
+                  border: `1px solid ${Colors.lightGray}`, background: Colors.white,
                   fontSize: 14, cursor: 'pointer',
                 }}
               >
@@ -490,7 +490,7 @@ export default function AdminAffiliateProducts() {
                 style={{
                   padding: '10px 20px', borderRadius: 8, border: 'none',
                   background: saving ? Colors.silver : Colors.sage,
-                  color: '#fff', fontWeight: 600, fontSize: 14,
+                  color: 'var(--color-white)', fontWeight: 600, fontSize: 14,
                   cursor: saving ? 'not-allowed' : 'pointer',
                 }}
               >
@@ -606,7 +606,7 @@ export default function AdminAffiliateProducts() {
                         onClick={() => setEditing({ ...p })}
                         style={{
                           padding: '2px 8px', fontSize: 11, borderRadius: 4,
-                          border: `1px solid ${Colors.lightGray}`, background: '#fff',
+                          border: `1px solid ${Colors.lightGray}`, background: Colors.white,
                           cursor: 'pointer',
                         }}
                       >
@@ -616,7 +616,7 @@ export default function AdminAffiliateProducts() {
                         onClick={() => handleDelete(p)}
                         style={{
                           padding: '2px 8px', fontSize: 11, borderRadius: 4,
-                          border: '1px solid #FFCDD2', background: '#FFF5F5',
+                          border: '1px solid #FFCDD2', background: Colors.cream,
                           color: '#C62828', cursor: 'pointer',
                         }}
                       >
@@ -710,11 +710,11 @@ export default function AdminAffiliateProducts() {
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => setEditing({ ...p })} style={{
                           padding: '4px 10px', fontSize: 12, borderRadius: 4,
-                          border: `1px solid ${Colors.lightGray}`, background: '#fff', cursor: 'pointer',
+                          border: `1px solid ${Colors.lightGray}`, background: Colors.white, cursor: 'pointer',
                         }}>Edit</button>
                         <button onClick={() => handleDelete(p)} style={{
                           padding: '4px 10px', fontSize: 12, borderRadius: 4,
-                          border: '1px solid #FFCDD2', background: '#FFF5F5', color: '#C62828', cursor: 'pointer',
+                          border: '1px solid #FFCDD2', background: Colors.cream, color: '#C62828', cursor: 'pointer',
                         }}>Delete</button>
                       </div>
                     </td>

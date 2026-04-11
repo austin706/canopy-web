@@ -1,4 +1,5 @@
 import { supabase, sendNotification } from '@/services/supabase';
+import logger from '@/utils/logger';
 
 /**
  * Pro Enrollment Service
@@ -167,7 +168,7 @@ export async function createVisitAllocation(
     });
 
   if (error) {
-    console.error('Failed to create visit allocation:', error);
+    logger.error('Failed to create visit allocation:', error);
     // Non-blocking — don't throw
   }
 }
@@ -193,7 +194,7 @@ export async function enrollProSubscriber(userId: string): Promise<{
       .single();
 
     if (!home) {
-      console.warn('Pro enrollment: user has no home registered');
+      logger.warn('Pro enrollment: user has no home registered');
       return result;
     }
 
@@ -234,7 +235,7 @@ export async function enrollProSubscriber(userId: string): Promise<{
       if (!visitError) {
         result.visitCreated = true;
       } else {
-        console.warn('Failed to create first visit:', visitError);
+        logger.warn('Failed to create first visit:', visitError);
       }
 
       // 5. Notify the provider about the new client
@@ -275,7 +276,7 @@ export async function enrollProSubscriber(userId: string): Promise<{
     Promise.resolve(supabase.from('profiles').update({ pro_welcome_sent: true }).eq('id', userId)).catch(() => {});
 
   } catch (error) {
-    console.error('Pro enrollment error:', error);
+    logger.error('Pro enrollment error:', error);
   }
 
   return result;
@@ -332,7 +333,7 @@ export async function proposeNextVisit(
       .single();
 
     if (error) {
-      console.warn('Failed to auto-propose next visit:', error);
+      logger.warn('Failed to auto-propose next visit:', error);
       return { nextVisitId: null };
     }
 
@@ -348,7 +349,7 @@ export async function proposeNextVisit(
 
     return { nextVisitId: newVisit?.id || null };
   } catch (error) {
-    console.error('Error auto-proposing next visit:', error);
+    logger.error('Error auto-proposing next visit:', error);
     return { nextVisitId: null };
   }
 }

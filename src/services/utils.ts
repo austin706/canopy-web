@@ -6,6 +6,7 @@ import { completeTask, addMaintenanceLog, createTask, supabase } from '@/service
 import { createNextDynamicTask } from '@/services/taskEngine';
 import { useStore } from '@/store/useStore';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 /**
  * Rolling Home Health Score — blended algorithm.
@@ -164,8 +165,8 @@ export const quickCompleteTask = async (task: MaintenanceTask): Promise<void> =>
   store.addMaintenanceLog(logEntry);
 
   // 3. Persist to Supabase (non-blocking — UI already updated)
-  try { await completeTask(task.id); } catch (err) { console.warn('Task complete API call failed:', err); }
-  try { await addMaintenanceLog(logEntry); } catch (err) { console.warn('Maintenance log save failed:', err); }
+  try { await completeTask(task.id); } catch (err) { logger.warn('Task complete API call failed:', err); }
+  try { await addMaintenanceLog(logEntry); } catch (err) { logger.warn('Maintenance log save failed:', err); }
 
   // 4. If this is a dynamic task, schedule the next occurrence
   let nextTask: MaintenanceTask | null = null;
@@ -175,7 +176,7 @@ export const quickCompleteTask = async (task: MaintenanceTask): Promise<void> =>
     // Add to local store immediately
     useStore.getState().addTask(nextTask);
     // Persist to Supabase
-    try { await createTask(nextTask); } catch (err) { console.warn('Next dynamic task creation failed:', err); }
+    try { await createTask(nextTask); } catch (err) { logger.warn('Next dynamic task creation failed:', err); }
   }
 
   // 4b. If this is an as_needed task, prompt user to schedule next occurrence
@@ -229,7 +230,7 @@ export const undoTaskCompletion = async (
       .update({ status: 'upcoming', completed_date: null, completed_by: null })
       .eq('id', originalTask.id);
   } catch (err) {
-    console.warn('Failed to revert task status:', err);
+    logger.warn('Failed to revert task status:', err);
   }
 
   try {
@@ -238,7 +239,7 @@ export const undoTaskCompletion = async (
       .delete()
       .eq('id', logEntryId);
   } catch (err) {
-    console.warn('Failed to delete maintenance log:', err);
+    logger.warn('Failed to delete maintenance log:', err);
   }
 
   if (nextDynamicTask) {
@@ -248,7 +249,7 @@ export const undoTaskCompletion = async (
         .delete()
         .eq('id', nextDynamicTask.id);
     } catch (err) {
-      console.warn('Failed to delete next dynamic task:', err);
+      logger.warn('Failed to delete next dynamic task:', err);
     }
   }
 };
@@ -263,7 +264,7 @@ export const quickSkipTask = async (task: MaintenanceTask): Promise<void> => {
     await supabase.from('maintenance_tasks')
       .update({ status: 'skipped' })
       .eq('id', task.id);
-  } catch (err) { console.warn('Skip task API call failed:', err); }
+  } catch (err) { logger.warn('Skip task API call failed:', err); }
 };
 
 /**
@@ -278,5 +279,5 @@ export const quickSnoozeTask = async (task: MaintenanceTask, days: number): Prom
     await supabase.from('maintenance_tasks')
       .update({ due_date: newDate.toISOString() })
       .eq('id', task.id);
-  } catch (err) { console.warn('Snooze task API call failed:', err); }
+  } catch (err) { logger.warn('Snooze task API call failed:', err); }
 };

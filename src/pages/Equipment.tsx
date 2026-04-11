@@ -7,6 +7,7 @@ import { getEquipmentLimit, PLANS } from '@/services/subscriptionGate';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts, getTemplateIdsForEquipmentCategory } from '@/services/taskEngine';
 import { generateCostForecast, type CostForecastItem } from '@/services/costForecast';
 import EquipmentScanner from '@/components/EquipmentScanner';
+import { PageSkeleton } from '@/components/Skeleton';
 import { Colors } from '@/constants/theme';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
 import { ROOF_LIFESPANS } from '@/services/taskEngine';
@@ -338,9 +339,7 @@ export default function Equipment() {
       </div>
 
       {loading ? (
-        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-          <p className="text-sm text-gray">Loading equipment...</p>
-        </div>
+        <div className="page-wide"><PageSkeleton rows={4} /></div>
       ) : (
       <>
       <div style={{ position: 'relative', marginBottom: 16 }}>

@@ -225,7 +225,7 @@ export default function TechnicianOnboardingPage() {
         <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
         <h2 style={{ color: Colors.charcoal, marginBottom: 8 }}>Not a Canopy Technician</h2>
         <p style={{ color: Colors.medGray, marginBottom: 24 }}>Your account is not set up as a Canopy technician. If you believe this is an error, please contact your supervisor.</p>
-        <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 24px', background: Colors.sage, color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
+        <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 24px', background: Colors.sage, color: 'var(--color-white)', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
           Go to Dashboard
         </button>
       </div>
@@ -336,7 +336,7 @@ export default function TechnicianOnboardingPage() {
 
       {/* Overall Progress */}
       <div style={{
-        background: '#fff', borderRadius: 12, padding: 20, marginBottom: 24,
+        background: Colors.white, borderRadius: 12, padding: 20, marginBottom: 24,
         border: `1px solid ${Colors.lightGray}`, boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -433,7 +433,7 @@ export default function TechnicianOnboardingPage() {
         {/* Stripe Connect (W-9 + Direct Deposit via Stripe) */}
         <div style={{
           padding: 16, borderRadius: 10, marginBottom: 10,
-          background: '#fff', border: `1px solid ${Colors.lightGray}`,
+          background: Colors.white, border: `1px solid ${Colors.lightGray}`,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
           <div>
@@ -445,7 +445,7 @@ export default function TechnicianOnboardingPage() {
             </p>
           </div>
           {provider.stripe_connect_onboarding_complete ? (
-            <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#e6f5ee', color: Colors.success, fontWeight: 700 }}>
+            <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: Colors.sageMuted, color: Colors.success, fontWeight: 700 }}>
               ✓ Connected
             </span>
           ) : (
@@ -454,7 +454,7 @@ export default function TechnicianOnboardingPage() {
               disabled={stripeLoading}
               style={{
                 padding: '8px 16px', fontSize: 12, fontWeight: 600, borderRadius: 6,
-                background: '#635bff', color: '#fff', border: 'none', cursor: 'pointer',
+                background: '#635bff', color: 'var(--color-white)', border: 'none', cursor: 'pointer',
                 opacity: stripeLoading ? 0.6 : 1,
               }}
             >
@@ -466,7 +466,7 @@ export default function TechnicianOnboardingPage() {
         {/* Background Check */}
         <div style={{
           padding: 16, borderRadius: 10, marginBottom: 10,
-          background: '#fff', border: `1px solid ${Colors.lightGray}`,
+          background: Colors.white, border: `1px solid ${Colors.lightGray}`,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
           <div>
@@ -511,7 +511,7 @@ export default function TechnicianOnboardingPage() {
             const isComplete = linkedStep?.status === 'completed';
             return (
               <div key={mat.id} style={{
-                padding: 14, borderRadius: 10, background: '#fff',
+                padding: 14, borderRadius: 10, background: Colors.white,
                 border: `1px solid ${isComplete ? Colors.success + '40' : Colors.lightGray}`,
                 cursor: mat.content_body || mat.content_url ? 'pointer' : 'default',
                 transition: 'border-color 0.15s',
@@ -559,7 +559,7 @@ export default function TechnicianOnboardingPage() {
               return (
                 <div key={item.id} style={{
                   display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-                  borderRadius: 8, marginBottom: 4, background: '#fff',
+                  borderRadius: 8, marginBottom: 4, background: Colors.white,
                   border: `1px solid ${item.status === 'completed' ? Colors.success + '30' : Colors.lightGray}`,
                 }}>
                   <div style={{
@@ -590,7 +590,7 @@ export default function TechnicianOnboardingPage() {
 
       {phase === 'complete' && (
         <div style={{
-          textAlign: 'center', padding: 32, background: '#e6f5ee', borderRadius: 12,
+          textAlign: 'center', padding: 32, background: Colors.sageMuted, borderRadius: 12,
           border: `1px solid ${Colors.success}30`, marginBottom: 24,
         }}>
           <div style={{ fontSize: 48, marginBottom: 8 }}>🎉</div>
@@ -599,7 +599,7 @@ export default function TechnicianOnboardingPage() {
             You are now a certified Canopy technician. Head to the Pro Portal to view your assignments.
           </p>
           <button onClick={() => navigate('/pro-portal')} style={{
-            padding: '10px 24px', background: Colors.sage, color: '#fff', border: 'none',
+            padding: '10px 24px', background: Colors.sage, color: 'var(--color-white)', border: 'none',
             borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14,
           }}>
             Go to Pro Portal
@@ -623,7 +623,7 @@ function DocumentCard({ title, description, status, signedAt, actionLabel, onAct
   return (
     <div style={{
       padding: 16, borderRadius: 10, marginBottom: 10,
-      background: '#fff', border: `1px solid ${status === 'signed' ? Colors.success + '40' : Colors.lightGray}`,
+      background: Colors.white, border: `1px solid ${status === 'signed' ? Colors.success + '40' : Colors.lightGray}`,
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     }}>
       <div>
@@ -635,13 +635,13 @@ function DocumentCard({ title, description, status, signedAt, actionLabel, onAct
         </p>
       </div>
       {status === 'signed' ? (
-        <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#e6f5ee', color: Colors.success, fontWeight: 700 }}>
+        <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: Colors.sageMuted, color: Colors.success, fontWeight: 700 }}>
           ✓ Signed
         </span>
       ) : (
         <button onClick={onAction} style={{
           padding: '8px 16px', fontSize: 12, fontWeight: 600, borderRadius: 6,
-          background: Colors.sage, color: '#fff', border: 'none', cursor: 'pointer',
+          background: Colors.sage, color: 'var(--color-white)', border: 'none', cursor: 'pointer',
         }}>
           {actionLabel}
         </button>
@@ -663,7 +663,7 @@ function UploadCard({ title, description, status, uploadedAt, uploading, onUploa
   return (
     <div style={{
       padding: 16, borderRadius: 10, marginBottom: 10,
-      background: '#fff', border: `1px solid ${status === 'signed' ? Colors.success + '40' : Colors.lightGray}`,
+      background: Colors.white, border: `1px solid ${status === 'signed' ? Colors.success + '40' : Colors.lightGray}`,
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     }}>
       <div>
@@ -678,13 +678,13 @@ function UploadCard({ title, description, status, uploadedAt, uploading, onUploa
         )}
       </div>
       {status === 'signed' ? (
-        <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#e6f5ee', color: Colors.success, fontWeight: 700 }}>
+        <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: Colors.sageMuted, color: Colors.success, fontWeight: 700 }}>
           ✓ Uploaded
         </span>
       ) : (
         <label style={{
           padding: '8px 16px', fontSize: 12, fontWeight: 600, borderRadius: 6,
-          background: Colors.copper, color: '#fff', cursor: uploading ? 'wait' : 'pointer',
+          background: Colors.copper, color: 'var(--color-white)', cursor: uploading ? 'wait' : 'pointer',
           opacity: uploading ? 0.6 : 1,
         }}>
           {uploading ? 'Uploading...' : 'Upload'}

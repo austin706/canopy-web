@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertHome, updateProfile, uploadPhoto, getStructures, addStructure, deleteStructure, STRUCTURE_TYPES, submitOwnershipVerification, uploadVerificationDocument } from '@/services/supabase';
+import { upsertHome, updateProfile, uploadPhoto, deleteTask, createTasks, getStructures, addStructure, deleteStructure, STRUCTURE_TYPES, submitOwnershipVerification, uploadVerificationDocument } from '@/services/supabase';
+import { generateTasksForHome } from '@/services/taskEngine';
+import { TASK_TEMPLATES } from '@/constants/maintenance';
 import { Colors } from '@/constants/theme';
 import HomeMembers from '@/components/HomeMembers';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
@@ -10,7 +12,7 @@ import type { Home } from '@/types';
 export default function HomeDetails() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, home, setHome } = useStore();
+  const { user, home, setHome, equipment, consumables, customTemplates, tasks, setTasks, addTask, removeTask } = useStore();
   const [editing, setEditing] = useState(!home || searchParams.get('edit') === 'emergency');
   const emergencySectionRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
@@ -182,6 +184,75 @@ export default function HomeDetails() {
       if (!home && user) {
         try { await updateProfile(user.id, { onboarding_complete: true }); } catch {}
       }
+
+      // ─── Retrigger task generation when home features or trash/recycling change ───
+      const featureFields = [
+        'has_pool', 'has_deck', 'has_sprinkler_system', 'has_fireplace',
+        'has_fountain', 'has_gutters', 'has_water_softener', 'has_sump_pump',
+      ] as const;
+      const trashFields = ['trash_day', 'recycling_day', 'recycling_frequency', 'yard_waste_day'] as const;
+      const oldHome = home as Record<string, any> | undefined;
+      const newHome = homeData as Record<string, any>;
+
+      const featureChanged = featureFields.some(
+        (f) => Boolean(oldHome?.[f]) !== Boolean(newHome[f])
+      );
+      const trashChanged = trashFields.some(
+        (f) => (oldHome?.[f] || null) !== (newHome[f] || null)
+      );
+
+      if (featureChanged || trashChanged) {
+        try {
+          // 1. Remove tasks whose required home feature was turned OFF
+          const removedFeatures = featureFields.filter(
+            (f) => oldHome?.[f] && !newHome[f]
+          );
+          if (removedFeatures.length > 0) {
+            const orphanTemplateIds = TASK_TEMPLATES
+              .filter((t) => t.requires_home_feature && removedFeatures.includes(t.requires_home_feature as any))
+              .map((t) => t.id);
+            const orphanedTasks = tasks.filter(
+              (t) => t.template_id && orphanTemplateIds.includes(t.template_id) && t.status !== 'completed'
+            );
+            for (const task of orphanedTasks) {
+              try { await deleteTask(task.id); } catch { /* best effort */ }
+              removeTask(task.id);
+            }
+          }
+
+          // 2. If trash/recycling day changed, remove old pickup tasks before regenerating
+          if (trashChanged) {
+            const pickupTitles = ['Take Out Trash', 'Put Out Recycling', 'Yard Waste Pickup'];
+            const stalePickups = tasks.filter(
+              (t) => pickupTitles.includes(t.title) && t.status !== 'completed'
+            );
+            for (const task of stalePickups) {
+              try { await deleteTask(task.id); } catch { /* best effort */ }
+              removeTask(task.id);
+            }
+          }
+
+          // 3. Re-run task generation with updated home data
+          const currentTasks = tasks.filter(
+            (t) => t.status !== 'completed' || t.status === 'completed'
+          ); // pass all tasks for dedup
+          const newTasks = generateTasksForHome(
+            homeData as any,
+            equipment || [],
+            currentTasks,
+            consumables || [],
+            undefined,
+            customTemplates,
+          );
+          if (newTasks.length > 0) {
+            for (const task of newTasks) addTask(task);
+            try { await createTasks(newTasks); } catch { /* best effort */ }
+          }
+        } catch (err) {
+          console.error('[HomeDetails] task regeneration error:', err);
+        }
+      }
+
       setEditing(false);
     } finally { setSaving(false); }
   };

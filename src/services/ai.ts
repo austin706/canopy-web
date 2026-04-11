@@ -34,6 +34,24 @@ export class AiUsageLimitError extends Error {
   }
 }
 
+export interface SuggestedTask {
+  title: string;
+  description: string;
+  instructions?: string[];
+  category: string;
+  priority: 'urgent' | 'high' | 'medium' | 'low';
+  frequency: 'weekly' | 'monthly' | 'quarterly' | 'semi_annual' | 'biannual' | 'seasonal' | 'annual' | 'as_needed';
+  scheduling_type: 'dynamic' | 'seasonal';
+  interval_days?: number;
+  applicable_months?: number[];
+  estimated_minutes?: number;
+  estimated_cost_low?: number;
+  estimated_cost_high?: number;
+  items_to_have_on_hand?: string[];
+  service_purpose?: string;
+  confidence: number;
+}
+
 export interface ScanResult {
   make: string;
   model: string;
@@ -51,6 +69,8 @@ export interface ScanResult {
   estimated_lifespan_years?: number;
   refrigerant_type?: string;   // e.g., "R22", "R410A", "R32"
   alerts?: string[];           // Actionable alerts like "Uses R22 refrigerant (phased out since 2020)"
+  // AI-suggested maintenance tasks for this equipment (v3 — saved as custom templates)
+  suggested_tasks?: SuggestedTask[];
 }
 
 /**
@@ -171,6 +191,22 @@ Extract all identifiable information and return a JSON object with these fields:
   - Any safety recalls or known issues for this model if you recognize it
 - additional_info: object with any other useful details from the label
 - confidence: 0-1 score of how confident you are in the extracted data
+- suggested_tasks: array of maintenance task objects specific to THIS equipment. Include tasks that may NOT be in a generic template library — especially for uncommon equipment. Each task object should have:
+  - title: short descriptive task name
+  - description: what to do and why it matters
+  - instructions: array of step-by-step instructions
+  - category: same as the equipment category
+  - priority: "urgent" | "high" | "medium" | "low"
+  - frequency: "weekly" | "monthly" | "quarterly" | "semi_annual" | "biannual" | "seasonal" | "annual" | "as_needed"
+  - scheduling_type: "dynamic" (interval-based) or "seasonal" (fixed months)
+  - interval_days: days between occurrences (for dynamic tasks)
+  - applicable_months: array of months 1-12 (for seasonal tasks)
+  - estimated_minutes: time to complete
+  - estimated_cost_low: low end cost estimate in dollars
+  - estimated_cost_high: high end cost estimate in dollars
+  - items_to_have_on_hand: array of supplies needed
+  - service_purpose: why this maintenance matters
+  - confidence: 0-1 confidence this task applies
 
 IMPORTANT: Identify the SPECIFIC piece of equipment on the label. For example, a Goodman CAPF model is an evaporator coil (part of the AC system), NOT a furnace — even if the coil is mounted on a furnace. Be precise about what the label describes.
 

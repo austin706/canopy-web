@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertEquipment, deleteEquipment as deleteEquipApi, getEquipment, createTasks, getEquipmentScanGuides, getEquipmentChecklist, upsertEquipmentChecklist } from '@/services/supabase';
+import { upsertEquipment, deleteEquipment as deleteEquipApi, getEquipment, createTasks, deleteTask, getEquipmentScanGuides, getEquipmentChecklist, upsertEquipmentChecklist, saveAIGeneratedTemplates } from '@/services/supabase';
 import type { EquipmentScanGuide, EquipmentChecklist } from '@/services/supabase';
 import { getEquipmentLimit, PLANS } from '@/services/subscriptionGate';
-import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
+import { generateTasksForHome, generateEquipmentLifecycleAlerts, getTemplateIdsForEquipmentCategory } from '@/services/taskEngine';
+import { generateCostForecast, type CostForecastItem } from '@/services/costForecast';
 import EquipmentScanner from '@/components/EquipmentScanner';
 import { Colors } from '@/constants/theme';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
@@ -50,20 +51,35 @@ const CATEGORIES: { value: EquipmentCategory; label: string; abbr: string; icon?
   { value: 'safety', label: 'Safety', abbr: 'SF', icon: '/icons/equipment/fireplace.svg' },
   { value: 'pool', label: 'Pool', abbr: 'PO', icon: '/icons/equipment/pool-spa.svg' },
   { value: 'garage', label: 'Garage', abbr: 'GR', icon: '/icons/equipment/garage-door.svg' },
+  { value: 'fireplace', label: 'Fireplace', abbr: 'FP', icon: '/icons/equipment/fireplace.svg' },
 ];
 
 export default function Equipment() {
-  const { user, home, equipment, tasks, setEquipment, addEquipment, removeEquipment, setTasks } = useStore();
+  const { user, home, equipment, consumables, customTemplates, tasks, setEquipment, addEquipment, removeEquipment, removeTask, setTasks } = useStore();
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [filter, setFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [form, setForm] = useState({ name: '', category: 'hvac' as EquipmentCategory, make: '', model: '', serial_number: '', install_date: '', expected_lifespan_years: '', location_in_home: '', notes: '' });
-  const [scanExtras, setScanExtras] = useState<{ equipment_subtype?: string; refrigerant_type?: string }>({});
+  const [scanExtras, setScanExtras] = useState<{ equipment_subtype?: string; refrigerant_type?: string; suggested_tasks?: any[] }>({});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Cost forecast for replacement estimates
+  const costForecast = useMemo(() => {
+    if (!equipment.length) return new Map<string, CostForecastItem>();
+    const forecast = generateCostForecast(equipment, home ? {
+      square_footage: home.square_footage,
+      stories: home.stories,
+      roof_type: home.roof_type,
+      has_pool: home.has_pool,
+    } : undefined);
+    const map = new Map<string, CostForecastItem>();
+    forecast.items.forEach((item) => map.set(item.equipment.id, item));
+    return map;
+  }, [equipment, home]);
 
   // Bulk selection mode
   const [selectMode, setSelectMode] = useState(false);
@@ -187,7 +203,7 @@ export default function Equipment() {
       // Auto-generate tasks for the new equipment
       try {
         const updatedEquipment = [...equipment, newItem];
-        const newTasks = generateTasksForHome(home, updatedEquipment, tasks, undefined, user?.user_preferences);
+        const newTasks = generateTasksForHome(home, updatedEquipment, tasks, consumables || [], user?.user_preferences, customTemplates);
         const lifecycleAlerts = generateEquipmentLifecycleAlerts([newItem], home);
         const allNewTasks = [...newTasks, ...lifecycleAlerts];
         if (allNewTasks.length > 0) {
@@ -196,6 +212,21 @@ export default function Equipment() {
         }
       } catch (taskErr) {
         console.warn('Task generation after equipment add failed:', taskErr);
+      }
+
+      // Save AI-suggested task templates to the database (non-blocking)
+      if (scanExtras.suggested_tasks && scanExtras.suggested_tasks.length > 0) {
+        try {
+          await saveAIGeneratedTemplates(
+            scanExtras.suggested_tasks.map((t: any) => ({
+              ...t,
+              requires_equipment: newItem.category,
+              ai_source_equipment_id: newItem.id,
+            }))
+          );
+        } catch (tplErr) {
+          console.warn('AI template save failed (non-blocking):', tplErr);
+        }
       }
 
       setShowModal(false);
@@ -209,8 +240,26 @@ export default function Equipment() {
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this equipment?')) return;
     try {
+      const deletedItem = equipment.find((eq) => eq.id === id);
       await deleteEquipApi(id);
       removeEquipment(id);
+
+      // Clean up orphaned tasks if no other equipment of this category remains
+      if (deletedItem) {
+        const remainingOfCategory = equipment.filter(
+          (eq) => eq.id !== id && eq.category === deletedItem.category
+        );
+        if (remainingOfCategory.length === 0) {
+          const orphanTemplateIds = getTemplateIdsForEquipmentCategory(deletedItem.category);
+          const orphanedTasks = tasks.filter(
+            (t) => t.template_id && orphanTemplateIds.includes(t.template_id) && t.status !== 'completed'
+          );
+          for (const task of orphanedTasks) {
+            try { await deleteTask(task.id); } catch { /* best effort */ }
+            removeTask(task.id);
+          }
+        }
+      }
     } catch (err: any) {
       alert('Failed to delete: ' + (err.message || 'Unknown error'));
     }
@@ -263,8 +312,8 @@ export default function Equipment() {
             : form.expected_lifespan_years,
       notes: notesParts.length > 0 ? notesParts.join('\n') : form.notes,
     });
-    // Store subtype and refrigerant for saving to DB
-    setScanExtras({ equipment_subtype, refrigerant_type });
+    // Store subtype, refrigerant, and AI-suggested tasks for saving to DB
+    setScanExtras({ equipment_subtype, refrigerant_type, suggested_tasks: scannedData.suggested_tasks });
     setShowScanner(false);
     setShowModal(true);
   };
@@ -712,6 +761,7 @@ export default function Equipment() {
                     const rounded = Math.round(pct);
                     const ageYrs = item.install_date ? Math.round((Date.now() - new Date(item.install_date).getTime()) / (365.25 * 86400000)) : 0;
                     const lifespan = item.expected_lifespan_years || 15;
+                    const forecast = costForecast.get(item.id);
                     return (
                       <div className="mt-sm">
                         <div className="flex items-center justify-between">
@@ -719,6 +769,17 @@ export default function Equipment() {
                           <span className="text-xs" style={{ color: rounded > 80 ? 'var(--color-error)' : rounded > 60 ? 'var(--color-warning)' : 'var(--color-sage)' }}>{ageYrs}yr / {lifespan}yr</span>
                         </div>
                         <div className="progress-bar mt-sm"><div className="progress-fill" style={{ width: `${rounded}%`, background: rounded > 80 ? 'var(--color-error)' : rounded > 60 ? 'var(--color-warning)' : 'var(--color-sage)' }} /></div>
+                        {forecast && (
+                          <div className="flex items-center justify-between mt-sm" style={{ fontSize: 11, color: 'var(--color-text-secondary, #888)' }}>
+                            <span>Est. replacement</span>
+                            <span style={{ fontWeight: 600, color: forecast.urgency === 'replace_now' ? 'var(--color-error)' : forecast.urgency === 'replace_soon' ? 'var(--color-warning)' : 'var(--color-sage)' }}>
+                              {forecast.costRange
+                                ? `$${forecast.costRange.low.toLocaleString()} – $${forecast.costRange.high.toLocaleString()}`
+                                : `$${forecast.estimatedCost.toLocaleString()}`}
+                              {forecast.isProQuote && ' (Pro quote)'}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     );
                   })()}
@@ -813,9 +874,27 @@ export default function Equipment() {
               if (!confirm(`Delete ${selectedIds.size} equipment item${selectedIds.size === 1 ? '' : 's'}? This cannot be undone.`)) return;
               setBulkDeleting(true);
               const ids = Array.from(selectedIds);
+              // Track categories being deleted for orphan cleanup
+              const deletedCategories = new Set(
+                ids.map(id => equipment.find(eq => eq.id === id)?.category).filter(Boolean)
+              );
               const results = await Promise.allSettled(ids.map(id => deleteEquipApi(id)));
               const succeeded = results.filter(r => r.status === 'fulfilled').length;
               results.forEach((r, i) => { if (r.status === 'fulfilled') removeEquipment(ids[i]); });
+              // Clean up orphaned tasks for categories with no remaining equipment
+              const deletedIds = new Set(ids.filter((_, i) => results[i].status === 'fulfilled'));
+              for (const cat of deletedCategories) {
+                if (!cat) continue;
+                const remaining = equipment.filter(eq => !deletedIds.has(eq.id) && eq.category === cat);
+                if (remaining.length === 0) {
+                  const orphanIds = getTemplateIdsForEquipmentCategory(cat);
+                  const orphaned = tasks.filter(t => t.template_id && orphanIds.includes(t.template_id) && t.status !== 'completed');
+                  for (const t of orphaned) {
+                    try { await deleteTask(t.id); } catch { /* best effort */ }
+                    removeTask(t.id);
+                  }
+                }
+              }
               setBulkDeleting(false);
               exitSelectMode();
               if (succeeded < ids.length) {

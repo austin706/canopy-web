@@ -83,6 +83,19 @@ export interface TaskTemplate {
    * e.g., ['single_family', 'townhome'] to exclude condos/apartments
    */
   requires_home_type?: string[];
+  /**
+   * Restricts this template to equipment with a matching equipment_subtype.
+   * Case-insensitive partial match: if the equipment's subtype includes any
+   * of these strings, the template applies.
+   * e.g., ['tank'] matches "Tank Water Heater" but not "Tankless Water Heater"
+   */
+  requires_equipment_subtype?: string[];
+  /**
+   * Excludes this template when the equipment subtype matches any of these
+   * strings (case-insensitive partial match).
+   * e.g., ['tankless'] excludes "Tankless Water Heater"
+   */
+  excludes_equipment_subtype?: string[];
 }
 
 /**
@@ -145,6 +158,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 15,
     estimated_pro_cost: 15,
     requires_equipment: 'hvac',
+    equipment_keyed: true,
+    consumable_spec: 'filter',
+    consumable_replacement_months: 3,
     items_to_have_on_hand: ['Replacement air filter (check size on current filter frame)', 'Vacuum or damp cloth for vent covers'],
   },
   {
@@ -217,6 +233,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 0,
     estimated_pro_cost: 0,
     requires_equipment: 'water_heater',
+    excludes_equipment_subtype: ['tankless'], // Tankless heaters have no tank to flush
     items_to_have_on_hand: ['Garden hose long enough to reach a drain or outside', 'Flathead screwdriver (for drain valve)'],
   },
   {
@@ -240,7 +257,39 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 30,
     estimated_pro_cost: 30,
     requires_equipment: 'water_heater',
+    excludes_equipment_subtype: ['tankless'], // Tankless heaters have no sacrificial anode rod
+    equipment_keyed: true,
+    consumable_spec: 'anode_rod',
+    consumable_replacement_months: 36, // Check every 3 years
     items_to_have_on_hand: ['1-1/16" socket wrench', 'Replacement anode rod (if needed, ~$20-50)'],
+  },
+  {
+    id: 'water-heater-tankless-descale',
+    pro_responsible: true,
+    title: 'Descale Tankless Water Heater',
+    description: 'Mineral scale buildup inside a tankless water heater reduces flow rate and efficiency. Annual descaling with white vinegar keeps it running at peak performance.',
+    service_purpose: 'Scale buildup reduces flow rate, efficiency, and can trigger error codes',
+    instructions: [
+      'Turn off power and gas (if applicable) to the unit',
+      'Close the hot and cold isolation valves on the water heater',
+      'Connect a submersible pump and hoses to the service valves',
+      'Fill a 5-gallon bucket with undiluted white vinegar',
+      'Run the pump to circulate vinegar through the unit for 45-60 minutes',
+      'Flush with clean water for 5 minutes to remove vinegar residue',
+      'Remove hoses, open isolation valves, and restore power',
+      'Check for error codes on the display panel',
+    ],
+    category: 'water_heater',
+    priority: 'medium',
+    frequency: 'annual',
+    scheduling_type: 'seasonal',
+    applicable_months: [4, 10],
+    estimated_minutes: 90,
+    estimated_cost: 15,
+    estimated_pro_cost: 150,
+    requires_equipment: 'water_heater',
+    requires_equipment_subtype: ['tankless'], // Only for tankless water heaters
+    items_to_have_on_hand: ['5 gallons of white vinegar', 'Submersible pump', 'Two washing machine hoses', '5-gallon bucket'],
   },
 
   // ═══ ROOF & GUTTERS ═══
@@ -2628,6 +2677,7 @@ export const EQUIPMENT_CATEGORIES = [
   { id: 'safety', label: 'Safety Systems', icon: 'shield-checkmark', color: Colors.error },
   { id: 'pool', label: 'Pool & Hot Tub', icon: 'water', color: Colors.info },
   { id: 'garage', label: 'Garage', icon: 'car', color: Colors.silver },
+  { id: 'fireplace', label: 'Fireplace', icon: 'flame', color: Colors.copper },
 ] as const;
 
 // ─── Roof Type Lifespans (from InterNACHI/NAHB standards) ───

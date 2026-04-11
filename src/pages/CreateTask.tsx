@@ -7,15 +7,15 @@ import { canAccess } from '@/services/subscriptionGate';
 import type { MaintenanceTask, EquipmentCategory, TaskPriority, TaskFrequency } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
 
-type Category = EquipmentCategory | 'general' | 'lawn' | 'pool' | 'deck' | 'seasonal' | 'pest_control';
+type Category = EquipmentCategory | 'general' | 'lawn' | 'pool' | 'deck' | 'seasonal' | 'pest_control' | 'fireplace';
 
 const CATEGORIES: Category[] = [
   'hvac', 'water_heater', 'plumbing', 'electrical', 'appliance',
-  'outdoor', 'safety', 'garage', 'filter', 'general', 'lawn', 'pool', 'deck', 'seasonal', 'pest_control'
+  'outdoor', 'safety', 'garage', 'filter', 'general', 'lawn', 'pool', 'deck', 'seasonal', 'pest_control', 'fireplace'
 ];
 
 const PRIORITIES: TaskPriority[] = ['urgent', 'high', 'medium', 'low'];
-const FREQUENCIES: TaskFrequency[] = ['monthly', 'quarterly', 'biannual', 'annual', 'as_needed'];
+const FREQUENCIES: TaskFrequency[] = ['weekly', 'monthly', 'quarterly', 'semi_annual', 'biannual', 'seasonal', 'annual', 'as_needed'];
 
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
   urgent: Colors.error,

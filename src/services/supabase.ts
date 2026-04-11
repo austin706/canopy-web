@@ -380,18 +380,31 @@ export const replaceEquipmentConsumables = async (
 
   if (consumables.length === 0) return [];
 
-  const rows = consumables.map((c) => ({
-    equipment_id: equipmentId,
-    home_id: homeId,
-    consumable_type: c.consumable_type,
-    name: c.name,
-    part_number: c.part_number,
-    spec: c.spec,
-    quantity: c.quantity ?? 1,
-    replacement_interval_months: c.replacement_interval_months,
-    confidence: c.confidence,
-    notes: c.notes,
-    detected_by: 'scan' as const,
+  // Look up the parent equipment to get its category for affiliate matching
+  const { data: parentEquip } = await supabase
+    .from('equipment')
+    .select('category')
+    .eq('id', equipmentId)
+    .single();
+  const equipCategory = parentEquip?.category || null;
+
+  // Auto-populate affiliate links from the curated affiliate_products table
+  const rows = await Promise.all(consumables.map(async (c) => {
+    const affiliateUrl = await matchAffiliateLink(c.consumable_type, c.spec, equipCategory);
+    return {
+      equipment_id: equipmentId,
+      home_id: homeId,
+      consumable_type: c.consumable_type,
+      name: c.name,
+      part_number: c.part_number,
+      spec: c.spec,
+      quantity: c.quantity ?? 1,
+      replacement_interval_months: c.replacement_interval_months,
+      confidence: c.confidence,
+      notes: c.notes,
+      detected_by: 'scan' as const,
+      purchase_url: affiliateUrl,
+    };
   }));
 
   const { data, error } = await supabase
@@ -1266,6 +1279,21 @@ export interface TaskTemplateDB {
   is_weather_triggered: boolean;
   sort_order: number;
   active: boolean;
+  // AI-generated template fields
+  source: 'built_in' | 'ai_generated' | 'user_created';
+  requires_equipment: string | null;
+  requires_equipment_subtype: string[] | null;
+  excludes_equipment_subtype: string[] | null;
+  equipment_keyed: boolean;
+  consumable_spec: string | null;
+  consumable_replacement_months: number | null;
+  scheduling_type: 'seasonal' | 'dynamic';
+  interval_days: number | null;
+  instructions_json: string[] | null;
+  items_to_have_on_hand: string[] | null;
+  service_purpose: string | null;
+  ai_confidence: number | null;
+  ai_source_equipment_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1300,6 +1328,157 @@ export const deleteTaskTemplate = async (id: string) => {
     .delete()
     .eq('id', id);
   if (error) throw error;
+};
+
+/** Save AI-generated task templates from equipment scan (batch upsert, dedup by title+category) */
+export const saveAIGeneratedTemplates = async (
+  templates: Array<{
+    title: string;
+    description: string;
+    instructions?: string[];
+    category: string;
+    priority?: string;
+    frequency?: string;
+    applicable_months?: number[];
+    estimated_minutes?: number;
+    estimated_cost_low?: number;
+    estimated_cost_high?: number;
+    requires_equipment?: string;
+    scheduling_type?: 'seasonal' | 'dynamic';
+    interval_days?: number;
+    items_to_have_on_hand?: string[];
+    service_purpose?: string;
+    ai_confidence?: number;
+    ai_source_equipment_id?: string;
+  }>
+): Promise<TaskTemplateDB[]> => {
+  if (templates.length === 0) return [];
+
+  const rows = templates.map((t) => ({
+    title: t.title,
+    description: t.description,
+    instructions_json: t.instructions ?? null,
+    category: t.category,
+    priority: t.priority ?? 'medium',
+    frequency: t.frequency ?? 'annual',
+    applicable_months: t.applicable_months ?? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    estimated_minutes: t.estimated_minutes ?? 30,
+    estimated_cost_low: t.estimated_cost_low ?? null,
+    estimated_cost_high: t.estimated_cost_high ?? null,
+    requires_equipment: t.requires_equipment ?? null,
+    scheduling_type: t.scheduling_type ?? 'seasonal',
+    interval_days: t.interval_days ?? null,
+    items_to_have_on_hand: t.items_to_have_on_hand ?? null,
+    service_purpose: t.service_purpose ?? null,
+    source: 'ai_generated' as const,
+    ai_confidence: t.ai_confidence ?? null,
+    ai_source_equipment_id: t.ai_source_equipment_id ?? null,
+    active: true,
+    updated_at: new Date().toISOString(),
+  }));
+
+  // Check for existing templates with same title+category to avoid duplicates
+  const titles = rows.map((r) => r.title);
+  const { data: existing } = await supabase
+    .from('task_templates')
+    .select('title, category')
+    .in('title', titles);
+  const existingKeys = new Set((existing || []).map((e: { title: string; category: string }) => `${e.title}|${e.category}`));
+  const newRows = rows.filter((r) => !existingKeys.has(`${r.title}|${r.category}`));
+  if (newRows.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('task_templates')
+    .insert(newRows)
+    .select();
+  if (error) throw error;
+  return data || [];
+};
+
+// ─── Affiliate Products ───
+
+export interface AffiliateProduct {
+  id: string;
+  consumable_type: string;
+  spec_pattern: string | null;
+  product_name: string;
+  affiliate_url: string;
+  equipment_category: string | null;
+  priority: number;
+  active: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+/** Fetch all affiliate products (admin view — includes inactive) */
+export const getAffiliateProducts = async (activeOnly = false): Promise<AffiliateProduct[]> => {
+  let query = supabase
+    .from('affiliate_products')
+    .select('*')
+    .order('consumable_type')
+    .order('priority', { ascending: false });
+  if (activeOnly) query = query.eq('active', true);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+};
+
+/** Create or update an affiliate product */
+export const upsertAffiliateProduct = async (product: Partial<AffiliateProduct> & { consumable_type: string; product_name: string; affiliate_url: string }): Promise<AffiliateProduct> => {
+  const { data, error } = await supabase
+    .from('affiliate_products')
+    .upsert(product)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+/** Delete an affiliate product */
+export const deleteAffiliateProduct = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('affiliate_products')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+};
+
+/**
+ * Look up the best affiliate link for a given consumable type + spec.
+ * Priority order: exact spec match > fallback (null spec) > no match.
+ */
+export const matchAffiliateLink = async (
+  consumableType: string,
+  spec?: string | null,
+  equipmentCategory?: string | null,
+): Promise<string | null> => {
+  // Fetch all active matches for this consumable type, ordered by priority
+  let query = supabase
+    .from('affiliate_products')
+    .select('affiliate_url, spec_pattern, equipment_category')
+    .eq('consumable_type', consumableType)
+    .eq('active', true)
+    .order('priority', { ascending: false });
+
+  const { data, error } = await query;
+  if (error || !data || data.length === 0) return null;
+
+  // Prefer: exact spec + equipment match > exact spec > equipment match > generic fallback
+  const exactSpecAndEquip = data.find((p) => p.spec_pattern === spec && p.equipment_category === equipmentCategory);
+  if (exactSpecAndEquip) return exactSpecAndEquip.affiliate_url;
+
+  const exactSpec = data.find((p) => p.spec_pattern === spec);
+  if (exactSpec) return exactSpec.affiliate_url;
+
+  const equipMatch = data.find((p) => !p.spec_pattern && p.equipment_category === equipmentCategory);
+  if (equipMatch) return equipMatch.affiliate_url;
+
+  const fallback = data.find((p) => !p.spec_pattern && !p.equipment_category);
+  if (fallback) return fallback.affiliate_url;
+
+  return data[0]?.affiliate_url || null;
 };
 
 // ─── Service Area Services ───

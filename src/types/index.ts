@@ -444,7 +444,8 @@ export type EquipmentCategory =
   | 'pest_control'
   | 'solar'
   | 'ventilation'
-  | 'water_treatment';
+  | 'water_treatment'
+  | 'fireplace';
 
 // ─── USER PREFERENCES ─────────────────────────────────────
 
@@ -751,6 +752,11 @@ export interface MaintenanceTask {
   pro_provider_id?: string;
   scheduled_time?: string;
   reminder_days_before?: number;
+
+  /** Consumable-generated tasks carry the affiliate/purchase link from the consumable */
+  purchase_url?: string;
+  /** ID of the consumable that generated this task (for equipment_keyed templates) */
+  consumable_id?: string;
 
   created_at: string;
 }

@@ -1,7 +1,7 @@
 import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { supabase, getProfile, getHome, getEquipment, getTasks, getAgent } from '@/services/supabase';
+import { supabase, getProfile, getHome, getEquipment, getTasks, getHomeConsumables, getTaskTemplates, getAgent } from '@/services/supabase';
 import { setUser as sentrySetUser } from '@/utils/sentry';
 import { loadServiceAreas, subscribeToServiceAreaChanges } from '@/services/subscriptionGate';
 import logger from '@/utils/logger';
@@ -94,6 +94,7 @@ const AgentApplication = lazy(() => import('@/pages/AgentApplication'));
 const BuilderApplication = lazy(() => import('@/pages/BuilderApplication'));
 const AdminBuilders = lazy(() => import('@/pages/AdminBuilders'));
 const AdminVerifications = lazy(() => import('@/pages/AdminVerifications'));
+const AdminAffiliateProducts = lazy(() => import('@/pages/AdminAffiliateProducts'));
 const TechnicianOnboarding = lazy(() => import('@/pages/TechnicianOnboarding'));
 const ProOnboardingSuccess = lazy(() => import('@/pages/ProOnboardingSuccess'));
 const ProOnboardingRefresh = lazy(() => import('@/pages/ProOnboardingRefresh'));
@@ -124,7 +125,7 @@ function HomeRoute() {
 }
 
 export default function App() {
-  const { reset, setUser, setHome, setEquipment, setTasks, setAgent } = useStore();
+  const { reset, setUser, setHome, setEquipment, setConsumables, setCustomTemplates, setTasks, setAgent } = useStore();
 
   useEffect(() => {
     // Validate Supabase session on app mount.
@@ -184,14 +185,16 @@ export default function App() {
           };
           setUser(userData);
 
-          // Load home data
+          // Load home data + custom templates
           try {
             const homeData = await getHome(authUser.id);
             if (homeData) {
               setHome(homeData);
-              const [equip, tasks] = await Promise.all([getEquipment(homeData.id), getTasks(homeData.id)]);
+              const [equip, consumables, tasks, templates] = await Promise.all([getEquipment(homeData.id), getHomeConsumables(homeData.id), getTasks(homeData.id), getTaskTemplates()]);
               setEquipment(equip);
+              setConsumables(consumables);
               setTasks(tasks);
+              setCustomTemplates(templates);
             }
           } catch {}
 
@@ -251,14 +254,16 @@ export default function App() {
           };
           setUser(userData);
 
-          // Load home data
+          // Load home data + custom templates
           try {
             const homeData = await getHome(authUser.id);
             if (homeData) {
               setHome(homeData);
-              const [equip, tasks] = await Promise.all([getEquipment(homeData.id), getTasks(homeData.id)]);
+              const [equip, consumables, tasks, templates] = await Promise.all([getEquipment(homeData.id), getHomeConsumables(homeData.id), getTasks(homeData.id), getTaskTemplates()]);
               setEquipment(equip);
+              setConsumables(consumables);
               setTasks(tasks);
+              setCustomTemplates(templates);
             }
           } catch {}
 
@@ -387,6 +392,7 @@ export default function App() {
             <Route path="/admin/technician-onboarding" element={<AdminTechnicianOnboarding />} />
             <Route path="/admin/builders" element={<AdminBuilders />} />
             <Route path="/admin/verifications" element={<AdminVerifications />} />
+            <Route path="/admin/affiliate-products" element={<AdminAffiliateProducts />} />
           </Route>
 
           {/* ═══════════════════════════════════════════════════════

@@ -282,9 +282,12 @@ export default function AdminReferenceData() {
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Frequency</label>
                   <select className="form-select" value={editingTemplate.frequency || 'annual'} onChange={e => setEditingTemplate({ ...editingTemplate, frequency: e.target.value })}>
+                    <option value="weekly">Weekly</option>
                     <option value="monthly">Monthly</option>
                     <option value="quarterly">Quarterly</option>
+                    <option value="semi_annual">Semi-Annual</option>
                     <option value="biannual">Biannual</option>
+                    <option value="seasonal">Seasonal</option>
                     <option value="annual">Annual</option>
                     <option value="as_needed">As Needed</option>
                   </select>

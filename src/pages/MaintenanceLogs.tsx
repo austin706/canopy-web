@@ -4,7 +4,7 @@ import { getMaintenanceLogs, addMaintenanceLog as addLogApi, updateMaintenanceLo
 import { trackLogEdit, getLogEditHistory } from '@/services/homeTransfer';
 import { Colors } from '@/constants/theme';
 
-const CATEGORIES = ['general','hvac','plumbing','electrical','roof','appliance','outdoor','safety','pool','garage'];
+const CATEGORIES = ['general','hvac','plumbing','electrical','roof','appliance','outdoor','safety','pool','garage','fireplace','pest_control'];
 
 const sourceLabel = (source?: string) => {
   if (source === 'pro_visit') return { text: 'Pro Verified', bg: Colors.sage + '20', color: Colors.sageDark || Colors.sage };

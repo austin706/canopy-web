@@ -3,7 +3,8 @@
 // ===============================================================
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, Home, Equipment, MaintenanceTask, WeatherData, Agent, MaintenanceLog } from '@/types';
+import type { User, Home, Equipment, EquipmentConsumable, MaintenanceTask, WeatherData, Agent, MaintenanceLog } from '@/types';
+import type { TaskTemplateDB } from '@/services/supabase';
 import { trackEvent } from '@/utils/analytics';
 
 interface CanopyState {
@@ -22,6 +23,13 @@ interface CanopyState {
   addEquipment: (item: Equipment) => void;
   updateEquipment: (id: string, updates: Partial<Equipment>) => void;
   removeEquipment: (id: string) => void;
+  consumables: EquipmentConsumable[];
+  setConsumables: (items: EquipmentConsumable[]) => void;
+  addConsumable: (item: EquipmentConsumable) => void;
+  updateConsumable: (id: string, updates: Partial<EquipmentConsumable>) => void;
+  removeConsumable: (id: string) => void;
+  customTemplates: TaskTemplateDB[];
+  setCustomTemplates: (templates: TaskTemplateDB[]) => void;
   tasks: MaintenanceTask[];
   setTasks: (tasks: MaintenanceTask[]) => void;
   setTask: (task: MaintenanceTask) => void;
@@ -42,6 +50,9 @@ interface CanopyState {
   setLoading: (loading: boolean) => void;
   onboardingStep: number;
   setOnboardingStep: (step: number) => void;
+  /** When an as_needed task is completed, store it here so UI can prompt rescheduling */
+  pendingReschedule: MaintenanceTask | null;
+  setPendingReschedule: (task: MaintenanceTask | null) => void;
   reset: () => void;
 }
 
@@ -72,6 +83,13 @@ export const useStore = create<CanopyState>()(
       addEquipment: (item) => set((s) => ({ equipment: [...s.equipment, item] })),
       updateEquipment: (id, updates) => set((s) => ({ equipment: s.equipment.map((e) => (e.id === id ? { ...e, ...updates } : e)) })),
       removeEquipment: (id) => set((s) => ({ equipment: s.equipment.filter((e) => e.id !== id) })),
+      consumables: [],
+      setConsumables: (consumables) => set({ consumables }),
+      addConsumable: (item) => set((s) => ({ consumables: [...s.consumables, item] })),
+      updateConsumable: (id, updates) => set((s) => ({ consumables: s.consumables.map((c) => (c.id === id ? { ...c, ...updates } : c)) })),
+      removeConsumable: (id) => set((s) => ({ consumables: s.consumables.filter((c) => c.id !== id) })),
+      customTemplates: [],
+      setCustomTemplates: (customTemplates) => set({ customTemplates }),
       tasks: [],
       setTasks: (tasks) => set({ tasks }),
       setTask: (task) => set((s) => ({
@@ -119,7 +137,9 @@ export const useStore = create<CanopyState>()(
       setLoading: (isLoading) => set({ isLoading }),
       onboardingStep: 0,
       setOnboardingStep: (onboardingStep) => set({ onboardingStep }),
-      reset: () => set({ user: null, isAuthenticated: false, home: null, homes: [], activeHomeId: null, equipment: [], tasks: [], maintenanceLogs: [], weather: null, agent: null, onboardingStep: 0 }),
+      pendingReschedule: null,
+      setPendingReschedule: (pendingReschedule) => set({ pendingReschedule }),
+      reset: () => set({ user: null, isAuthenticated: false, home: null, homes: [], activeHomeId: null, equipment: [], consumables: [], customTemplates: [], tasks: [], maintenanceLogs: [], weather: null, agent: null, onboardingStep: 0, pendingReschedule: null }),
     }),
     {
       name: 'canopy-web-store',
@@ -130,6 +150,7 @@ export const useStore = create<CanopyState>()(
         homes: state.homes,
         activeHomeId: state.activeHomeId,
         equipment: state.equipment,
+        consumables: state.consumables,
         tasks: state.tasks,
         maintenanceLogs: state.maintenanceLogs,
         weather: state.weather,

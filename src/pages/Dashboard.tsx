@@ -33,7 +33,7 @@ const DEMO_WEATHER = { temperature: 72, feels_like: 74, humidity: 55, wind_speed
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, home, weather, tasks, equipment, setWeather, setTasks } = useStore();
+  const { user, home, weather, tasks, equipment, consumables, customTemplates, setWeather, setTasks } = useStore();
   const tier = user?.subscription_tier || 'free';
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
@@ -117,7 +117,7 @@ export default function Dashboard() {
         } else {
           // No tasks in DB — generate from home profile and persist
           // Pass empty array as existingTasks since DB confirmed empty
-          const generated = generateTasksForHome(home, equipment, [], undefined, user?.user_preferences);
+          const generated = generateTasksForHome(home, equipment, [], consumables || [], user?.user_preferences, customTemplates);
           if (generated.length > 0) {
             try {
               const saved = await createTasks(generated);

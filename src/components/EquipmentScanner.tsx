@@ -39,6 +39,7 @@ const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
   { value: 'safety', label: 'Safety' },
   { value: 'pool', label: 'Pool' },
   { value: 'garage', label: 'Garage' },
+  { value: 'fireplace', label: 'Fireplace' },
 ];
 
 /**

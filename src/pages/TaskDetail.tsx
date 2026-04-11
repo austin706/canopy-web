@@ -281,6 +281,32 @@ export default function TaskDetail() {
           </div>
         )}
 
+        {/* Purchase / Affiliate Link */}
+        {task.purchase_url && (
+          <a
+            href={task.purchase_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="card mb-lg"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              background: '#FFF8F0',
+              border: `1px solid ${Colors.copper}40`,
+              textDecoration: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontSize: 20 }}>🛒</span>
+            <div>
+              <p style={{ fontWeight: 600, color: Colors.copper, fontSize: 14, margin: 0 }}>Buy Replacement</p>
+              <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>Order the exact part on Amazon</p>
+            </div>
+            <span style={{ marginLeft: 'auto', color: Colors.copper, fontSize: 18 }}>→</span>
+          </a>
+        )}
+
         {/* Instructions */}
         {task.instructions && task.instructions.length > 0 && (
           <div className="card mb-lg">

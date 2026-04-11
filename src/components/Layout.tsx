@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { resendVerificationEmail, supabase, getUserHomes, STRUCTURE_TYPES } from '@/services/supabase';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import RescheduleModal from '@/components/RescheduleModal';
 import { PLANS } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
 import type { Home } from '@/types';
@@ -279,6 +280,7 @@ export default function Layout() {
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>
+        <RescheduleModal />
       </main>
     </div>
   );

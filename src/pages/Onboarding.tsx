@@ -30,6 +30,7 @@ const EQUIPMENT_CATEGORIES: { value: EquipmentCategory; label: string }[] = [
   { value: 'safety', label: 'Safety' },
   { value: 'pool', label: 'Pool' },
   { value: 'garage', label: 'Garage' },
+  { value: 'fireplace', label: 'Fireplace' },
 ];
 
 const SCAN_SUGGESTIONS = [
@@ -104,7 +105,7 @@ const PROGRESS_STEPS = 5; // Steps shown in progress bar (Address, Systems, Plan
 export default function Onboarding() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, home, setHome, addEquipment, setTasks } = useStore();
+  const { user, home, setHome, addEquipment, customTemplates, setTasks } = useStore();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [generatingTasks, setGeneratingTasks] = useState(false);
@@ -703,7 +704,7 @@ export default function Onboarding() {
           task_reminder_days_before: 3,
           weather_alerts_enabled: true,
         };
-        const generatedTasks = generateTasksForHome(home, allEquipment, existingTasks, [], userPreferences);
+        const generatedTasks = generateTasksForHome(home, allEquipment, existingTasks, [], userPreferences, customTemplates);
         const lifecycleAlerts = generateEquipmentLifecycleAlerts(allEquipment, home);
         const allNewTasks = [...generatedTasks, ...lifecycleAlerts];
         if (allNewTasks.length > 0) {

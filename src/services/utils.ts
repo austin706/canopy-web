@@ -63,6 +63,11 @@ export const quickCompleteTask = async (task: MaintenanceTask): Promise<void> =>
     try { await createTask(nextTask); } catch (err) { console.warn('Next dynamic task creation failed:', err); }
   }
 
+  // 4b. If this is an as_needed task, prompt user to schedule next occurrence
+  if (task.frequency === 'as_needed' && !nextDynamicTask) {
+    useStore.getState().setPendingReschedule(task);
+  }
+
   // 5. Show undo toast
   showToast({
     message: 'Task completed',

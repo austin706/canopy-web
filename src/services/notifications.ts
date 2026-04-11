@@ -133,3 +133,162 @@ export const updateNotificationPreferences = async (userId: string, preferences:
   if (error) throw error;
   return data;
 };
+
+// --- Web Push Subscription ---
+
+/**
+ * Register for browser-based Web Push notifications.
+ *
+ * 1. Checks browser support (Service Workers, PushManager)
+ * 2. Requests notification permission from user
+ * 3. Subscribes to push notifications with VAPID public key
+ * 4. Stores the subscription (endpoint + keys) in profiles.web_push_subscription
+ *
+ * @returns Promise<{ subscribed: boolean; message: string }>
+ */
+export const registerForWebPush = async (
+  userId: string,
+): Promise<{ subscribed: boolean; message: string }> => {
+  try {
+    // Check browser support
+    if (!('serviceWorker' in navigator)) {
+      logger.warn('[Web Push] Service Workers not supported');
+      return { subscribed: false, message: 'Service Workers not supported in this browser' };
+    }
+
+    if (!('PushManager' in window)) {
+      logger.warn('[Web Push] PushManager not supported');
+      return { subscribed: false, message: 'Web Push not supported in this browser' };
+    }
+
+    // Request notification permission
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      logger.info('[Web Push] Notification permission denied by user');
+      return { subscribed: false, message: 'Notification permission denied' };
+    }
+
+    // Get Service Worker registration
+    const registration = await navigator.serviceWorker.ready;
+
+    // Get VAPID public key from environment
+    const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+    if (!vapidPublicKey) {
+      logger.error('[Web Push] VITE_VAPID_PUBLIC_KEY not configured');
+      return { subscribed: false, message: 'Web Push not configured on server' };
+    }
+
+    // Convert base64 VAPID key to Uint8Array
+    const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+
+    // Subscribe to push notifications
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: convertedVapidKey as BufferSource,
+    });
+
+    // Store subscription in database
+    const subscriptionJson = subscription.toJSON();
+    const { error } = await supabase
+      .from('profiles')
+      .update({ web_push_subscription: subscriptionJson })
+      .eq('id', userId);
+
+    if (error) {
+      logger.error('[Web Push] Failed to save subscription:', error);
+      return { subscribed: false, message: 'Failed to save subscription' };
+    }
+
+    logger.info('[Web Push] Successfully subscribed to push notifications');
+    return { subscribed: true, message: 'Browser notifications enabled' };
+  } catch (error) {
+    logger.error('[Web Push] Registration failed:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return { subscribed: false, message };
+  }
+};
+
+/**
+ * Unregister from Web Push notifications.
+ *
+ * 1. Gets current subscription
+ * 2. Unsubscribes from push
+ * 3. Clears stored subscription from database
+ *
+ * @returns Promise<{ unsubscribed: boolean; message: string }>
+ */
+export const unregisterWebPush = async (
+  userId: string,
+): Promise<{ unsubscribed: boolean; message: string }> => {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      return { unsubscribed: true, message: 'Web Push not supported' };
+    }
+
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+
+    if (subscription) {
+      await subscription.unsubscribe();
+      logger.info('[Web Push] Unsubscribed from push notifications');
+    }
+
+    // Clear subscription from database
+    const { error } = await supabase
+      .from('profiles')
+      .update({ web_push_subscription: null })
+      .eq('id', userId);
+
+    if (error) {
+      logger.error('[Web Push] Failed to clear subscription:', error);
+      return { unsubscribed: false, message: 'Failed to clear subscription' };
+    }
+
+    logger.info('[Web Push] Successfully unsubscribed');
+    return { unsubscribed: true, message: 'Browser notifications disabled' };
+  } catch (error) {
+    logger.error('[Web Push] Unregistration failed:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return { unsubscribed: false, message };
+  }
+};
+
+/**
+ * Check if user is currently subscribed to Web Push.
+ *
+ * @returns Promise<boolean> true if subscribed, false otherwise
+ */
+export const isWebPushSubscribed = async (): Promise<boolean> => {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      return false;
+    }
+
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    return subscription !== null;
+  } catch (error) {
+    logger.error('[Web Push] Failed to check subscription status:', error);
+    return false;
+  }
+};
+
+/**
+ * Convert base64-encoded VAPID public key to Uint8Array.
+ * Web Push API requires the key in Uint8Array format.
+ *
+ * @param base64String - Base64-encoded public key
+ * @returns Uint8Array representation of the key
+ */
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}

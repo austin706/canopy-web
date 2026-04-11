@@ -59,3 +59,17 @@ if (loader) {
   loader.classList.add('fade-out');
   setTimeout(() => loader.remove(), 300);
 }
+
+// ─── Register Service Worker for Web Push (production only) ───
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((registration) => {
+        logger.info('[Web Push] Service Worker registered successfully');
+      })
+      .catch((error) => {
+        logger.warn('[Web Push] Service Worker registration failed:', error);
+      });
+  });
+}

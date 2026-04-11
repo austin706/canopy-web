@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { supabase, updateProfile, redeemGiftCode, deleteUserAccount, exportUserData, lookupAgentByCode, linkAgent, getCalendarToken, rotateCalendarToken, buildICalSubscribeUrl } from '@/services/supabase';
+import { registerForWebPush, unregisterWebPush, isWebPushSubscribed } from '@/services/notifications';
 import { PLANS } from '@/services/subscriptionGate';
 import MessageBanner from '@/components/MessageBanner';
 import { Colors } from '@/constants/theme';
@@ -34,6 +35,10 @@ export default function Profile() {
   const [calLoading, setCalLoading] = useState(false);
   const [calCopied, setCalCopied] = useState(false);
 
+  // Browser notifications
+  const [webPushEnabled, setWebPushEnabled] = useState(false);
+  const [webPushLoading, setWebPushLoading] = useState(false);
+
   // Maintenance Preferences
   const [editingPreferences, setEditingPreferences] = useState(false);
   const [preferencesLoading, setPreferencesLoading] = useState(false);
@@ -46,6 +51,15 @@ export default function Profile() {
   const [showProTasks, setShowProTasks] = useState(
     user?.user_preferences?.show_pro_tasks ?? DEFAULT_USER_PREFERENCES.show_pro_tasks
   );
+
+  // Check if user is already subscribed to web push
+  useEffect(() => {
+    const checkWebPushStatus = async () => {
+      const isSubscribed = await isWebPushSubscribed();
+      setWebPushEnabled(isSubscribed);
+    };
+    checkWebPushStatus().catch(err => console.error('Failed to check web push status:', err));
+  }, []);
 
   const tier = user?.subscription_tier || 'free';
   const plan = PLANS.find(p => p.value === tier);
@@ -124,6 +138,44 @@ export default function Profile() {
     } catch {
       setMessage('Copy failed — select the URL manually');
       setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
+  const handleEnableBrowserNotifications = async () => {
+    if (!user) return;
+    setWebPushLoading(true);
+    try {
+      const result = await registerForWebPush(user.id);
+      if (result.subscribed) {
+        setWebPushEnabled(true);
+        setMessage('Browser notifications enabled');
+      } else {
+        setMessage(result.message || 'Failed to enable notifications');
+      }
+    } catch (e: any) {
+      setMessage(e.message || 'Failed to enable notifications');
+    } finally {
+      setWebPushLoading(false);
+      setTimeout(() => setMessage(''), 4000);
+    }
+  };
+
+  const handleDisableBrowserNotifications = async () => {
+    if (!user) return;
+    setWebPushLoading(true);
+    try {
+      const result = await unregisterWebPush(user.id);
+      if (result.unsubscribed) {
+        setWebPushEnabled(false);
+        setMessage('Browser notifications disabled');
+      } else {
+        setMessage(result.message || 'Failed to disable notifications');
+      }
+    } catch (e: any) {
+      setMessage(e.message || 'Failed to disable notifications');
+    } finally {
+      setWebPushLoading(false);
+      setTimeout(() => setMessage(''), 4000);
     }
   };
 
@@ -405,6 +457,34 @@ export default function Profile() {
             </p>
           </div>
         )}
+      </div>
+
+      {/* Browser Notifications */}
+      <div className="card mb-lg">
+        <h3 style={{ fontSize: 16, marginBottom: 4 }}>Browser Notifications</h3>
+        <p className="text-xs text-gray mb-md">
+          Get push notifications in your browser when important Canopy events happen. Notifications work across all your devices when you're logged in.
+        </p>
+        {!webPushEnabled ? (
+          <button className="btn btn-primary btn-sm" onClick={handleEnableBrowserNotifications} disabled={webPushLoading}>
+            {webPushLoading ? 'Enabling…' : 'Enable Browser Notifications'}
+          </button>
+        ) : (
+          <div className="flex gap-sm">
+            <div style={{ flex: 1 }}>
+              <div className="flex items-center gap-sm">
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-success, #4CAF50)' }} />
+                <span className="text-sm">Browser notifications enabled</span>
+              </div>
+            </div>
+            <button className="btn btn-secondary btn-sm" onClick={handleDisableBrowserNotifications} disabled={webPushLoading}>
+              {webPushLoading ? 'Disabling…' : 'Disable'}
+            </button>
+          </div>
+        )}
+        <p className="text-xs text-gray" style={{ marginTop: 12 }}>
+          You'll be asked to allow notifications when you enable this feature. Make sure your browser's notification settings for canopyhome.app are not blocked.
+        </p>
       </div>
 
       {/* Link Agent */}

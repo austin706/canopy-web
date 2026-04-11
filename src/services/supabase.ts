@@ -412,6 +412,43 @@ export const replaceEquipmentConsumables = async (
     .insert(rows)
     .select();
   if (error) throw error;
+
+  // Auto-seed any new consumable type+spec combos into affiliate_products
+  // so admin sees them as "needs link" in the Consumables tab
+  for (const c of consumables) {
+    try {
+      // Check if an affiliate_products row already exists for this type+spec
+      const specVal = c.spec || null;
+      let query = supabase
+        .from('affiliate_products')
+        .select('id')
+        .eq('consumable_type', c.consumable_type)
+        .eq('link_type', 'consumable');
+      if (specVal) {
+        query = query.eq('spec_pattern', specVal);
+      } else {
+        query = query.is('spec_pattern', null);
+      }
+      const { data: existing } = await query.limit(1);
+      if (!existing || existing.length === 0) {
+        // Seed a placeholder row — inactive until admin adds a URL
+        await supabase.from('affiliate_products').insert({
+          consumable_type: c.consumable_type,
+          spec_pattern: specVal,
+          equipment_category: equipCategory,
+          product_name: c.name + (c.spec ? ` (${c.spec})` : ''),
+          affiliate_url: '',
+          link_type: 'consumable',
+          active: false,
+          priority: 0,
+          notes: `Auto-seeded from equipment scan. Part: ${c.part_number || 'unknown'}. Add Amazon affiliate URL to activate.`,
+        });
+      }
+    } catch {
+      // Non-blocking — don't fail the scan save if affiliate seeding fails
+    }
+  }
+
   return data || [];
 };
 
@@ -1410,6 +1447,10 @@ export interface AffiliateProduct {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  item_key: string | null;
+  quality_tier: 'budget' | 'recommended' | 'premium' | null;
+  price_estimate: number | null;
+  link_type: 'consumable' | 'item_on_hand';
 }
 
 /** Fetch all affiliate products (admin view — includes inactive) */
@@ -1426,7 +1467,7 @@ export const getAffiliateProducts = async (activeOnly = false): Promise<Affiliat
 };
 
 /** Create or update an affiliate product */
-export const upsertAffiliateProduct = async (product: Partial<AffiliateProduct> & { consumable_type: string; product_name: string; affiliate_url: string }): Promise<AffiliateProduct> => {
+export const upsertAffiliateProduct = async (product: Partial<AffiliateProduct> & { product_name: string; affiliate_url: string }): Promise<AffiliateProduct> => {
   const { data, error } = await supabase
     .from('affiliate_products')
     .upsert(product)
@@ -1479,6 +1520,56 @@ export const matchAffiliateLink = async (
   if (fallback) return fallback.affiliate_url;
 
   return data[0]?.affiliate_url || null;
+};
+
+/**
+ * Look up affiliate products for an items_to_have_on_hand string.
+ * Returns multiple products (different quality tiers) sorted by priority.
+ * Matches by normalized item_key (lowercased, trimmed).
+ */
+export const matchAffiliateLinksForItem = async (
+  itemName: string,
+): Promise<AffiliateProduct[]> => {
+  const key = itemName.toLowerCase().trim();
+  const { data, error } = await supabase
+    .from('affiliate_products')
+    .select('*')
+    .eq('link_type', 'item_on_hand')
+    .eq('item_key', key)
+    .eq('active', true)
+    .order('priority', { ascending: false });
+
+  if (error || !data) return [];
+  return data as AffiliateProduct[];
+};
+
+/**
+ * Batch-fetch affiliate links for multiple items_to_have_on_hand at once.
+ * Returns a map of item_key → AffiliateProduct[].
+ * Much more efficient than calling matchAffiliateLinksForItem per item.
+ */
+export const batchMatchAffiliateLinksForItems = async (
+  itemNames: string[],
+): Promise<Record<string, AffiliateProduct[]>> => {
+  if (!itemNames.length) return {};
+  const keys = itemNames.map((n) => n.toLowerCase().trim());
+  const { data, error } = await supabase
+    .from('affiliate_products')
+    .select('*')
+    .eq('link_type', 'item_on_hand')
+    .in('item_key', keys)
+    .eq('active', true)
+    .order('priority', { ascending: false });
+
+  if (error || !data) return {};
+
+  const result: Record<string, AffiliateProduct[]> = {};
+  for (const product of data as AffiliateProduct[]) {
+    const k = product.item_key || '';
+    if (!result[k]) result[k] = [];
+    result[k].push(product);
+  }
+  return result;
 };
 
 // ─── Service Area Services ───

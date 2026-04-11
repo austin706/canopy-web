@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/utils';
-import { reopenTask as reopenTaskApi, deleteTask as deleteTaskApi } from '@/services/supabase';
+import { reopenTask as reopenTaskApi, deleteTask as deleteTaskApi, batchMatchAffiliateLinksForItems, type AffiliateProduct } from '@/services/supabase';
 import { getDisplayStatus } from '@/services/taskEngine';
 import { supabase } from '@/services/supabase';
 
@@ -46,6 +46,13 @@ export default function TaskDetail() {
   const [selectedBundleTasks, setSelectedBundleTasks] = useState<Set<string>>(new Set());
   const [hasProRequest, setHasProRequest] = useState(false);
   const [isLoadingProRequest, setIsLoadingProRequest] = useState(false);
+  const [itemAffiliateLinks, setItemAffiliateLinks] = useState<Record<string, AffiliateProduct[]>>({});
+
+  // Fetch affiliate links for items_to_have_on_hand
+  useEffect(() => {
+    if (!task?.items_to_have_on_hand?.length) return;
+    batchMatchAffiliateLinksForItems(task.items_to_have_on_hand).then(setItemAffiliateLinks).catch(() => {});
+  }, [task?.id, task?.items_to_have_on_hand?.length]);
 
   const handleReopen = async () => {
     if (!task) return;
@@ -271,12 +278,64 @@ export default function TaskDetail() {
           <div className="card mb-lg" style={{ background: Colors.copperMuted, border: `1px solid ${Colors.copper}30` }}>
             <p style={{ fontWeight: 600, marginBottom: 10, color: Colors.copperDark }}>Items to Have on Hand</p>
             <div className="flex-col gap-xs">
-              {task.items_to_have_on_hand.map((item: string) => (
-                <div key={item} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ color: Colors.copper, fontSize: 14 }}>•</span>
-                  <p style={{ fontSize: 14, color: Colors.charcoal }}>{item}</p>
-                </div>
-              ))}
+              {task.items_to_have_on_hand.map((item: string) => {
+                const links = itemAffiliateLinks[item.toLowerCase().trim()] || [];
+                return (
+                  <div key={item}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span style={{ color: Colors.copper, fontSize: 14 }}>•</span>
+                      <p style={{ fontSize: 14, color: Colors.charcoal, flex: 1 }}>{item}</p>
+                    </div>
+                    {links.length > 0 && (
+                      <div style={{ marginLeft: 22, marginTop: 4, marginBottom: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {links.map((link) => (
+                          <a
+                            key={link.id}
+                            href={link.affiliate_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              padding: '3px 10px',
+                              borderRadius: 6,
+                              border: `1px solid ${Colors.copper}30`,
+                              background: '#FFF8F0',
+                              textDecoration: 'none',
+                              fontSize: 12,
+                              color: Colors.copper,
+                              fontWeight: 500,
+                              transition: 'background 0.15s',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#FFF0E0')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = '#FFF8F0')}
+                          >
+                            <span style={{ fontSize: 13 }}>🛒</span>
+                            <span>{link.product_name}</span>
+                            {link.price_estimate && (
+                              <span style={{ fontWeight: 600, color: Colors.copperDark }}>${link.price_estimate.toFixed(2)}</span>
+                            )}
+                            {link.quality_tier && (
+                              <span style={{
+                                fontSize: 10,
+                                fontWeight: 600,
+                                padding: '1px 5px',
+                                borderRadius: 3,
+                                textTransform: 'capitalize',
+                                background: link.quality_tier === 'budget' ? '#E3F2FD' : link.quality_tier === 'premium' ? '#FFF3E0' : '#E8F5E9',
+                                color: link.quality_tier === 'budget' ? '#1565C0' : link.quality_tier === 'premium' ? '#E65100' : '#2E7D32',
+                              }}>
+                                {link.quality_tier}
+                              </span>
+                            )}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

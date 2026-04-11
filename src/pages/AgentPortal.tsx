@@ -8,8 +8,10 @@ import AdminPreviewBanner from '@/components/AdminPreviewBanner';
 
 function generateCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
   let code = '';
-  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 8; i++) code += chars[bytes[i] % chars.length];
   return code;
 }
 
@@ -26,7 +28,7 @@ export default function AgentPortal() {
   const navigate = useNavigate();
   const { user } = useStore();
   const isAdmin = user?.role === 'admin';
-  const [tab, setTab] = useState<'clients' | 'new-client' | 'codes' | 'my-qr' | 'notifications' | 'analytics'>('clients');
+  const [tab, setTab] = useState<'clients' | 'new-client' | 'codes' | 'my-qr' | 'marketing' | 'dashboard' | 'notifications'>('clients');
   const [clients, setClients] = useState<ClientData[]>([]);
   const [codes, setCodes] = useState<any[]>([]);
   const [agentNotifications, setAgentNotifications] = useState<any[]>([]);
@@ -44,6 +46,12 @@ export default function AgentPortal() {
   const [newNote, setNewNote] = useState('');
   const [noteCategory, setNoteCategory] = useState('general');
   const [savingNote, setSavingNote] = useState(false);
+
+  // Dashboard / Portfolio metrics
+  const [clientHealthScores, setClientHealthScores] = useState<Record<string, number>>({});
+  const [clientActivityDates, setClientActivityDates] = useState<Record<string, string | null>>({});
+  const [clientEquipmentAlerts, setClientEquipmentAlerts] = useState<Record<string, any[]>>({});
+  const [dashboardActivityFeed, setDashboardActivityFeed] = useState<any[]>([]);
 
   // New client setup form
   const [setupStep, setSetupStep] = useState<1 | 2 | 3>(1);
@@ -79,6 +87,150 @@ export default function AgentPortal() {
 
     const { data: codeData } = await supabase.from('gift_codes').select('*').eq('agent_id', agentRecord.id);
     setCodes(codeData || []);
+
+    // Load dashboard metrics: health scores, activity dates, equipment alerts, activity feed
+    try {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+      // Get all maintenance tasks for these clients
+      const clientIds = clientList.map((c: any) => c.id);
+      if (clientIds.length > 0) {
+        // Fetch tasks for health score calculation
+        const { data: allTasks } = await supabase
+          .from('maintenance_tasks')
+          .select('id, user_id, status, completed_at, due_date');
+
+        // Fetch recent completions for activity feed
+        const { data: recentTasks } = await supabase
+          .from('maintenance_tasks')
+          .select('id, user_id, title, status, completed_at')
+          .eq('status', 'completed')
+          .gte('completed_at', fourteenDaysAgo.toISOString())
+          .order('completed_at', { ascending: false })
+          .limit(10);
+
+        // Fetch equipment for aging alerts
+        const { data: equipmentData } = await supabase
+          .from('equipment')
+          .select('id, name, home_id, installation_date, purchase_date')
+          .in('home_id', clientsWithHomes.filter((c: any) => c.home).map((c: any) => c.home.id));
+
+        // Calculate rolling health scores per client (same algorithm as Dashboard)
+        const healthScores: Record<string, number> = {};
+        const activityDates: Record<string, string | null> = {};
+        const ninetyDaysAgo = new Date(now);
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+        clientList.forEach((client: any) => {
+          const clientTasks = (allTasks || []).filter((t: any) => t.user_id === client.id);
+
+          // Component 1: Rolling 90-day completion (50%)
+          const r90 = clientTasks.filter((t: any) => {
+            if (t.status === 'skipped') return false;
+            const d = new Date(t.due_date);
+            return d >= ninetyDaysAgo && d <= now;
+          });
+          const r90Done = r90.filter((t: any) => t.status === 'completed').length;
+          let r90Rate: number;
+          if (r90.length === 0) r90Rate = 70;
+          else if (r90.length < 10) {
+            const real = (r90Done / r90.length) * 100;
+            const sw = (10 - r90.length) / 10;
+            r90Rate = Math.round(real * (1 - sw) + 70 * sw);
+          } else r90Rate = Math.round((r90Done / r90.length) * 100);
+
+          // Component 2: Current month (30%)
+          const mTasks = clientTasks.filter((t: any) => {
+            if (t.status === 'skipped') return false;
+            const d = new Date(t.due_date);
+            return d >= monthStart && d <= now;
+          });
+          const mDone = mTasks.filter((t: any) => t.status === 'completed').length;
+          const mRate = mTasks.length > 0 ? Math.round((mDone / mTasks.length) * 100) : r90Rate;
+
+          // Component 3: Overdue penalty (20%)
+          const overdue = clientTasks.filter((t: any) => {
+            if (t.status === 'completed' || t.status === 'skipped') return false;
+            const d = new Date(t.due_date); d.setHours(0,0,0,0);
+            return d < now;
+          });
+          let ded = 0;
+          overdue.forEach((t: any) => {
+            const d = new Date(t.due_date); d.setHours(0,0,0,0);
+            const days = Math.floor((now.getTime() - d.getTime()) / 86400000);
+            ded += days > 30 ? 15 : days > 7 ? 10 : 5;
+          });
+
+          healthScores[client.id] = Math.max(0, Math.min(100, Math.round(r90Rate * 0.5 + mRate * 0.3 + Math.max(0, 100 - ded) * 0.2)));
+
+          // Find most recent task completion for this client
+          const clientRecentTasks = (recentTasks || []).filter((t: any) => t.user_id === client.id);
+          activityDates[client.id] = clientRecentTasks.length > 0 ? clientRecentTasks[0].completed_at : null;
+        });
+
+        // Build equipment alerts (80%+ of lifespan)
+        const equipmentAlerts: Record<string, any[]> = {};
+        clientsWithHomes.forEach((client: any) => {
+          equipmentAlerts[client.id] = [];
+          if (client.home) {
+            const homeEquipment = (equipmentData || []).filter((e: any) => e.home_id === client.home.id);
+            homeEquipment.forEach((eq: any) => {
+              const installDate = eq.installation_date || eq.purchase_date;
+              if (installDate) {
+                const ageMs = now.getTime() - new Date(installDate).getTime();
+                const ageYears = ageMs / (365.25 * 24 * 60 * 60 * 1000);
+                // Estimate lifespans for common equipment (in years)
+                const lifespanMap: Record<string, number> = {
+                  'roof': 25, 'hvac': 15, 'water_heater': 10, 'ac_unit': 15,
+                  'furnace': 15, 'dishwasher': 10, 'refrigerator': 12, 'washer': 11,
+                  'dryer': 12, 'oven': 15, 'microwave': 9, 'disposal': 8
+                };
+                let estimatedLifespan = 15; // default fallback
+                for (const [key, lifespan] of Object.entries(lifespanMap)) {
+                  if (eq.name.toLowerCase().includes(key)) {
+                    estimatedLifespan = lifespan;
+                    break;
+                  }
+                }
+                const percentOfLife = (ageYears / estimatedLifespan) * 100;
+                if (percentOfLife >= 80) {
+                  equipmentAlerts[client.id].push({
+                    id: eq.id,
+                    name: eq.name,
+                    ageYears: Math.round(ageYears * 10) / 10,
+                    estimatedLifespan,
+                    percentOfLife: Math.round(percentOfLife),
+                  });
+                }
+              }
+            });
+          }
+        });
+
+        setClientHealthScores(healthScores);
+        setClientActivityDates(activityDates);
+        setClientEquipmentAlerts(equipmentAlerts);
+
+        // Format activity feed
+        const feed = (recentTasks || [])
+          .map((task: any) => {
+            const client = clientList.find((c: any) => c.id === task.user_id);
+            return {
+              id: task.id,
+              clientName: client?.full_name || 'Unknown',
+              taskTitle: task.title,
+              completedAt: task.completed_at,
+            };
+          })
+          .slice(0, 10);
+        setDashboardActivityFeed(feed);
+      }
+    } catch (err: any) {
+      console.error('Failed to load dashboard metrics:', err?.message);
+    }
   };
 
   useEffect(() => {
@@ -171,6 +323,27 @@ export default function AgentPortal() {
       await supabase.from('agent_client_notes').delete().eq('id', noteId);
       setClientNotes(prev => ({ ...prev, [clientId]: (prev[clientId] || []).filter(n => n.id !== noteId) }));
     } catch { alert('Failed to delete note'); }
+  };
+
+  // Helper: format relative time
+  const getActivityIndicator = (lastActivityDate: string | null): { color: string; text: string; dot: string } => {
+    if (!lastActivityDate) {
+      return { color: Colors.medGray, text: 'Never', dot: '●' };
+    }
+    const daysAgo = Math.floor((Date.now() - new Date(lastActivityDate).getTime()) / (1000 * 60 * 60 * 24));
+    if (daysAgo <= 7) {
+      return { color: Colors.success, text: `${daysAgo}d ago`, dot: '●' };
+    }
+    if (daysAgo <= 30) {
+      return { color: Colors.warning, text: `${daysAgo}d ago`, dot: '●' };
+    }
+    return { color: Colors.medGray, text: `${daysAgo}d ago`, dot: '●' };
+  };
+
+  const getHealthScoreBadgeColor = (score: number): string => {
+    if (score >= 70) return Colors.success;
+    if (score >= 40) return Colors.warning;
+    return Colors.error;
   };
 
   // Expiration helpers
@@ -316,7 +489,8 @@ export default function AgentPortal() {
         <button className={`tab ${tab === 'new-client' ? 'active' : ''}`} onClick={() => { setTab('new-client'); resetSetupForm(); }}>+ New Client</button>
         <button className={`tab ${tab === 'codes' ? 'active' : ''}`} onClick={() => setTab('codes')}>Gift Codes ({codes.length})</button>
         <button className={`tab ${tab === 'my-qr' ? 'active' : ''}`} onClick={() => setTab('my-qr')}>My QR Code</button>
-        <button className={`tab ${tab === 'analytics' ? 'active' : ''}`} onClick={() => setTab('analytics')}>Analytics</button>
+        <button className={`tab ${tab === 'marketing' ? 'active' : ''}`} onClick={() => setTab('marketing')}>Marketing</button>
+        <button className={`tab ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => setTab('dashboard')}>Dashboard</button>
         <button className={`tab ${tab === 'notifications' ? 'active' : ''}`} onClick={() => setTab('notifications')} style={{ position: 'relative' }}>
           Alerts
           {agentNotifications.filter(n => !n.read).length > 0 && (
@@ -364,6 +538,17 @@ export default function AgentPortal() {
                       ) : (
                         <span className="badge" style={{ background: Colors.error.slice(0, -2) + '15', color: Colors.error, fontSize: 11 }}>No home</span>
                       )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {(() => {
+                          const indicator = getActivityIndicator(clientActivityDates[c.id] || null);
+                          return (
+                            <>
+                              <span style={{ color: indicator.color, fontSize: 10 }}>{indicator.dot}</span>
+                              <span className="text-xs" style={{ color: indicator.color }}>{indicator.text}</span>
+                            </>
+                          );
+                        })()}
+                      </div>
                       <span style={{ color: 'var(--silver)', fontSize: 12, transform: expandedClient === c.id ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>&#9662;</span>
                     </div>
                   </div>
@@ -402,6 +587,53 @@ export default function AgentPortal() {
                         </div>
                       )}
                       <p className="text-xs text-gray mt-md">Joined: {c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</p>
+
+                      {/* Home Health Score */}
+                      {c.home && (
+                        <div style={{ marginTop: 16, borderTop: `1px solid var(--color-border)`, paddingTop: 16 }}>
+                          <div className="flex items-center justify-between mb-md">
+                            <p style={{ fontWeight: 600, fontSize: 14 }}>Home Health</p>
+                            <div style={{
+                              width: 60, height: 60, borderRadius: '50%',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: `${getHealthScoreBadgeColor(clientHealthScores[c.id] || 0)}20`,
+                              border: `2px solid ${getHealthScoreBadgeColor(clientHealthScores[c.id] || 0)}`,
+                            }}>
+                              <div style={{ textAlign: 'center' }}>
+                                <p style={{ fontWeight: 700, fontSize: 20, color: getHealthScoreBadgeColor(clientHealthScores[c.id] || 0), lineHeight: 1 }}>{clientHealthScores[c.id] || 0}%</p>
+                                <p className="text-xs text-gray" style={{ lineHeight: 1 }}>this month</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Equipment Aging Alerts */}
+                      {c.home && (clientEquipmentAlerts[c.id] || []).length > 0 && (
+                        <div style={{ marginTop: 16, borderTop: `1px solid var(--color-border)`, paddingTop: 16 }}>
+                          <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 12 }}>Equipment Alerts</p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {(clientEquipmentAlerts[c.id] || []).map((eq: any) => (
+                              <div
+                                key={eq.id}
+                                style={{
+                                  padding: '10px 12px',
+                                  borderRadius: 8,
+                                  background: `${Colors.error}15`,
+                                  borderLeft: `3px solid ${Colors.error}`,
+                                }}
+                              >
+                                <p className="text-sm fw-600" style={{ color: Colors.error, marginBottom: 2 }}>
+                                  {eq.name}
+                                </p>
+                                <p className="text-xs text-gray">
+                                  {eq.ageYears} years old (expected: {eq.estimatedLifespan} years) — {eq.percentOfLife}% of lifespan
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Sale Prep Status */}
                       {c.home?.sale_prep_active && (
@@ -795,9 +1027,157 @@ export default function AgentPortal() {
         </>
       ) :
 
-      // ═══ Analytics Tab ═══
-      tab === 'analytics' ? (
+      // ═══ Marketing Tab ═══
+      tab === 'marketing' ? (
+        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+          {/* Social Proof Stats */}
+          <div className="card mb-lg" style={{ padding: 24, background: `linear-gradient(135deg, var(--color-copper)10, var(--color-sage)10)` }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, textAlign: 'center' }}>Your Impact</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 32, fontWeight: 700, color: Colors.copper, marginBottom: 4 }}>{clients.length}</p>
+                <p className="text-sm text-gray">Families Helped</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 32, fontWeight: 700, color: Colors.sage, marginBottom: 4 }}>{redeemedCodes.length}</p>
+                <p className="text-sm text-gray">Gift Codes Redeemed</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 32, fontWeight: 700, color: Colors.charcoal, marginBottom: 4 }}>
+                  {clients.filter((c: any) => clientActivityDates[c.id]).length}
+                </p>
+                <p className="text-sm text-gray">Homes Actively Maintained</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray" style={{ textAlign: 'center', marginTop: 16 }}>
+              Share these stats on social media and with your team!
+            </p>
+          </div>
+
+          {/* Email Templates */}
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Email Templates</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+            {[
+              {
+                subject: 'A gift for your new home!',
+                body: `Congratulations on your new home at [Address]! As a closing gift, I'd like to give you a year of Canopy Home — your home's new operating system. Canopy helps you stay on top of maintenance, track your equipment, and protect your investment. Here's your gift code: [CODE]. Just head to canopyhome.app, create an account, and enter this code. Welcome home! — [Agent Name]`,
+                title: 'Closing Gift',
+              },
+              {
+                subject: "How's the new house treating you?",
+                body: `Hey [Client Name], just checking in! I hope you're settling in at [Address]. Quick reminder — your Canopy account is ready to help you stay on top of home maintenance this season. Log in at canopyhome.app to see what tasks are coming up. Let me know if you need anything! — [Agent Name]`,
+                title: 'Re-engagement',
+              },
+              {
+                subject: 'Know someone buying a home?',
+                body: `Hey [Client Name], I hope Canopy has been helpful for your home at [Address]! If you have any friends or family looking to buy or sell, I'd love to help — and I'll make sure they get the same Canopy gift to start their homeownership journey right. — [Agent Name]`,
+                title: 'Referral Ask',
+              },
+            ].map((template, idx) => (
+              <div key={idx} className="card" style={{ padding: 20 }}>
+                <div className="flex items-center justify-between mb-md">
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>{template.title}</p>
+                    <p className="text-sm text-gray">Subject: {template.subject}</p>
+                  </div>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`Subject: ${template.subject}\n\n${template.body}`);
+                      alert('Template copied to clipboard!');
+                    }}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-sm" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, color: Colors.charcoal }}>
+                  {template.body}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Tips for Agents */}
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Tips for Success</h2>
+          <div className="card" style={{ padding: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                'Include your QR code on business cards and closing packets',
+                'Follow up 30 days after closing to check if they\'ve activated Canopy',
+                'Clients with active Canopy accounts are 3x more likely to refer friends',
+              ].map((tip, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 18, color: Colors.copper, marginTop: -2 }}>✓</span>
+                  <p className="text-sm" style={{ color: Colors.charcoal }}>{tip}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) :
+
+      // ═══ Dashboard Tab ═══
+      tab === 'dashboard' ? (
         <>
+          {/* Portfolio Overview */}
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Portfolio Overview</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }} className="mb-lg">
+            <div className="card stat-card">
+              <div className="stat-value" style={{ color: Colors.success }}>
+                {clients.filter((c: any) => clientActivityDates[c.id]).length}
+              </div>
+              <div className="stat-label">Active Clients</div>
+            </div>
+            <div className="card stat-card">
+              <div className="stat-value" style={{ color: Colors.warning }}>
+                {clients.filter((c: any) => !clientActivityDates[c.id] && c.home).length}
+              </div>
+              <div className="stat-label">Inactive Clients</div>
+            </div>
+            <div className="card stat-card">
+              <div className="stat-value" style={{ color: Colors.sage }}>
+                {clients.length > 0
+                  ? Math.round(
+                      Object.values(clientHealthScores).reduce((a, b) => a + b, 0) / clients.length
+                    )
+                  : 0}
+              </div>
+              <div className="stat-label">Avg Home Health</div>
+            </div>
+            <div className="card stat-card">
+              <div className="stat-value" style={{ color: Colors.error }}>
+                {Object.values(clientEquipmentAlerts).reduce((sum: number, alerts: any[]) => sum + alerts.length, 0)}
+              </div>
+              <div className="stat-label">Equipment Alerts</div>
+            </div>
+          </div>
+
+          {/* Client Activity Feed */}
+          {dashboardActivityFeed.length > 0 && (
+            <>
+              <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Recent Client Activity</h2>
+              <div className="card mb-lg" style={{ padding: 20 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {dashboardActivityFeed.map((activity, idx) => {
+                    const daysAgo = Math.floor((Date.now() - new Date(activity.completedAt).getTime()) / (1000 * 60 * 60 * 24));
+                    return (
+                      <div key={activity.id} style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: idx < dashboardActivityFeed.length - 1 ? 12 : 0, borderBottom: idx < dashboardActivityFeed.length - 1 ? `1px solid var(--color-border)` : 'none' }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: Colors.copper, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="text-sm" style={{ color: Colors.charcoal }}>
+                            <strong>{activity.clientName}</strong> completed <em>{activity.taskTitle}</em>
+                          </p>
+                        </div>
+                        <span className="text-xs text-gray" style={{ flexShrink: 0 }}>{daysAgo}d ago</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Code Performance */}
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Code Performance</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }} className="mb-lg">
             <div className="card stat-card">

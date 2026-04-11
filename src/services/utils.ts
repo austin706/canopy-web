@@ -7,6 +7,121 @@ import { createNextDynamicTask } from '@/services/taskEngine';
 import { useStore } from '@/store/useStore';
 import { showToast } from '@/components/Toast';
 
+/**
+ * Rolling Home Health Score — blended algorithm.
+ *
+ * Three weighted components:
+ *   1. Rolling 90-day completion rate (50%) — your track record carries forward
+ *   2. Current month momentum (30%) — actionable "what's due now" signal
+ *   3. Overdue penalty (20%) — urgency signal for neglected tasks
+ *
+ * Behavior by action:
+ *   - Complete: improves all three components
+ *   - Snooze: neutral (removes overdue penalty, but doesn't count as completed)
+ *   - Skip: excluded from denominator entirely (deliberate "not applicable")
+ *   - Overdue: actively drags score down, worse the longer it sits
+ *
+ * New users (<10 tasks in 90-day history) get a starter blend of 70% assumed
+ * completion so they don't start at 0.
+ */
+export interface HealthScoreResult {
+  score: number;           // 0-100 blended score
+  rolling90: number;       // 90-day completion rate (0-100)
+  currentMonth: number;    // current month completion rate (0-100)
+  overdueCount: number;    // number of overdue tasks right now
+  completedCount: number;  // tasks completed this month
+  totalCount: number;      // eligible tasks due this month (excluding skipped)
+  label: string;           // human-readable label
+  color: 'green' | 'yellow' | 'red';
+}
+
+export const calculateHealthScore = (tasks: MaintenanceTask[]): HealthScoreResult => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  // ─── Time boundaries ───
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const ninetyDaysAgo = new Date(now);
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+  // ─── Component 1: Rolling 90-day completion rate (50% weight) ───
+  const rolling90Tasks = tasks.filter(t => {
+    if (t.status === 'skipped') return false;
+    const d = new Date(t.due_date);
+    return d >= ninetyDaysAgo && d <= now;
+  });
+  const rolling90Completed = rolling90Tasks.filter(t => t.status === 'completed').length;
+  const rolling90Eligible = rolling90Tasks.length;
+
+  let rolling90Rate: number;
+  if (rolling90Eligible === 0) {
+    rolling90Rate = 70; // brand-new user
+  } else if (rolling90Eligible < 10) {
+    const realRate = (rolling90Completed / rolling90Eligible) * 100;
+    const starterWeight = (10 - rolling90Eligible) / 10;
+    rolling90Rate = Math.round(realRate * (1 - starterWeight) + 70 * starterWeight);
+  } else {
+    rolling90Rate = Math.round((rolling90Completed / rolling90Eligible) * 100);
+  }
+
+  // ─── Component 2: Current month momentum (30% weight) ───
+  const monthTasks = tasks.filter(t => {
+    if (t.status === 'skipped') return false;
+    const d = new Date(t.due_date);
+    return d >= thisMonthStart && d <= thisMonthEnd;
+  });
+  const monthCompleted = monthTasks.filter(t => t.status === 'completed').length;
+  const monthEligible = monthTasks.length;
+  const currentMonthRate = monthEligible > 0
+    ? Math.round((monthCompleted / monthEligible) * 100)
+    : rolling90Rate;
+
+  // ─── Component 3: Overdue penalty (20% weight) ───
+  const overdueTasks = tasks.filter(t => {
+    if (t.status === 'completed' || t.status === 'skipped') return false;
+    const d = new Date(t.due_date);
+    d.setHours(0, 0, 0, 0);
+    return d < now;
+  });
+
+  let overdueDeduction = 0;
+  for (const t of overdueTasks) {
+    const d = new Date(t.due_date);
+    d.setHours(0, 0, 0, 0);
+    const daysOverdue = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysOverdue > 30) overdueDeduction += 15;
+    else if (daysOverdue > 7) overdueDeduction += 10;
+    else overdueDeduction += 5;
+  }
+  const overdueScore = Math.max(0, 100 - overdueDeduction);
+
+  // ─── Blend ───
+  const blended = Math.round(
+    rolling90Rate * 0.50 +
+    currentMonthRate * 0.30 +
+    overdueScore * 0.20
+  );
+  const score = Math.max(0, Math.min(100, blended));
+
+  let label: string;
+  let color: 'green' | 'yellow' | 'red';
+  if (score >= 85) { label = 'Great shape'; color = 'green'; }
+  else if (score >= 60) { label = 'Needs attention'; color = 'yellow'; }
+  else { label = 'Action required'; color = 'red'; }
+
+  return {
+    score,
+    rolling90: rolling90Rate,
+    currentMonth: currentMonthRate,
+    overdueCount: overdueTasks.length,
+    completedCount: monthCompleted,
+    totalCount: monthEligible,
+    label,
+    color,
+  };
+};
+
 /** Generate a UUID v4 */
 export const generateUUID = (): string =>
   'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {

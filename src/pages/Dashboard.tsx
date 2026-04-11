@@ -5,7 +5,7 @@ import logger from '@/utils/logger';
 import { canAccess, getTaskLimit, PLANS } from '@/services/subscriptionGate';
 import { Colors, PriorityColors, StatusColors } from '@/constants/theme';
 import DashboardChat from '@/components/DashboardChat';
-import { quickCompleteTask } from '@/services/utils';
+import { quickCompleteTask, calculateHealthScore } from '@/services/utils';
 import { ImageViewer } from '@/components/ImageViewer';
 import { getTasks, createTasks, getHomeJoinRequests, approveHomeJoinRequest, denyHomeJoinRequest, getNotifications, markNotificationRead } from '@/services/supabase';
 import { fetchWeather } from '@/services/weather';
@@ -187,16 +187,13 @@ export default function Dashboard() {
   const unreadNotifications = notifications.filter(n => !n.read);
   const recentNotifications = unreadNotifications.slice(0, 2);
 
-  const currentMonth = new Date().toLocaleString('default', { month: 'long' });
   const now = new Date();
+  const currentMonth = now.toLocaleString('default', { month: 'long' });
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-  const { healthScore, completedCount, totalCount } = useMemo(() => {
-    const monthTasks = tasksToShow.filter(t => { const d = new Date(t.due_date); return d >= monthStart && d <= monthEnd; });
-    const completed = monthTasks.filter(t => t.status === 'completed').length;
-    return { healthScore: monthTasks.length > 0 ? Math.round((completed / monthTasks.length) * 100) : 0, completedCount: completed, totalCount: monthTasks.length };
-  }, [tasks, tier]);
+  const healthData = useMemo(() => calculateHealthScore(tasks), [tasks]);
+  const { score: healthScore, completedCount, totalCount, overdueCount, label: healthLabel } = healthData;
 
   const costForecast = useMemo(() => generateCostForecast(equipment, home ? {
     square_footage: home.square_footage,
@@ -420,16 +417,21 @@ export default function Dashboard() {
               <HealthGauge score={healthScore} size={100} />
               <div style={{ flex: 1 }}>
                 <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>Home Health Score</p>
-                <p className="text-sm text-gray" style={{ marginBottom: 8 }}>{currentMonth} maintenance progress</p>
+                <p className="text-sm" style={{ color: healthData.color === 'green' ? Colors.success : healthData.color === 'yellow' ? '#FF9800' : Colors.error, fontWeight: 600, marginBottom: 8 }}>{healthLabel}</p>
                 <p className="text-sm" style={{ color: Colors.charcoal }}>
-                  <strong>{completedCount}</strong> of <strong>{totalCount}</strong> tasks complete
+                  <strong>{completedCount}</strong> of <strong>{totalCount}</strong> {currentMonth} tasks complete
                 </p>
+                {overdueCount > 0 && (
+                  <p className="text-xs mt-xs" style={{ color: Colors.error }}>
+                    {overdueCount} overdue task{overdueCount > 1 ? 's' : ''} — complete or skip to improve your score
+                  </p>
+                )}
                 <p className="text-xs text-gray mt-sm">
                   {totalCount === 0
                     ? 'Set up your home to generate maintenance tasks'
                     : totalCount > completedCount
-                    ? `Complete ${totalCount - completedCount} more task${totalCount - completedCount > 1 ? 's' : ''} to improve your score`
-                    : 'Great job! All tasks complete this month'}
+                    ? `Complete ${totalCount - completedCount} more task${totalCount - completedCount > 1 ? 's' : ''} this month to keep your score strong`
+                    : 'All caught up this month — great work!'}
                 </p>
               </div>
             </div>

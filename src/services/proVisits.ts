@@ -317,6 +317,39 @@ export async function completeVisit(
       }).catch(() => {});
     } catch (e) { console.warn('Failed to send visit completion notification:', e); }
   }
+
+  // Trigger payout processing (fire-and-forget — payout failure
+  // doesn't block visit completion; admin can retry from dashboard)
+  try {
+    await triggerVisitPayout(visitId);
+  } catch (payoutErr) {
+    console.warn(`Payout trigger failed for visit ${visitId} — admin can retry:`, payoutErr);
+  }
+}
+
+/**
+ * Trigger payout to the pro tech for a completed visit.
+ * Creates a Stripe Transfer from Canopy's balance to the tech's Connect account.
+ */
+export async function triggerVisitPayout(visitId: string): Promise<{
+  success: boolean;
+  payout_id?: string;
+  amount_cents?: number;
+  stripe_transfer_id?: string;
+  error?: string;
+}> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+
+  const res = await supabase.functions.invoke('process-pro-payout', {
+    body: { visit_id: visitId },
+  });
+
+  if (res.error) {
+    throw new Error(res.error.message || 'Payout processing failed');
+  }
+
+  return res.data;
 }
 
 export async function rateVisit(

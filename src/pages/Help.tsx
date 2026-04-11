@@ -100,7 +100,7 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         id: 'subscription-plans',
         question: 'What\'s included in each plan?',
-        answer: 'Free: Basic calendar with generic checklists and up to 5 equipment slots. Home ($9.99/mo or $109.99/yr): All AI-powered maintenance tasks, unlimited equipment, personalized checklists, weather-smart scheduling, cost forecasts, Home Token, and the AI Home Assistant. Pro ($149/mo or $1,649/yr): Home features plus bimonthly professional home inspections with a Certified Pro. Pro+ ($199/mo or $2,199/yr): Everything in Pro plus monthly visits, priority scheduling, and expanded service coverage.',
+        answer: 'Free: Basic calendar with generic checklists and up to 5 equipment slots. Home ($6.99/mo on web, $9.99/mo on iOS/Android): All AI-powered maintenance tasks, unlimited equipment, personalized checklists, weather-smart scheduling, cost forecasts, Home Token, and the AI Home Assistant. Home is DIY — you handle maintenance yourself with Canopy\'s guidance. Pro ($149/mo on web, $199/mo on iOS/Android): Everything in Home plus bimonthly professional home inspections with a Certified Pro. Pro+ (custom pricing): Full concierge service with a dedicated pro, routine maintenance of all systems, and priority scheduling — contact us for a quote.',
         keywords: ['plans', 'pricing', 'tiers', 'free', 'home', 'pro', 'subscription'],
       },
       {
@@ -178,7 +178,7 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         id: 'agent-linking',
         question: 'How does agent linking work?',
-        answer: 'Real estate agents can create Canopy accounts and purchase gift codes to give their buyers. When a buyer redeems a gift code, their account is automatically linked to the agent. The agent can see which codes have been redeemed and which homes are under management in their Agent Portal. This is a lead-generation tool — agents do not earn commissions from Canopy.',
+        answer: 'Real estate agents can create Canopy accounts and purchase gift codes to give their buyers as closing gifts. When a buyer redeems a gift code, their account is automatically linked to the agent. The agent can see which codes have been redeemed and which homes are under management in their Agent Portal. Agents are a referral and lead source for Canopy.',
         keywords: ['agent', 'real estate', 'link', 'gift code', 'portal'],
       },
       {

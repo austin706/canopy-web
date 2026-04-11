@@ -115,6 +115,15 @@ export default function AdminAgents() {
 
   const handlePhotoUpload = async (file: File) => {
     if (!selectedAgent || !file) return;
+
+    // Client-side file size validation (10MB limit)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = Math.round(file.size / 1024 / 1024);
+      alert(`File too large (${fileSizeMB}MB). Maximum file size is 10MB. Please choose a smaller file.`);
+      return;
+    }
+
     setUploadingPhoto(true);
     try {
       const photoUrl = await uploadPhoto('agent-photos', `${selectedAgent.id}/${Date.now()}_${file.name}`, file);

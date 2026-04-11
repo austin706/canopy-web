@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import { uploadPhoto, getDocuments, createDocument, deleteDocument, getSecureNotes, createSecureNote, deleteSecureNote, getVaultPin, upsertVaultPin } from '@/services/supabase';
+import { uploadPhoto, getDocuments, createDocument, deleteDocument, getSecureNotes, createSecureNote, deleteSecureNote, hasVaultPin, setVaultPin, verifyVaultPin, removeVaultPin } from '@/services/supabase';
 import { canAccess } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
 import InspectionUploader from '@/components/InspectionUploader';
@@ -50,19 +50,13 @@ export default function Documents() {
   const [notesLoading, setNotesLoading] = useState(false);
 
   // PIN Protection state
-  const [vaultPinHash, setVaultPinHash] = useState<string | null>(null);
+  const [hasPinSet, setHasPinSet] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [isPinUnlocked, setIsPinUnlocked] = useState(true); // Default unlocked; lock screen shows only when PIN exists
   const [showPinSetup, setShowPinSetup] = useState(false);
   const [pinError, setPinError] = useState('');
 
-  // Hash PIN with user ID as salt using Web Crypto API (SHA-256)
-  const hashPin = async (pin: string, userId: string): Promise<string> => {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(`${userId}:vault:${pin}`);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-  };
+  // PIN hashing is now handled server-side via pgcrypto bcrypt RPCs
 
   const tier = user?.subscription_tier || 'free';
   const hasAccess = canAccess(tier, 'document_vault');
@@ -77,7 +71,7 @@ export default function Documents() {
         const [docs, notes, pinData] = await Promise.all([
           getDocuments(home.id),
           getSecureNotes(home.id),
-          getVaultPin(user.id),
+          hasVaultPin(user.id),
         ]);
         // Map DB rows to local Document shape
         setDocuments(docs.map((row: any) => ({
@@ -88,8 +82,8 @@ export default function Documents() {
           url: row.file_url || '',
         })));
         setSecureNotes(notes);
-        if (pinData?.pin_hash) {
-          setVaultPinHash(pinData.pin_hash);
+        if (pinData === true) {
+          setHasPinSet(true);
           setIsPinUnlocked(false); // Lock vault when PIN exists
         }
       } catch (err) {
@@ -109,9 +103,8 @@ export default function Documents() {
     }
     try {
       if (user?.id) {
-        const hashed = await hashPin(pinInput, user.id);
-        await upsertVaultPin(user.id, hashed);
-        setVaultPinHash(hashed);
+        await setVaultPin(user.id, pinInput);
+        setHasPinSet(true);
       }
       setIsPinUnlocked(true);
       setShowPinSetup(false);
@@ -125,8 +118,8 @@ export default function Documents() {
   const handleUnlockPin = async () => {
     setPinError('');
     if (!user?.id) return;
-    const hashed = await hashPin(pinInput, user.id);
-    if (hashed === vaultPinHash) {
+    const valid = await verifyVaultPin(user.id, pinInput);
+    if (valid) {
       setIsPinUnlocked(true);
       setPinInput('');
     } else {
@@ -165,6 +158,14 @@ export default function Documents() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Client-side file size validation (10MB limit)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = Math.round(file.size / 1024 / 1024);
+      alert(`File too large (${fileSizeMB}MB). Maximum file size is 10MB. Please choose a smaller file.`);
+      return;
+    }
 
     const categoryPrompt = prompt('Select document category:\n1. Warranty\n2. Manual\n3. Receipt\n4. Inspection\n5. Insurance\n6. Other\n\nEnter number (1-6):');
     if (!categoryPrompt) return;
@@ -287,7 +288,7 @@ export default function Documents() {
         </div>
 
         {/* Secure Notes PIN Protection */}
-        {hasSecureNotesAccess && vaultPinHash && !isPinUnlocked && (
+        {hasSecureNotesAccess && hasPinSet && !isPinUnlocked && (
           <div className="card" style={{
             background: 'var(--color-copper-muted, #FFF3E0)',
             border: `2px solid var(--color-copper)`,
@@ -339,7 +340,7 @@ export default function Documents() {
         {hasSecureNotesAccess && isPinUnlocked && (
           <button
             onClick={() => {
-              if (vaultPinHash) {
+              if (hasPinSet) {
                 if (confirm('Change your vault PIN?')) {
                   setPinInput('');
                   setShowPinSetup(true);
@@ -362,7 +363,7 @@ export default function Documents() {
               padding: 0
             }}
           >
-            {vaultPinHash ? 'Change Vault PIN' : 'Set Vault PIN'}
+            {hasPinSet ? 'Change Vault PIN' : 'Set Vault PIN'}
           </button>
         )}
 
@@ -370,7 +371,7 @@ export default function Documents() {
         {hasSecureNotesAccess && showPinSetup && isPinUnlocked && (
           <div className="card" style={{ marginBottom: 24 }}>
             <h3 style={{ color: Colors.charcoal, marginBottom: 12, fontSize: 16, fontWeight: 600 }}>
-              {vaultPinHash ? 'Change' : 'Set'} Vault PIN
+              {hasPinSet ? 'Change' : 'Set'} Vault PIN
             </h3>
             <input
               type="password"

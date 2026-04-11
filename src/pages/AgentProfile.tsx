@@ -68,6 +68,14 @@ export default function AgentProfile() {
   const handlePhotoUpload = async (file: File) => {
     if (!agent || !file) return;
 
+    // Client-side file size validation (10MB limit)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = Math.round(file.size / 1024 / 1024);
+      setMessage(`File too large (${fileSizeMB}MB). Maximum file size is 10MB.`);
+      return;
+    }
+
     setUploadingPhoto(true);
     try {
       const photoUrl = await uploadPhoto('agent-photos', `${agent.id}/${Date.now()}_${file.name}`, file);
@@ -85,6 +93,14 @@ export default function AgentProfile() {
 
   const handleLogoUpload = async (file: File) => {
     if (!agent || !file) return;
+
+    // Client-side file size validation (10MB limit)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = Math.round(file.size / 1024 / 1024);
+      setMessage(`File too large (${fileSizeMB}MB). Maximum file size is 10MB.`);
+      return;
+    }
 
     setUploadingLogo(true);
     try {

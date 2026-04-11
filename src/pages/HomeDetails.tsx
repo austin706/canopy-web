@@ -260,6 +260,15 @@ export default function HomeDetails() {
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !home) return;
+
+    // Client-side file size validation (10MB limit)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = Math.round(file.size / 1024 / 1024);
+      alert(`File too large (${fileSizeMB}MB). Maximum file size is 10MB. Please choose a smaller file.`);
+      return;
+    }
+
     setUploadingPhoto(true);
     try {
       const ext = file.name.split('.').pop() || 'jpg';

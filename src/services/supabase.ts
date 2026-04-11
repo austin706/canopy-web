@@ -33,8 +33,27 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
-// --- Auth ---
+// --- Auth (S10: client-side rate limiting on auth endpoints) ---
+const authAttempts = new Map<string, { count: number; resetAt: number }>();
+const AUTH_RATE_LIMIT = 5;       // max attempts
+const AUTH_RATE_WINDOW = 60_000; // per 1 minute
+
+function checkAuthRateLimit(action: string): void {
+  const now = Date.now();
+  const entry = authAttempts.get(action);
+  if (entry && now < entry.resetAt) {
+    if (entry.count >= AUTH_RATE_LIMIT) {
+      const waitSec = Math.ceil((entry.resetAt - now) / 1000);
+      throw new Error(`Too many attempts. Please wait ${waitSec} seconds and try again.`);
+    }
+    entry.count++;
+  } else {
+    authAttempts.set(action, { count: 1, resetAt: now + AUTH_RATE_WINDOW });
+  }
+}
+
 export const signUp = async (email: string, password: string, fullName: string) => {
+  checkAuthRateLimit('signUp');
   const { data, error } = await supabase.auth.signUp({
     email, password,
     options: {
@@ -64,6 +83,7 @@ export const signUp = async (email: string, password: string, fullName: string) 
 };
 
 export const signIn = async (email: string, password: string) => {
+  checkAuthRateLimit('signIn');
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
@@ -582,12 +602,12 @@ const ALLOWED_MIME_TYPES = [
   'image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp',
   'application/pdf',
 ];
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB (reduced from 20 MB for security)
 
 export const uploadPhoto = async (bucket: string, path: string, file: File) => {
-  // Validate file size
+  // Validate file size (client-side check before upload)
   if (file.size > MAX_FILE_SIZE) {
-    throw new Error(`File too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum is 20MB.`);
+    throw new Error(`File too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum is 10MB.`);
   }
 
   // Validate MIME type
@@ -615,6 +635,25 @@ export const getProfile = async (userId: string) => {
 };
 
 // --- Agent Linking ---
+// Security: Verify that the current user owns the agent record (S6)
+const verifyAgentOwnership = async (agentId: string): Promise<void> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.id) throw new Error('User not authenticated');
+
+  const { data: profile, error: profileErr } = await supabase
+    .from('profiles')
+    .select('agent_id, role')
+    .eq('id', user.id)
+    .single();
+
+  if (profileErr || !profile) throw new Error('Profile not found');
+
+  // Allow access if user is admin OR if agent_id matches
+  if (profile.role !== 'admin' && profile.agent_id !== agentId) {
+    throw new Error('Unauthorized: You do not own this agent record');
+  }
+};
+
 export const lookupAgentByCode = async (code: string) => {
   // Agents share a simple code (e.g., their email or a short code) for homeowners to link
   const trimmed = code.trim().toLowerCase();
@@ -667,6 +706,7 @@ export const redeemGiftCode = async (code: string, userId: string) => {
 };
 
 export const getAgent = async (agentId: string) => {
+  await verifyAgentOwnership(agentId);
   const { data, error } = await supabase.from('agents').select('*').eq('id', agentId).single();
   if (error) throw error;
   return data;
@@ -744,12 +784,18 @@ export const createAgentRecord = async (agent: Record<string, unknown>) => {
 };
 
 export const updateAgent = async (agentId: string, updates: Record<string, unknown>) => {
+  // Security: Verify agent ownership before allowing update
+  await verifyAgentOwnership(agentId);
+
   const { data, error } = await supabase.from('agents').update(updates).eq('id', agentId).select().single();
   if (error) throw error;
   return data;
 };
 
 export const deleteAgent = async (agentId: string) => {
+  // Security: Verify agent ownership before allowing deletion
+  await verifyAgentOwnership(agentId);
+
   const { error } = await supabase.from('agents').delete().eq('id', agentId);
   if (error) throw error;
 };
@@ -1078,29 +1124,42 @@ export const deleteSecureNote = async (id: string) => {
   if (error) throw error;
 };
 
-// --- Vault PIN ---
-export const getVaultPin = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('vault_pins')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
-  if (error && error.code !== 'PGRST116') throw error;
-  return data;
+// ─── Vault PIN (bcrypt-hashed server-side via pgcrypto RPCs) ───
+
+/** Check whether the user has a vault PIN set (no hash exposed to client). */
+export const hasVaultPin = async (userId: string): Promise<boolean> => {
+  const { data, error } = await supabase.rpc('has_vault_pin', { p_user_id: userId });
+  if (error) throw error;
+  return data === true;
 };
 
-export const upsertVaultPin = async (userId: string, pinHash: string) => {
-  const { data, error } = await supabase
-    .from('vault_pins')
-    .upsert({
-      user_id: userId,
-      pin_hash: pinHash,
-      updated_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
+/** Set or update the vault PIN. The raw PIN is sent over HTTPS and bcrypt-hashed in Postgres. */
+export const setVaultPin = async (userId: string, pin: string): Promise<void> => {
+  const { error } = await supabase.rpc('set_vault_pin', { p_user_id: userId, p_pin: pin });
   if (error) throw error;
-  return data;
+};
+
+/** Verify a PIN attempt against the stored bcrypt hash. Returns true/false. */
+export const verifyVaultPin = async (userId: string, pin: string): Promise<boolean> => {
+  const { data, error } = await supabase.rpc('verify_vault_pin', { p_user_id: userId, p_pin: pin });
+  if (error) throw error;
+  return data === true;
+};
+
+/** Remove the vault PIN entirely. */
+export const removeVaultPin = async (userId: string): Promise<void> => {
+  const { error } = await supabase.rpc('remove_vault_pin', { p_user_id: userId });
+  if (error) throw error;
+};
+
+// Legacy aliases for backward compatibility
+export const getVaultPin = async (userId: string) => {
+  const hasPinSet = await hasVaultPin(userId);
+  return hasPinSet ? { pin_hash: '__bcrypt_protected__' } : null;
+};
+export const upsertVaultPin = async (userId: string, pin: string) => {
+  await setVaultPin(userId, pin);
+  return { user_id: userId, pin_hash: '__bcrypt_protected__' };
 };
 
 // ─── Home Members ───
@@ -1896,6 +1955,7 @@ export const createAgentQRCode = async (
   buyerEmail?: string,
   notes?: string,
 ): Promise<AgentHomeQRCode> => {
+  await verifyAgentOwnership(agentId);
   const { data, error } = await supabase
     .from('agent_home_qr_codes')
     .insert({
@@ -1912,6 +1972,9 @@ export const createAgentQRCode = async (
 };
 
 export const getAgentQRCodes = async (agentId: string): Promise<AgentHomeQRCode[]> => {
+  // Security: Verify agent ownership before retrieving QR codes
+  await verifyAgentOwnership(agentId);
+
   const { data, error } = await supabase
     .from('agent_home_qr_codes')
     .select('*')
@@ -1953,6 +2016,18 @@ export const claimQRCode = async (token: string, userId: string): Promise<AgentH
 };
 
 export const revokeQRCode = async (id: string): Promise<void> => {
+  // Security: Verify the QR code belongs to the current user's agent before revoking
+  const { data: qrCode, error: fetchErr } = await supabase
+    .from('agent_home_qr_codes')
+    .select('agent_id')
+    .eq('id', id)
+    .single();
+
+  if (fetchErr || !qrCode) throw new Error('QR code not found');
+
+  // Verify ownership of the associated agent
+  await verifyAgentOwnership(qrCode.agent_id);
+
   const { error } = await supabase
     .from('agent_home_qr_codes')
     .update({ status: 'revoked', updated_at: new Date().toISOString() })

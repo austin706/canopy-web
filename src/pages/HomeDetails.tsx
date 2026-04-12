@@ -147,7 +147,7 @@ export default function HomeDetails() {
       await createHomeJoinRequest(claimInfo.homeId, user.id, claimInfo.ownerId, 'Requesting to join this home (from Home Details).');
       setJoinRequestSent(true);
     } catch (err: any) {
-      showToast(err?.message || 'Failed to send join request', 'error');
+      showToast({ message: err?.message || 'Failed to send join request' });
     } finally {
       setJoinRequesting(false);
     }

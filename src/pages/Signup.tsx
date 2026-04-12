@@ -85,7 +85,7 @@ export default function Signup() {
       // GA4: primary conversion event — new account created
       trackEvent('sign_up', { method: 'email' });
       // Don't block — redirect to login with a success message
-      navigate('/login?signup=success');
+      navigate('/signup-success');
     } catch (err: any) {
       setError(getErrorMessage(err) || 'Signup failed');
     } finally {

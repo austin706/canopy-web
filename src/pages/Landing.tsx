@@ -11,7 +11,7 @@ import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 const FAQ_ITEMS: Array<{ q: string; a: string }> = [
   {
     q: 'Is Canopy really free? Do I need a credit card to sign up?',
-    a: 'Yes — the Free plan is free forever, no credit card required. It includes up to 5 equipment items, a basic maintenance calendar, weather-smart alerts, document storage, 15 AI chat messages per month, and 1 lifetime AI equipment scan so you can try it before upgrading.',
+    a: 'Yes — the Free plan is free forever, no credit card required. It includes up to 3 equipment items, a basic maintenance calendar, weather-smart alerts, 5 AI chat messages per month, 2 text lookups per month, 1 lifetime AI equipment scan, and 90 days of maintenance history.',
   },
   {
     q: 'What does the AI equipment scanner actually do?',
@@ -56,6 +56,7 @@ export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly');
+  const [comparisonOpen, setComparisonOpen] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
@@ -150,14 +151,12 @@ export default function Landing() {
                 {label}
               </a>
             ))}
-            {[{ label: 'Support', href: '/support' }, { label: 'For Agents', href: '/for-agents' }, { label: 'For Pros', href: '/for-pros' }].map((item) => (
-              <a key={item.label} href={item.href}
-                style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.charcoal; }}
-                onMouseLeave={(e) => { (e.target as HTMLElement).style.color = Colors.medGray; }}>
-                {item.label}
-              </a>
-            ))}
+            <a href="/support"
+              style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.color = Colors.charcoal; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.color = Colors.medGray; }}>
+              Support
+            </a>
             <button onClick={() => navigate('/login')}
               style={{ padding: '8px 20px', fontSize: 14, fontWeight: FontWeight.medium, background: 'transparent', color: Colors.charcoal, border: `1px solid ${Colors.lightGray}`, borderRadius: BorderRadius.md, cursor: 'pointer', fontFamily: fontStack, transition: 'all 0.2s' }}
               onMouseEnter={(e) => { (e.target as HTMLElement).style.borderColor = Colors.copper; (e.target as HTMLElement).style.color = Colors.copper; }}
@@ -182,9 +181,7 @@ export default function Landing() {
               {label}
             </a>
           ))}
-          {[{ l: 'Support', h: '/support' }, { l: 'For Agents', h: '/for-agents' }, { l: 'For Pros', h: '/for-pros' }].map((i) => (
-            <a key={i.l} href={i.h} style={{ padding: '12px 0', fontSize: 16, color: Colors.charcoal, textDecoration: 'none', fontWeight: FontWeight.medium }}>{i.l}</a>
-          ))}
+          <a href="/support" style={{ padding: '12px 0', fontSize: 16, color: Colors.charcoal, textDecoration: 'none', fontWeight: FontWeight.medium }}>Support</a>
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
             <button onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
               style={{ flex: 1, padding: 12, fontSize: 15, fontWeight: FontWeight.medium, background: 'transparent', color: Colors.charcoal, border: `1px solid ${Colors.lightGray}`, borderRadius: BorderRadius.md, cursor: 'pointer', fontFamily: fontStack }}>
@@ -223,14 +220,14 @@ export default function Landing() {
           fontSize: isMobile ? 34 : 54, fontWeight: FontWeight.bold,
           color: Colors.charcoal, margin: '0 0 24px 0', lineHeight: 1.15,
         }}>
-          Your Home, Taken Care Of
+          Stop guessing. Start knowing.
         </h1>
 
         <p style={{
           fontSize: isMobile ? 17 : 20, color: Colors.medGray,
           margin: '0 auto 40px', lineHeight: 1.6, maxWidth: 660,
         }}>
-          Canopy is the AI-powered platform that helps you understand, maintain, and protect your home — from the day you move in to the day you sell.
+          Canopy is the AI-powered platform that tracks every piece of equipment in your home, tells you exactly what needs attention and when, and builds a verified maintenance record that protects your home's value.
         </p>
 
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 32 }}>
@@ -256,37 +253,119 @@ export default function Landing() {
           </button>
         </div>
 
-        <p style={{ fontSize: 14, color: Colors.medGray, margin: 0 }}>
-          Free forever plan available — no credit card required
+        <p style={{ fontSize: 14, color: Colors.medGray, margin: '0 0 32px 0' }}>
+          Free forever — no credit card required
         </p>
+
+        {/* Trust badges inline */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: isMobile ? 20 : 48, flexWrap: 'wrap',
+        }}>
+          {[
+            { icon: '🔒', text: 'Bank-level encryption' },
+            { icon: '🤖', text: 'Powered by AI' },
+            { icon: '📱', text: 'Web + iOS + Android' },
+            { icon: '⚡', text: 'Set up in 5 minutes' },
+          ].map((item) => (
+            <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>{item.icon}</span>
+              <span style={{ fontSize: 13, fontWeight: FontWeight.medium, color: Colors.medGray }}>{item.text}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // TRUST BAR
+  // HOW IT WORKS
   // ═══════════════════════════════════════════════════════════════════════════════
-  const TrustBar = () => (
-    <section style={{
-      background: Colors.white, padding: isMobile ? '20px 16px' : '18px 24px',
-      borderBottom: `1px solid ${Colors.lightGray}`, fontFamily: fontStack,
+  const HowItWorks = () => (
+    <section id="how-it-works" style={{
+      background: Colors.cream, padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack,
     }}>
-      <div style={{
-        maxWidth: 900, margin: '0 auto',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: isMobile ? 20 : 48, flexWrap: 'wrap',
-      }}>
-        {[
-          { icon: '🔒', text: 'Bank-level encryption' },
-          { icon: '🤖', text: 'Powered by AI' },
-          { icon: '📱', text: 'Web + iOS + Android' },
-          { icon: '⚡', text: 'Set up in 5 minutes' },
-        ].map((item) => (
-          <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 16 }}>{item.icon}</span>
-            <span style={{ fontSize: 13, fontWeight: FontWeight.medium, color: Colors.medGray }}>{item.text}</span>
-          </div>
-        ))}
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+        <h2 style={{
+          fontSize: isMobile ? 26 : 38, fontWeight: FontWeight.bold,
+          color: Colors.charcoal, textAlign: 'center', margin: '0 0 56px 0',
+        }}>
+          Up and running in 5 minutes
+        </h2>
+
+        <div style={{
+          display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 32 : 48,
+        }}>
+          {[
+            { step: '1', title: 'Scan Your Equipment', desc: "Walk through your home and snap photos of appliance labels. Canopy's AI identifies make, model, serial number, and age — then builds your equipment inventory and a personalized maintenance plan." },
+            { step: '2', title: 'Follow Your Plan', desc: 'Get a maintenance calendar tailored to your specific equipment, climate zone, and season. Clear instructions for each task, with reminders so nothing slips through the cracks.' },
+            { step: '3', title: 'Go Hands-Off with Pro', desc: 'Upgrade to Pro and get a Canopy-certified technician at your door every other month. They inspect, maintain, and catch small problems before they become expensive ones.' },
+          ].map((item) => (
+            <div key={item.step} style={{ textAlign: 'center' }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: '50%',
+                background: Colors.sage, color: Colors.white,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 22, fontWeight: FontWeight.bold, margin: '0 auto 20px',
+              }}>
+                {item.step}
+              </div>
+              <h3 style={{ fontSize: 19, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 10px 0' }}>{item.title}</h3>
+              <p style={{ fontSize: 15, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURES GRID
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const FeaturesSection = () => (
+    <section id="features" style={{
+      background: '#F5F4F0', padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack,
+    }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <h2 style={{
+          fontSize: isMobile ? 26 : 38, fontWeight: FontWeight.bold,
+          color: Colors.charcoal, textAlign: 'center', margin: '0 0 12px 0',
+        }}>
+          Everything your home needs in one place
+        </h2>
+        <p style={{
+          fontSize: isMobile ? 15 : 17, color: Colors.medGray, textAlign: 'center',
+          maxWidth: 560, margin: '0 auto 48px', lineHeight: 1.5,
+        }}>
+          From day-one setup to selling your home — Canopy covers the full homeownership lifecycle.
+        </p>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+          gap: isMobile ? 16 : 24,
+        }}>
+          {[
+            { icon: '📸', title: 'AI Equipment Scanner', desc: 'Point your camera at any appliance label. Canopy reads the make, model, serial number, and expected lifespan — then generates a personalized maintenance schedule in seconds.' },
+            { icon: '📅', title: 'Smart Maintenance Calendar', desc: '40+ task templates customized to your equipment, climate zone, and season. Weather-smart alerts pair severe weather with actionable prep tasks specific to your home.' },
+            { icon: '💬', title: 'AI Home Assistant', desc: 'Ask anything about your home. Get instant, personalized answers grounded in your actual equipment, maintenance history, and local conditions.' },
+            { icon: '🔧', title: 'Bimonthly Pro Visits', desc: 'Canopy-certified technicians visit every other month to inspect systems, change filters, and generate detailed reports. Available on Pro plans in Tulsa.' },
+            { icon: '🗂️', title: 'Document Vault & Home Token', desc: 'Store warranties, manuals, inspection reports, and receipts. Everything builds toward your Home Token — the verified, timestamped record of your home\'s complete history that transfers when you sell.' },
+            { icon: '📊', title: 'Home Health Score', desc: 'A living score that reflects how well-maintained your home is. Track it over time, see exactly where to focus next, and use it as proof of care when you list.' },
+          ].map((f) => (
+            <div key={f.title}
+              style={{
+                background: Colors.white, padding: isMobile ? 24 : 28, borderRadius: BorderRadius.lg,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)', transition: 'transform 0.2s, box-shadow 0.2s',
+              }}
+              onMouseEnter={(e) => cardHover(e, true)}
+              onMouseLeave={(e) => cardHover(e, false)}>
+              <div style={{ fontSize: 28, marginBottom: 12 }}>{f.icon}</div>
+              <h3 style={{ fontSize: 17, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>{f.title}</h3>
+              <p style={{ fontSize: 14, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -378,255 +457,6 @@ export default function Landing() {
   );
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // VALUE PROPS — the "why"
-  // ═══════════════════════════════════════════════════════════════════════════════
-  const ValueProps = () => (
-    <section style={{
-      background: Colors.white, padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack,
-    }}>
-      <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-        <h2 style={{
-          fontSize: isMobile ? 26 : 38, fontWeight: FontWeight.bold,
-          color: Colors.charcoal, textAlign: 'center', margin: '0 0 16px 0',
-        }}>
-          Your home is your biggest investment.{isMobile ? ' ' : <br />}Canopy helps you protect it.
-        </h2>
-        <p style={{
-          fontSize: isMobile ? 16 : 18, color: Colors.medGray, textAlign: 'center',
-          maxWidth: 680, margin: '0 auto 48px', lineHeight: 1.6,
-        }}>
-          Most homeowners are guessing — forgotten filter changes, lost warranty info, no idea what was last serviced or when. Canopy replaces the guesswork with a system.
-        </p>
-
-        <div style={{
-          display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 28 : 40,
-        }}>
-          {[
-            { icon: '🧠', title: 'AI That Knows Your Home', desc: 'Scan equipment labels with your camera. Canopy identifies make, model, and age — then builds a personalized maintenance plan for everything you own.' },
-            { icon: '🔧', title: 'Pro Maintenance On Autopilot', desc: 'Canopy-vetted technicians visit your home every other month to inspect, maintain, and catch small problems before they become expensive ones.' },
-            { icon: '📄', title: 'A Verified Record That Builds Over Time', desc: 'Every task, pro visit, and inspection is logged with timestamps and verification — creating a complete home history you can share or transfer when you sell.' },
-          ].map((c) => (
-            <div key={c.title} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 40, marginBottom: 16 }} role="img" aria-label={c.title}>{c.icon}</div>
-              <h3 style={{ fontSize: 19, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 10px 0' }}>{c.title}</h3>
-              <p style={{ fontSize: 15, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>{c.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-
-  // ═══════════════════════════════════════════════════════════════════════════════
-  // HOW IT WORKS
-  // ═══════════════════════════════════════════════════════════════════════════════
-  const HowItWorks = () => (
-    <section id="how-it-works" style={{
-      background: Colors.cream, padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack,
-    }}>
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
-        <h2 style={{
-          fontSize: isMobile ? 26 : 38, fontWeight: FontWeight.bold,
-          color: Colors.charcoal, textAlign: 'center', margin: '0 0 56px 0',
-        }}>
-          Up and running in minutes
-        </h2>
-
-        <div style={{
-          display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 32 : 48,
-        }}>
-          {[
-            { step: '1', title: 'Scan Your Home', desc: 'Walk through and snap photos of your appliance labels. Canopy\'s AI identifies everything — HVAC, water heater, appliances — and builds your equipment inventory.' },
-            { step: '2', title: 'Follow Your Plan', desc: 'Get a maintenance calendar tailored to your equipment, your climate, and the season. Clear instructions for each task, with reminders so nothing slips.' },
-            { step: '3', title: 'Want Hands-Off? Add Pro Visits', desc: 'You can handle it all yourself with Canopy\'s guidance — or upgrade to Pro and get a certified technician at your door every other month for inspections, filter changes, and peace of mind.' },
-          ].map((item) => (
-            <div key={item.step} style={{ textAlign: 'center' }}>
-              <div style={{
-                width: 52, height: 52, borderRadius: '50%',
-                background: Colors.sage, color: Colors.white,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 22, fontWeight: FontWeight.bold, margin: '0 auto 20px',
-              }}>
-                {item.step}
-              </div>
-              <h3 style={{ fontSize: 19, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 10px 0' }}>{item.title}</h3>
-              <p style={{ fontSize: 15, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-
-  // ═══════════════════════════════════════════════════════════════════════════════
-  // FEATURES GRID
-  // ═══════════════════════════════════════════════════════════════════════════════
-  const FeaturesSection = () => (
-    <section id="features" style={{
-      background: '#F5F4F0', padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack,
-    }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        <h2 style={{
-          fontSize: isMobile ? 26 : 38, fontWeight: FontWeight.bold,
-          color: Colors.charcoal, textAlign: 'center', margin: '0 0 12px 0',
-        }}>
-          Everything your home needs in one place
-        </h2>
-        <p style={{
-          fontSize: isMobile ? 15 : 17, color: Colors.medGray, textAlign: 'center',
-          maxWidth: 560, margin: '0 auto 48px', lineHeight: 1.5,
-        }}>
-          From day-one setup to selling your home — Canopy covers the full homeownership lifecycle.
-        </p>
-
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: isMobile ? 16 : 24,
-        }}>
-          {[
-            { icon: '📸', title: 'AI Equipment Scanner', desc: 'Point your camera at any appliance label. Canopy identifies the make, model, serial number, and expected lifespan in seconds.' },
-            { icon: '📅', title: 'Smart Maintenance Calendar', desc: '40+ task templates customized to your equipment and climate zone. Seasonal reminders and step-by-step instructions for each task.' },
-            { icon: '💬', title: 'AI Home Assistant', desc: 'Ask anything about your home and get instant, personalized answers based on your actual equipment and maintenance history.' },
-            { icon: '🔧', title: 'Bimonthly Pro Visits', desc: 'Canopy-vetted technicians visit every other month to inspect systems, change filters, and generate detailed inspection reports.' },
-            { icon: '⛅', title: 'Weather-Smart Alerts', desc: 'Real-time NWS severe weather alerts paired with actionable prep tasks specific to your home, your equipment, and the incoming conditions.' },
-            { icon: '📊', title: 'Home Health Score', desc: 'A living score that reflects how well-maintained your home is. Track it over time and know exactly where to focus next.' },
-            { icon: '🗂️', title: 'Document Vault', desc: 'Store warranties, inspection reports, manuals, and receipts. PIN-protected secure notes for alarm codes and sensitive info.' },
-            { icon: '🏠', title: 'Home Token', desc: 'A verified, timestamped record of your home\'s complete maintenance history — pro visits, inspections, tasks, and documents — that transfers to the next owner when you sell.' },
-            { icon: '🏷️', title: 'Sale Prep & Home Transfer', desc: 'When you\'re ready to sell, Canopy generates a prioritized prep checklist. At closing, transfer your full home history to the buyer in one click.' },
-          ].map((f) => (
-            <div key={f.title}
-              style={{
-                background: Colors.white, padding: isMobile ? 24 : 28, borderRadius: BorderRadius.lg,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)', transition: 'transform 0.2s, box-shadow 0.2s',
-              }}
-              onMouseEnter={(e) => cardHover(e, true)}
-              onMouseLeave={(e) => cardHover(e, false)}>
-              <div style={{ fontSize: 28, marginBottom: 12 }}>{f.icon}</div>
-              <h3 style={{ fontSize: 17, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>{f.title}</h3>
-              <p style={{ fontSize: 14, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-
-  // ═══════════════════════════════════════════════════════════════════════════════
-  // LIFECYCLE SECTION — sell the long-term story
-  // ═══════════════════════════════════════════════════════════════════════════════
-  const LifecycleSection = () => (
-    <section style={{
-      background: Colors.white, padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack,
-    }}>
-      <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-        <h2 style={{
-          fontSize: isMobile ? 26 : 36, fontWeight: FontWeight.bold,
-          color: Colors.charcoal, textAlign: 'center', margin: '0 0 16px 0',
-        }}>
-          Canopy grows with you
-        </h2>
-        <p style={{
-          fontSize: isMobile ? 15 : 17, color: Colors.medGray, textAlign: 'center',
-          maxWidth: 600, margin: '0 auto 48px', lineHeight: 1.5,
-        }}>
-          Whether you just moved in or you've lived there for 20 years, Canopy meets you where you are.
-        </p>
-
-        <div style={{
-          display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 20 : 28,
-        }}>
-          {[
-            {
-              stage: 'Move In',
-              icon: '🏡',
-              desc: 'Scan your equipment, upload your inspection report, and get a maintenance plan built for your home in minutes. If your seller used Canopy, their full Home Token transfers to you automatically.',
-            },
-            {
-              stage: 'Live In',
-              icon: '🛠️',
-              desc: 'Follow your personalized calendar, get weather-smart alerts, and ask the AI assistant anything. Every completed task builds your home\'s verified maintenance record.',
-            },
-            {
-              stage: 'Maintain',
-              icon: '📋',
-              desc: 'Upgrade to Pro and let certified technicians handle the hard stuff. Bimonthly visits, detailed inspection reports, and a growing record of professional care for your home.',
-            },
-            {
-              stage: 'Sell',
-              icon: '🤝',
-              desc: 'Use Sale Prep to prioritize improvements. Your Home Token — the complete, verified history of how you cared for your home — transfers to the buyer at closing, adding confidence and value to your sale.',
-            },
-          ].map((item) => (
-            <div key={item.stage} style={{
-              display: 'flex', gap: 20, padding: 24,
-              background: Colors.warmWhite, borderRadius: BorderRadius.lg,
-              border: `1px solid ${Colors.lightGray}`,
-            }}>
-              <div style={{ fontSize: 32, flexShrink: 0 }}>{item.icon}</div>
-              <div>
-                <h3 style={{ fontSize: 17, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 6px 0' }}>{item.stage}</h3>
-                <p style={{ fontSize: 14, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-
-  // ═══════════════════════════════════════════════════════════════════════════════
-  // AGENTS + PROS CTA
-  // ═══════════════════════════════════════════════════════════════════════════════
-  const PartnersSection = () => (
-    <section style={{
-      background: Colors.cream, padding: isMobile ? '48px 16px' : '64px 24px', fontFamily: fontStack,
-    }}>
-      <div style={{
-        maxWidth: 1000, margin: '0 auto',
-        display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 24 : 32,
-      }}>
-        {/* Agents */}
-        <div style={{
-          background: Colors.white, borderRadius: BorderRadius.lg, padding: isMobile ? 24 : 32,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-        }}>
-          <div style={{ fontSize: 28, marginBottom: 12 }}>🏘️</div>
-          <h3 style={{ fontSize: 20, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>For Real Estate Agents</h3>
-          <p style={{ fontSize: 15, color: Colors.medGray, lineHeight: 1.6, margin: '0 0 20px 0' }}>
-            Gift Canopy subscriptions to clients at closing. They get a well-maintained home. You get a differentiated closing gift, a portal to track client homes, and the ability to attest to Home Tokens before listings.
-          </p>
-          <a href="/for-agents" style={{
-            display: 'inline-block', padding: '10px 24px', fontSize: 14, fontWeight: FontWeight.semibold,
-            background: Colors.copper, color: Colors.white, borderRadius: BorderRadius.md, textDecoration: 'none',
-          }}>
-            Learn More
-          </a>
-        </div>
-
-        {/* Pros */}
-        <div style={{
-          background: Colors.white, borderRadius: BorderRadius.lg, padding: isMobile ? 24 : 32,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-        }}>
-          <div style={{ fontSize: 28, marginBottom: 12 }}>🔧</div>
-          <h3 style={{ fontSize: 20, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>For Home Service Pros</h3>
-          <p style={{ fontSize: 15, color: Colors.medGray, lineHeight: 1.6, margin: '0 0 20px 0' }}>
-            Join the Canopy Certified network and get matched with homeowners in your area who need bimonthly visits, inspections, and project work. We handle scheduling, payments, and customer management.
-          </p>
-          <a href="/for-pros" style={{
-            display: 'inline-block', padding: '10px 24px', fontSize: 14, fontWeight: FontWeight.semibold,
-            background: 'transparent', color: Colors.copper, border: `1px solid ${Colors.copper}`,
-            borderRadius: BorderRadius.md, textDecoration: 'none',
-          }}>
-            Become a Pro
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-
-  // ═══════════════════════════════════════════════════════════════════════════════
   // PRICING
   // ═══════════════════════════════════════════════════════════════════════════════
   const PricingSection = () => {
@@ -654,6 +484,61 @@ export default function Landing() {
     const itemStyle: React.CSSProperties = { fontSize: 14, color: Colors.medGray, marginBottom: 10, display: 'flex', gap: 8 };
     const checkStyle: React.CSSProperties = { color: Colors.sage, flexShrink: 0 };
 
+    // Comparison table data
+    const rows: Array<[string, string, string, string, string]> = [
+      ['Equipment items', 'Up to 3', 'Unlimited', 'Unlimited', 'Unlimited'],
+      ['Maintenance calendar (40+ tasks)', 'Basic', '✓', '✓', '✓'],
+      ['AI equipment scans (photo)', '1 lifetime', 'Unlimited', 'Unlimited', 'Unlimited'],
+      ['AI chat messages', '5/mo', 'Unlimited', 'Unlimited', 'Unlimited'],
+      ['Text model lookup', '2/mo', 'Unlimited', 'Unlimited', 'Unlimited'],
+      ['Maintenance history', '90 days', 'Full', 'Full', 'Full'],
+      ['Weather-smart alerts', '✓', '✓', '✓', '✓'],
+      ['Document vault', '✓', '✓', '✓', '✓'],
+      ['Secure notes (PIN-protected)', '—', '✓', '✓', '✓'],
+      ['Home health score', '—', '✓', '✓', '✓'],
+      ['Home Token + completeness score', '—', '✓', '✓', '✓'],
+      ['Sale prep checklist', '—', '✓', '✓', '✓'],
+      ['Bimonthly pro visits', '—', '—', '6/yr', 'Custom cadence'],
+      ['Detailed inspection reports', '—', '—', '✓', '✓'],
+      ['Priority scheduling', '—', '—', '✓', '✓'],
+      ['Dedicated pro provider', '—', '—', '—', '✓'],
+      ['Canopy Certified Pro network', '—', '—', '✓', '✓'],
+    ];
+    const headers = ['Free', 'Home', 'Pro', 'Pro+'];
+
+    const cell: React.CSSProperties = {
+      padding: isMobile ? '10px 8px' : '14px 16px',
+      borderBottom: `1px solid ${Colors.lightGray}`,
+      fontSize: isMobile ? 12 : 14,
+      color: Colors.charcoal,
+      textAlign: 'center',
+    };
+    const featureCell: React.CSSProperties = {
+      ...cell,
+      textAlign: 'left',
+      color: Colors.charcoal,
+      fontWeight: FontWeight.medium,
+      position: 'sticky',
+      left: 0,
+      background: Colors.white,
+      minWidth: isMobile ? 140 : 260,
+    };
+    const headerCell: React.CSSProperties = {
+      ...cell,
+      fontWeight: FontWeight.bold,
+      background: Colors.warmWhite,
+      borderBottom: `2px solid ${Colors.copper}`,
+      color: Colors.charcoal,
+      fontSize: isMobile ? 13 : 15,
+      position: 'sticky',
+      top: 0,
+    };
+    const renderValue = (v: string) => {
+      if (v === '✓') return <span style={{ color: Colors.sage, fontWeight: FontWeight.bold, fontSize: 18 }} aria-label="included">✓</span>;
+      if (v === '—') return <span style={{ color: Colors.medGray }} aria-label="not included">—</span>;
+      return v;
+    };
+
     return (
       <section id="pricing" style={{
         background: Colors.white, padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack,
@@ -669,7 +554,7 @@ export default function Landing() {
             fontSize: 16, color: Colors.medGray, textAlign: 'center',
             maxWidth: 560, margin: '0 auto 32px',
           }}>
-            Start free, upgrade when you're ready. Every plan builds your home's record.
+            Start free, upgrade when you're ready. Every plan builds your home's verified record.
           </p>
 
           {/* Monthly / Annual toggle */}
@@ -745,7 +630,7 @@ export default function Landing() {
               </div>
               <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 24px 0', fontWeight: FontWeight.medium, minHeight: 38 }}>Get to know your home</p>
               <ul style={listStyle}>
-                {['Up to 5 equipment items', 'Basic maintenance calendar', 'Weather alerts', 'Document storage', '15 AI chat messages/mo', '1 AI equipment scan'].map((i) => (
+                {['Up to 3 equipment items', 'Basic maintenance calendar', 'Weather alerts', '5 AI chat messages/mo', '2 text lookups/mo', '1 AI equipment scan', '90-day history'].map((i) => (
                   <li key={i} style={itemStyle}><span style={checkStyle}>✓</span> {i}</li>
                 ))}
               </ul>
@@ -774,7 +659,7 @@ export default function Landing() {
                 Complete home management
               </p>
               <ul style={listStyle}>
-                {['Everything in Free', 'Unlimited equipment', 'Unlimited AI scans & chat', 'Smart scheduling & reminders', 'Home health score', 'Home Token with completeness score', 'Sale prep checklist', 'Secure notes'].map((i) => (
+                {['Everything in Free', 'Unlimited equipment', 'Unlimited AI scans & chat', 'Full maintenance history', 'Smart scheduling & reminders', 'Home health score', 'Home Token with completeness score', 'Sale prep checklist', 'Secure notes'].map((i) => (
                   <li key={i} style={itemStyle}><span style={checkStyle}>✓</span> {i}</li>
                 ))}
               </ul>
@@ -838,134 +723,68 @@ export default function Landing() {
             </div>
           </div>
 
-          <p style={{ textAlign: 'center', fontSize: 14, color: Colors.medGray, margin: 0 }}>
+          <p style={{ textAlign: 'center', fontSize: 14, color: Colors.medGray, margin: '0 0 32px 0' }}>
             All plans include a 7-day money-back guarantee.
           </p>
-        </div>
-      </section>
-    );
-  };
 
-  // ═══════════════════════════════════════════════════════════════════════════════
-  // FEATURE COMPARISON TABLE
-  // ═══════════════════════════════════════════════════════════════════════════════
-  const ComparisonSection = () => {
-    // Rows: [feature, free, home, pro, proPlus]
-    // Use ✓ / — / text values for clarity.
-    const rows: Array<[string, string, string, string, string]> = [
-      ['Equipment items', 'Up to 5', 'Unlimited', 'Unlimited', 'Unlimited'],
-      ['Maintenance calendar (40+ tasks)', 'Basic', '✓', '✓', '✓'],
-      ['AI equipment scans (photo)', '1 lifetime', 'Unlimited', 'Unlimited', 'Unlimited'],
-      ['AI chat messages', '15/mo', 'Unlimited', 'Unlimited', 'Unlimited'],
-      ['Text model lookup', '5/mo', 'Unlimited', 'Unlimited', 'Unlimited'],
-      ['Weather-smart alerts', '✓', '✓', '✓', '✓'],
-      ['Document vault', '✓', '✓', '✓', '✓'],
-      ['Secure notes (PIN-protected)', '—', '✓', '✓', '✓'],
-      ['Home health score', '—', '✓', '✓', '✓'],
-      ['Home Token + completeness score', '—', '✓', '✓', '✓'],
-      ['Sale prep checklist', '—', '✓', '✓', '✓'],
-      ['Bimonthly pro visits', '—', '—', '6/yr', 'Custom cadence'],
-      ['Detailed inspection reports', '—', '—', '✓', '✓'],
-      ['Priority scheduling', '—', '—', '✓', '✓'],
-      ['Dedicated pro provider', '—', '—', '—', '✓'],
-      ['Canopy Certified Pro network', '—', '—', '✓', '✓'],
-    ];
-    const headers = ['Free', 'Home', 'Pro', 'Pro+'];
-
-    const cell: React.CSSProperties = {
-      padding: isMobile ? '10px 8px' : '14px 16px',
-      borderBottom: `1px solid ${Colors.lightGray}`,
-      fontSize: isMobile ? 12 : 14,
-      color: Colors.charcoal,
-      textAlign: 'center',
-    };
-    const featureCell: React.CSSProperties = {
-      ...cell,
-      textAlign: 'left',
-      color: Colors.charcoal,
-      fontWeight: FontWeight.medium,
-      position: 'sticky',
-      left: 0,
-      background: Colors.white,
-      minWidth: isMobile ? 140 : 260,
-    };
-    const headerCell: React.CSSProperties = {
-      ...cell,
-      fontWeight: FontWeight.bold,
-      background: Colors.warmWhite,
-      borderBottom: `2px solid ${Colors.copper}`,
-      color: Colors.charcoal,
-      fontSize: isMobile ? 13 : 15,
-      position: 'sticky',
-      top: 0,
-    };
-    const renderValue = (v: string) => {
-      if (v === '✓') return <span style={{ color: Colors.sage, fontWeight: FontWeight.bold, fontSize: 18 }} aria-label="included">✓</span>;
-      if (v === '—') return <span style={{ color: Colors.medGray }} aria-label="not included">—</span>;
-      return v;
-    };
-
-    return (
-      <section style={{
-        background: Colors.cream, padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack,
-      }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <h2 style={{
-            fontSize: isMobile ? 24 : 34, fontWeight: FontWeight.bold,
-            color: Colors.charcoal, textAlign: 'center', margin: '0 0 12px 0',
-          }}>
-            Compare plans feature by feature
-          </h2>
-          <p style={{
-            fontSize: isMobile ? 15 : 17, color: Colors.medGray, textAlign: 'center',
-            maxWidth: 640, margin: '0 auto 40px', lineHeight: 1.6,
-          }}>
-            Not sure which plan fits? Here's everything side by side.
-          </p>
-
-          <div
-            role="region"
-            aria-label="Plan feature comparison"
-            style={{
-              background: Colors.white,
-              borderRadius: BorderRadius.lg,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-              overflowX: 'auto',
-              WebkitOverflowScrolling: 'touch',
-            }}
-          >
-            <table style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              minWidth: isMobile ? 560 : 'auto',
+          {/* Inline comparison details */}
+          <details style={{
+            background: Colors.warmWhite,
+            border: `1px solid ${Colors.lightGray}`,
+            borderRadius: BorderRadius.lg,
+            padding: '20px 24px',
+            cursor: 'pointer',
+            marginTop: 24,
+          }}
+          open={comparisonOpen}
+          onToggle={(e) => setComparisonOpen((e.target as HTMLDetailsElement).open)}>
+            <summary style={{
+              fontSize: 16,
+              fontWeight: FontWeight.semibold,
+              color: Colors.charcoal,
+              listStyle: 'none',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
             }}>
-              <thead>
-                <tr>
-                  <th style={{ ...headerCell, textAlign: 'left', left: 0, zIndex: 2 }} scope="col">Feature</th>
-                  {headers.map((h) => (
-                    <th key={h} style={headerCell} scope="col">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(([feature, free, home, pro, proPlus], idx) => (
-                  <tr key={feature} style={{ background: idx % 2 === 0 ? Colors.white : Colors.warmWhite }}>
-                    <th scope="row" style={{ ...featureCell, background: idx % 2 === 0 ? Colors.white : Colors.warmWhite }}>{feature}</th>
-                    <td style={cell}>{renderValue(free)}</td>
-                    <td style={cell}>{renderValue(home)}</td>
-                    <td style={cell}>{renderValue(pro)}</td>
-                    <td style={cell}>{renderValue(proPlus)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              <span>See full feature comparison</span>
+              <span style={{ fontSize: 20, color: Colors.copper, transform: comparisonOpen ? 'rotate(45deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>+</span>
+            </summary>
 
-          {isMobile && (
-            <p style={{ fontSize: 12, color: Colors.medGray, textAlign: 'center', margin: '12px 0 0' }}>
-              ← Scroll horizontally to see all plans →
-            </p>
-          )}
+            <div style={{ marginTop: 24, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                minWidth: isMobile ? 560 : 'auto',
+              }}>
+                <thead>
+                  <tr>
+                    <th style={{ ...headerCell, textAlign: 'left', left: 0, zIndex: 2 }} scope="col">Feature</th>
+                    {headers.map((h) => (
+                      <th key={h} style={headerCell} scope="col">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map(([feature, free, home, pro, proPlus], idx) => (
+                    <tr key={feature} style={{ background: idx % 2 === 0 ? Colors.white : Colors.warmWhite }}>
+                      <th scope="row" style={{ ...featureCell, background: idx % 2 === 0 ? Colors.white : Colors.warmWhite }}>{feature}</th>
+                      <td style={cell}>{renderValue(free)}</td>
+                      <td style={cell}>{renderValue(home)}</td>
+                      <td style={cell}>{renderValue(pro)}</td>
+                      <td style={cell}>{renderValue(proPlus)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {isMobile && (
+              <p style={{ fontSize: 12, color: Colors.medGray, textAlign: 'center', margin: '12px 0 0' }}>
+                ← Scroll horizontally to see all plans →
+              </p>
+            )}
+          </details>
         </div>
       </section>
     );
@@ -1174,15 +993,10 @@ export default function Landing() {
       <div style={{ fontFamily: fontStack }}>
         <NavHeader />
         <HeroSection />
-        <TrustBar />
-        <StatsSection />
-        <ValueProps />
         <HowItWorks />
         <FeaturesSection />
-        <LifecycleSection />
-        <PartnersSection />
+        <StatsSection />
         {PricingSection()}
-        <ComparisonSection />
         <FaqSection />
         <FinalCta />
         <Footer />

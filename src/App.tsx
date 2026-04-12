@@ -98,6 +98,7 @@ const AdminAffiliateProducts = lazy(() => import('@/pages/AdminAffiliateProducts
 const TechnicianOnboarding = lazy(() => import('@/pages/TechnicianOnboarding'));
 const ProOnboardingSuccess = lazy(() => import('@/pages/ProOnboardingSuccess'));
 const ProOnboardingRefresh = lazy(() => import('@/pages/ProOnboardingRefresh'));
+const SignupSuccess = lazy(() => import('@/pages/SignupSuccess'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -323,6 +324,7 @@ export default function App() {
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/signup-success" element={<SignupSuccess />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/pro-login" element={<ProLogin />} />

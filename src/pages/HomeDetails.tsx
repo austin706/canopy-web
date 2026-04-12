@@ -10,6 +10,8 @@ import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { showToast } from '@/components/Toast';
 import type { Home } from '@/types';
 import HomeQRCode from '@/components/HomeQRCode';
+import { findExistingProperty } from '@/services/addressVerification';
+import { createHomeJoinRequest } from '@/services/home';
 
 export default function HomeDetails() {
   const navigate = useNavigate();
@@ -79,6 +81,13 @@ export default function HomeDetails() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Duplicate address detection — prompt to join instead of creating a new home
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [claimInfo, setClaimInfo] = useState<{ homeId: string; ownerId: string } | null>(null);
+  const [joinRequesting, setJoinRequesting] = useState(false);
+  const [joinRequestSent, setJoinRequestSent] = useState(false);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+
   // Auto-scroll to emergency/infrastructure section if linked from Dashboard
   useEffect(() => {
     if (searchParams.get('edit') === 'emergency' && emergencySectionRef.current) {
@@ -131,15 +140,49 @@ export default function HomeDetails() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleJoinRequest = async () => {
+    if (!user || !claimInfo) return;
+    setJoinRequesting(true);
+    try {
+      await createHomeJoinRequest(claimInfo.homeId, user.id, claimInfo.ownerId, 'Requesting to join this home (from Home Details).');
+      setJoinRequestSent(true);
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to send join request', 'error');
+    } finally {
+      setJoinRequesting(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!user || !form.address) return;
     if (!validateForm()) return;
     setSaving(true);
     try {
+      // If creating a new home, check for duplicate addresses first
+      if (!home) {
+        try {
+          const match = await findExistingProperty(
+            '', undefined, undefined,
+            form.address, form.city, form.state, form.zip_code,
+            user.id,
+            selectedPlaceId || undefined,
+          );
+          if (match.found && match.homeId && match.ownerId) {
+            setClaimInfo({ homeId: match.homeId, ownerId: match.ownerId });
+            setShowClaimModal(true);
+            setSaving(false);
+            return;
+          }
+        } catch {
+          // Non-fatal — proceed with save if check fails
+        }
+      }
+
       const homeData: any = {
         id: home?.id || crypto.randomUUID(),
         user_id: user.id,
         ...form,
+        google_place_id: selectedPlaceId || home?.google_place_id || null,
         year_built: form.year_built ? parseInt(form.year_built) : null,
         square_footage: form.square_footage ? parseInt(form.square_footage) : null,
         stories: parseInt(form.stories) || 1,
@@ -353,13 +396,16 @@ export default function HomeDetails() {
                 <AddressAutocomplete
                   value={form.address}
                   onChange={(v) => setForm({...form, address: v})}
-                  onPlaceSelected={(details) => setForm({
-                    ...form,
-                    address: details.address || form.address,
-                    city: details.city || form.city,
-                    state: details.state || form.state,
-                    zip_code: details.zipCode || form.zip_code,
-                  })}
+                  onPlaceSelected={(details) => {
+                    setSelectedPlaceId(details.placeId || null);
+                    setForm({
+                      ...form,
+                      address: details.address || form.address,
+                      city: details.city || form.city,
+                      state: details.state || form.state,
+                      zip_code: (details.zipCode || form.zip_code).split('-')[0],
+                    });
+                  }}
                 />
               </div>
               <div className="grid-3">
@@ -951,6 +997,41 @@ export default function HomeDetails() {
           <HomeQRCode />
         </div>
       ) : null}
+
+      {/* Duplicate Address / Join Home Modal */}
+      {showClaimModal && claimInfo && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="card" style={{ maxWidth: 440, width: '100%', padding: 28 }}>
+            {joinRequestSent ? (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: `${Colors.sage}20`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, marginBottom: 12 }}>✓</div>
+                  <h3 style={{ fontSize: 18, marginBottom: 8 }}>Request Sent!</h3>
+                  <p style={{ fontSize: 14, color: Colors.medGray }}>
+                    The home owner will receive your request. Once approved, you'll be added as a household member.
+                  </p>
+                </div>
+                <button className="btn btn-primary btn-full" onClick={() => { setShowClaimModal(false); setJoinRequestSent(false); }}>Got it</button>
+              </>
+            ) : (
+              <>
+                <h3 style={{ fontSize: 18, marginBottom: 8 }}>This address is already on Canopy</h3>
+                <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 20 }}>
+                  Someone already has a home set up at <strong>{form.address}, {form.city}</strong>. Would you like to request to join their home as a household member?
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-primary" onClick={handleJoinRequest} disabled={joinRequesting} style={{ flex: 1 }}>
+                    {joinRequesting ? 'Sending...' : 'Request to Join'}
+                  </button>
+                  <button className="btn" onClick={() => setShowClaimModal(false)} style={{ flex: 1, background: Colors.cream, color: Colors.charcoal, border: `1px solid ${Colors.lightGray}` }}>
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -21,6 +21,7 @@ import { CanopyLogo, NavWeather, NavHome } from '@/components/icons/CanopyLogo';
 import { generateCostForecast, FORECAST_DISCLAIMER } from '@/services/costForecast';
 import PendingInvites from '@/components/PendingInvites';
 import SetupChecklist from '@/components/SetupChecklist';
+import RecallAlertBanner from '@/components/RecallAlertBanner';
 import { getDocuments, getHomeMembers } from '@/services/supabase';
 import type { MaintenanceTask, HomeJoinRequest } from '@/types';
 
@@ -370,6 +371,9 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+
+      {/* CPSC Recall Alerts */}
+      <RecallAlertBanner />
 
       {/* Pending Home Member Invites */}
       <PendingInvites />

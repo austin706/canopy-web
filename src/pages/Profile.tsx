@@ -10,6 +10,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import type { ThemeMode } from '@/constants/theme';
 import type { SubscriptionTier, UserPreferences, MaintenanceDepth } from '@/types';
 import { DEFAULT_USER_PREFERENCES } from '@/types';
+import ReferralCard from '@/components/ReferralCard';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -532,6 +533,9 @@ export default function Profile() {
           </button>
         </div>
       </div>
+
+      {/* Referral Program */}
+      <ReferralCard />
 
       {/* Calendar Subscription (iCal feed) */}
       <div className="card mb-lg">

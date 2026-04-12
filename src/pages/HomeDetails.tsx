@@ -9,6 +9,7 @@ import HomeMembers from '@/components/HomeMembers';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { showToast } from '@/components/Toast';
 import type { Home } from '@/types';
+import HomeQRCode from '@/components/HomeQRCode';
 
 export default function HomeDetails() {
   const navigate = useNavigate();
@@ -945,6 +946,9 @@ export default function HomeDetails() {
 
           {/* Home Members */}
           <HomeMembers homeId={home.id} />
+
+          {/* Home QR Code */}
+          <HomeQRCode />
         </div>
       ) : null}
     </div>

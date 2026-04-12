@@ -2,6 +2,9 @@ import { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Colors } from '@/constants/theme';
 import { MailIcon, PhoneIcon, ChevronDownIcon, ChevronUpIcon } from '@/components/icons/Icons';
+import { useStore } from '@/store/useStore';
+import { updateProfile } from '@/services/supabase';
+import { DEFAULT_SETUP_CHECKLIST_STATE } from '@/types';
 import packageJson from '../../package.json';
 
 // ─── Help Center article data ────────────────────────────────────────────
@@ -263,7 +266,21 @@ export default function Help() {
     return hash || null;
   });
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [resettingChecklist, setResettingChecklist] = useState(false);
+  const { user, setUser } = useStore();
   const appVersion = packageJson.version;
+
+  const handleResetChecklist = async () => {
+    if (!user) return;
+    setResettingChecklist(true);
+    try {
+      const resetState = { ...DEFAULT_SETUP_CHECKLIST_STATE, dismissed: false, dismissed_at: null };
+      await updateProfile(user.id, { setup_checklist_state: resetState });
+      setUser({ ...user, setup_checklist_state: resetState });
+    } finally {
+      setResettingChecklist(false);
+    }
+  };
 
   // ── Search filtering ──
   const filteredSections = useMemo(() => {
@@ -462,6 +479,16 @@ export default function Help() {
                   {expandedId === item.id && (
                     <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${Colors.lightGray}` }}>
                       <p style={{ fontSize: 14, color: Colors.medGray, lineHeight: 1.7 }}>{item.answer}</p>
+                      {item.id === 'setup-checklist' && user?.setup_checklist_state?.dismissed && (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={handleResetChecklist}
+                          disabled={resettingChecklist}
+                          style={{ marginTop: 12 }}
+                        >
+                          {resettingChecklist ? 'Resetting...' : 'Show Setup Checklist Again'}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

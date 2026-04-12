@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { signUp } from '@/services/supabase';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
 import { Colors } from '@/constants/theme';
@@ -8,8 +8,18 @@ import { trackEvent } from '@/utils/analytics';
 
 export default function Signup() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+
+  // Capture referral code from ?ref= query param and persist for post-login redemption
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      try { sessionStorage.setItem('canopy_referral_code', refCode); } catch {}
+      trackEvent('referral_signup_landed', { code: refCode });
+    }
+  }, [searchParams]);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -117,6 +127,20 @@ export default function Signup() {
       </div>
       <div className="auth-form-panel">
         <div className="auth-card">
+          {searchParams.get('ref') && (
+            <div style={{
+              background: `${Colors.sage}15`,
+              border: `1px solid ${Colors.sage}40`,
+              borderRadius: 8,
+              padding: '10px 16px',
+              marginBottom: 16,
+              fontSize: 13,
+              color: Colors.sage,
+              textAlign: 'center',
+            }}>
+              You were referred by a friend — you'll both get 1 month free when you subscribe!
+            </div>
+          )}
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
             <h1>Create Account</h1>
             <p className="subtitle">Start managing your home with Canopy</p>

@@ -1,7 +1,7 @@
 import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { supabase, getProfile, getHome, getEquipment, getTasks, getHomeConsumables, getTaskTemplates, getAgent } from '@/services/supabase';
+import { supabase, getProfile, getHome, getEquipment, getTasks, getHomeConsumables, getTaskTemplates, getAgent, redeemReferralCode } from '@/services/supabase';
 import { setUser as sentrySetUser } from '@/utils/sentry';
 import { loadServiceAreas, subscribeToServiceAreaChanges } from '@/services/subscriptionGate';
 import logger from '@/utils/logger';
@@ -205,6 +205,22 @@ export default function App() {
               const a = await getAgent(userData.agent_id);
               setAgent(a);
             } catch {}
+          }
+
+          // Redeem referral code if one was stored during signup
+          try {
+            const refCode = sessionStorage.getItem('canopy_referral_code');
+            if (refCode) {
+              sessionStorage.removeItem('canopy_referral_code');
+              const result = await redeemReferralCode(refCode);
+              if (result.success) {
+                logger.info('[Referral] Code redeemed successfully:', refCode);
+              } else {
+                logger.warn('[Referral] Code redemption failed:', result.error);
+              }
+            }
+          } catch (refErr) {
+            logger.warn('[Referral] Failed to redeem code:', refErr);
           }
 
           sentrySetUser({

@@ -164,6 +164,7 @@ function dbTemplateToInternal(db: TaskTemplateDB): TaskTemplate {
     applicable_regions: db.regions as any,
     requires_home_feature: db.requires_feature ?? undefined,
     pro_responsible: db.pro_recommended || false,
+    task_level: db.task_level || 'standard',
   };
 }
 
@@ -309,7 +310,7 @@ function generateTasksForHomeImpl(
 
     // Check user preferences before generating task
     const isProTask = template.pro_responsible ?? false;
-    if (!isTaskVisible(template.id, template.category, userPreferences, isProTask)) {
+    if (!isTaskVisible(template.id, template.category, userPreferences, isProTask, template.task_level)) {
       return;
     }
 

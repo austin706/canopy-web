@@ -222,6 +222,7 @@ export interface TaskTemplateDB {
   service_purpose: string | null;
   ai_confidence: number | null;
   ai_source_equipment_id: string | null;
+  task_level: 'core' | 'standard' | 'comprehensive';
   created_at: string;
   updated_at: string;
 }

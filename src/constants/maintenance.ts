@@ -96,6 +96,9 @@ export interface TaskTemplate {
    * e.g., ['tankless'] excludes "Tankless Water Heater"
    */
   excludes_equipment_subtype?: string[];
+
+  /** Visibility tier: core = basic/essential, standard = recommended, comprehensive = everything */
+  task_level?: 'core' | 'standard' | 'comprehensive';
 }
 
 /**

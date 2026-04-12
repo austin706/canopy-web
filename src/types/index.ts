@@ -494,66 +494,42 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
 
 // ─── TASK VISIBILITY LOGIC ────────────────────────────────
 
-/**
- * Core tasks shown at ALL depth levels (even "simple").
- * These are the ~20 essential tasks every homeowner should do.
- */
-export const CORE_TASK_IDS: string[] = [
-  'hvac-filter-change',
-  'hvac-spring-tuneup',
-  'hvac-fall-furnace',
-  'smoke-co-test',
-  'fire-extinguisher-check',
-  'water-heater-flush',
-  'gutter-clean-spring',
-  'gutter-clean-fall',
-  'roof-inspection',
-  'check-for-leaks',
-  'winterize-hose-bibs',
-  'spring-exterior-walkthrough',
-  'fall-winterize',
-  'dryer-vent-clean',
-  'garage-door-maintenance',
-  'gfci-outlet-test',
-  'water-heater-tpr-valve',
-  'foundation-inspection',
-  'spring-lawn-care',
-  'fall-lawn-care',
-];
+export type TaskLevel = 'core' | 'standard' | 'comprehensive';
 
 /**
- * Tasks only shown at "comprehensive" depth (in addition to standard).
- * These are niche, detailed, or less common tasks.
+ * Legacy hardcoded ID arrays — kept ONLY as fallback for any hardcoded
+ * templates that don't come from the DB (and thus lack a task_level field).
+ * The DB task_level column is the source of truth; these are used only when
+ * task_level is undefined (i.e., for hardcoded-only templates).
  */
-export const COMPREHENSIVE_ONLY_TASK_IDS: string[] = [
-  // Cleaning
-  'window-washing-exterior',
-  'window-washing-interior',
-  'pressure-wash-exterior',
-  'deep-clean-kitchen',
-  'deep-clean-bathroom',
-  'carpet-deep-clean',
-  'garbage-bins-clean',
-  // Niche maintenance
-  'air-duct-cleaning',
-  'humidifier-pad-replace',
-  'air-purifier-filter',
-  'surge-protector-check',
-  'driveway-seal',
-  'stone-countertop-seal',
-  'air-exchanger-clean',
-  'lightbulb-check',
-  'knife-sharpen',
+const LEGACY_CORE_TASK_IDS: string[] = [
+  'hvac-filter-change', 'hvac-spring-tuneup', 'hvac-fall-furnace',
+  'smoke-co-test', 'fire-extinguisher-check', 'water-heater-flush',
+  'gutter-clean-spring', 'gutter-clean-fall', 'roof-inspection',
+  'check-for-leaks', 'winterize-hose-bibs', 'spring-exterior-walkthrough',
+  'fall-winterize', 'dryer-vent-clean', 'garage-door-maintenance',
+  'gfci-outlet-test', 'water-heater-tpr-valve', 'foundation-inspection',
+  'spring-lawn-care', 'fall-lawn-care',
+];
+const LEGACY_COMPREHENSIVE_TASK_IDS: string[] = [
+  'window-washing-exterior', 'window-washing-interior', 'pressure-wash-exterior',
+  'deep-clean-kitchen', 'deep-clean-bathroom', 'carpet-deep-clean',
+  'garbage-bins-clean', 'air-duct-cleaning', 'humidifier-pad-replace',
+  'air-purifier-filter', 'surge-protector-check', 'driveway-seal',
+  'stone-countertop-seal', 'air-exchanger-clean', 'lightbulb-check', 'knife-sharpen',
 ];
 
 /**
  * Determines if a task should be visible based on user preferences.
+ * Uses the DB-driven task_level field as primary source of truth.
+ * Falls back to legacy hardcoded ID lists for templates without task_level.
  */
 export function isTaskVisible(
   taskId: string,
   taskCategory: string,
   prefs: UserPreferences,
   isProTask: boolean = false,
+  taskLevel?: TaskLevel,
 ): boolean {
   // Check per-category override first (highest priority)
   const categoryKey = taskCategory as TaskCategoryKey;
@@ -566,13 +542,18 @@ export function isTaskVisible(
   // Check pro task visibility
   if (isProTask && !prefs.show_pro_tasks) return false;
 
-  // Check maintenance depth
+  // Resolve the effective task level: prefer DB field, fall back to legacy ID matching
+  const effectiveLevel: TaskLevel = taskLevel
+    ?? (LEGACY_CORE_TASK_IDS.includes(taskId) ? 'core'
+      : LEGACY_COMPREHENSIVE_TASK_IDS.includes(taskId) ? 'comprehensive'
+      : 'standard');
+
+  // Check maintenance depth against task level
   switch (prefs.maintenance_depth) {
     case 'simple':
-      return CORE_TASK_IDS.includes(taskId);
+      return effectiveLevel === 'core';
     case 'standard':
-      // Show everything except comprehensive-only (unless overridden above)
-      return !COMPREHENSIVE_ONLY_TASK_IDS.includes(taskId);
+      return effectiveLevel !== 'comprehensive';
     case 'comprehensive':
       return true;
     default:

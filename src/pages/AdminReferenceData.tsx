@@ -321,7 +321,7 @@ export default function AdminReferenceData() {
                   <input className="form-input" type="number" value={editingTemplate.sort_order || 0} onChange={e => setEditingTemplate({ ...editingTemplate, sort_order: parseInt(e.target.value) || 0 })} />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 8 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Service Type</label>
                   <select className="form-select" value={editingTemplate.service_type || 'diy'} onChange={e => setEditingTemplate({ ...editingTemplate, service_type: e.target.value as any })}>
@@ -329,6 +329,14 @@ export default function AdminReferenceData() {
                     <option value="canopy_visit">Canopy Visit — Bimonthly tech</option>
                     <option value="canopy_pro">Canopy Pro — Certified Pro dispatch</option>
                     <option value="licensed_pro">Licensed Pro — Licensed contractor</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Task Level</label>
+                  <select className="form-select" value={editingTemplate.task_level || 'standard'} onChange={e => setEditingTemplate({ ...editingTemplate, task_level: e.target.value as any })}>
+                    <option value="core">Core — Basic essentials</option>
+                    <option value="standard">Standard — Recommended</option>
+                    <option value="comprehensive">Comprehensive — Everything</option>
                   </select>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'end', paddingBottom: 4 }}>
@@ -358,6 +366,7 @@ export default function AdminReferenceData() {
                 <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
                   <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Title</th>
                   <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Category</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Level</th>
                   <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Service Type</th>
                   <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Priority</th>
                   <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Frequency</th>
@@ -370,6 +379,15 @@ export default function AdminReferenceData() {
                   <tr key={t.id} style={{ borderBottom: '1px solid var(--color-border)', opacity: t.active ? 1 : 0.5 }}>
                     <td style={{ padding: '10px 16px', fontSize: 13, fontWeight: 600 }}>{t.title}</td>
                     <td style={{ padding: '10px 16px', fontSize: 12 }}>{t.category}</td>
+                    <td style={{ padding: '10px 16px', fontSize: 12 }}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
+                        background: t.task_level === 'core' ? '#E0ECFF' : t.task_level === 'comprehensive' ? '#F5E6FF' : '#F0F0F0',
+                        color: t.task_level === 'core' ? '#3366AA' : t.task_level === 'comprehensive' ? '#7733AA' : '#666',
+                      }}>
+                        {t.task_level === 'core' ? 'Core' : t.task_level === 'comprehensive' ? 'Comprehensive' : 'Standard'}
+                      </span>
+                    </td>
                     <td style={{ padding: '10px 16px', fontSize: 12 }}>
                       <span style={{
                         fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4,

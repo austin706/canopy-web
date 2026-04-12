@@ -7,6 +7,7 @@ import { TASK_TEMPLATES } from '@/constants/maintenance';
 import { Colors } from '@/constants/theme';
 import HomeMembers from '@/components/HomeMembers';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import { showToast } from '@/components/Toast';
 import type { Home } from '@/types';
 
 export default function HomeDetails() {
@@ -265,7 +266,7 @@ export default function HomeDetails() {
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
     if (file.size > MAX_FILE_SIZE) {
       const fileSizeMB = Math.round(file.size / 1024 / 1024);
-      alert(`File too large (${fileSizeMB}MB). Maximum file size is 10MB. Please choose a smaller file.`);
+      showToast({ message: `File too large (${fileSizeMB}MB). Maximum file size is 10MB. Please choose a smaller file.` });
       return;
     }
 
@@ -279,7 +280,7 @@ export default function HomeDetails() {
       setHome(updated);
     } catch (err) {
       console.error('Photo upload failed:', err);
-      alert('Failed to upload photo. Please try again.');
+      showToast({ message: 'Failed to upload photo. Please try again.' });
     } finally {
       setUploadingPhoto(false);
     }
@@ -296,7 +297,7 @@ export default function HomeDetails() {
       setShowAddStructure(false);
     } catch (err) {
       console.error('Failed to add structure:', err);
-      alert('Failed to add structure. Please try again.');
+      showToast({ message: 'Failed to add structure. Please try again.' });
     } finally {
       setAddingStructure(false);
     }
@@ -309,7 +310,7 @@ export default function HomeDetails() {
       setStructures(structures.filter(s => s.id !== structureId));
     } catch (err) {
       console.error('Failed to delete structure:', err);
-      alert('Failed to delete structure. Please try again.');
+      showToast({ message: 'Failed to delete structure. Please try again.' });
     }
   };
 

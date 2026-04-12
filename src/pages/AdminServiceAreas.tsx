@@ -6,6 +6,7 @@ import { invalidateServiceAreaCache } from '@/services/subscriptionGate';
 import { logAdminAction } from '@/services/auditLog';
 import { getMessageVariant, messageColors } from '@/utils/messageType';
 import { Colors } from '@/constants/theme';
+import { showToast } from '@/components/Toast';
 
 interface ServiceArea {
   id: string;
@@ -104,7 +105,7 @@ export default function AdminServiceAreas() {
       setEditingService(null);
       await logAdminAction('service_area_service.upsert', 'service_area_services', saved.id, { service_key: saved.service_key, area: catalogArea.zip_code });
     } catch (e: any) {
-      alert(e.message);
+      showToast({ message: e.message });
     }
   };
 
@@ -115,7 +116,7 @@ export default function AdminServiceAreas() {
       setCatalogServices(prev => prev.filter(s => s.id !== serviceId));
       await logAdminAction('service_area_service.delete', 'service_area_services', serviceId, { area: catalogArea?.zip_code });
     } catch (e: any) {
-      alert(e.message);
+      showToast({ message: e.message });
     }
   };
 

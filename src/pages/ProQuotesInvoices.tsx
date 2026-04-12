@@ -4,6 +4,7 @@ import { supabase, sendNotification } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
+import { showToast } from '@/components/Toast';
 
 interface LineItem {
   id: string;
@@ -253,7 +254,7 @@ export default function ProQuotesInvoices() {
 
   const handleSaveTemplate = async () => {
     if (!providerId || !templateForm.name.trim()) {
-      alert('Please enter a template name');
+      showToast({ message: 'Please enter a template name' });
       return;
     }
 
@@ -293,10 +294,10 @@ export default function ProQuotesInvoices() {
       await loadTemplates(providerId);
       setEditingTemplateId(null);
       setTemplateForm({ name: '', description: '', category: 'general', lineItems: [{ id: '1', description: '', quantity: 1, unitPrice: 0 }], taxRate: 0 });
-      alert(editingTemplateId ? 'Template updated' : 'Template saved');
+      showToast({ message: editingTemplateId ? 'Template updated' : 'Template saved' });
     } catch (err) {
       console.error('Error saving template:', err);
-      alert('Failed to save template');
+      showToast({ message: 'Failed to save template' });
     }
   };
 
@@ -310,7 +311,7 @@ export default function ProQuotesInvoices() {
       if (error) throw error;
       setTemplates(prev => prev.filter(t => t.id !== templateId));
     } catch {
-      alert('Failed to delete template');
+      showToast({ message: 'Failed to delete template' });
     }
   };
 
@@ -346,12 +347,12 @@ export default function ProQuotesInvoices() {
       lineItems: lineItems.length > 0 ? lineItems : formData.lineItems,
       taxRate: (template.default_tax_rate || 0) * 100,
     });
-    alert(`Template "${template.name}" applied. Adjust details and select a client.`);
+    showToast({ message: `Template "${template.name}" applied. Adjust details and select a client.` });
   };
 
   const handleSaveCurrentAsTemplate = () => {
     if (!formData.title) {
-      alert('Add a title first before saving as template');
+      showToast({ message: 'Add a title first before saving as template' });
       return;
     }
     setTemplateForm({
@@ -406,7 +407,7 @@ export default function ProQuotesInvoices() {
 
   const handleCreateQuote = async () => {
     if (!providerId || !formData.clientId || !formData.title || formData.lineItems.length === 0) {
-      alert('Please fill in all required fields');
+      showToast({ message: 'Please fill in all required fields' });
       return;
     }
 
@@ -435,16 +436,16 @@ export default function ProQuotesInvoices() {
       resetForm();
       setShowForm(false);
       if (providerId) await loadQuotes(providerId);
-      alert('Quote created successfully');
+      showToast({ message: 'Quote created successfully' });
     } catch (err) {
       console.error('Error creating quote:', err);
-      alert('Failed to create quote');
+      showToast({ message: 'Failed to create quote' });
     }
   };
 
   const handleCreateInvoice = async () => {
     if (!providerId || !formData.clientId || !formData.title || !formData.dueDate || formData.lineItems.length === 0) {
-      alert('Please fill in all required fields');
+      showToast({ message: 'Please fill in all required fields' });
       return;
     }
 
@@ -474,10 +475,10 @@ export default function ProQuotesInvoices() {
       resetForm();
       setShowForm(false);
       if (providerId) await loadInvoices(providerId);
-      alert('Invoice created successfully');
+      showToast({ message: 'Invoice created successfully' });
     } catch (err) {
       console.error('Error creating invoice:', err);
-      alert('Failed to create invoice');
+      showToast({ message: 'Failed to create invoice' });
     }
   };
 
@@ -493,10 +494,10 @@ export default function ProQuotesInvoices() {
       if (error) throw error;
 
       await loadQuotes(providerId);
-      alert('Quote sent to client');
+      showToast({ message: 'Quote sent to client' });
     } catch (err) {
       console.error('Error sending quote:', err);
-      alert('Failed to send quote');
+      showToast({ message: 'Failed to send quote' });
     }
   };
 
@@ -524,10 +525,10 @@ export default function ProQuotesInvoices() {
       if (error) throw error;
 
       await Promise.all([loadQuotes(providerId), loadInvoices(providerId)]);
-      alert('Invoice created from quote');
+      showToast({ message: 'Invoice created from quote' });
     } catch (err) {
       console.error('Error converting quote:', err);
-      alert('Failed to convert quote');
+      showToast({ message: 'Failed to convert quote' });
     }
   };
 
@@ -558,10 +559,10 @@ export default function ProQuotesInvoices() {
       }
 
       await loadInvoices(providerId);
-      alert('Invoice sent to client');
+      showToast({ message: 'Invoice sent to client' });
     } catch (err) {
       console.error('Error sending invoice:', err);
-      alert('Failed to send invoice');
+      showToast({ message: 'Failed to send invoice' });
     }
   };
 

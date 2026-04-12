@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PageSkeleton } from '@/components/Skeleton';
 import { Colors } from '@/constants/theme';
+import { showToast } from '@/components/Toast';
 import {
   getEmailTemplates,
   seedEmailTemplates,
@@ -94,18 +95,18 @@ export default function AdminEmails() {
 
   const handleSendTest = async (templateKey: string) => {
     if (!testEmail.trim()) {
-      alert('Please enter a recipient email address');
+      showToast({ message: 'Please enter a recipient email address' });
       return;
     }
 
     try {
       setTestSending(true);
       await sendTestEmail(templateKey, testEmail);
-      alert(`Test email sent to ${testEmail}`);
+      showToast({ message: `Test email sent to ${testEmail}` });
       setTestEmailOpen(null);
       setTestEmail('');
     } catch (err) {
-      alert(`Failed to send test email: ${err instanceof Error ? err.message : String(err)}`);
+      showToast({ message: `Failed to send test email: ${err instanceof Error ? err.message : String(err)}` });
     } finally {
       setTestSending(false);
     }

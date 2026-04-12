@@ -20,6 +20,7 @@ export interface PlanInfo {
   shortName: string;
   features: string[];
   pricing: TierPricing;
+  maxHomes: number;
   badge?: string;
   requiresProArea?: boolean;
   inquireForPricing?: boolean;
@@ -53,9 +54,17 @@ export const PRICING: Record<Exclude<SubscriptionTier, 'free'>, TierPricing> = {
     stripe: { monthly: 6.99, yearly: 75.49 },
     iap: { monthly: 9.99, yearly: 109.99 },
   },
+  home_2: {
+    stripe: { monthly: 11.99, yearly: 129.49 },
+    iap: { monthly: 16.99, yearly: 183.49 },
+  },
   pro: {
     stripe: { monthly: 149, yearly: 1609 },
     iap: { monthly: 199.99, yearly: 2199.99 },
+  },
+  pro_2: {
+    stripe: { monthly: 279, yearly: 3018.60 },
+    iap: { monthly: 379.99, yearly: 4103.89 },
   },
   pro_plus: {
     stripe: { monthly: 0, yearly: 0 }, // Custom pricing — contact sales
@@ -75,9 +84,10 @@ export const PLANS: Array<PlanInfo & { value?: SubscriptionTier; price?: number 
     id: 'free',
     name: 'Free',
     shortName: 'Free',
+    maxHomes: 1,
     features: [
       'Basic maintenance calendar',
-      '5 equipment slots',
+      '3 equipment slots',
       'Generic checklists',
     ],
     pricing: { stripe: { monthly: 0, yearly: 0 }, iap: { monthly: 0, yearly: 0 } },
@@ -90,6 +100,7 @@ export const PLANS: Array<PlanInfo & { value?: SubscriptionTier; price?: number 
     id: 'home',
     name: 'Home Plan',
     shortName: 'Home',
+    maxHomes: 1,
     badge: 'Most Popular',
     features: [
       'All 44 AI-powered tasks',
@@ -106,9 +117,30 @@ export const PLANS: Array<PlanInfo & { value?: SubscriptionTier; price?: number 
     period: '/month',
   },
   {
+    id: 'home_2',
+    name: 'Home 2-Pack',
+    shortName: 'Home 2-Pack',
+    maxHomes: 2,
+    features: [
+      'All 44 AI-powered tasks per home',
+      'Unlimited equipment per home',
+      'Personalized checklists',
+      'Weather alerts & action items',
+      'Secure notes vault',
+      'Lawn & Pool & Deck care',
+      'Manage 2 homes',
+    ],
+    pricing: PRICING.home_2,
+    // Legacy properties for web app backwards compatibility
+    value: 'home_2' as SubscriptionTier,
+    price: 11.99,
+    period: '/month',
+  },
+  {
     id: 'pro',
     name: 'Home Pro',
     shortName: 'Pro',
+    maxHomes: 1,
     requiresProArea: true,
     features: [
       'Everything in Home Plan',
@@ -124,9 +156,30 @@ export const PLANS: Array<PlanInfo & { value?: SubscriptionTier; price?: number 
     period: '/month',
   },
   {
+    id: 'pro_2',
+    name: 'Pro 2-Pack',
+    shortName: 'Pro 2-Pack',
+    maxHomes: 2,
+    requiresProArea: true,
+    features: [
+      'Everything in Home Pro per home',
+      'Bimonthly 2-hr pro maintenance visit per home',
+      'Checklist items completed for you',
+      'Pro service scheduler',
+      'Quotes & invoicing for add-on work',
+      'Manage 2 homes',
+    ],
+    pricing: PRICING.pro_2,
+    // Legacy properties for web app backwards compatibility
+    value: 'pro_2' as SubscriptionTier,
+    price: 279,
+    period: '/month',
+  },
+  {
     id: 'pro_plus',
     name: 'Home Pro+',
     shortName: 'Pro+',
+    maxHomes: 1,
     requiresProArea: true,
     inquireForPricing: true,
     features: [

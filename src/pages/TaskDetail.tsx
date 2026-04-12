@@ -6,6 +6,7 @@ import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/ut
 import { reopenTask as reopenTaskApi, deleteTask as deleteTaskApi, batchMatchAffiliateLinksForItems, type AffiliateProduct } from '@/services/supabase';
 import { getDisplayStatus } from '@/services/taskEngine';
 import { supabase } from '@/services/supabase';
+import { showToast } from '@/components/Toast';
 
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
@@ -63,11 +64,11 @@ export default function TaskDetail() {
       } catch (err) {
         console.warn('Reopen API call failed:', err);
       }
-      alert('Task reopened and moved to upcoming.');
+      showToast({ message: 'Task reopened and moved to upcoming.' });
       navigate(-1);
     } catch (error) {
       console.error('Error reopening task:', error);
-      alert('Failed to reopen task. Please try again.');
+      showToast({ message: 'Failed to reopen task. Please try again.' });
     }
   };
 
@@ -82,7 +83,7 @@ export default function TaskDetail() {
       navigate(-1);
     } catch (error) {
       console.error('Error deleting task:', error);
-      alert('Failed to delete task. Please try again.');
+      showToast({ message: 'Failed to delete task. Please try again.' });
     }
   };
 
@@ -127,7 +128,7 @@ export default function TaskDetail() {
       setShowCategoryBundleModal(true);
     } catch (error) {
       console.error('Error loading bundle tasks:', error);
-      alert('Failed to load category tasks. Continuing with just this task.');
+      showToast({ message: 'Failed to load category tasks. Continuing with just this task.' });
       await createProRequest([task.id]);
     } finally {
       setIsLoadingProRequest(false);
@@ -180,12 +181,12 @@ export default function TaskDetail() {
 
       if (linkError) throw linkError;
 
-      alert(`Pro request created! We'll send you quotes for ${taskIds.length} task${taskIds.length !== 1 ? 's' : ''}.`);
+      showToast({ message: `Pro request created! We'll send you quotes for ${taskIds.length} task${taskIds.length !== 1 ? 's' : ''}.` });
       setShowCategoryBundleModal(false);
       setHasProRequest(true);
     } catch (error) {
       console.error('Error creating pro request:', error);
-      alert('Failed to create pro request. Please try again.');
+      showToast({ message: 'Failed to create pro request. Please try again.' });
     } finally {
       setIsLoadingProRequest(false);
     }

@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { showToast } from '@/components/Toast';
 import {
   supabase,
   getTechnicianDocuments,
@@ -163,7 +164,7 @@ export default function TechnicianOnboardingPage() {
       setSigningDoc(null);
       setAgreementRead(false);
     } catch (e: any) {
-      alert(`Error signing document: ${e.message}`);
+      showToast({ message: `Error signing document: ${e.message}` });
     } finally {
       setSigning(false);
     }
@@ -180,7 +181,7 @@ export default function TechnicianOnboardingPage() {
         return [...filtered, doc];
       });
     } catch (e: any) {
-      alert(`Upload error: ${e.message}`);
+      showToast({ message: `Upload error: ${e.message}` });
     } finally {
       setUploading(null);
     }
@@ -194,7 +195,7 @@ export default function TechnicianOnboardingPage() {
       const { onboardingUrl } = await createStripeConnectAccount(provider.id);
       window.open(onboardingUrl, '_blank');
     } catch (e: any) {
-      alert(`Stripe Connect error: ${e.message}. This feature requires the stripe-connect-onboard edge function to be deployed.`);
+      showToast({ message: `Stripe Connect error: ${e.message}. This feature requires the stripe-connect-onboard edge function to be deployed.` });
     } finally {
       setStripeLoading(false);
     }
@@ -207,7 +208,7 @@ export default function TechnicianOnboardingPage() {
       await initiateBackgroundCheck(provider.id);
       setProvider({ ...provider, background_check_status: 'pending' });
     } catch (e: any) {
-      alert(e.message);
+      showToast({ message: e.message });
     }
   };
 

@@ -18,7 +18,7 @@ export type {
   VisitSummaryData,
 } from './inspection';
 
-export type SubscriptionTier = 'free' | 'home' | 'pro' | 'pro_plus';
+export type SubscriptionTier = 'free' | 'home' | 'home_2' | 'pro' | 'pro_2' | 'pro_plus';
 
 // ─── ENUM TYPES ───────────────────────────────────────────
 

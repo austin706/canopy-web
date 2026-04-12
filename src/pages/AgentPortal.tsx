@@ -6,6 +6,7 @@ import { Colors, StatusColors } from '@/constants/theme';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import AdminPreviewBanner from '@/components/AdminPreviewBanner';
 import { PageSkeleton } from '@/components/Skeleton';
+import { showToast } from '@/components/Toast';
 
 function generateCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -312,7 +313,7 @@ export default function AgentPortal() {
       setNewNote('');
       setNoteCategory('general');
     } catch (err: any) {
-      alert('Failed to save note: ' + (err.message || 'Unknown error'));
+      showToast({ message: 'Failed to save note: ' + (err.message || 'Unknown error') });
     } finally {
       setSavingNote(false);
     }
@@ -323,7 +324,7 @@ export default function AgentPortal() {
     try {
       await supabase.from('agent_client_notes').delete().eq('id', noteId);
       setClientNotes(prev => ({ ...prev, [clientId]: (prev[clientId] || []).filter(n => n.id !== noteId) }));
-    } catch { alert('Failed to delete note'); }
+    } catch { showToast({ message: 'Failed to delete note' }); }
   };
 
   // Helper: format relative time
@@ -385,8 +386,8 @@ export default function AgentPortal() {
   // ─── New Client Setup ───
   const handleCreateClient = async () => {
     if (!agentId) return;
-    if (!clientForm.name.trim()) { alert('Client name is required'); return; }
-    if (!homeForm.address.trim()) { alert('Home address is required'); return; }
+    if (!clientForm.name.trim()) { showToast({ message: 'Client name is required' }); return; }
+    if (!homeForm.address.trim()) { showToast({ message: 'Home address is required' }); return; }
 
     setCreating(true);
     try {
@@ -434,7 +435,7 @@ export default function AgentPortal() {
       setCreatedCode(code);
       setSetupStep(3);
     } catch (e: any) {
-      alert('Failed to create invite: ' + (e.message || 'Unknown error'));
+      showToast({ message: 'Failed to create invite: ' + (e.message || 'Unknown error') });
     } finally {
       setCreating(false);
     }
@@ -458,7 +459,7 @@ export default function AgentPortal() {
   const copyCode = () => {
     if (createdCode) {
       navigator.clipboard.writeText(createdCode);
-      alert('Code copied to clipboard!');
+      showToast({ message: 'Code copied to clipboard!' });
     }
   };
 
@@ -772,7 +773,7 @@ export default function AgentPortal() {
                 </select>
               </div>
               <button className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => {
-                if (!clientForm.name.trim()) { alert('Client name is required'); return; }
+                if (!clientForm.name.trim()) { showToast({ message: 'Client name is required' }); return; }
                 setSetupStep(2);
               }}>
                 Next: Home Details &rarr;
@@ -1085,7 +1086,7 @@ export default function AgentPortal() {
                     className="btn btn-secondary btn-sm"
                     onClick={() => {
                       navigator.clipboard.writeText(`Subject: ${template.subject}\n\n${template.body}`);
-                      alert('Template copied to clipboard!');
+                      showToast({ message: 'Template copied to clipboard!' });
                     }}
                   >
                     Copy
@@ -1313,7 +1314,7 @@ export default function AgentPortal() {
                     <button
                       className="btn btn-secondary"
                       style={{ flex: 1 }}
-                      onClick={() => { navigator.clipboard.writeText(agentUrl); alert('Link copied to clipboard!'); }}
+                      onClick={() => { navigator.clipboard.writeText(agentUrl); showToast({ message: 'Link copied to clipboard!' }); }}
                     >
                       Copy Link
                     </button>

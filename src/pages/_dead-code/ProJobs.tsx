@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import logger from '@/utils/logger';
+import { showToast } from '@/components/Toast';
 
 interface Job {
   id: string;
@@ -131,7 +132,7 @@ export default function ProJobs() {
         .single();
 
       if (provider && provider.max_jobs_per_day && (count || 0) >= provider.max_jobs_per_day) {
-        alert(`You've reached your maximum jobs for today (${provider.max_jobs_per_day}). Update your capacity in settings to accept more.`);
+        showToast({ message: `You've reached your maximum jobs for today (${provider.max_jobs_per_day}). Update your capacity in settings to accept more.` });
         return;
       }
     } catch (err) {
@@ -148,10 +149,10 @@ export default function ProJobs() {
 
       if (!error) {
         setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, provider_id: providerId, status: 'matched' } : j)));
-        alert('You have been matched with this job.');
+        showToast({ message: 'You have been matched with this job.' });
       }
     } catch (err) {
-      alert('Failed to accept job');
+      showToast({ message: 'Failed to accept job' });
     }
   };
 
@@ -162,7 +163,7 @@ export default function ProJobs() {
     // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(dateStr)) {
-      alert('Please enter date in YYYY-MM-DD format');
+      showToast({ message: 'Please enter date in YYYY-MM-DD format' });
       return;
     }
 
@@ -196,9 +197,9 @@ export default function ProJobs() {
       if (apptError) logger.warn('Failed to create linked appointment:', apptError);
 
       setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, status: 'scheduled', scheduled_date: dateStr } : j)));
-      alert('Job scheduled successfully.');
+      showToast({ message: 'Job scheduled successfully.' });
     } catch (err) {
-      alert('Failed to schedule job');
+      showToast({ message: 'Failed to schedule job' });
     }
   };
 
@@ -216,10 +217,10 @@ export default function ProJobs() {
           .eq('request_id', jobId);
 
         setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, status: 'completed' } : j)));
-        alert('Job marked as completed.');
+        showToast({ message: 'Job marked as completed.' });
       }
     } catch (err) {
-      alert('Failed to complete job');
+      showToast({ message: 'Failed to complete job' });
     }
   };
 

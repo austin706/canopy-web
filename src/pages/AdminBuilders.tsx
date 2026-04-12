@@ -8,6 +8,7 @@ import {
   type Builder,
 } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
+import { showToast } from '@/components/Toast';
 
 type Tab = 'applications' | 'active';
 
@@ -48,7 +49,7 @@ export default function AdminBuilders() {
       setNotes('');
       await load();
     } catch (err: any) {
-      alert(`Review failed: ${err.message || err}`);
+      showToast({ message: `Review failed: ${err.message || err}` });
     }
   };
 

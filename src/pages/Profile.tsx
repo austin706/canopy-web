@@ -52,6 +52,9 @@ export default function Profile() {
     user?.user_preferences?.show_pro_tasks ?? DEFAULT_USER_PREFERENCES.show_pro_tasks
   );
 
+  // Downgrade confirmation modal
+  const [showDowngradeModal, setShowDowngradeModal] = useState(false);
+
   // Check if user is already subscribed to web push
   useEffect(() => {
     const checkWebPushStatus = async () => {
@@ -298,11 +301,123 @@ export default function Profile() {
             <p className="text-sm text-gray">{(plan as any)?.inquireForPricing ? 'Concierge Plan' : `$${plan?.price || 0}${plan?.period}`}</p>
             {user?.subscription_expires_at && <p className="text-xs text-gray mt-sm">Expires: {new Date(user.subscription_expires_at).toLocaleDateString()}</p>}
           </div>
-          <button className="btn btn-primary" onClick={() => navigate('/subscription')}>
-            {tier === 'free' ? 'Upgrade' : 'Manage Plan'}
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexDirection: 'column' }}>
+            <button className="btn btn-primary" onClick={() => navigate('/subscription')}>
+              {tier === 'free' ? 'Upgrade' : 'Manage Plan'}
+            </button>
+            {tier !== 'free' && (
+              <button
+                className="btn btn-ghost btn-sm"
+                style={{ color: Colors.error, fontSize: 12 }}
+                onClick={() => setShowDowngradeModal(true)}
+              >
+                Cancel Subscription
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Downgrade Confirmation Modal */}
+      {showDowngradeModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 16,
+          }}
+          onClick={() => setShowDowngradeModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: Colors.white,
+              borderRadius: 16,
+              padding: 24,
+              maxWidth: 420,
+              width: '100%',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: Colors.charcoal, margin: '0 0 16px 0' }}>
+              Cancel Your Subscription?
+            </h2>
+            <p style={{ fontSize: 14, color: Colors.medGray, margin: '0 0 16px 0', lineHeight: 1.6 }}>
+              If you cancel, the following features will be locked:
+            </p>
+            <div style={{ background: Colors.cream, borderRadius: 8, padding: 16, marginBottom: 20 }}>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 13, color: Colors.charcoal }}>
+                <li style={{ marginBottom: 8, paddingLeft: 20, position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 0 }}>•</span>
+                  Equipment items beyond 3
+                </li>
+                <li style={{ marginBottom: 8, paddingLeft: 20, position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 0 }}>•</span>
+                  Maintenance history older than 90 days
+                </li>
+                <li style={{ marginBottom: 8, paddingLeft: 20, position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 0 }}>•</span>
+                  Weather alerts & recommendations
+                </li>
+                <li style={{ marginBottom: 8, paddingLeft: 20, position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 0 }}>•</span>
+                  Document vault & secure notes
+                </li>
+                <li style={{ paddingLeft: 20, position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 0 }}>•</span>
+                  Unlimited AI access
+                </li>
+              </ul>
+            </div>
+            <div style={{ display: 'flex', gap: 12, flexDirection: 'column' }}>
+              <button
+                className="btn"
+                style={{
+                  background: Colors.sage,
+                  color: Colors.white,
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '10px 16px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+                onClick={() => setShowDowngradeModal(false)}
+              >
+                Keep My Plan
+              </button>
+              <button
+                className="btn btn-ghost"
+                style={{
+                  color: Colors.error,
+                  borderColor: Colors.error,
+                  border: `1px solid ${Colors.error}`,
+                  borderRadius: 8,
+                  padding: '10px 16px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: 'transparent',
+                }}
+                onClick={() => {
+                  setShowDowngradeModal(false);
+                  navigate('/subscription');
+                }}
+              >
+                Cancel Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Maintenance Preferences */}
       <div className="card mb-lg">

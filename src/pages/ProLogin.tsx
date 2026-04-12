@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signIn, supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
+import { showToast } from '@/components/Toast';
 
 export default function ProLogin() {
   const navigate = useNavigate();
@@ -41,14 +42,14 @@ export default function ProLogin() {
 
         if (proError || !proData) {
           await supabase.auth.signOut();
-          alert('Access Denied: This account is not registered as a service provider.');
+          showToast({ message: 'Access Denied: This account is not registered as a service provider.' });
           return;
         }
       }
 
       navigate('/pro-portal');
     } catch (error: any) {
-      alert(error.message || 'Failed to sign in. Please check your credentials.');
+      showToast({ message: error.message || 'Failed to sign in. Please check your credentials.' });
     } finally {
       setLoading(false);
     }

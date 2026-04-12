@@ -1,10 +1,12 @@
 import { useState, useRef } from 'react';
+import { useStore } from '@/store/useStore';
 import { scanEquipmentLabel, lookupByModelNumber, AiUsageLimitError, type ScanResult } from '@/services/ai';
 import { Colors } from '@/constants/theme';
 import type { EquipmentCategory } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
 import { useProgress } from '@/components/ProgressBar';
 import logger from '@/utils/logger';
+import { useNavigate } from 'react-router-dom';
 
 interface EquipmentScannerProps {
   onScanComplete?: (data: ScanResult & { name: string; category: EquipmentCategory }) => void;
@@ -163,6 +165,10 @@ async function compressImageFromFile(file: File, previewDataUrl: string, maxWidt
 }
 
 export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentScannerProps) {
+  const navigate = useNavigate();
+  const { user } = useStore();
+  const tier = user?.subscription_tier || 'free';
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>('');
   const [scanning, setScanning] = useState(false);
@@ -173,6 +179,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
   const [scanData, setScanData] = useState<ScanResult | null>(null);
   const [equipmentName, setEquipmentName] = useState('');
   const [equipmentCategory, setEquipmentCategory] = useState<EquipmentCategory>('hvac');
+  const [showBlurredPreview, setShowBlurredPreview] = useState(false); // Free tier limit reached
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { show: showProgress, hide: hideProgress, setProgress } = useProgress();
 
@@ -245,6 +252,12 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
   const handleScan = async () => {
     if (!selectedFile || !preview) {
       setError('Please select an image first');
+      return;
+    }
+
+    // Free tier: check if this is a second scan attempt
+    if (tier === 'free' && scanned) {
+      setShowBlurredPreview(true);
       return;
     }
 
@@ -859,6 +872,80 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
               style={{ flex: 1 }}
             >
               {scanning ? 'Scanning...' : 'Scan Label'}
+            </button>
+          </div>
+        </div>
+      ) : showBlurredPreview ? (
+        // Blurred Preview for Free Tier (Limit Reached)
+        <div>
+          <div
+            style={{
+              position: 'relative',
+              marginBottom: 20,
+              borderRadius: 12,
+              overflow: 'hidden',
+              backgroundColor: Colors.lightGray,
+              height: 300,
+            }}
+          >
+            <img
+              src={preview}
+              alt="Equipment label"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                filter: 'blur(8px)',
+                opacity: 0.6,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(255, 255, 255, 0.3)',
+              }}
+            >
+              <div
+                style={{
+                  textAlign: 'center',
+                  background: 'var(--color-white)',
+                  padding: '20px 24px',
+                  borderRadius: 12,
+                  maxWidth: 280,
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                }}
+              >
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+                <p style={{ fontSize: 16, fontWeight: 600, color: Colors.charcoal, margin: '0 0 8px 0' }}>
+                  Unlock Full Analysis
+                </p>
+                <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>
+                  Upgrade to Home for unlimited AI equipment scanning
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+            <button
+              className="btn btn-ghost"
+              onClick={handleReset}
+            >
+              Try Another Photo
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate('/subscription')}
+              style={{ flex: 1 }}
+            >
+              View Plans
             </button>
           </div>
         </div>

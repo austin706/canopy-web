@@ -7,6 +7,7 @@ import { uploadInspectionDoc, getVisitDocuments, deleteInspectionDoc, type Inspe
 import { getEquipmentTrends, type EquipmentTrend } from '@/services/equipmentTrending';
 import type { ProMonthlyVisit, VisitAllocation } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
+import { showToast } from '@/components/Toast';
 
 export default function Visits() {
   const { user, home } = useStore();
@@ -103,9 +104,9 @@ export default function Visits() {
       const { rebookable } = await cancelVisit(upcomingVisit.id, 'Cancelled by homeowner');
       setShowCancelModal(false);
       if (rebookable) {
-        alert('Visit cancelled. Since you cancelled 48+ hours in advance, you can rebook for this month.');
+        showToast({ message: 'Visit cancelled. Since you cancelled 48+ hours in advance, you can rebook for this month.' });
       } else {
-        alert('Visit cancelled. Since this was within 48 hours of your visit, this month\'s visit has been forfeited.');
+        showToast({ message: 'Visit cancelled. Since this was within 48 hours of your visit, this month\'s visit has been forfeited.' });
       }
       await loadVisits();
     } catch (err: any) {

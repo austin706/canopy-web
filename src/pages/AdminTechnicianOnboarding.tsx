@@ -13,6 +13,7 @@ import {
 import type { OnboardingStep, TrainingMaterial, TechnicianOnboarding, TechnicianDocument } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { logAdminAction } from '@/services/auditLog';
+import { showToast } from '@/components/Toast';
 
 interface Technician {
   id: string;
@@ -139,7 +140,7 @@ export default function AdminTechnicianOnboarding() {
         step_id: stepId, notes, score, contact_name: selectedTech.contact_name,
       });
     } catch (e: any) {
-      alert(e.message);
+      showToast({ message: e.message });
     }
   };
 
@@ -168,7 +169,7 @@ export default function AdminTechnicianOnboarding() {
         await logAdminAction('onboarding.completed', 'pro_provider', selectedTech.id, { contact_name: selectedTech.contact_name });
       }
     } catch (e: any) {
-      alert(e.message);
+      showToast({ message: e.message });
     }
   };
 
@@ -370,7 +371,7 @@ export default function AdminTechnicianOnboarding() {
                       try {
                         await initiateBackgroundCheck(selectedTech.id);
                         setSelectedTech({ ...selectedTech, background_check_status: 'pending' });
-                      } catch (e: any) { alert(e.message); }
+                      } catch (e: any) { showToast({ message: e.message }); }
                     }} style={{
                       fontSize: 10, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
                       background: Colors.copper, color: 'var(--color-white)', border: 'none', cursor: 'pointer',

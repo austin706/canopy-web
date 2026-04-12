@@ -8,6 +8,7 @@ import {
 import { logAdminAction } from '@/services/auditLog';
 import { Colors } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
+import { showToast } from '@/components/Toast';
 
 const CONSUMABLE_TYPES = [
   'filter', 'anode_rod', 'belt', 'battery', 'bulb', 'cartridge',
@@ -116,7 +117,7 @@ export default function AdminAffiliateProducts() {
       await loadProducts();
     } catch (err) {
       console.error('Failed to save affiliate product:', err);
-      alert('Failed to save. Check console for details.');
+      showToast({ message: 'Failed to save. Check console for details.' });
     } finally {
       setSaving(false);
     }

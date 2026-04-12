@@ -2,11 +2,12 @@ import { useMemo, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import logger from '@/utils/logger';
-import { canAccess, getTaskLimit, PLANS } from '@/services/subscriptionGate';
+import { canAccess, getTaskLimit, getHistoryDaysLimit, PLANS } from '@/services/subscriptionGate';
 import { Colors, PriorityColors, StatusColors } from '@/constants/theme';
 import DashboardChat from '@/components/DashboardChat';
 import { quickCompleteTask, calculateHealthScore } from '@/services/utils';
 import { ImageViewer } from '@/components/ImageViewer';
+import { showToast } from '@/components/Toast';
 import { getTasks, createTasks, getHomeJoinRequests, approveHomeJoinRequest, denyHomeJoinRequest, getNotifications, markNotificationRead } from '@/services/supabase';
 import { fetchWeather } from '@/services/weather';
 import { Skeleton } from '@/components/Skeleton';
@@ -33,7 +34,7 @@ const DEMO_WEATHER = { temperature: 72, feels_like: 74, humidity: 55, wind_speed
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, home, weather, tasks, equipment, consumables, customTemplates, setWeather, setTasks } = useStore();
+  const { user, home, weather, tasks, equipment, consumables, customTemplates, maintenanceLogs, setWeather, setTasks } = useStore();
   const tier = user?.subscription_tier || 'free';
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
@@ -49,6 +50,9 @@ export default function Dashboard() {
   // Notification state
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+
+  // Upgrade banner state
+  const [historyWarningDismissed, setHistoryWarningDismissed] = useState(false);
 
   // Load notifications
   useEffect(() => {
@@ -176,9 +180,23 @@ export default function Dashboard() {
       loadWeather();
     }
   }, [home, tier, setWeather]);
+
+  // Load and check history warning dismissal
+  useEffect(() => {
+    const dismissed = localStorage.getItem('history-warning-dismissed');
+    if (dismissed) {
+      const dismissedTime = parseInt(dismissed, 10);
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      if (dismissedTime > weekAgo) {
+        setHistoryWarningDismissed(true);
+      }
+    }
+  }, []);
+
   const hasWeather = canAccess(tier, 'weather_alerts');
   const hasAI = canAccess(tier, 'ai_task_generation');
   const taskLimit = getTaskLimit(tier);
+  const historyDaysLimit = getHistoryDaysLimit(tier);
 
   const isDemo = !user?.onboarding_complete && (!tasks || tasks.length === 0);
   const displayTasks = isDemo ? DEMO_TASKS : tasks.map(t => ({ ...t, status: getDisplayStatus(t) }));
@@ -186,6 +204,27 @@ export default function Dashboard() {
   const displayWeather = weather || DEMO_WEATHER;
   const unreadNotifications = notifications.filter(n => !n.read);
   const recentNotifications = unreadNotifications.slice(0, 2);
+
+  // Calculate 90-day history cliff warning for free tier
+  const shouldShowHistoryWarning = tier === 'free' && historyDaysLimit === 90 && !historyWarningDismissed && maintenanceLogs && maintenanceLogs.length > 0;
+  let oldestLogDaysAway = null;
+  if (shouldShowHistoryWarning) {
+    const sortedLogs = [...maintenanceLogs].sort((a, b) => new Date(a.completed_date).getTime() - new Date(b.completed_date).getTime());
+    if (sortedLogs.length > 0) {
+      const oldestLog = sortedLogs[0];
+      const daysOld = Math.floor((Date.now() - new Date(oldestLog.completed_date).getTime()) / (24 * 60 * 60 * 1000));
+      oldestLogDaysAway = Math.max(0, 90 - daysOld);
+    }
+  }
+
+  // Get current season
+  const getSeason = (): string => {
+    const month = now.getMonth();
+    if (month >= 2 && month <= 4) return 'Spring';
+    if (month >= 5 && month <= 7) return 'Summer';
+    if (month >= 8 && month <= 10) return 'Fall';
+    return 'Winter';
+  };
 
   const now = new Date();
   const currentMonth = now.toLocaleString('default', { month: 'long' });
@@ -300,7 +339,7 @@ export default function Dashboard() {
                       await approveHomeJoinRequest(req.id);
                       setJoinRequests(prev => prev.filter(r => r.id !== req.id));
                     } catch (err: any) {
-                      alert(err?.message || 'Failed to approve.');
+                      showToast({ message: err?.message || 'Failed to approve.' });
                     } finally {
                       setProcessingRequest(null);
                     }
@@ -318,7 +357,7 @@ export default function Dashboard() {
                       await denyHomeJoinRequest(req.id);
                       setJoinRequests(prev => prev.filter(r => r.id !== req.id));
                     } catch (err: any) {
-                      alert(err?.message || 'Failed to deny.');
+                      showToast({ message: err?.message || 'Failed to deny.' });
                     } finally {
                       setProcessingRequest(null);
                     }
@@ -334,6 +373,61 @@ export default function Dashboard() {
 
       {/* Pending Home Member Invites */}
       <PendingInvites />
+
+      {/* 90-Day History Cliff Warning Banner (Free Tier) */}
+      {shouldShowHistoryWarning && oldestLogDaysAway !== null && oldestLogDaysAway <= 14 && (
+        <div style={{
+          background: 'linear-gradient(135deg, var(--color-warning, #FFF3E0) 0%, rgba(255, 193, 7, 0.05) 100%)',
+          border: '1px solid var(--color-warning, #FFE0B2)',
+          borderRadius: 12,
+          padding: '16px 18px',
+          marginBottom: 20,
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 12,
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-charcoal)', marginBottom: 6 }}>
+              Your oldest maintenance records will be locked in {oldestLogDaysAway} day{oldestLogDaysAway === 1 ? '' : 's'}
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0, marginBottom: 10 }}>
+              Upgrade to Home to keep your full history and never lose important home records.
+            </p>
+            <button
+              onClick={() => navigate('/subscription')}
+              style={{
+                padding: '6px 12px',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--color-white)',
+                background: 'var(--color-warning, #FF9800)',
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer',
+              }}
+            >
+              Upgrade Now
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              setHistoryWarningDismissed(true);
+              localStorage.setItem('history-warning-dismissed', Date.now().toString());
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: 20,
+              cursor: 'pointer',
+              padding: 0,
+              color: 'var(--color-text-secondary)',
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Post-onboarding setup checklist */}
       <SetupChecklist
@@ -394,15 +488,36 @@ export default function Dashboard() {
               )}
             </div>
           ) : (
-            <div className="card" style={{ background: 'var(--color-copper-muted, #FFF3E0)', borderLeft: `4px solid var(--color-copper)` }}>
+            <div
+              className="card"
+              style={{
+                background: 'var(--color-background)',
+                borderLeft: `4px solid ${Colors.sage}`,
+                cursor: 'pointer',
+                opacity: 0.85,
+              }}
+              onClick={() => navigate('/subscription')}
+            >
               <div className="flex items-center gap-md">
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--color-card-background)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><NavWeather size={24} /></div>
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: Colors.sageMuted,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 24,
+                }}>
+                  🔒
+                </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 600 }}>Weather Alerts</p>
-                  <p className="text-sm text-gray">Upgrade to get actionable weather alerts</p>
+                  <p style={{ fontWeight: 600, marginBottom: 4 }}>
+                    {displayWeather.alerts && displayWeather.alerts.length > 0 ? `${displayWeather.alerts.length} weather alerts` : 'Weather Alerts'}
+                  </p>
+                  <p className="text-sm text-gray">Weather alerts available. Upgrade to Home.</p>
                 </div>
               </div>
-              <button className="btn btn-primary mt-md" onClick={() => navigate('/subscription')}>Upgrade to Home</button>
             </div>
           )}
 
@@ -588,6 +703,78 @@ export default function Dashboard() {
             <p className="text-sm text-gray">{PLANS.find(p => p.value === tier)?.inquireForPricing ? 'Concierge Plan' : `$${PLANS.find(p => p.value === tier)?.price || 0}${PLANS.find(p => p.value === tier)?.period}`}</p>
             {tier === 'free' && <button className="btn btn-primary btn-sm mt-md" onClick={() => navigate('/subscription')}>Upgrade</button>}
           </div>
+
+          {/* Document Vault Teaser (Free Tier) */}
+          {tier === 'free' && (
+            <div
+              className="card"
+              style={{
+                background: 'var(--color-background)',
+                borderLeft: `4px solid ${Colors.sage}`,
+                cursor: 'pointer',
+                opacity: 0.9,
+              }}
+              onClick={() => navigate('/subscription')}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ fontSize: 24, marginTop: 2 }}>🔒</div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 600, marginBottom: 4 }}>Secure Document Vault</p>
+                  <p className="text-xs text-gray" style={{ marginBottom: 8 }}>Store warranties, receipts, and insurance docs</p>
+                  <button
+                    style={{
+                      fontSize: 11,
+                      color: Colors.sage,
+                      background: 'transparent',
+                      border: `1px solid ${Colors.sage}`,
+                      borderRadius: 3,
+                      padding: '4px 8px',
+                      cursor: 'pointer',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Learn More
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Seasonal Recommendations Teaser (Free Tier) */}
+          {tier === 'free' && (
+            <div
+              className="card"
+              style={{
+                background: 'var(--color-background)',
+                borderLeft: `4px solid ${Colors.copper}`,
+                cursor: 'pointer',
+                opacity: 0.9,
+              }}
+              onClick={() => navigate('/subscription')}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ fontSize: 24, marginTop: 2 }}>🌿</div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 600, marginBottom: 4 }}>{getSeason()} Maintenance</p>
+                  <p className="text-xs text-gray" style={{ marginBottom: 8 }}>4 tasks recommended for your home</p>
+                  <button
+                    style={{
+                      fontSize: 11,
+                      color: Colors.copper,
+                      background: 'transparent',
+                      border: `1px solid ${Colors.copper}`,
+                      borderRadius: 3,
+                      padding: '4px 8px',
+                      cursor: 'pointer',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Upgrade to see
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Equipment Summary */}
           <div className="card">

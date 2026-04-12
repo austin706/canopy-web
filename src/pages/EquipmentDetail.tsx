@@ -4,6 +4,7 @@ import { useStore } from '@/store/useStore';
 import { upsertEquipment, deleteEquipment as deleteEquipApi, createProRequest } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { ROOF_LIFESPANS } from '@/services/taskEngine';
+import { showToast } from '@/components/Toast';
 import type { Equipment as EquipmentType, EquipmentCategory } from '@/types';
 
 const CATEGORIES: { value: EquipmentCategory; label: string }[] = [
@@ -94,7 +95,7 @@ export default function EquipmentDetail() {
       });
       setProRequested(true);
     } catch (err: any) {
-      alert('Failed to submit request: ' + (err.message || 'Unknown error'));
+      showToast({ message: 'Failed to submit request: ' + (err.message || 'Unknown error') });
     } finally {
       setRequestingPro(false);
     }
@@ -108,7 +109,7 @@ export default function EquipmentDetail() {
 
   const handleSave = async () => {
     if (!editForm.name.trim()) {
-      alert('Equipment name is required');
+      showToast({ message: 'Equipment name is required' });
       return;
     }
 
@@ -143,7 +144,7 @@ export default function EquipmentDetail() {
       await upsertEquipment({ ...item, ...updates });
       setIsEditing(false);
     } catch (err: any) {
-      alert('Failed to save: ' + (err.message || 'Unknown error'));
+      showToast({ message: 'Failed to save: ' + (err.message || 'Unknown error') });
     } finally {
       setIsSaving(false);
     }
@@ -155,7 +156,7 @@ export default function EquipmentDetail() {
       removeEquipment(item.id);
       navigate('/equipment');
     }).catch((err: any) => {
-      alert('Failed to delete: ' + (err.message || 'Unknown error'));
+      showToast({ message: 'Failed to delete: ' + (err.message || 'Unknown error') });
     });
   };
 

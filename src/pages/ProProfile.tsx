@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import AdminPreviewBanner from '@/components/AdminPreviewBanner';
+import { showToast } from '@/components/Toast';
 
 interface ProviderProfile {
   id: string;
@@ -97,7 +98,7 @@ export default function ProProfile() {
       }
     } catch (err) {
       console.error('Error loading profile:', err);
-      alert('Failed to load provider profile');
+      showToast({ message: 'Failed to load provider profile' });
     } finally {
       setLoading(false);
     }
@@ -107,7 +108,7 @@ export default function ProProfile() {
     if (!profile) return;
 
     if (!contactName.trim() || !email.trim() || !phone.trim()) {
-      alert('Please fill in all required fields.');
+      showToast({ message: 'Please fill in all required fields.' });
       return;
     }
 
@@ -115,7 +116,7 @@ export default function ProProfile() {
     try {
       const years = yearsExperience ? parseInt(yearsExperience, 10) : null;
       if (yearsExperience && (isNaN(years!) || years! < 0 || years! > 60)) {
-        alert('Please enter a valid number of years (0-60).');
+        showToast({ message: 'Please enter a valid number of years (0-60).' });
         setSaving(false);
         return;
       }
@@ -133,9 +134,9 @@ export default function ProProfile() {
         .eq('id', profile.id);
 
       if (error) throw error;
-      alert('Your profile has been updated.');
+      showToast({ message: 'Your profile has been updated.' });
     } catch (err) {
-      alert('Failed to update profile.');
+      showToast({ message: 'Failed to update profile.' });
     } finally {
       setSaving(false);
     }

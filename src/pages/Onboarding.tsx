@@ -2,11 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import logger from '@/utils/logger';
-import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase, createHomeJoinRequest, sendNotification, insertProInterest } from '@/services/supabase';
+import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase, createHomeJoinRequest, sendNotification, insertProInterest, getUserHomes } from '@/services/supabase';
 import { verifyAddress, findExistingProperty } from '@/services/addressVerification';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
-import { PLANS, isProAvailableInArea, loadServiceAreas, getEquipmentLimit, isPremium } from '@/services/subscriptionGate';
+import { PLANS, isProAvailableInArea, loadServiceAreas, getEquipmentLimit, getHomeLimit, isPremium } from '@/services/subscriptionGate';
 import { requestConsultation } from '@/services/proPlus';
 import { findProviderForZip } from '@/services/proEnrollment';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
@@ -114,6 +114,11 @@ export default function Onboarding() {
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [claimInfo, setClaimInfo] = useState<{ homeId: string; ownerId: string } | null>(null);
   const [joinRequestSent, setJoinRequestSent] = useState(false);
+
+  // Home limit gate state
+  const [showHomeLimitModal, setShowHomeLimitModal] = useState(false);
+  const [homeLimitReached, setHomeLimitReached] = useState<'upgrade' | 'contact' | null>(null);
+  const [userHomeCount, setUserHomeCount] = useState(0);
 
   // Address verification state
   const [verifiedAddress, setVerifiedAddress] = useState<{
@@ -503,6 +508,31 @@ export default function Onboarding() {
     } catch (err) {
       console.error('Duplicate address check failed:', err);
       // Proceed — don't block onboarding, but log the error
+    }
+
+    // Check home limit if in "add property" mode
+    if (isAddPropertyMode) {
+      try {
+        const userHomes = await getUserHomes(user.id);
+        setUserHomeCount(userHomes.length);
+        const homeLimit = getHomeLimit(user.subscription_tier);
+
+        // If user has reached their home limit, show gate
+        if (homeLimit && userHomes.length >= homeLimit) {
+          if (homeLimit === 1) {
+            // Single-home tier users should upgrade to 2-home plan
+            setHomeLimitReached('upgrade');
+          } else if (homeLimit === 2) {
+            // 2-home tier users should contact support for 3+ homes
+            setHomeLimitReached('contact');
+          }
+          setShowHomeLimitModal(true);
+          return;
+        }
+      } catch (err) {
+        logger.error('Failed to check home limit:', err);
+        // Proceed anyway — don't block onboarding
+      }
     }
 
     try {
@@ -1154,6 +1184,86 @@ export default function Onboarding() {
             <button className="btn btn-primary" onClick={handleAddressSubmit} disabled={saving}>
               {saving ? 'Saving...' : 'Next'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Home Limit Modal ===== */}
+      {showHomeLimitModal && homeLimitReached && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 9999, padding: 20,
+        }}>
+          <div style={{
+            background: 'var(--color-card-background)', borderRadius: 16, padding: 32, maxWidth: 440, width: '100%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <span style={{ fontSize: 48 }}>🏠</span>
+            </div>
+            {homeLimitReached === 'upgrade' ? (
+              <>
+                <h3 style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
+                  Upgrade to Manage Multiple Homes
+                </h3>
+                <p style={{ color: Colors.medGray, fontSize: 14, lineHeight: 1.6, textAlign: 'center', marginBottom: 24 }}>
+                  Your current plan includes 1 home. Upgrade to our Home 2-Pack ($11.99/mo) or Pro 2-Pack ($279/mo) to manage this property and your existing home.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: '100%' }}
+                    onClick={() => navigate('/subscription')}
+                  >
+                    View Plans
+                  </button>
+                  <button
+                    className="btn btn-ghost"
+                    style={{ width: '100%', fontSize: 13, color: Colors.medGray }}
+                    onClick={() => {
+                      setShowHomeLimitModal(false);
+                      setHomeLimitReached(null);
+                      navigate('/');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
+                  Interested in 3+ Properties?
+                </h3>
+                <p style={{ color: Colors.medGray, fontSize: 14, lineHeight: 1.6, textAlign: 'center', marginBottom: 24 }}>
+                  You've reached the limit for your current plan. We'd love to help you set up a custom plan for managing {userHomeCount + 1}+ properties.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: '100%' }}
+                    onClick={() => {
+                      window.location.href = 'mailto:support@canopyhome.app?subject=Custom%20Multi-Property%20Plan&body=' +
+                        encodeURIComponent(`Hi, I'm interested in managing multiple properties with Canopy. I currently have ${userHomeCount} home(s) and would like to add more. Can you help me set up a custom plan?`);
+                    }}
+                  >
+                    Contact Support
+                  </button>
+                  <button
+                    className="btn btn-ghost"
+                    style={{ width: '100%', fontSize: 13, color: Colors.medGray }}
+                    onClick={() => {
+                      setShowHomeLimitModal(false);
+                      setHomeLimitReached(null);
+                      navigate('/');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

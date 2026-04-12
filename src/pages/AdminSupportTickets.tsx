@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { logAdminAction } from '@/services/auditLog';
 import { Colors, StatusColors } from '@/constants/theme';
 import { PageSkeleton } from '@/components/Skeleton';
+import { showToast } from '@/components/Toast';
 
 interface SupportTicket {
   id: string;
@@ -118,7 +119,7 @@ export default function AdminSupportTickets() {
         email: ticket?.email
       }).catch(() => {});
     } catch (error: any) {
-      alert('Failed to update status: ' + error.message);
+      showToast({ message: 'Failed to update status: ' + error.message });
     }
   };
 

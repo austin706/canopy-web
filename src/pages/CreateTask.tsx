@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Colors } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
 import { createTask } from '@/services/supabase';
-import { canAccess } from '@/services/subscriptionGate';
+import { canAccess, getTaskLimit } from '@/services/subscriptionGate';
 import type { MaintenanceTask, EquipmentCategory, TaskPriority, TaskFrequency } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
 
@@ -26,8 +26,9 @@ const PRIORITY_COLORS: Record<TaskPriority, string> = {
 
 export default function CreateTask() {
   const navigate = useNavigate();
-  const { user, home, setTasks } = useStore();
+  const { user, home, tasks: existingTasks, setTasks } = useStore();
   const tier = user?.subscription_tier || 'free';
+  const taskLimit = getTaskLimit(tier);
 
   // Gate: custom tasks require Home tier or higher
   if (!canAccess(tier, 'custom_tasks')) {
@@ -249,6 +250,42 @@ export default function CreateTask() {
         <h1 style={{ fontSize: '24px', fontWeight: '600', color: Colors.charcoal, margin: '16px 0 24px 0' }}>
           Create Custom Task
         </h1>
+
+        {/* Task limit warning for free tier */}
+        {taskLimit && existingTasks && existingTasks.length >= 2 && (
+          <div style={{
+            padding: '12px 14px',
+            backgroundColor: 'var(--color-background)',
+            borderLeft: `3px solid ${Colors.sage}`,
+            borderRadius: 4,
+            marginBottom: 24,
+          }}>
+            <p style={{ fontSize: 13, color: Colors.medGray, margin: 0, marginBottom: 8 }}>
+              {existingTasks.length === taskLimit ? (
+                <span style={{ color: Colors.error, fontWeight: 600 }}>You've reached your task limit on Free.</span>
+              ) : (
+                <span><strong>{taskLimit - existingTasks.length} task slot</strong> remaining on Free. Home plan gives you unlimited tasks.</span>
+              )}
+            </p>
+            {existingTasks.length === taskLimit && (
+              <button
+                onClick={() => navigate('/subscription')}
+                style={{
+                  padding: '6px 10px',
+                  fontSize: 12,
+                  color: Colors.sage,
+                  background: 'transparent',
+                  border: `1px solid ${Colors.sage}`,
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                }}
+              >
+                View Plans
+              </button>
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           {/* Title */}

@@ -6,6 +6,7 @@ import { isProOrHigher } from '@/services/subscriptionGate';
 import MessageBanner from '@/components/MessageBanner';
 import { Colors, StatusColors } from '@/constants/theme';
 import { ImageViewer } from '@/components/ImageViewer';
+import { showToast } from '@/components/Toast';
 import type { ProRequest as ProRequestType } from '@/types';
 
 const SERVICE_TYPES = ['HVAC Maintenance', 'Filter Change', 'Gutter Cleaning', 'Plumbing Repair', 'Electrical Inspection', 'Roof Inspection', 'Pool Service', 'Deck Maintenance', 'Lawn Care', 'General Handyman', 'Custom/Other'];
@@ -103,7 +104,7 @@ export default function ProRequest() {
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
     if (file.size > MAX_FILE_SIZE) {
       const fileSizeMB = Math.round(file.size / 1024 / 1024);
-      alert(`File too large (${fileSizeMB}MB). Maximum file size is 10MB. Please choose a smaller file.`);
+      showToast({ message: `File too large (${fileSizeMB}MB). Maximum file size is 10MB. Please choose a smaller file.` });
       return;
     }
 

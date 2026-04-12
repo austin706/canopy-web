@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PageSkeleton } from '@/components/Skeleton';
+import { showToast } from '@/components/Toast';
 import {
   getReferenceData,
   getAllReferenceTypes,
@@ -88,7 +89,7 @@ export default function AdminReferenceData() {
       setEditingItem(null);
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      showToast({ message: err.message });
     }
   };
 
@@ -99,7 +100,7 @@ export default function AdminReferenceData() {
       await logAdminAction('reference.delete', 'reference_data', item.id, { type: item.type, key: item.key });
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      showToast({ message: err.message });
     }
   };
 
@@ -111,7 +112,7 @@ export default function AdminReferenceData() {
       setEditingTemplate(null);
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      showToast({ message: err.message });
     }
   };
 
@@ -122,7 +123,7 @@ export default function AdminReferenceData() {
       await logAdminAction('reference.delete', 'task_template', t.id, { title: t.title });
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      showToast({ message: err.message });
     }
   };
 

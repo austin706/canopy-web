@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import AdminPreviewBanner from '@/components/AdminPreviewBanner';
+import { showToast } from '@/components/Toast';
 
 interface AvailabilityDay {
   day: string;
@@ -126,10 +127,10 @@ export default function ProAvailability() {
         .eq('id', providerId);
 
       if (!error) {
-        alert('Your availability has been updated.');
+        showToast({ message: 'Your availability has been updated.' });
       }
     } catch (err) {
-      alert('Failed to save availability settings.');
+      showToast({ message: 'Failed to save availability settings.' });
     } finally {
       setSaving(false);
     }

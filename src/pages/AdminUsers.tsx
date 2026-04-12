@@ -3,6 +3,7 @@ import { getAllUsers, updateProfile, deleteUserAccount, getUserDetailData } from
 import { useStore } from '@/store/useStore';
 import { logAdminAction } from '@/services/auditLog';
 import { PageSkeleton } from '@/components/Skeleton';
+import { showToast } from '@/components/Toast';
 
 const TIER_COLORS: Record<string, string> = {
   free: '#6B7280',
@@ -78,7 +79,7 @@ export default function AdminUsers() {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole, admin_override: true } : u));
       syncCurrentUser(userId, { role: newRole });
       await logAdminAction('user.role_change', 'user', userId, { old_role: oldRole, new_role: newRole, email: user?.email });
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { showToast({ message: e.message }); }
   };
 
   const handleTierChange = async (userId: string, newTier: string) => {
@@ -97,7 +98,7 @@ export default function AdminUsers() {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, subscription_tier: newTier, subscription_expires_at: expires, admin_override: isOverride } : u));
       syncCurrentUser(userId, { subscription_tier: newTier, subscription_expires_at: expires });
       await logAdminAction('user.tier_change', 'user', userId, { old_tier: oldTier, new_tier: newTier, email: user?.email });
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { showToast({ message: e.message }); }
   };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
@@ -108,7 +109,7 @@ export default function AdminUsers() {
       await deleteUserAccount(userId);
       setUsers(prev => prev.filter(u => u.id !== userId));
       await logAdminAction('user.delete', 'user', userId, { email: user?.email });
-    } catch (e: any) { alert('Failed to delete: ' + e.message); }
+    } catch (e: any) { showToast({ message: 'Failed to delete: ' + e.message }); }
   };
 
   const handleBulkTierChange = async (newTier: string) => {
@@ -129,7 +130,7 @@ export default function AdminUsers() {
       await logAdminAction('user.bulk_tier_change', 'user', 'bulk', { count: selectedIds.size, new_tier: newTier });
       setSelectedIds(new Set());
       setBulkTierAction(null);
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { showToast({ message: e.message }); }
   };
 
   const handleBulkDelete = async () => {
@@ -142,7 +143,7 @@ export default function AdminUsers() {
       setUsers(prev => prev.filter(u => !selectedIds.has(u.id)));
       await logAdminAction('user.bulk_delete', 'user', 'bulk', { count: selectedIds.size });
       setSelectedIds(new Set());
-    } catch (e: any) { alert('Failed to delete: ' + e.message); }
+    } catch (e: any) { showToast({ message: 'Failed to delete: ' + e.message }); }
   };
 
   const toggleSelectUser = (userId: string) => {

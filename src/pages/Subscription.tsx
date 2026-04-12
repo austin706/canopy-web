@@ -409,6 +409,36 @@ export default function Subscription() {
 
       {message && <MessageBanner message={message} />}
 
+      {/* Free Tier Limits Summary Banner */}
+      {tier === 'free' && (
+        <div className="card mb-lg" style={{
+          background: 'var(--color-copper)',
+          color: 'var(--color-white)',
+          padding: '20px 24px',
+        }}>
+          <p style={{ fontWeight: 700, fontSize: 16, margin: '0 0 8px' }}>You're on Free</p>
+          <p style={{ fontSize: 13, margin: '0 0 12px', lineHeight: 1.5, opacity: 0.95 }}>
+            <strong>3 equipment items</strong> · <strong>5 AI chats/mo</strong> · <strong>1 home</strong> · <strong>90-day history</strong>. Upgrade to remove all limits and unlock premium features.
+          </p>
+          <button
+            className="btn btn-sm"
+            style={{
+              background: 'var(--color-white)',
+              color: 'var(--color-copper)',
+              fontWeight: 600,
+              padding: '6px 14px',
+              fontSize: 12,
+              border: 'none',
+              borderRadius: 4,
+              cursor: 'pointer',
+            }}
+            onClick={() => document.querySelector('[data-plan="home"]')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            See Plans Below
+          </button>
+        </div>
+      )}
+
       {/* Pro Enrollment Progress */}
       {enrolling && (
         <div className="card mb-lg" style={{ background: Colors.sageMuted, padding: '20px 24px' }}>
@@ -463,19 +493,45 @@ export default function Subscription() {
       <div className="grid-2 mb-lg">
         {PLANS.map(plan => {
           const isInquiry = (plan as any).inquireForPricing === true;
+          // Calculate annual savings for non-free plans
+          const monthlyPrice = plan.price || 0;
+          const annualVsMonthly = monthlyPrice * 12;
+          const hasAnnualOption = (plan as any).annual_price !== undefined;
+          const annualPrice = (plan as any).annual_price || monthlyPrice * 12;
+          const annualSavings = annualVsMonthly - annualPrice;
+          const savingsPercentage = annualSavings > 0 ? Math.round((annualSavings / annualVsMonthly) * 100) : 0;
+
           return (
-          <div key={plan.id} className="card" style={tier === plan.value ? { border: `2px solid ${Colors.copper}` } : {}}>
+          <div key={plan.id} className="card" style={tier === plan.value ? { border: `2px solid ${Colors.copper}` } : {}} data-plan={plan.value}>
             <div className="flex items-center justify-between mb-md">
-              <div>
+              <div style={{ flex: 1 }}>
                 <p style={{ fontSize: 16, fontWeight: 700 }}>{plan.name}</p>
                 {isInquiry ? (
                   <p style={{ fontSize: 16, fontWeight: 600, color: Colors.copper }}>Inquire for Pricing</p>
                 ) : (
-                  <p style={{ fontSize: 22, fontWeight: 700, color: Colors.copper }}>${plan.price}<span className="text-sm text-gray">{plan.period}</span></p>
+                  <>
+                    <p style={{ fontSize: 22, fontWeight: 700, color: Colors.copper }}>${plan.price}<span className="text-sm text-gray">{plan.period}</span></p>
+                    {hasAnnualOption && annualSavings > 0 && (
+                      <p style={{
+                        fontSize: 12,
+                        color: Colors.sage,
+                        fontWeight: 600,
+                        margin: '6px 0 0 0',
+                        background: 'var(--color-sage-muted)',
+                        padding: '4px 8px',
+                        borderRadius: 4,
+                        display: 'inline-block',
+                      }}>
+                        Save ${annualSavings.toFixed(2)}/year
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
-              {tier === plan.value && <span className="badge badge-copper">Current</span>}
-              {isInquiry && tier !== plan.value && <span className="badge" style={{ background: Colors.copperMuted, color: Colors.copper }}>Concierge</span>}
+              <div>
+                {tier === plan.value && <span className="badge badge-copper">Current</span>}
+                {isInquiry && tier !== plan.value && <span className="badge" style={{ background: Colors.copperMuted, color: Colors.copper }}>Concierge</span>}
+              </div>
             </div>
             {isInquiry && tier !== plan.value && (
               <p style={{ fontSize: 13, color: '#666', marginBottom: 12, lineHeight: 1.5 }}>

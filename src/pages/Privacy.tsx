@@ -6,7 +6,7 @@ export default function Privacy() {
       </div>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Privacy Policy</h1>
-      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>Last updated: March 22, 2026</p>
+      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>Last updated: April 11, 2026</p>
 
       <p>Canopy ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the Canopy mobile application, web platform, and related services (collectively, the "Service").</p>
 
@@ -96,10 +96,61 @@ export default function Privacy() {
         <li style={{ marginBottom: 8 }}><strong>Apple App Store / Google Play Store</strong> — app distribution and payment processing</li>
       </ul>
 
-      <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>10. Changes to This Policy</h2>
+      <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>10. California Privacy Rights (CCPA/CPRA)</h2>
+      <p>If you are a California resident, the California Consumer Privacy Act (CCPA), as amended by the California Privacy Rights Act (CPRA), provides you with specific rights regarding your personal information.</p>
+
+      <h3 style={{ fontSize: 18, fontWeight: 600, marginTop: 20, marginBottom: 8 }}>Your California Privacy Rights</h3>
+      <ul style={{ paddingLeft: 24, marginTop: 8 }}>
+        <li style={{ marginBottom: 8 }}><strong>Right to Know:</strong> You have the right to request that we disclose the categories and specific pieces of personal information we have collected about you, the categories of sources from which it was collected, the business purpose for collecting it, and the categories of third parties with whom we share it.</li>
+        <li style={{ marginBottom: 8 }}><strong>Right to Delete:</strong> You have the right to request deletion of your personal information. You can delete your account directly from your account settings, or contact us at support@canopyhome.app.</li>
+        <li style={{ marginBottom: 8 }}><strong>Right to Correct:</strong> You have the right to request that we correct inaccurate personal information we maintain about you.</li>
+        <li style={{ marginBottom: 8 }}><strong>Right to Opt Out of Sale/Sharing:</strong> We do not sell your personal information. We do not share your personal information for cross-context behavioral advertising.</li>
+        <li style={{ marginBottom: 8 }}><strong>Right to Limit Use of Sensitive Personal Information:</strong> We only use sensitive personal information (such as your home address) as necessary to provide the Service. We do not use sensitive personal information for purposes beyond what is reasonably expected.</li>
+        <li style={{ marginBottom: 8 }}><strong>Right to Non-Discrimination:</strong> We will not discriminate against you for exercising any of your CCPA/CPRA rights.</li>
+      </ul>
+
+      <h3 style={{ fontSize: 18, fontWeight: 600, marginTop: 20, marginBottom: 8 }}>Categories of Personal Information Collected</h3>
+      <p>In the preceding 12 months, we have collected the following categories of personal information: identifiers (name, email address), property-related information (home address, equipment details), commercial information (subscription history), internet or electronic network activity (usage data, device information), geolocation data (approximate location for weather and provider matching), and professional information (for Agents and Pro Providers).</p>
+
+      <h3 style={{ fontSize: 18, fontWeight: 600, marginTop: 20, marginBottom: 8 }}>How to Exercise Your Rights</h3>
+      <p>To exercise any of these rights, you may submit a request by emailing support@canopyhome.app, using the data export and account deletion features in your account settings, or contacting us through the in-app support form. We will verify your identity before processing your request. You may also designate an authorized agent to submit a request on your behalf.</p>
+
+      <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>11. European Privacy Rights (GDPR)</h2>
+      <p>If you are located in the European Economic Area (EEA), the United Kingdom, or Switzerland, the General Data Protection Regulation (GDPR) and applicable local laws provide you with additional rights regarding your personal data.</p>
+
+      <h3 style={{ fontSize: 18, fontWeight: 600, marginTop: 20, marginBottom: 8 }}>Legal Basis for Processing</h3>
+      <p>We process your personal data on the following legal bases:</p>
+      <ul style={{ paddingLeft: 24, marginTop: 8 }}>
+        <li style={{ marginBottom: 8 }}><strong>Performance of a contract:</strong> Processing necessary to provide you with the Service you have subscribed to, including generating maintenance schedules, connecting you with Pro Providers, and managing your account.</li>
+        <li style={{ marginBottom: 8 }}><strong>Legitimate interests:</strong> Processing necessary for our legitimate business interests, such as improving the Service, analyzing usage patterns, preventing fraud, and ensuring security, where these interests are not overridden by your rights.</li>
+        <li style={{ marginBottom: 8 }}><strong>Consent:</strong> Processing based on your explicit consent, such as sending push notifications, collecting location data, and using AI-powered features. You may withdraw consent at any time.</li>
+        <li style={{ marginBottom: 8 }}><strong>Legal obligation:</strong> Processing necessary to comply with applicable laws and regulations.</li>
+      </ul>
+
+      <h3 style={{ fontSize: 18, fontWeight: 600, marginTop: 20, marginBottom: 8 }}>Your GDPR Rights</h3>
+      <ul style={{ paddingLeft: 24, marginTop: 8 }}>
+        <li style={{ marginBottom: 8 }}><strong>Right of Access:</strong> You have the right to obtain confirmation of whether we process your personal data and to request a copy of it. You can export your data at any time from your account settings.</li>
+        <li style={{ marginBottom: 8 }}><strong>Right to Rectification:</strong> You have the right to have inaccurate personal data corrected. You can update most information directly in the app.</li>
+        <li style={{ marginBottom: 8 }}><strong>Right to Erasure ("Right to Be Forgotten"):</strong> You have the right to request deletion of your personal data. You can delete your account from your account settings, which will remove your data within 30 days.</li>
+        <li style={{ marginBottom: 8 }}><strong>Right to Restriction of Processing:</strong> You have the right to request that we restrict processing of your personal data under certain circumstances.</li>
+        <li style={{ marginBottom: 8 }}><strong>Right to Data Portability:</strong> You have the right to receive your personal data in a structured, commonly used, machine-readable format. Use the data export feature in your account settings.</li>
+        <li style={{ marginBottom: 8 }}><strong>Right to Object:</strong> You have the right to object to processing of your personal data based on legitimate interests. You may also object to processing for direct marketing purposes at any time.</li>
+        <li style={{ marginBottom: 8 }}><strong>Rights Related to Automated Decision-Making:</strong> Our AI-powered features (equipment scanning, maintenance recommendations, Home Assistant) provide suggestions to assist you but do not make decisions that produce legal or similarly significant effects. You are not subject to decisions based solely on automated processing.</li>
+      </ul>
+
+      <h3 style={{ fontSize: 18, fontWeight: 600, marginTop: 20, marginBottom: 8 }}>International Data Transfers</h3>
+      <p>Your personal data may be transferred to and processed in the United States, where our servers and service providers are located. We ensure appropriate safeguards are in place for such transfers, including standard contractual clauses approved by the European Commission. Our hosting provider, Supabase, maintains SOC 2 Type II compliance and encrypts all data in transit and at rest.</p>
+
+      <h3 style={{ fontSize: 18, fontWeight: 600, marginTop: 20, marginBottom: 8 }}>Data Protection Officer</h3>
+      <p>For questions about our data processing practices or to exercise your GDPR rights, please contact us at support@canopyhome.app. You also have the right to lodge a complaint with your local data protection supervisory authority.</p>
+
+      <h3 style={{ fontSize: 18, fontWeight: 600, marginTop: 20, marginBottom: 8 }}>Data Retention</h3>
+      <p>We retain your personal data only for as long as necessary to fulfill the purposes for which it was collected, including satisfying legal, accounting, or reporting requirements. When your account is deleted, we remove or anonymize your personal data within 30 days, except where retention is required by law.</p>
+
+      <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>12. Changes to This Policy</h2>
       <p>We may update this Privacy Policy from time to time. We will notify you of material changes through the Service or via email. Your continued use of the Service after notification constitutes acceptance of the updated policy.</p>
 
-      <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>11. Contact Us</h2>
+      <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>13. Contact Us</h2>
       <p>If you have questions or concerns about this Privacy Policy or our data practices, please contact us at:</p>
       <p style={{ marginTop: 8 }}>
         <strong>Canopy</strong><br />

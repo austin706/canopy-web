@@ -7,6 +7,7 @@ import PhotoCropModal from '@/components/PhotoCropModal';
 import { logAdminAction } from '@/services/auditLog';
 import { useStore } from '@/store/useStore';
 import { PageSkeleton } from '@/components/Skeleton';
+import { showToast } from '@/components/Toast';
 
 const STATUS_COLORS: Record<string, string> = {
   pending: Colors.warning,
@@ -72,7 +73,7 @@ export default function AdminAgents() {
       setApplications(data);
     } catch (e) {
       console.error('Failed to load applications:', e);
-      alert('Failed to load applications');
+      showToast({ message: 'Failed to load applications' });
     } finally {
       setApplicationsLoading(false);
     }
@@ -91,7 +92,7 @@ export default function AdminAgents() {
       setShowModal(false);
       setForm({ name: '', email: '', phone: '', brokerage: '' });
     } catch (e: any) {
-      alert(e.message);
+      showToast({ message: e.message });
     } finally {
       setSaving(false);
     }
@@ -108,7 +109,7 @@ export default function AdminAgents() {
       setSelectedAgent(null);
       setForm({ name: '', email: '', phone: '', brokerage: '' });
     } catch (e: any) {
-      alert(e.message);
+      showToast({ message: e.message });
     } finally {
       setSaving(false);
     }
@@ -121,7 +122,7 @@ export default function AdminAgents() {
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
     if (file.size > MAX_FILE_SIZE) {
       const fileSizeMB = Math.round(file.size / 1024 / 1024);
-      alert(`File too large (${fileSizeMB}MB). Maximum file size is 10MB. Please choose a smaller file.`);
+      showToast({ message: `File too large (${fileSizeMB}MB). Maximum file size is 10MB. Please choose a smaller file.` });
       return;
     }
 
@@ -132,9 +133,9 @@ export default function AdminAgents() {
       await logAdminAction('agent.update', 'agent', selectedAgent.id, { name: selectedAgent.name, email: selectedAgent.email });
       setAgents(prev => prev.map(a => a.id === selectedAgent.id ? updatedAgent : a));
       setSelectedAgent(updatedAgent);
-      alert('Agent photo updated successfully!');
+      showToast({ message: 'Agent photo updated successfully!' });
     } catch (e: any) {
-      alert('Failed to upload photo: ' + e.message);
+      showToast({ message: 'Failed to upload photo: ' + e.message });
     } finally {
       setUploadingPhoto(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -174,9 +175,9 @@ export default function AdminAgents() {
       await logAdminAction('agent.bulk_delete', 'agent', 'bulk', { count: selectedIds.size });
       setAgents(prev => prev.filter(a => !selectedIds.has(a.id)));
       setSelectedIds(new Set());
-      alert(`${selectedIds.size} agent(s) deleted successfully.`);
+      showToast({ message: `${selectedIds.size} agent(s) deleted successfully.` });
     } catch (e: any) {
-      alert('Failed to delete agents: ' + e.message);
+      showToast({ message: 'Failed to delete agents: ' + e.message });
     } finally {
       setDeleting(false);
     }
@@ -190,7 +191,7 @@ export default function AdminAgents() {
       await logAdminAction('agent.delete', 'agent', agentId, { name: agent?.name, email: agent?.email });
       setAgents(prev => prev.filter(a => a.id !== agentId));
     } catch (e: any) {
-      alert('Failed to delete: ' + e.message);
+      showToast({ message: 'Failed to delete: ' + e.message });
     }
   };
 
@@ -230,9 +231,9 @@ export default function AdminAgents() {
       setReviewDecision(null);
       setReviewNotes('');
       setExpandedAppId(null);
-      alert(`Application ${reviewDecision} successfully!`);
+      showToast({ message: `Application ${reviewDecision} successfully!` });
     } catch (e: any) {
-      alert('Failed to review application: ' + e.message);
+      showToast({ message: 'Failed to review application: ' + e.message });
     } finally {
       setReviewingApp(false);
     }

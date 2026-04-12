@@ -1,0 +1,86 @@
+/* ═══════════════════════════════════════════════════════════════ */
+/* Upgrade Gate Styling */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.upgrade-gate-container {
+  width: 100%;
+}
+
+.upgrade-gate-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f5f1ed 0%, #faf8f5 100%);
+  border: 1px solid #e8dfd6;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.upgrade-gate-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0e5d8;
+  border-radius: 8px;
+  color: #c08b5c; /* Copper */
+}
+
+.upgrade-gate-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.upgrade-gate-message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #3d3d3d;
+  font-weight: 500;
+}
+
+.upgrade-gate-button {
+  flex-shrink: 0;
+  padding: 8px 20px;
+  background-color: #c08b5c; /* Copper */
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upgrade-gate-button:hover {
+  background-color: #b37a4d;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(192, 139, 92, 0.2);
+}
+
+.upgrade-gate-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(192, 139, 92, 0.15);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .upgrade-gate-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .upgrade-gate-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .upgrade-gate-button {
+    width: 100%;
+    text-align: center;
+  }
+}

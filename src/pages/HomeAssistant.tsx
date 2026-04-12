@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Colors } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
-import { canAccess } from '@/services/subscriptionGate';
+import { canAccess, getAiLimit } from '@/services/subscriptionGate';
 import { useNavigate } from 'react-router-dom';
 
 interface ChatMessage {
@@ -27,17 +27,50 @@ export default function HomeAssistant() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [aiUsage, setAiUsage] = useState({ current: 0, limit: 0 });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const tier = user?.subscription_tier || 'free';
   const hasAccess = canAccess(tier, 'ai_chat');
+  const aiChatLimit = getAiLimit(tier, 'ai_chat');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => { scrollToBottom(); }, [messages]);
+
+  // Load AI usage for free tier users
+  useEffect(() => {
+    if (tier === 'free' && user?.id && aiChatLimit) {
+      const loadUsage = async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            const response = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL || 'https://uxxrmyxoyesipprwlxrn.supabase.co'}/functions/v1/get-ai-usage`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ user_id: user.id }),
+              }
+            );
+            const data = await response.json();
+            if (response.ok) {
+              setAiUsage({ current: data.chat_count || 0, limit: aiChatLimit });
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to load AI usage:', err);
+        }
+      };
+      loadUsage();
+    }
+  }, [tier, user?.id, aiChatLimit]);
 
   // Build home context string for the AI
   const buildHomeContext = (): string => {
@@ -165,6 +198,10 @@ export default function HomeAssistant() {
         timestamp: new Date(),
       };
       setMessages([...newMessages, assistantMessage]);
+      // Update usage counter if free tier
+      if (tier === 'free' && aiChatLimit) {
+        setAiUsage(prev => ({ ...prev, current: Math.min(prev.current + 1, aiChatLimit) }));
+      }
     } catch (err) {
       setError('Failed to connect to AI assistant. Please try again.');
       console.warn('Chat error:', err);
@@ -195,7 +232,7 @@ export default function HomeAssistant() {
     <div className="page" style={{ maxWidth: 800, display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)', padding: 0 }}>
       {/* Header */}
       <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${Colors.cream}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <div style={{
             width: 40, height: 40, borderRadius: '50%', background: Colors.sageMuted,
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
@@ -205,6 +242,51 @@ export default function HomeAssistant() {
             <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>AI-powered home maintenance advice · <a href="/ai-disclaimer" style={{ color: Colors.sage, textDecoration: 'none' }}>Disclaimer</a></p>
           </div>
         </div>
+        {/* Usage counter for free tier */}
+        {tier === 'free' && aiChatLimit && (
+          <div style={{ marginTop: 12, padding: '10px 12px', backgroundColor: 'var(--color-background)', borderRadius: 8 }}>
+            <div style={{ fontSize: 12, color: Colors.medGray, marginBottom: 6 }}>
+              {aiUsage.current === aiChatLimit ? (
+                <span style={{ color: Colors.error, fontWeight: 600 }}>Monthly limit reached</span>
+              ) : aiUsage.current >= 4 ? (
+                <span style={{ color: 'var(--color-warning, #D4A574)', fontWeight: 600 }}>
+                  {aiUsage.current} of {aiChatLimit} AI chats used this month
+                </span>
+              ) : (
+                <span>{aiUsage.current} of {aiChatLimit} AI chats used this month</span>
+              )}
+            </div>
+            <div style={{
+              height: 4, backgroundColor: Colors.cream, borderRadius: 2,
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                height: '100%',
+                width: `${(aiUsage.current / aiChatLimit) * 100}%`,
+                backgroundColor: aiUsage.current === aiChatLimit ? Colors.error : aiUsage.current >= 4 ? 'var(--color-warning, #D4A574)' : Colors.sage,
+                transition: 'all 0.3s ease',
+              }} />
+            </div>
+            {aiUsage.current >= 4 && (
+              <button
+                onClick={() => navigate('/subscription')}
+                style={{
+                  marginTop: 8,
+                  padding: '6px 10px',
+                  fontSize: 12,
+                  color: Colors.sage,
+                  background: 'transparent',
+                  border: `1px solid ${Colors.sage}`,
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                }}
+              >
+                View Plans
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Messages area */}

@@ -4,6 +4,7 @@ import { supabase, sendNotification, sendDirectEmailNotification } from '@/servi
 import { linkAgent } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { AgentAvatar } from '@/components/AgentAvatar';
+import { showToast } from '@/components/Toast';
 
 /**
  * AgentView — User-facing page to view their linked agent, search for an agent, or manage link requests.
@@ -85,7 +86,7 @@ export default function AgentView() {
       setSearchResults([]);
       setSearchQuery('');
     } catch (e: any) {
-      alert('Failed to link agent: ' + (e.message || 'Please try again.'));
+      showToast({ message: 'Failed to link agent: ' + (e.message || 'Please try again.') });
     } finally {
       setLinking(false);
     }
@@ -100,7 +101,7 @@ export default function AgentView() {
       setAgent(null);
       if (user) setUser({ ...user, agent_id: undefined });
     } catch (e: any) {
-      alert('Failed to unlink: ' + e.message);
+      showToast({ message: 'Failed to unlink: ' + e.message });
     } finally {
       setUnlinking(false);
     }
@@ -145,7 +146,7 @@ export default function AgentView() {
         }).catch(() => {});
       }
     } catch (e: any) {
-      alert('Failed to approve: ' + e.message);
+      showToast({ message: 'Failed to approve: ' + e.message });
     } finally {
       setProcessingRequest(null);
     }
@@ -184,7 +185,7 @@ export default function AgentView() {
         }).catch(() => {});
       }
     } catch (e: any) {
-      alert('Failed to reject: ' + e.message);
+      showToast({ message: 'Failed to reject: ' + e.message });
     } finally {
       setProcessingRequest(null);
     }

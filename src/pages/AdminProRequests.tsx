@@ -3,6 +3,7 @@ import { PageSkeleton } from '@/components/Skeleton';
 import { getAllProRequests, updateProRequest, getAllProProviders, sendNotification, supabase } from '@/services/supabase';
 import { logAdminAction } from '@/services/auditLog';
 import { StatusColors, Colors } from '@/constants/theme';
+import { showToast } from '@/components/Toast';
 
 interface Provider {
   id: string;
@@ -87,7 +88,7 @@ export default function AdminProRequests() {
           }).catch(() => {});
         }
       }
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { showToast({ message: e.message }); }
   };
 
   const handleAssignProvider = async (requestId: string, providerId: string) => {
@@ -145,14 +146,14 @@ export default function AdminProRequests() {
           }).catch(() => {});
         }
       }
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { showToast({ message: e.message }); }
   };
 
   const handleUnassignProvider = async (requestId: string) => {
     try {
       await updateProRequest(requestId, { assigned_provider: null, status: 'pending' });
       setRequests(prev => prev.map(r => r.id === requestId ? { ...r, assigned_provider: null, status: 'pending' } : r));
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { showToast({ message: e.message }); }
   };
 
   const getMatchingProviders = (category: string, homeZip?: string) => {

@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import { PageSkeleton } from '@/components/Skeleton';
+import { showToast } from '@/components/Toast';
 
 interface ProProvider {
   id: string;
@@ -212,7 +213,7 @@ export default function ProPortal() {
   const handleSaveZips = async (providerId: string) => {
     const zips = zipInput.split(',').map(z => z.trim()).filter(z => /^\d{5}$/.test(z));
     if (zips.length === 0) {
-      alert('Please enter valid 5-digit zip codes separated by commas.');
+      showToast({ message: 'Please enter valid 5-digit zip codes separated by commas.' });
       return;
     }
 
@@ -228,7 +229,7 @@ export default function ProPortal() {
       setEditingZips(null);
       setZipInput('');
     } catch (err: any) {
-      alert('Failed to update zip codes: ' + err.message);
+      showToast({ message: 'Failed to update zip codes: ' + err.message });
     }
   };
 
@@ -455,7 +456,7 @@ export default function ProPortal() {
         setProvider({ ...provider, is_available: newStatus });
       }
     } catch (err) {
-      alert('Failed to update availability');
+      showToast({ message: 'Failed to update availability' });
     }
   };
 
@@ -610,7 +611,7 @@ export default function ProPortal() {
                           if (availableZips.length > 0) {
                             // Save from checkbox selection
                             if (selectedZips.length === 0) {
-                              alert('Please select at least one zip code.');
+                              showToast({ message: 'Please select at least one zip code.' });
                               return;
                             }
                             supabase
@@ -618,7 +619,7 @@ export default function ProPortal() {
                               .update({ zip_codes: selectedZips })
                               .eq('id', p.id)
                               .then(({ error }) => {
-                                if (error) { alert('Failed to update: ' + error.message); return; }
+                                if (error) { showToast({ message: 'Failed to update: ' + error.message }); return; }
                                 setAllProviders(prev => prev.map(pr => pr.id === p.id ? { ...pr, zip_codes: selectedZips } : pr));
                                 setEditingZips(null);
                                 setSelectedZips([]);

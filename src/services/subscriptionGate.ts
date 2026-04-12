@@ -22,7 +22,9 @@ export type AiFeature = 'ai_photo_scan' | 'ai_chat' | 'ai_text_lookup';
 export const TIER_FEATURES: Record<SubscriptionTier, Feature[]> = {
   free: ['basic_calendar','ai_photo_scan','ai_chat','ai_text_lookup'],
   home: ['basic_calendar','unlimited_equipment','personalized_scheduling','smart_recurrence','weather_alerts','weather_action_items','document_vault','secure_notes','maintenance_history_export','seasonal_recommendations','ai_task_generation','custom_tasks','ai_photo_scan','ai_chat','ai_text_lookup'],
+  home_2: ['basic_calendar','unlimited_equipment','personalized_scheduling','smart_recurrence','weather_alerts','weather_action_items','document_vault','secure_notes','maintenance_history_export','seasonal_recommendations','ai_task_generation','custom_tasks','ai_photo_scan','ai_chat','ai_text_lookup'],
   pro: ['basic_calendar','unlimited_equipment','personalized_scheduling','smart_recurrence','weather_alerts','weather_action_items','document_vault','secure_notes','maintenance_history_export','seasonal_recommendations','ai_task_generation','custom_tasks','pro_service_requests','pro_visit_scheduling','pro_service_scheduler','filter_change_service','gutter_cleaning_service','ai_photo_scan','ai_chat','ai_text_lookup'],
+  pro_2: ['basic_calendar','unlimited_equipment','personalized_scheduling','smart_recurrence','weather_alerts','weather_action_items','document_vault','secure_notes','maintenance_history_export','seasonal_recommendations','ai_task_generation','custom_tasks','pro_service_requests','pro_visit_scheduling','pro_service_scheduler','filter_change_service','gutter_cleaning_service','ai_photo_scan','ai_chat','ai_text_lookup'],
   pro_plus: ['basic_calendar','unlimited_equipment','personalized_scheduling','smart_recurrence','weather_alerts','weather_action_items','document_vault','secure_notes','maintenance_history_export','seasonal_recommendations','ai_task_generation','custom_tasks','pro_service_requests','pro_visit_scheduling','pro_service_scheduler','filter_change_service','gutter_cleaning_service','extended_pro_visits','pool_service','deck_service','lawn_service','pest_control','priority_support','full_property_concierge','ai_photo_scan','ai_chat','ai_text_lookup'],
 };
 
@@ -31,15 +33,25 @@ export const TIER_FEATURES: Record<SubscriptionTier, Feature[]> = {
 export const AI_LIMITS: Record<SubscriptionTier, Record<AiFeature, number | null>> = {
   free: {
     ai_photo_scan: 1,    // 1 lifetime (enforced separately)
-    ai_chat: 15,          // 15 messages/month
-    ai_text_lookup: 5,    // 5 lookups/month
+    ai_chat: 5,           // 5 messages/month
+    ai_text_lookup: 2,    // 2 lookups/month
   },
   home: {
     ai_photo_scan: null,  // unlimited
     ai_chat: null,
     ai_text_lookup: null,
   },
+  home_2: {
+    ai_photo_scan: null,  // unlimited
+    ai_chat: null,
+    ai_text_lookup: null,
+  },
   pro: {
+    ai_photo_scan: null,
+    ai_chat: null,
+    ai_text_lookup: null,
+  },
+  pro_2: {
     ai_photo_scan: null,
     ai_chat: null,
     ai_text_lookup: null,
@@ -57,7 +69,7 @@ export function canAccess(tier: SubscriptionTier | undefined | null, feature: Fe
 }
 
 export function getEquipmentLimit(tier: SubscriptionTier | undefined | null): number | null {
-  return (!tier || tier === 'free') ? 5 : null;
+  return (!tier || tier === 'free') ? 3 : null;
 }
 
 export function getTaskLimit(tier: SubscriptionTier | undefined | null): number | null {
@@ -82,6 +94,39 @@ export function getAiLimit(
 ): number | null {
   const t = tier || 'free';
   return AI_LIMITS[t][feature];
+}
+
+/**
+ * Get the maximum number of homes a user can manage on a given tier.
+ */
+export function getHomeLimit(tier: SubscriptionTier | undefined | null): number {
+  const t = tier || 'free';
+  switch (t) {
+    case 'free': return 1;
+    case 'home': return 1;
+    case 'home_2': return 2;
+    case 'pro': return 1;
+    case 'pro_2': return 2;
+    case 'pro_plus': return 1; // custom, handled separately
+    default: return 1;
+  }
+}
+
+/**
+ * Get history retention limit in days for a given tier.
+ * null = unlimited retention.
+ */
+export function getHistoryDaysLimit(tier: SubscriptionTier | undefined | null): number | null {
+  const t = tier || 'free';
+  return t === 'free' ? 90 : null; // null = unlimited
+}
+
+/**
+ * Check if a user can view/access a specific home by index.
+ * Soft-gate for locked homes (show with lock overlay).
+ */
+export function canViewHome(tier: SubscriptionTier | undefined | null, homeIndex: number): boolean {
+  return homeIndex < getHomeLimit(tier);
 }
 
 /**
@@ -190,7 +235,7 @@ export async function checkProAvailability(
 }
 
 export function getNextTier(tier: SubscriptionTier | undefined | null): SubscriptionTier | null {
-  const order: SubscriptionTier[] = ['free', 'home', 'pro', 'pro_plus'];
+  const order: SubscriptionTier[] = ['free', 'home', 'home_2', 'pro', 'pro_2', 'pro_plus'];
   const idx = order.indexOf(tier || 'free');
   return idx < order.length - 1 ? order[idx + 1] : null;
 }

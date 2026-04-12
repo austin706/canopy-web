@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { TASK_TEMPLATES } from '@/constants/maintenance';
 import AdminPreviewBanner from '@/components/AdminPreviewBanner';
+import { showToast } from '@/components/Toast';
 import type { ProMonthlyVisit, Home, Equipment, ProProvider } from '@/types';
 
 interface Visit extends ProMonthlyVisit {
@@ -193,7 +194,7 @@ export default function ProJobQueue() {
       navigate(`/pro-portal/inspection/${visitId}`);
     } catch (error) {
       console.error('Error starting visit:', error);
-      alert('Failed to start visit');
+      showToast({ message: 'Failed to start visit' });
     }
   };
 

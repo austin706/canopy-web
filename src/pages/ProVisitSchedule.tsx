@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
+import { showToast } from '@/components/Toast';
 
 // Unified calendar event from either table
 interface CalendarVisit {
@@ -321,23 +322,23 @@ export default function ProVisitSchedule() {
 
   const handleProposeVisit = async () => {
     if (!providerId || !proposeForm.clientId || !proposeForm.visitDate) {
-      alert('Please fill in all required fields');
+      showToast({ message: 'Please fill in all required fields' });
       return;
     }
 
     if (!proposeForm.visitTime || !proposeForm.visitEndTime) {
-      alert('Please select both start and end times');
+      showToast({ message: 'Please select both start and end times' });
       return;
     }
 
     if (proposeForm.visitTime >= proposeForm.visitEndTime) {
-      alert('End time must be after start time');
+      showToast({ message: 'End time must be after start time' });
       return;
     }
 
     const client = clients.find(c => c.id === proposeForm.clientId);
     if (!client) {
-      alert('Please select a valid client');
+      showToast({ message: 'Please select a valid client' });
       return;
     }
 
@@ -373,10 +374,10 @@ export default function ProVisitSchedule() {
       setShowProposeForm(false);
       setConflictWarning('');
       await loadVisits(providerId, providerZips);
-      alert('Visit proposal sent. Awaiting homeowner confirmation.');
+      showToast({ message: 'Visit proposal sent. Awaiting homeowner confirmation.' });
     } catch (err: any) {
       console.error('Error proposing visit:', err);
-      alert('Failed to propose visit: ' + (err.message || ''));
+      showToast({ message: 'Failed to propose visit: ' + (err.message || '') });
     }
   };
 
@@ -403,13 +404,13 @@ export default function ProVisitSchedule() {
       await loadVisits(providerId, providerZips);
     } catch (err) {
       console.error('Error starting visit:', err);
-      alert('Failed to start visit');
+      showToast({ message: 'Failed to start visit' });
     }
   };
 
   const handleCompleteVisit = async (visit: CalendarVisit) => {
     if (!completeForm.timeSpent) {
-      alert('Please enter time spent');
+      showToast({ message: 'Please enter time spent' });
       return;
     }
 
@@ -442,10 +443,10 @@ export default function ProVisitSchedule() {
       setCompleteFormId(null);
       setCompleteForm({ timeSpent: '', notes: '' });
       await loadVisits(providerId, providerZips);
-      alert('Visit completed successfully');
+      showToast({ message: 'Visit completed successfully' });
     } catch (err) {
       console.error('Error completing visit:', err);
-      alert('Failed to complete visit');
+      showToast({ message: 'Failed to complete visit' });
     }
   };
 

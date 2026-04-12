@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { logAdminAction } from '@/services/auditLog';
 import { Colors } from '@/constants/theme';
+import { showToast } from '@/components/Toast';
 
 interface ProviderApplication {
   id: string;
@@ -49,7 +50,7 @@ export default function AdminProviderApplications() {
       setApplications(data || []);
     } catch (e: any) {
       console.error('Error loading applications:', e);
-      alert('Failed to load applications');
+      showToast({ message: 'Failed to load applications' });
     } finally {
       setLoading(false);
     }
@@ -119,7 +120,7 @@ export default function AdminProviderApplications() {
       );
     } catch (e: any) {
       console.error('Approval error:', e);
-      alert(e.message || 'Failed to approve application');
+      showToast({ message: e.message || 'Failed to approve application' });
     } finally {
       setActionInProgress(null);
     }
@@ -128,7 +129,7 @@ export default function AdminProviderApplications() {
   const handleReject = async (app: ProviderApplication) => {
     const notes = rejectNotes[app.id] || '';
     if (!notes.trim()) {
-      alert('Please provide review notes for rejection');
+      showToast({ message: 'Please provide review notes for rejection' });
       return;
     }
 
@@ -161,7 +162,7 @@ export default function AdminProviderApplications() {
       });
     } catch (e: any) {
       console.error('Rejection error:', e);
-      alert(e.message || 'Failed to reject application');
+      showToast({ message: e.message || 'Failed to reject application' });
     } finally {
       setActionInProgress(null);
     }
@@ -190,7 +191,7 @@ export default function AdminProviderApplications() {
       );
     } catch (e: any) {
       console.error('Withdrawal error:', e);
-      alert(e.message || 'Failed to withdraw application');
+      showToast({ message: e.message || 'Failed to withdraw application' });
     } finally {
       setActionInProgress(null);
     }

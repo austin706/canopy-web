@@ -6,6 +6,7 @@ import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import { ImageViewer } from '@/components/ImageViewer';
 import { SignaturePad } from '@/components/SignaturePad';
+import { showToast } from '@/components/Toast';
 import type { ProMonthlyVisit, Home, Equipment } from '@/types';
 import type {
   VisitInspection,
@@ -137,7 +138,7 @@ export default function ProInspection() {
       }
     } catch (error) {
       console.error('Error loading inspection data:', error);
-      alert('Failed to load inspection data');
+      showToast({ message: 'Failed to load inspection data' });
       navigate('/pro-portal/job-queue');
     } finally {
       setLoading(false);
@@ -229,7 +230,7 @@ export default function ProInspection() {
       );
     } catch (error) {
       console.error('Error uploading photo:', error);
-      alert('Failed to upload photo');
+      showToast({ message: 'Failed to upload photo' });
     } finally {
       setUploadingPhotoFor(null);
       if (fileInputRef.current) {
@@ -382,7 +383,7 @@ export default function ProInspection() {
       navigate('/pro-portal/job-queue', { state: { success: 'Visit completed successfully. Next visit has been auto-proposed.' } });
     } catch (error) {
       console.error('Error completing visit:', error);
-      alert('Failed to complete visit');
+      showToast({ message: 'Failed to complete visit' });
     } finally {
       setSaving(false);
     }

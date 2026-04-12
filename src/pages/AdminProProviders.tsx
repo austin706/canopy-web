@@ -6,6 +6,7 @@ import { Colors } from '@/constants/theme';
 import { supabase } from '@/services/supabase';
 import { PageSkeleton } from '@/components/Skeleton';
 import { logAdminAction } from '@/services/auditLog';
+import { showToast } from '@/components/Toast';
 
 const SERVICE_CATEGORIES = [
   'HVAC', 'Plumbing', 'Electrical', 'Roofing', 'Landscaping', 'Pest Control',
@@ -199,7 +200,7 @@ export default function AdminProProviders() {
       setShowModal(false);
       setForm({ ...emptyForm });
       setEditing(null);
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { showToast({ message: e.message }); }
     finally { setSaving(false); }
   };
 
@@ -211,7 +212,7 @@ export default function AdminProProviders() {
       await deleteProProvider(id);
       setProviders(prev => prev.filter(p => p.id !== id));
       await logAdminAction('provider.delete', 'pro_provider', id, { business_name: provider?.business_name });
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { showToast({ message: e.message }); }
     finally { setDeleting(null); }
   };
 
@@ -221,7 +222,7 @@ export default function AdminProProviders() {
       const updated = await updateProProvider(id, { is_available: !currentStatus });
       setProviders(prev => prev.map(p => p.id === id ? updated : p));
       await logAdminAction('provider.toggle_availability', 'pro_provider', id, { business_name: provider?.business_name, is_available: !currentStatus });
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { showToast({ message: e.message }); }
   };
 
   const toggleCategory = (cat: string) => {

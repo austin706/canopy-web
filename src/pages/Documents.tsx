@@ -4,6 +4,7 @@ import { uploadPhoto, getDocuments, createDocument, deleteDocument, getSecureNot
 import { canAccess } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
 import InspectionUploader from '@/components/InspectionUploader';
+import { showToast } from '@/components/Toast';
 import type { SecureNote } from '@/types';
 
 interface Document {
@@ -130,11 +131,11 @@ export default function Documents() {
 
   const handleAddSecureNote = async () => {
     if (!newNoteTitle.trim() || !newNoteContent.trim()) {
-      alert('Please enter both a title and content for your secure note.');
+      showToast({ message: 'Please enter both a title and content for your secure note.' });
       return;
     }
     if (!home?.id) {
-      alert('No home profile found. Please complete onboarding first.');
+      showToast({ message: 'No home profile found. Please complete onboarding first.' });
       return;
     }
     try {
@@ -151,7 +152,7 @@ export default function Documents() {
       setShowAddNote(false);
     } catch (err: any) {
       console.error('Failed to save secure note:', err);
-      alert('Failed to save note: ' + (err.message || 'Unknown error'));
+      showToast({ message: 'Failed to save note: ' + (err.message || 'Unknown error') });
     }
   };
 
@@ -163,7 +164,7 @@ export default function Documents() {
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
     if (file.size > MAX_FILE_SIZE) {
       const fileSizeMB = Math.round(file.size / 1024 / 1024);
-      alert(`File too large (${fileSizeMB}MB). Maximum file size is 10MB. Please choose a smaller file.`);
+      showToast({ message: `File too large (${fileSizeMB}MB). Maximum file size is 10MB. Please choose a smaller file.` });
       return;
     }
 
@@ -182,7 +183,7 @@ export default function Documents() {
     const category = categoryMap[categoryPrompt] || 'other';
 
     if (!home?.id || !user?.id) {
-      alert('No home profile found. Please complete onboarding first.');
+      showToast({ message: 'No home profile found. Please complete onboarding first.' });
       return;
     }
 
@@ -210,7 +211,7 @@ export default function Documents() {
 
       setDocuments(prev => [newDoc, ...prev]);
     } catch (err: any) {
-      alert('Failed to upload: ' + (err.message || 'Unknown error'));
+      showToast({ message: 'Failed to upload: ' + (err.message || 'Unknown error') });
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -523,7 +524,7 @@ export default function Documents() {
                             setDocuments(prev => prev.filter(d => d.id !== doc.id));
                           } catch (err) {
                             console.error('Failed to delete document:', err);
-                            alert('Failed to delete document. Please try again.');
+                            showToast({ message: 'Failed to delete document. Please try again.' });
                           }
                         }
                       }}
@@ -753,7 +754,7 @@ export default function Documents() {
                                 if (expandedNoteId === note.id) setExpandedNoteId(null);
                               } catch (err) {
                                 console.error('Failed to delete note:', err);
-                                alert('Failed to delete note. Please try again.');
+                                showToast({ message: 'Failed to delete note. Please try again.' });
                               }
                             }
                           }}

@@ -5,12 +5,15 @@ import { Colors } from '@/constants/theme';
 import { PageSkeleton } from '@/components/Skeleton';
 import { PLANS } from '@/services/subscriptionGate';
 import { logAdminAction } from '@/services/auditLog';
+import { showToast } from '@/components/Toast';
 import type { SubscriptionTier } from '@/types';
 
 function generateCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const randomValues = new Uint8Array(8);
+  crypto.getRandomValues(randomValues);
   let code = '';
-  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 8; i++) code += chars[randomValues[i] % chars.length];
   return code;
 }
 
@@ -49,7 +52,7 @@ export default function AdminGiftCodes() {
       setCodes(prev => [...created, ...prev]);
       setShowModal(false);
       setForm({ count: '5', tier: 'home', agent_id: '', duration_months: '12' });
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { showToast({ message: e.message }); }
     finally { setGenerating(false); }
   };
 
@@ -62,7 +65,7 @@ export default function AdminGiftCodes() {
       await logAdminAction('code.delete', 'gift_code', 'bulk', { count: deletedIds.length });
       setCodes(prev => prev.filter(c => !deletedIds.includes(c.id)));
       setSelectedIds(new Set());
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { showToast({ message: e.message }); }
   };
 
   const toggleSelectAll = () => {

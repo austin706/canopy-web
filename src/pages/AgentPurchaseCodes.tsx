@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
+import { showToast } from '@/components/Toast';
 
 /**
  * AgentPurchaseCodes — Agents gift subscriptions to clients via Stripe wholesale pricing.
@@ -103,7 +104,7 @@ export default function AgentPurchaseCodes() {
         throw new Error('No checkout URL returned');
       }
     } catch (e: any) {
-      alert('Unable to start checkout: ' + (e.message || 'Please try again.'));
+      showToast({ message: 'Unable to start checkout: ' + (e.message || 'Please try again.') });
     } finally {
       setPurchasing(false);
     }
@@ -115,7 +116,7 @@ export default function AgentPurchaseCodes() {
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
-    alert('Code copied to clipboard!');
+    showToast({ message: 'Code copied to clipboard!' });
   };
 
   const isPreset = !customMonths && DURATION_PRESETS.includes(months);

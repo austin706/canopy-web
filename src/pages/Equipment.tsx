@@ -4,12 +4,14 @@ import { useStore } from '@/store/useStore';
 import { upsertEquipment, deleteEquipment as deleteEquipApi, getEquipment, createTasks, deleteTask, getEquipmentScanGuides, getEquipmentChecklist, upsertEquipmentChecklist, saveAIGeneratedTemplates } from '@/services/supabase';
 import type { EquipmentScanGuide, EquipmentChecklist } from '@/services/supabase';
 import { getEquipmentLimit, PLANS } from '@/services/subscriptionGate';
+import UpgradeGate from '@/components/UpgradeGate';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts, getTemplateIdsForEquipmentCategory } from '@/services/taskEngine';
 import { generateCostForecast, type CostForecastItem } from '@/services/costForecast';
 import EquipmentScanner from '@/components/EquipmentScanner';
 import { PageSkeleton } from '@/components/Skeleton';
 import { Colors } from '@/constants/theme';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
+import { showToast } from '@/components/Toast';
 import { ROOF_LIFESPANS } from '@/services/taskEngine';
 import type { Equipment as EquipmentType, EquipmentCategory } from '@/types';
 
@@ -234,7 +236,7 @@ export default function Equipment() {
       setForm({ name: '', category: 'hvac', make: '', model: '', serial_number: '', install_date: '', expected_lifespan_years: '', location_in_home: '', notes: '' });
       setScanExtras({});
     } catch (err: any) {
-      alert('Failed to save equipment: ' + (err.message || 'Unknown error'));
+      showToast({ message: 'Failed to save equipment: ' + (err.message || 'Unknown error') });
     } finally { setSaving(false); }
   };
 
@@ -262,7 +264,7 @@ export default function Equipment() {
         }
       }
     } catch (err: any) {
-      alert('Failed to delete: ' + (err.message || 'Unknown error'));
+      showToast({ message: 'Failed to delete: ' + (err.message || 'Unknown error') });
     }
   };
 
@@ -334,7 +336,7 @@ export default function Equipment() {
               <button className="btn btn-ghost" onClick={() => setSelectMode(true)}>Select</button>
             )
           )}
-          <button className="btn btn-primary" onClick={() => atLimit ? alert(limitMessage) : setShowScanner(true)}>+ Add Equipment</button>
+          <button className="btn btn-primary" onClick={() => atLimit ? showToast({ message: limitMessage }) : setShowScanner(true)}>+ Add Equipment</button>
         </div>
       </div>
 
@@ -437,7 +439,7 @@ export default function Equipment() {
           {/* CTA */}
           <button
             className="btn btn-primary"
-            onClick={() => atLimit ? alert(limitMessage) : setShowScanner(true)}
+            onClick={() => atLimit ? showToast({ message: limitMessage }) : setShowScanner(true)}
             style={{ width: '100%', padding: '14px 0', fontSize: 15, marginBottom: 20 }}
           >
             + Add Equipment
@@ -664,21 +666,23 @@ export default function Equipment() {
           </div>
         )}
         <div className="grid-2">
-          {filtered.map(item => {
+          {filtered.map((item, idx) => {
             const pct = getLifespanPct(item, home);
             const isReplacement = pct !== null && pct >= 95;
             const isInspect = pct !== null && pct >= 80 && pct < 95;
+            const isLocked = limit !== null && idx >= limit;
             return (
             <div
               key={item.id}
               className="card"
-              onClick={() => selectMode ? toggleSelected(item.id) : navigate(`/equipment/${item.id}`)}
+              onClick={() => isLocked ? showToast({ message: `You have ${equipment.length} equipment items. Upgrade to Home to manage all of them.` }) : (selectMode ? toggleSelected(item.id) : navigate(`/equipment/${item.id}`))}
               style={{
-                cursor: 'pointer',
+                cursor: isLocked ? 'not-allowed' : 'pointer',
                 position: 'relative',
                 borderLeft: isReplacement ? `4px solid var(--color-error)` : isInspect ? `4px solid var(--color-warning)` : undefined,
                 outline: selectMode && selectedIds.has(item.id) ? `2px solid var(--color-copper)` : undefined,
                 transition: 'all 0.2s ease',
+                opacity: isLocked ? 0.6 : 1,
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget;
@@ -705,6 +709,23 @@ export default function Equipment() {
                 }
               }}
             >
+              {isLocked && (
+                <div style={{
+                  position: 'absolute', inset: 0, zIndex: 3,
+                  background: 'rgba(0, 0, 0, 0.4)',
+                  borderRadius: 'inherit',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 8,
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: Colors.white, fontSize: 24,
+                  }}>
+                    🔒
+                  </div>
+                </div>
+              )}
               {selectMode && (
                 <div style={{
                   position: 'absolute', top: 8, right: 8, zIndex: 2,
@@ -788,6 +809,16 @@ export default function Equipment() {
             );
           })}
         </div>
+        {limit !== null && equipment.length > limit && (
+          <UpgradeGate
+            feature="equipment"
+            currentTier={tier}
+            isLocked={true}
+            lockedMessage={`You have ${equipment.length} equipment items. Upgrade to Home to manage all of them.`}
+          >
+            <div />
+          </UpgradeGate>
+        )}
         </>
       )}
       </>
@@ -897,7 +928,7 @@ export default function Equipment() {
               setBulkDeleting(false);
               exitSelectMode();
               if (succeeded < ids.length) {
-                alert(`Deleted ${succeeded} of ${ids.length}. Some items could not be deleted.`);
+                showToast({ message: `Deleted ${succeeded} of ${ids.length}. Some items could not be deleted.` });
               }
             }}
           >

@@ -55,9 +55,36 @@ export async function sendQuote(quoteId: string): Promise<void> {
     .update({ status: 'sent', sent_at: new Date().toISOString() })
     .eq('id', quoteId);
   if (error) throw error;
+
+  // Notify the homeowner about the new quote
+  try {
+    const { data: quote } = await supabase
+      .from('quotes')
+      .select('homeowner_id, title, total_amount, pro_provider_id')
+      .eq('id', quoteId)
+      .single();
+    if (quote?.homeowner_id) {
+      const { data: provider } = await supabase.from('pro_providers').select('business_name, contact_name').eq('id', quote.pro_provider_id).single();
+      const providerName = provider?.business_name || provider?.contact_name || 'A service provider';
+      sendNotification({
+        user_id: quote.homeowner_id,
+        title: 'New Quote Received',
+        body: `${providerName} sent you a quote for "${quote.title}" — $${quote.total_amount.toFixed(2)}. Tap to review.`,
+        category: 'account_billing',
+        action_url: `/quotes/${quoteId}`,
+      }).catch(() => {});
+    }
+  } catch {}
 }
 
 export async function approveQuote(quoteId: string, notes?: string): Promise<void> {
+  // Get quote details before updating (need pro_provider_id for notification)
+  const { data: quote } = await supabase
+    .from('quotes')
+    .select('pro_provider_id, title, total_amount')
+    .eq('id', quoteId)
+    .single();
+
   const { error } = await supabase
     .from('quotes')
     .update({
@@ -67,9 +94,32 @@ export async function approveQuote(quoteId: string, notes?: string): Promise<voi
     })
     .eq('id', quoteId);
   if (error) throw error;
+
+  // Notify the pro that their quote was approved
+  if (quote?.pro_provider_id) {
+    try {
+      const { data: provider } = await supabase.from('pro_providers').select('user_id').eq('id', quote.pro_provider_id).single();
+      if (provider?.user_id) {
+        sendNotification({
+          user_id: provider.user_id,
+          title: 'Quote Approved',
+          body: `Your quote for "${quote.title}" ($${quote.total_amount.toFixed(2)}) has been approved by the homeowner.`,
+          category: 'account_billing',
+          action_url: `/quotes/${quoteId}`,
+        }).catch(() => {});
+      }
+    } catch {}
+  }
 }
 
 export async function rejectQuote(quoteId: string, reason?: string): Promise<void> {
+  // Get quote details before updating
+  const { data: quote } = await supabase
+    .from('quotes')
+    .select('pro_provider_id, title')
+    .eq('id', quoteId)
+    .single();
+
   const { error } = await supabase
     .from('quotes')
     .update({
@@ -79,6 +129,22 @@ export async function rejectQuote(quoteId: string, reason?: string): Promise<voi
     })
     .eq('id', quoteId);
   if (error) throw error;
+
+  // Notify the pro that their quote was rejected
+  if (quote?.pro_provider_id) {
+    try {
+      const { data: provider } = await supabase.from('pro_providers').select('user_id').eq('id', quote.pro_provider_id).single();
+      if (provider?.user_id) {
+        sendNotification({
+          user_id: provider.user_id,
+          title: 'Quote Declined',
+          body: `Your quote for "${quote.title}" was not approved.${reason ? ` Reason: ${reason}` : ''}`,
+          category: 'account_billing',
+          action_url: `/quotes/${quoteId}`,
+        }).catch(() => {});
+      }
+    } catch {}
+  }
 }
 
 export async function convertQuoteToInvoice(quoteId: string, dueDate: string): Promise<Invoice> {
@@ -300,6 +366,38 @@ export async function recordManualPayment(
       .eq('id', invoiceId)
       .eq('status', 'draft');
   }
+
+  // Notify both parties about the payment
+  try {
+    const { data: inv } = await supabase.from('invoices').select('homeowner_id, pro_provider_id, title').eq('id', invoiceId).single();
+    if (inv) {
+      const isPaid = invoice && totalPaid >= invoice.total_amount;
+      const methodLabel = paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1);
+      // Notify homeowner of payment confirmation
+      if (inv.homeowner_id) {
+        sendNotification({
+          user_id: inv.homeowner_id,
+          title: isPaid ? 'Invoice Paid in Full' : 'Payment Recorded',
+          body: `${methodLabel} payment of $${amount.toFixed(2)} recorded for "${inv.title}".${isPaid ? ' This invoice is now paid in full.' : ''}`,
+          category: 'account_billing',
+          action_url: `/invoices/${invoiceId}`,
+        }).catch(() => {});
+      }
+      // Notify pro of payment received
+      if (inv.pro_provider_id) {
+        const { data: provider } = await supabase.from('pro_providers').select('user_id').eq('id', inv.pro_provider_id).single();
+        if (provider?.user_id) {
+          sendNotification({
+            user_id: provider.user_id,
+            title: 'Payment Received',
+            body: `${methodLabel} payment of $${amount.toFixed(2)} received for "${inv.title}".${isPaid ? ' Invoice is now fully paid.' : ''}`,
+            category: 'account_billing',
+            action_url: `/invoices/${invoiceId}`,
+          }).catch(() => {});
+        }
+      }
+    }
+  } catch {}
 
   return payment;
 }

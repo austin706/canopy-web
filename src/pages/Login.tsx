@@ -17,6 +17,7 @@ export default function Login() {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const isNewSignup = searchParams.get('signup') === 'success';
+  const isEmailVerified = searchParams.get('verified') === 'true';
 
   // On mount: if the Zustand store says logged-out, clear any stale
   // Supabase localStorage tokens. If the store says logged-in, redirect
@@ -155,6 +156,12 @@ export default function Login() {
           {isNewSignup && (
             <div style={{ background: 'var(--color-success-muted, #4CAF5020)', color: 'var(--color-success)', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
               <strong>Account created!</strong> Check your email for a verification link — verify your email to sign in.
+            </div>
+          )}
+
+          {isEmailVerified && !isNewSignup && (
+            <div style={{ background: 'var(--color-success-muted, #4CAF5020)', color: 'var(--color-success)', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+              <strong>Email verified!</strong> You can now sign in to your account.
             </div>
           )}
 

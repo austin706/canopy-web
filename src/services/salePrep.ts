@@ -44,6 +44,16 @@ export async function activateSalePrep(
     .select()
     .single();
   if (error) throw error;
+
+  // Auto-notify the linked agent
+  try {
+    const { data: home } = await supabase.from('homes').select('agent_id, address, city').eq('id', homeId).single();
+    if (home?.agent_id) {
+      const addr = home.address ? `${home.address}, ${home.city}` : 'their home';
+      await notifyAgentSalePrep(userId, home.agent_id, addr);
+    }
+  } catch (e) { logger.warn('Failed to auto-notify agent on sale prep activation:', e); }
+
   return data;
 }
 
@@ -135,6 +145,13 @@ export async function updateTargetDate(prepId: string, date: string): Promise<vo
 
 /** Mark sale prep as completed or cancelled */
 export async function closeSalePrep(prepId: string, status: 'completed' | 'cancelled'): Promise<void> {
+  // Get prep details before closing for agent notification
+  const { data: prep } = await supabase
+    .from('home_sale_prep')
+    .select('home_id, user_id')
+    .eq('id', prepId)
+    .single();
+
   const { error } = await supabase
     .from('home_sale_prep')
     .update({
@@ -143,6 +160,36 @@ export async function closeSalePrep(prepId: string, status: 'completed' | 'cance
     })
     .eq('id', prepId);
   if (error) throw error;
+
+  // Notify the linked agent
+  if (prep?.home_id) {
+    try {
+      const { data: home } = await supabase.from('homes').select('agent_id, address, city').eq('id', prep.home_id).single();
+      if (home?.agent_id) {
+        const { data: agent } = await supabase.from('agents').select('email').eq('id', home.agent_id).single();
+        const addr = home.address ? `${home.address}, ${home.city}` : 'a home';
+        const title = status === 'completed' ? 'Sale Prep Complete' : 'Sale Prep Cancelled';
+        const body = status === 'completed'
+          ? `The sale prep checklist for ${addr} has been marked as complete. The home is ready to list.`
+          : `Sale prep for ${addr} has been cancelled.`;
+
+        if (agent?.email) {
+          // Resolve agent profile for in-app notification
+          const { data: agentProfile } = await supabase.from('profiles').select('id').eq('email', agent.email).single();
+          sendDirectEmailNotification({
+            recipient_email: agent.email,
+            user_id: agentProfile?.id || undefined,
+            title,
+            body,
+            subject: title,
+            category: 'agent',
+            action_url: '/agent-portal',
+            action_label: 'View in Canopy',
+          }).catch(() => {});
+        }
+      }
+    } catch (e) { logger.warn('Failed to notify agent of sale prep close:', e); }
+  }
 }
 
 /** Notify the homeowner's linked agent that sale prep has been activated */

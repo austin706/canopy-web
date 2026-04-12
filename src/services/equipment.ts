@@ -2,8 +2,32 @@
 // Equipment Domain
 // ===============================================================
 import { supabase } from './supabaseClient';
+import { sendNotification } from './notifications';
 import type { Equipment } from '@/types';
 import { matchAffiliateLink } from './admin';
+
+/** Notify other home members about equipment changes */
+async function notifyEquipmentChange(homeId: string, excludeUserId: string, title: string, body: string) {
+  try {
+    const { data: home } = await supabase.from('homes').select('user_id').eq('id', homeId).single();
+    const { data: members } = await supabase
+      .from('home_members')
+      .select('user_id')
+      .eq('home_id', homeId)
+      .eq('invite_status', 'accepted')
+      .not('user_id', 'is', null);
+
+    const userIds = new Set<string>();
+    if (home?.user_id && home.user_id !== excludeUserId) userIds.add(home.user_id);
+    for (const m of members || []) {
+      if (m.user_id && m.user_id !== excludeUserId) userIds.add(m.user_id);
+    }
+
+    for (const uid of userIds) {
+      sendNotification({ user_id: uid, title, body, category: 'equipment', action_url: '/dashboard' }).catch(() => {});
+    }
+  } catch {}
+}
 
 // --- Equipment ---
 
@@ -14,14 +38,33 @@ export const getEquipment = async (homeId: string) => {
 };
 
 export const upsertEquipment = async (equipment: Partial<Equipment>) => {
+  const isNew = !equipment.id;
   const { data, error } = await supabase.from('equipment').upsert(equipment).select().single();
   if (error) throw error;
+
+  // Notify other home members about new equipment (skip updates to avoid noise)
+  if (isNew && data?.home_id) {
+    notifyEquipmentChange(data.home_id, '',
+      'Equipment Added',
+      `"${data.name || data.category || 'New equipment'}" has been added to your home.`);
+  }
+
   return data;
 };
 
 export const deleteEquipment = async (id: string) => {
+  // Get equipment details before deleting for notification
+  const { data: equip } = await supabase.from('equipment').select('home_id, name, category').eq('id', id).single();
+
   const { error } = await supabase.from('equipment').delete().eq('id', id);
   if (error) throw error;
+
+  // Notify other home members
+  if (equip?.home_id) {
+    notifyEquipmentChange(equip.home_id, '',
+      'Equipment Removed',
+      `"${equip.name || equip.category || 'Equipment'}" has been removed from your home.`);
+  }
 };
 
 // --- Equipment Consumables (Migration 041) ---

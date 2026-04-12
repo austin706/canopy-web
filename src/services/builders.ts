@@ -2,8 +2,8 @@
 // Builders Domain
 // ===============================================================
 import { supabase } from './supabaseClient';
+import { sendNotification, sendDirectEmailNotification } from './notifications';
 import logger from '@/utils/logger';
-import { sendDirectEmailNotification } from './notifications';
 
 export interface BuilderApplication {
   id: string;
@@ -78,6 +78,38 @@ export const submitBuilderApplication = async (
     .select()
     .single();
   if (error) throw error;
+
+  // Send confirmation email to the applicant
+  const email = (app as Record<string, unknown>).contact_email as string;
+  const name = (app as Record<string, unknown>).company_name as string || 'your company';
+  if (email) {
+    try {
+      await sendDirectEmailNotification({
+        recipient_email: email,
+        title: 'Application Received',
+        body: `Thanks for submitting ${name}'s builder application to Canopy! We'll review it and get back to you soon.`,
+        subject: 'Canopy Builder Application Received',
+        category: 'general',
+        action_url: 'https://canopyhome.app',
+        action_label: 'Visit Canopy',
+      });
+    } catch {}
+  }
+
+  // Notify admins of new application
+  try {
+    const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin');
+    for (const admin of admins || []) {
+      sendNotification({
+        user_id: admin.id,
+        title: 'New Builder Application',
+        body: `${name} has submitted a builder application. Review it in the admin panel.`,
+        category: 'general',
+        action_url: '/admin/builders',
+      }).catch(() => {});
+    }
+  } catch {}
+
   return data as BuilderApplication;
 };
 

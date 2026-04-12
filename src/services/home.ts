@@ -2,6 +2,7 @@
 // Home & Property Management Domain
 // ===============================================================
 import { supabase } from './supabaseClient';
+import { sendNotification } from './notifications';
 import type { Home } from '@/types';
 
 // --- Home Profile ---
@@ -93,6 +94,22 @@ export const createHomeJoinRequest = async (
     .select()
     .single();
   if (error) throw error;
+
+  // Notify the home owner (in-app + email via cron queue)
+  try {
+    await sendNotification({
+      user_id: ownerId,
+      title: 'Home Access Request',
+      body: message || 'Someone has requested to join your home on Canopy.',
+      category: 'home_join_request',
+      action_url: '/dashboard',
+      data: { request_id: data.id, requester_id: requesterId },
+    });
+  } catch (notifErr) {
+    // Don't fail the join request if notification fails
+    console.warn('Failed to send join request notification:', notifErr);
+  }
+
   return data;
 };
 
@@ -142,16 +159,47 @@ export const approveHomeJoinRequest = async (requestId: string) => {
     .eq('id', requestId);
   if (updErr) throw updErr;
 
+  // Notify the requester that they've been approved
+  try {
+    await sendNotification({
+      user_id: request.requester_id,
+      title: 'Home Access Approved',
+      body: 'Your request to join a home on Canopy has been approved! You now have access.',
+      category: 'home_join_approved',
+      action_url: '/dashboard',
+    });
+  } catch {}
+
   return { home_id: request.home_id, user_id: request.requester_id };
 };
 
 /** Deny a join request */
 export const denyHomeJoinRequest = async (requestId: string) => {
+  // Get request details before denying (need requester_id for notification)
+  const { data: request } = await supabase
+    .from('home_join_requests')
+    .select('requester_id')
+    .eq('id', requestId)
+    .single();
+
   const { error } = await supabase
     .from('home_join_requests')
     .update({ status: 'denied', responded_at: new Date().toISOString() })
     .eq('id', requestId);
   if (error) throw error;
+
+  // Notify the requester that their request was denied
+  if (request) {
+    try {
+      await sendNotification({
+        user_id: request.requester_id,
+        title: 'Home Access Request Update',
+        body: 'Your request to join a home was not approved. Contact support@canopyhome.app if you need help.',
+        category: 'home_join_denied',
+        action_url: '/support',
+      });
+    } catch {}
+  }
 };
 
 // --- Additional Structures ---
@@ -281,10 +329,34 @@ export const inviteHomeMember = async (homeId: string, email: string, role: 'edi
     .single();
 
   if (error) throw error;
+
+  // Notify the invitee
+  try {
+    const { data: home } = await supabase.from('homes').select('address, city').eq('id', homeId).single();
+    const addr = home ? `${home.address}, ${home.city}` : 'a home';
+    if (existingProfile) {
+      await sendNotification({
+        user_id: existingProfile.id,
+        title: 'Home Invitation',
+        body: `You've been invited to join ${addr} on Canopy as ${role === 'editor' ? 'an editor' : 'a viewer'}.`,
+        category: 'home_invite',
+        action_url: '/dashboard',
+      });
+    }
+    // TODO: sendDirectEmailNotification for users without accounts
+  } catch {}
+
   return data;
 };
 
 export const acceptHomeInvite = async (memberId: string, userId: string) => {
+  // Get invite details before updating (need invited_by for notification)
+  const { data: invite } = await supabase
+    .from('home_members')
+    .select('invited_by, home_id')
+    .eq('id', memberId)
+    .single();
+
   const { data, error } = await supabase
     .from('home_members')
     .update({
@@ -297,10 +369,33 @@ export const acceptHomeInvite = async (memberId: string, userId: string) => {
     .single();
 
   if (error) throw error;
+
+  // Notify the person who invited them
+  if (invite?.invited_by) {
+    try {
+      const { data: accepter } = await supabase.from('profiles').select('full_name, email').eq('id', userId).single();
+      const name = accepter?.full_name || accepter?.email || 'Someone';
+      await sendNotification({
+        user_id: invite.invited_by,
+        title: 'Invitation Accepted',
+        body: `${name} accepted your invitation to join your home on Canopy.`,
+        category: 'home_invite',
+        action_url: '/dashboard',
+      });
+    } catch {}
+  }
+
   return data;
 };
 
 export const declineHomeInvite = async (memberId: string) => {
+  // Get invite details before declining
+  const { data: invite } = await supabase
+    .from('home_members')
+    .select('invited_by, invite_email, user_id')
+    .eq('id', memberId)
+    .single();
+
   const { error } = await supabase
     .from('home_members')
     .update({
@@ -310,15 +405,51 @@ export const declineHomeInvite = async (memberId: string) => {
     .eq('id', memberId);
 
   if (error) throw error;
+
+  // Notify the inviter
+  if (invite?.invited_by) {
+    try {
+      const declinerName = invite.invite_email || 'The invitee';
+      await sendNotification({
+        user_id: invite.invited_by,
+        title: 'Invitation Declined',
+        body: `${declinerName} declined your home invitation.`,
+        category: 'home_invite',
+        action_url: '/dashboard',
+      });
+    } catch {}
+  }
 };
 
 export const removeHomeMember = async (memberId: string) => {
+  // Get member details before removing (need user_id for notification)
+  const { data: member } = await supabase
+    .from('home_members')
+    .select('user_id, home_id')
+    .eq('id', memberId)
+    .single();
+
   const { error } = await supabase
     .from('home_members')
     .delete()
     .eq('id', memberId);
 
   if (error) throw error;
+
+  // Notify the removed member
+  if (member?.user_id) {
+    try {
+      const { data: home } = await supabase.from('homes').select('address, city').eq('id', member.home_id).single();
+      const addr = home ? `${home.address}, ${home.city}` : 'a home';
+      await sendNotification({
+        user_id: member.user_id,
+        title: 'Home Access Removed',
+        body: `Your access to ${addr} has been removed. Contact the homeowner if you think this was a mistake.`,
+        category: 'home_invite',
+        action_url: '/dashboard',
+      });
+    } catch {}
+  }
 };
 
 export const updateHomeMemberRole = async (memberId: string, role: 'owner' | 'editor' | 'viewer') => {
@@ -333,6 +464,20 @@ export const updateHomeMemberRole = async (memberId: string, role: 'owner' | 'ed
     .single();
 
   if (error) throw error;
+
+  // Notify the member about their role change
+  if (data?.user_id) {
+    try {
+      await sendNotification({
+        user_id: data.user_id,
+        title: 'Home Role Updated',
+        body: `Your role has been changed to ${role}. ${role === 'editor' ? 'You can now edit home details and tasks.' : role === 'owner' ? 'You now have full owner access.' : 'You can view home details and tasks.'}`,
+        category: 'home_invite',
+        action_url: '/dashboard',
+      });
+    } catch {}
+  }
+
   return data;
 };
 

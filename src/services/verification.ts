@@ -2,6 +2,7 @@
 // Ownership Verification Domain
 // ===============================================================
 import { supabase } from './supabaseClient';
+import { sendNotification } from './notifications';
 import type { Home } from '@/types';
 import { uploadPhoto } from './photos';
 
@@ -37,6 +38,34 @@ export const submitOwnershipVerification = async (
     .select()
     .single();
   if (error) throw error;
+
+  // Notify the homeowner their submission was received
+  if (data?.user_id) {
+    try {
+      await sendNotification({
+        user_id: data.user_id,
+        title: 'Verification Submitted',
+        body: 'Your ownership verification documents have been submitted and are under review. We\'ll notify you once reviewed.',
+        category: 'verification',
+        action_url: '/dashboard',
+      });
+    } catch {}
+  }
+
+  // Notify admins of new submission
+  try {
+    const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin');
+    for (const admin of admins || []) {
+      await sendNotification({
+        user_id: admin.id,
+        title: 'New Verification Request',
+        body: `A homeowner has submitted ownership verification documents for ${data?.address || 'a property'}. Review needed.`,
+        category: 'verification',
+        action_url: '/admin/verification',
+      });
+    }
+  } catch {}
+
   return data;
 };
 
@@ -83,6 +112,30 @@ export const reviewOwnershipVerification = async (
     .select()
     .single();
   if (error) throw error;
+
+  // Notify the homeowner of the decision
+  if (data?.user_id) {
+    try {
+      if (decision === 'verified') {
+        await sendNotification({
+          user_id: data.user_id,
+          title: 'Ownership Verified',
+          body: 'Your ownership verification has been approved! Your home now has a verified badge.',
+          category: 'verification',
+          action_url: '/dashboard',
+        });
+      } else {
+        await sendNotification({
+          user_id: data.user_id,
+          title: 'Verification Update',
+          body: `Your ownership verification was not approved.${notes ? ` Reason: ${notes}` : ''} You can resubmit with additional documentation.`,
+          category: 'verification',
+          action_url: '/dashboard',
+        });
+      }
+    } catch {}
+  }
+
   return data;
 };
 

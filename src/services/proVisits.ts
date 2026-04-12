@@ -275,6 +275,22 @@ export async function startVisit(visitId: string): Promise<void> {
     })
     .eq('id', visitId);
   if (error) throw error;
+
+  // Notify homeowner that the visit has started
+  try {
+    const { data: visit } = await supabase.from('pro_monthly_visits').select('homeowner_id, pro_provider_id').eq('id', visitId).single();
+    if (visit?.homeowner_id) {
+      const { data: provider } = await supabase.from('pro_providers').select('business_name, contact_name').eq('id', visit.pro_provider_id).single();
+      const providerName = provider?.business_name || provider?.contact_name || 'Your Canopy tech';
+      sendNotification({
+        user_id: visit.homeowner_id,
+        title: 'Visit In Progress',
+        body: `${providerName} has started your home maintenance visit.`,
+        category: 'pro_service',
+        action_url: '/pro-services',
+      }).catch(() => {});
+    }
+  } catch {}
 }
 
 export async function completeVisit(

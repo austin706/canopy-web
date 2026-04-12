@@ -2,6 +2,7 @@
 // Agents Domain (Agent Linking, Gift Codes)
 // ===============================================================
 import { supabase } from './supabaseClient';
+import { sendNotification } from './notifications';
 
 // Security: Verify that the current user owns the agent record (S6)
 export const verifyAgentOwnership = async (agentId: string): Promise<void> => {
@@ -70,6 +71,19 @@ export const redeemGiftCode = async (code: string, userId: string) => {
     const { data } = await supabase.from('agents').select('*').eq('id', gc.agent_id).single();
     agent = data;
   }
+
+  // Notify the user of their new subscription
+  try {
+    const tierLabel = gc.tier === 'home' ? 'Canopy Home' : gc.tier === 'pro' ? 'Canopy Pro' : gc.tier === 'pro_plus' ? 'Canopy Pro+' : gc.tier;
+    await sendNotification({
+      user_id: userId,
+      title: 'Welcome to Canopy!',
+      body: `Your ${tierLabel} subscription is now active${agent ? `, courtesy of your real estate agent` : ''}. Explore your dashboard to get started with smart home maintenance.`,
+      category: 'account_billing',
+      action_url: '/dashboard',
+    });
+  } catch {}
+
   return { success: true, tier: gc.tier, expiresAt: newExpiry.toISOString(), agent };
 };
 

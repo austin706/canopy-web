@@ -142,6 +142,13 @@ export async function declineTransfer(transferId: string): Promise<void> {
 
 /** Cancel a pending transfer (by the seller) */
 export async function cancelTransfer(transferId: string): Promise<void> {
+  // Get transfer details before cancelling (need to_user_id/to_email for notification)
+  const { data: transfer } = await supabase
+    .from('home_transfers')
+    .select('to_user_id, to_email, home_id')
+    .eq('id', transferId)
+    .single();
+
   const { error } = await supabase
     .from('home_transfers')
     .update({
@@ -150,6 +157,30 @@ export async function cancelTransfer(transferId: string): Promise<void> {
     })
     .eq('id', transferId);
   if (error) throw error;
+
+  // Notify the buyer that the transfer was cancelled
+  if (transfer) {
+    try {
+      const { data: home } = await supabase.from('homes').select('address, city').eq('id', transfer.home_id).single();
+      const addr = home ? `${home.address}, ${home.city}` : 'a home';
+      if (transfer.to_user_id) {
+        sendNotification({
+          user_id: transfer.to_user_id,
+          title: 'Transfer Cancelled',
+          body: `The home record transfer for ${addr} has been cancelled by the seller.`,
+          category: 'general',
+          action_url: '/dashboard',
+        }).catch(() => {});
+      } else if (transfer.to_email) {
+        sendDirectEmailNotification({
+          recipient_email: transfer.to_email,
+          title: 'Transfer Cancelled',
+          body: `The home record transfer for ${addr} has been cancelled by the seller.`,
+          category: 'general',
+        }).catch(() => {});
+      }
+    } catch (e) { logger.warn('Failed to send cancel notification:', e); }
+  }
 }
 
 /** Notify the buyer via in-app notification + the existing email system */

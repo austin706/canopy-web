@@ -188,6 +188,12 @@ export default function App() {
         sentrySetUser(null);
       }
 
+      if (event === 'PASSWORD_RECOVERY' && session?.user) {
+        // Recovery token detected — redirect to reset form, don't load dashboard
+        window.location.replace('/reset-password');
+        return;
+      }
+
       if (event === 'SIGNED_IN' && session?.user) {
         // User just signed in — load full profile and home data
         try {
@@ -273,6 +279,12 @@ export default function App() {
       }
 
       if (event === 'INITIAL_SESSION' && session?.user) {
+        // If this is a password recovery session, redirect to reset page — don't load dashboard
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        if (hashParams.get('type') === 'recovery' || window.location.pathname === '/reset-password') {
+          return; // Let ResetPassword component handle the session
+        }
+
         // Initial session detected (e.g., magic link from URL hash)
         // Load profile and home data like SIGNED_IN
         try {

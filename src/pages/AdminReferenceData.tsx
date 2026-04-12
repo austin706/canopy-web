@@ -254,7 +254,7 @@ export default function AdminReferenceData() {
             <span style={{ fontWeight: 600, fontSize: 14 }}>{templates.length} templates</span>
             <button
               className="btn btn-primary btn-sm"
-              onClick={() => setEditingTemplate({ title: '', category: 'hvac', priority: 'medium', frequency: 'annual', applicable_months: [1,2,3,4,5,6,7,8,9,10,11,12], regions: ['all'], active: true, sort_order: templates.length + 1 })}
+              onClick={() => setEditingTemplate({ title: '', category: 'hvac', priority: 'medium', frequency: 'annual', applicable_months: [1,2,3,4,5,6,7,8,9,10,11,12], regions: ['all'], active: true, sort_order: templates.length + 1, service_type: 'diy', pro_recommended: false })}
             >
               + Add Template
             </button>
@@ -321,14 +321,27 @@ export default function AdminReferenceData() {
                   <input className="form-input" type="number" value={editingTemplate.sort_order || 0} onChange={e => setEditingTemplate({ ...editingTemplate, sort_order: parseInt(e.target.value) || 0 })} />
                 </div>
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Service Type</label>
+                  <select className="form-select" value={editingTemplate.service_type || 'diy'} onChange={e => setEditingTemplate({ ...editingTemplate, service_type: e.target.value as any })}>
+                    <option value="diy">DIY — Homeowner handles</option>
+                    <option value="canopy_visit">Canopy Visit — Bimonthly tech</option>
+                    <option value="canopy_pro">Canopy Pro — Certified Pro dispatch</option>
+                    <option value="licensed_pro">Licensed Pro — Licensed contractor</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'end', paddingBottom: 4 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                    <input type="checkbox" checked={editingTemplate.pro_recommended || false} onChange={e => setEditingTemplate({ ...editingTemplate, pro_recommended: e.target.checked })} />
+                    Pro Recommended
+                  </label>
+                </div>
+              </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
                   <input type="checkbox" checked={editingTemplate.active !== false} onChange={e => setEditingTemplate({ ...editingTemplate, active: e.target.checked })} />
                   Active
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                  <input type="checkbox" checked={editingTemplate.pro_required || false} onChange={e => setEditingTemplate({ ...editingTemplate, pro_required: e.target.checked })} />
-                  Pro Required
                 </label>
                 <div style={{ flex: 1 }} />
                 <button className="btn btn-ghost btn-sm" onClick={() => setEditingTemplate(null)}>Cancel</button>
@@ -345,6 +358,7 @@ export default function AdminReferenceData() {
                 <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
                   <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Title</th>
                   <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Category</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Service Type</th>
                   <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Priority</th>
                   <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Frequency</th>
                   <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: 12, fontWeight: 600 }}>Active</th>
@@ -356,6 +370,15 @@ export default function AdminReferenceData() {
                   <tr key={t.id} style={{ borderBottom: '1px solid var(--color-border)', opacity: t.active ? 1 : 0.5 }}>
                     <td style={{ padding: '10px 16px', fontSize: 13, fontWeight: 600 }}>{t.title}</td>
                     <td style={{ padding: '10px 16px', fontSize: 12 }}>{t.category}</td>
+                    <td style={{ padding: '10px 16px', fontSize: 12 }}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
+                        background: t.service_type === 'canopy_visit' ? '#E8F0E4' : t.service_type === 'canopy_pro' ? '#FDF0E6' : t.service_type === 'licensed_pro' ? '#FDE8E8' : '#F0F0F0',
+                        color: t.service_type === 'canopy_visit' ? '#5A7A4A' : t.service_type === 'canopy_pro' ? '#A0623A' : t.service_type === 'licensed_pro' ? '#A04040' : '#666',
+                      }}>
+                        {t.service_type === 'canopy_visit' ? 'Canopy Visit' : t.service_type === 'canopy_pro' ? 'Canopy Pro' : t.service_type === 'licensed_pro' ? 'Licensed Pro' : 'DIY'}
+                      </span>
+                    </td>
                     <td style={{ padding: '10px 16px', fontSize: 12 }}>
                       <span style={{ color: t.priority === 'high' ? Colors.error : t.priority === 'medium' ? Colors.warning : Colors.medGray, fontWeight: 600 }}>
                         {t.priority}
@@ -375,7 +398,7 @@ export default function AdminReferenceData() {
                 ))}
                 {templates.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ padding: 32, textAlign: 'center', fontSize: 13, color: Colors.medGray }}>
+                    <td colSpan={7} style={{ padding: 32, textAlign: 'center', fontSize: 13, color: Colors.medGray }}>
                       No task templates in database yet. The app still uses hardcoded templates as fallback. Add templates here to override them.
                     </td>
                   </tr>

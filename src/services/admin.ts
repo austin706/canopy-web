@@ -202,7 +202,8 @@ export interface TaskTemplateDB {
   estimated_cost_high: number | null;
   regions: string[];
   requires_feature: string | null;
-  pro_required: boolean;
+  pro_recommended: boolean;
+  service_type: 'diy' | 'canopy_visit' | 'canopy_pro' | 'licensed_pro';
   is_weather_triggered: boolean;
   sort_order: number;
   active: boolean;

@@ -163,7 +163,7 @@ function dbTemplateToInternal(db: TaskTemplateDB): TaskTemplate {
     items_to_have_on_hand: db.items_to_have_on_hand ?? undefined,
     applicable_regions: db.regions as any,
     requires_home_feature: db.requires_feature ?? undefined,
-    pro_responsible: db.pro_required || false,
+    pro_responsible: db.pro_recommended || false,
   };
 }
 

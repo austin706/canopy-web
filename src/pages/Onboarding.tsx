@@ -1111,7 +1111,7 @@ export default function Onboarding() {
                   address: details.address || addressForm.address,
                   city: details.city || addressForm.city,
                   state: details.state || addressForm.state,
-                  zip_code: details.zipCode || addressForm.zip_code,
+                  zip_code: (details.zipCode || addressForm.zip_code).split('-')[0],
                 });
               }}
               placeholder="Start typing your address…"

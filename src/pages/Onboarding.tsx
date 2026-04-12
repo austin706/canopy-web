@@ -112,6 +112,7 @@ export default function Onboarding() {
 
   // Address claim state
   const [showClaimModal, setShowClaimModal] = useState(false);
+  const [showOwnHomeModal, setShowOwnHomeModal] = useState(false);
   const [claimInfo, setClaimInfo] = useState<{ homeId: string; ownerId: string } | null>(null);
   const [joinRequestSent, setJoinRequestSent] = useState(false);
 
@@ -490,7 +491,7 @@ export default function Onboarding() {
       ...(selectedPlaceId && { google_place_id: selectedPlaceId }),
     };
 
-    // Check if this property already exists
+    // Check if this property already exists (either owned by this user or another)
     try {
       const match = await findExistingProperty(
         verified?.normalizedAddress || '',
@@ -500,10 +501,18 @@ export default function Onboarding() {
         user.id,
         selectedPlaceId || undefined,
       );
-      if (match.found && match.homeId && match.ownerId) {
-        setClaimInfo({ homeId: match.homeId, ownerId: match.ownerId });
-        setShowClaimModal(true);
-        return;
+      if (match.found && match.homeId) {
+        if (match.isOwnHome) {
+          // Same user already has this address — block with friendly message
+          setShowOwnHomeModal(true);
+          return;
+        }
+        if (match.ownerId) {
+          // Different user owns this address — offer join request
+          setClaimInfo({ homeId: match.homeId, ownerId: match.ownerId });
+          setShowClaimModal(true);
+          return;
+        }
       }
     } catch (err) {
       console.error('Duplicate address check failed:', err);
@@ -1349,6 +1358,46 @@ export default function Onboarding() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== Own Home Duplicate Modal ===== */}
+      {showOwnHomeModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 9999, padding: 20,
+        }}>
+          <div style={{
+            background: 'var(--color-card-background)', borderRadius: 16, padding: 32, maxWidth: 440, width: '100%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <span style={{ fontSize: 48 }}>&#x2705;</span>
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
+              You Already Have This Home
+            </h3>
+            <p style={{ color: Colors.medGray, fontSize: 14, lineHeight: 1.6, textAlign: 'center', marginBottom: 24 }}>
+              <strong>{addressForm.address}, {addressForm.city}</strong> is already in your account. You can view and manage it from your dashboard.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                onClick={() => { setShowOwnHomeModal(false); navigate('/'); }}
+              >
+                Go to Dashboard
+              </button>
+              <button
+                className="btn btn-ghost"
+                style={{ width: '100%', fontSize: 13, color: Colors.medGray }}
+                onClick={() => setShowOwnHomeModal(false)}
+              >
+                Enter a Different Address
+              </button>
+            </div>
           </div>
         </div>
       )}

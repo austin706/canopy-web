@@ -83,6 +83,7 @@ export default function HomeDetails() {
 
   // Duplicate address detection — prompt to join instead of creating a new home
   const [showClaimModal, setShowClaimModal] = useState(false);
+  const [showOwnHomeModal, setShowOwnHomeModal] = useState(false);
   const [claimInfo, setClaimInfo] = useState<{ homeId: string; ownerId: string } | null>(null);
   const [joinRequesting, setJoinRequesting] = useState(false);
   const [joinRequestSent, setJoinRequestSent] = useState(false);
@@ -167,11 +168,18 @@ export default function HomeDetails() {
             user.id,
             selectedPlaceId || undefined,
           );
-          if (match.found && match.homeId && match.ownerId) {
-            setClaimInfo({ homeId: match.homeId, ownerId: match.ownerId });
-            setShowClaimModal(true);
-            setSaving(false);
-            return;
+          if (match.found && match.homeId) {
+            if (match.isOwnHome) {
+              setShowOwnHomeModal(true);
+              setSaving(false);
+              return;
+            }
+            if (match.ownerId) {
+              setClaimInfo({ homeId: match.homeId, ownerId: match.ownerId });
+              setShowClaimModal(true);
+              setSaving(false);
+              return;
+            }
           }
         } catch {
           // Non-fatal — proceed with save if check fails
@@ -997,6 +1005,27 @@ export default function HomeDetails() {
           <HomeQRCode />
         </div>
       ) : null}
+
+      {/* Own Home Duplicate Modal */}
+      {showOwnHomeModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="card" style={{ maxWidth: 440, width: '100%', padding: 28, textAlign: 'center' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: `${Colors.copper}20`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, marginBottom: 12 }}>🏠</div>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>You Already Have This Home</h3>
+            <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 20 }}>
+              This address is already in your account. You can view and manage it from your dashboard.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-primary" onClick={() => { setShowOwnHomeModal(false); navigate('/'); }} style={{ flex: 1 }}>
+                Go to Dashboard
+              </button>
+              <button className="btn" onClick={() => setShowOwnHomeModal(false)} style={{ flex: 1, background: Colors.cream, color: Colors.charcoal, border: `1px solid ${Colors.lightGray}` }}>
+                Enter a Different Address
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Duplicate Address / Join Home Modal */}
       {showClaimModal && claimInfo && (

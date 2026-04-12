@@ -106,46 +106,47 @@ export async function findExistingProperty(
   rawCity: string,
   rawState: string,
   rawZip: string,
-  excludeUserId?: string,
+  currentUserId?: string,
   googlePlaceId?: string,
-): Promise<{ found: boolean; homeId?: string; ownerId?: string }> {
+): Promise<{ found: boolean; homeId?: string; ownerId?: string; isOwnHome?: boolean }> {
+
+  // Helper: check a query result and return a match with ownership info
+  const checkResult = (data: { id: string; user_id: string }[] | null) => {
+    if (data && data.length > 0) {
+      const isOwnHome = !!currentUserId && data[0].user_id === currentUserId;
+      return { found: true, homeId: data[0].id, ownerId: data[0].user_id, isOwnHome };
+    }
+    return null;
+  };
 
   // Strategy 0: Google Places ID is the canonical property identity.
   // When present, this is deterministic — the same physical property
   // always resolves to the same place_id.
   if (googlePlaceId) {
-    let q = supabase
+    const { data } = await supabase
       .from('homes')
       .select('id, user_id')
       .eq('google_place_id', googlePlaceId)
       .limit(1);
-    if (excludeUserId) q = q.neq('user_id', excludeUserId);
-
-    const { data } = await q;
-    if (data && data.length > 0) {
-      return { found: true, homeId: data[0].id, ownerId: data[0].user_id };
-    }
+    const match = checkResult(data);
+    if (match) return match;
   }
 
   // Strategy 1: Exact match on normalized_address
   if (normalizedAddress) {
-    let q = supabase
+    const { data } = await supabase
       .from('homes')
       .select('id, user_id')
       .eq('normalized_address', normalizedAddress)
       .limit(1);
-    if (excludeUserId) q = q.neq('user_id', excludeUserId);
-
-    const { data } = await q;
-    if (data && data.length > 0) {
-      return { found: true, homeId: data[0].id, ownerId: data[0].user_id };
-    }
+    const match = checkResult(data);
+    if (match) return match;
   }
 
   // Strategy 2: Lat/lng proximity (~30 meters ≈ 0.0003 degrees)
   if (latitude && longitude) {
     const PROXIMITY_DEGREES = 0.0003; // ~30 meters
-    let q = supabase
+    const { data } = await supabase
       .from('homes')
       .select('id, user_id')
       .gte('latitude', latitude - PROXIMITY_DEGREES)
@@ -153,16 +154,12 @@ export async function findExistingProperty(
       .gte('longitude', longitude - PROXIMITY_DEGREES)
       .lte('longitude', longitude + PROXIMITY_DEGREES)
       .limit(1);
-    if (excludeUserId) q = q.neq('user_id', excludeUserId);
-
-    const { data } = await q;
-    if (data && data.length > 0) {
-      return { found: true, homeId: data[0].id, ownerId: data[0].user_id };
-    }
+    const match = checkResult(data);
+    if (match) return match;
   }
 
   // Strategy 3: Fallback ilike match on raw address (handles pre-existing homes without normalization)
-  let q = supabase
+  const { data } = await supabase
     .from('homes')
     .select('id, user_id')
     .ilike('address', rawAddress.trim())
@@ -170,12 +167,8 @@ export async function findExistingProperty(
     .ilike('state', rawState.trim())
     .eq('zip_code', rawZip.trim())
     .limit(1);
-  if (excludeUserId) q = q.neq('user_id', excludeUserId);
-
-  const { data } = await q;
-  if (data && data.length > 0) {
-    return { found: true, homeId: data[0].id, ownerId: data[0].user_id };
-  }
+  const match = checkResult(data);
+  if (match) return match;
 
   return { found: false };
 }

@@ -203,10 +203,14 @@ function generateTasksForHomeImpl(
   const convertedDB = customTemplates
     .filter((db) => db.active)
     .map(dbTemplateToInternal);
-  const dbTitleKeys = new Set(convertedDB.map((t) => `${t.title}|${t.category}`));
-  // Only include hardcoded templates whose title+category isn't already in the DB
+  // Build key set from ALL DB templates (including inactive) so that deactivated
+  // DB templates also suppress their hardcoded counterparts from sneaking back in.
+  const allDbTitleKeys = new Set(
+    customTemplates.map((db) => `${db.title}|${db.category}`)
+  );
+  // Only include hardcoded templates whose title+category doesn't exist in the DB at all
   const fallbackBuiltIn = TASK_TEMPLATES.filter(
-    (t) => !dbTitleKeys.has(`${t.title}|${t.category}`)
+    (t) => !allDbTitleKeys.has(`${t.title}|${t.category}`)
   );
   const allTemplates: TaskTemplate[] = [...convertedDB, ...fallbackBuiltIn];
 

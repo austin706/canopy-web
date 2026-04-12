@@ -10,8 +10,17 @@ export interface EmailTemplate {
   enabled: boolean;
   recipient_type: 'admin' | 'user' | 'pro_provider';
   trigger_event: string;
+  body_html: string | null;
+  body_text: string | null;
+  variables: string[];
   created_at: string;
   updated_at: string;
+}
+
+// Helper to extract {{variable}} names from a string
+function extractVariables(str: string): string[] {
+  const matches = str.match(/\{\{(\w+)\}\}/g) || [];
+  return [...new Set(matches.map(m => m.replace(/\{\{|\}\}/g, '')))];
 }
 
 // Default templates — these define the system's email capabilities
@@ -26,6 +35,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'admin',
     trigger_event: 'user.signup',
+    body_html: null,
+    body_text: null,
+    variables: ['user_name'],
   },
   {
     template_key: 'admin_new_subscription',
@@ -36,6 +48,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'admin',
     trigger_event: 'subscription.upgraded',
+    body_html: null,
+    body_text: null,
+    variables: ['tier', 'user_name'],
   },
   {
     template_key: 'admin_new_pro_request',
@@ -46,6 +61,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'admin',
     trigger_event: 'pro_request.created',
+    body_html: null,
+    body_text: null,
+    variables: ['service_type', 'user_name'],
   },
   {
     template_key: 'admin_payment_received',
@@ -56,6 +74,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'admin',
     trigger_event: 'payment.completed',
+    body_html: null,
+    body_text: null,
+    variables: ['amount', 'user_name'],
   },
   {
     template_key: 'admin_new_quote_request',
@@ -66,6 +87,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'admin',
     trigger_event: 'quote.requested',
+    body_html: null,
+    body_text: null,
+    variables: ['service_title', 'user_name'],
   },
   {
     template_key: 'admin_user_feedback',
@@ -76,6 +100,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'admin',
     trigger_event: 'visit.rated',
+    body_html: null,
+    body_text: null,
+    variables: ['rating', 'user_name'],
   },
 
   // User Transactional Emails
@@ -88,6 +115,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'user',
     trigger_event: 'user.signup',
+    body_html: null,
+    body_text: null,
+    variables: ['user_name'],
   },
   {
     template_key: 'user_subscription_confirmed',
@@ -98,6 +128,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'user',
     trigger_event: 'subscription.upgraded',
+    body_html: null,
+    body_text: null,
+    variables: ['tier'],
   },
   {
     template_key: 'user_visit_scheduled',
@@ -108,6 +141,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'user',
     trigger_event: 'visit.confirmed',
+    body_html: null,
+    body_text: null,
+    variables: ['visit_date'],
   },
   {
     template_key: 'user_visit_completed',
@@ -118,6 +154,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'user',
     trigger_event: 'visit.completed',
+    body_html: null,
+    body_text: null,
+    variables: [],
   },
   {
     template_key: 'user_quote_ready',
@@ -128,6 +167,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'user',
     trigger_event: 'quote.sent',
+    body_html: null,
+    body_text: null,
+    variables: ['service_title', 'amount'],
   },
   {
     template_key: 'user_invoice_sent',
@@ -138,6 +180,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'user',
     trigger_event: 'invoice.sent',
+    body_html: null,
+    body_text: null,
+    variables: ['invoice_number', 'amount', 'due_date'],
   },
   {
     template_key: 'user_payment_confirmed',
@@ -148,6 +193,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'user',
     trigger_event: 'payment.completed',
+    body_html: null,
+    body_text: null,
+    variables: ['amount', 'service_title'],
   },
 
   // User Automated Emails
@@ -160,6 +208,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'user',
     trigger_event: 'cron.weekly_tasks',
+    body_html: null,
+    body_text: null,
+    variables: ['task_count'],
   },
   {
     template_key: 'user_overdue_tasks',
@@ -170,6 +221,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'user',
     trigger_event: 'cron.overdue_check',
+    body_html: null,
+    body_text: null,
+    variables: ['overdue_count'],
   },
   {
     template_key: 'user_visit_reminder',
@@ -180,6 +234,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'user',
     trigger_event: 'cron.visit_reminder',
+    body_html: null,
+    body_text: null,
+    variables: [],
   },
   {
     template_key: 'user_monthly_summary',
@@ -190,6 +247,9 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: true,
     recipient_type: 'user',
     trigger_event: 'cron.monthly_summary',
+    body_html: null,
+    body_text: null,
+    variables: ['month'],
   },
   {
     template_key: 'user_seasonal_prep',
@@ -200,6 +260,93 @@ export const DEFAULT_TEMPLATES: Omit<EmailTemplate, 'id' | 'created_at' | 'updat
     enabled: false,
     recipient_type: 'user',
     trigger_event: 'cron.seasonal',
+    body_html: null,
+    body_text: null,
+    variables: ['season'],
+  },
+
+  // Drip Email Series (Welcome)
+  {
+    template_key: 'drip_welcome',
+    name: 'Drip: Day 0 — Welcome',
+    description: 'Immediate welcome email with quick-start guide after signup',
+    subject: 'Welcome to Canopy, {{user_name}}! Here\'s your quick-start guide 🏠',
+    category: 'user_automated',
+    enabled: true,
+    recipient_type: 'user',
+    trigger_event: 'drip.day_0',
+    body_html: null,
+    body_text: null,
+    variables: ['user_name'],
+  },
+  {
+    template_key: 'drip_feature_discovery',
+    name: 'Drip: Day 3 — Feature Discovery',
+    description: 'Introduces equipment scanning and AI assistant features',
+    subject: 'Did you know Canopy can scan your equipment? 📸',
+    category: 'user_automated',
+    enabled: true,
+    recipient_type: 'user',
+    trigger_event: 'drip.day_3',
+    body_html: null,
+    body_text: null,
+    variables: [],
+  },
+  {
+    template_key: 'drip_value_reveal',
+    name: 'Drip: Day 7 — Value Reveal',
+    description: 'Shows what Home plan unlocks with feature comparison',
+    subject: 'You\'ve been using Canopy for a week — here\'s what you\'re missing',
+    category: 'user_automated',
+    enabled: true,
+    recipient_type: 'user',
+    trigger_event: 'drip.day_7',
+    body_html: null,
+    body_text: null,
+    variables: [],
+  },
+  {
+    template_key: 'drip_social_proof',
+    name: 'Drip: Day 14 — Social Proof',
+    description: 'Testimonial + upgrade CTA after 2 weeks of use',
+    subject: 'Homeowners like you are upgrading — here\'s why',
+    category: 'user_automated',
+    enabled: true,
+    recipient_type: 'user',
+    trigger_event: 'drip.day_14',
+    body_html: null,
+    body_text: null,
+    variables: [],
+  },
+
+  // Monthly Summary (upgrade-focused for free users)
+  {
+    template_key: 'user_monthly_upgrade_summary',
+    name: 'Monthly Summary (Free Users)',
+    description: 'Personalized monthly stats with upgrade nudge for free-tier users',
+    subject: '📊 Your {{month}} Canopy recap — see what you could unlock',
+    category: 'user_automated',
+    enabled: true,
+    recipient_type: 'user',
+    trigger_event: 'cron.monthly_free_summary',
+    body_html: null,
+    body_text: null,
+    variables: ['month'],
+  },
+
+  // Upgrade Success
+  {
+    template_key: 'user_upgrade_success',
+    name: 'Upgrade Success',
+    description: 'Congratulations email highlighting newly unlocked features after upgrading',
+    subject: '🎉 Welcome to {{tier}} — here\'s everything you just unlocked',
+    category: 'user_transactional',
+    enabled: true,
+    recipient_type: 'user',
+    trigger_event: 'subscription.upgraded',
+    body_html: null,
+    body_text: null,
+    variables: ['tier'],
   },
 ];
 
@@ -216,7 +363,7 @@ export async function getEmailTemplates(): Promise<EmailTemplate[]> {
 // Update a template's settings
 export async function updateEmailTemplate(
   templateId: string,
-  updates: Partial<Pick<EmailTemplate, 'enabled' | 'subject'>>
+  updates: Partial<Pick<EmailTemplate, 'enabled' | 'subject' | 'body_html' | 'body_text'>>
 ): Promise<void> {
   const { error } = await supabase
     .from('email_templates')

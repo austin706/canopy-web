@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { supabase, getProfile, getHome, getEquipment, getTasks, getHomeConsumables, getTaskTemplates, getAgent, redeemReferralCode } from '@/services/supabase';
@@ -17,89 +17,110 @@ import ProLayout from '@/components/ProLayout';
 import AdminLayout from '@/components/AdminLayout';
 import Toast from '@/components/Toast';
 
+// ─── Lazy with stale-chunk reload ────────────────────────────
+// After a Vercel deploy, old cached HTML may reference chunk filenames
+// that no longer exist. This wrapper catches the import failure and
+// does a single hard reload so the browser fetches fresh HTML + chunks.
+function lazyRetry(factory: () => Promise<{ default: React.ComponentType<any> }>) {
+  return lazy(() =>
+    factory().catch((err) => {
+      const key = 'chunk_reload';
+      const hasReloaded = sessionStorage.getItem(key);
+      if (!hasReloaded) {
+        sessionStorage.setItem(key, '1');
+        window.location.reload();
+        // Return a never-resolving promise so React doesn't render stale state
+        return new Promise(() => {});
+      }
+      sessionStorage.removeItem(key);
+      throw err; // Let ErrorBoundary handle it on 2nd failure
+    })
+  );
+}
+
 // ─── Lazy-loaded pages (code-split per route) ───────────────
-const Login = lazy(() => import('@/pages/Login'));
-const Signup = lazy(() => import('@/pages/Signup'));
-const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
-const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
-const Landing = lazy(() => import('@/pages/Landing'));
-const Dashboard = lazy(() => import('@/pages/Dashboard'));
-const Calendar = lazy(() => import('@/pages/Calendar'));
-const Weather = lazy(() => import('@/pages/Weather'));
-const Equipment = lazy(() => import('@/pages/Equipment'));
-const Profile = lazy(() => import('@/pages/Profile'));
-const Subscription = lazy(() => import('@/pages/Subscription'));
-const ProRequest = lazy(() => import('@/pages/ProRequest'));
-const AgentView = lazy(() => import('@/pages/AgentView'));
-const MaintenanceLogs = lazy(() => import('@/pages/MaintenanceLogs'));
-const HomeDetails = lazy(() => import('@/pages/HomeDetails'));
-const AdminDashboard = lazy(() => import('@/pages/AdminDashboard'));
-const AdminAgents = lazy(() => import('@/pages/AdminAgents'));
-const AdminUsers = lazy(() => import('@/pages/AdminUsers'));
-const AdminGiftCodes = lazy(() => import('@/pages/AdminGiftCodes'));
-const AdminProRequests = lazy(() => import('@/pages/AdminProRequests'));
-const AdminProProviders = lazy(() => import('@/pages/AdminProProviders'));
-const AdminServiceAreas = lazy(() => import('@/pages/AdminServiceAreas'));
-const AdminNotifications = lazy(() => import('@/pages/AdminNotifications'));
-const AdminEmails = lazy(() => import('@/pages/AdminEmails'));
-const AdminAnalytics = lazy(() => import('@/pages/AdminAnalytics'));
-const AdminAuditLog = lazy(() => import('@/pages/AdminAuditLog'));
-const AdminProviderApplications = lazy(() => import('@/pages/AdminProviderApplications'));
-const AdminSupportTickets = lazy(() => import('@/pages/AdminSupportTickets'));
-const AdminReferenceData = lazy(() => import('@/pages/AdminReferenceData'));
-const AdminTechnicianOnboarding = lazy(() => import('@/pages/AdminTechnicianOnboarding'));
-const AgentPortal = lazy(() => import('@/pages/AgentPortal'));
-const AgentProfile = lazy(() => import('@/pages/AgentProfile'));
-const AgentClientHome = lazy(() => import('@/pages/AgentClientHome'));
-const AgentPurchaseCodes = lazy(() => import('@/pages/AgentPurchaseCodes'));
-const AgentLinkClient = lazy(() => import('@/pages/AgentLinkClient'));
-const TaskDetail = lazy(() => import('@/pages/TaskDetail'));
-const EquipmentDetail = lazy(() => import('@/pages/EquipmentDetail'));
-const Notifications = lazy(() => import('@/pages/Notifications'));
-const Documents = lazy(() => import('@/pages/Documents'));
-const Help = lazy(() => import('@/pages/Help'));
-const WhatsNew = lazy(() => import('@/pages/WhatsNew'));
-const Onboarding = lazy(() => import('@/pages/Onboarding'));
-const ProPortal = lazy(() => import('@/pages/ProPortal'));
-const ProLogin = lazy(() => import('@/pages/ProLogin'));
+const Login = lazyRetry(() => import('@/pages/Login'));
+const Signup = lazyRetry(() => import('@/pages/Signup'));
+const ForgotPassword = lazyRetry(() => import('@/pages/ForgotPassword'));
+const ResetPassword = lazyRetry(() => import('@/pages/ResetPassword'));
+const Landing = lazyRetry(() => import('@/pages/Landing'));
+const Dashboard = lazyRetry(() => import('@/pages/Dashboard'));
+const Calendar = lazyRetry(() => import('@/pages/Calendar'));
+const Weather = lazyRetry(() => import('@/pages/Weather'));
+const Equipment = lazyRetry(() => import('@/pages/Equipment'));
+const Profile = lazyRetry(() => import('@/pages/Profile'));
+const Subscription = lazyRetry(() => import('@/pages/Subscription'));
+const ProRequest = lazyRetry(() => import('@/pages/ProRequest'));
+const AgentView = lazyRetry(() => import('@/pages/AgentView'));
+const MaintenanceLogs = lazyRetry(() => import('@/pages/MaintenanceLogs'));
+const HomeDetails = lazyRetry(() => import('@/pages/HomeDetails'));
+const AdminDashboard = lazyRetry(() => import('@/pages/AdminDashboard'));
+const AdminAgents = lazyRetry(() => import('@/pages/AdminAgents'));
+const AdminUsers = lazyRetry(() => import('@/pages/AdminUsers'));
+const AdminGiftCodes = lazyRetry(() => import('@/pages/AdminGiftCodes'));
+const AdminProRequests = lazyRetry(() => import('@/pages/AdminProRequests'));
+const AdminProProviders = lazyRetry(() => import('@/pages/AdminProProviders'));
+const AdminServiceAreas = lazyRetry(() => import('@/pages/AdminServiceAreas'));
+const AdminNotifications = lazyRetry(() => import('@/pages/AdminNotifications'));
+const AdminEmails = lazyRetry(() => import('@/pages/AdminEmails'));
+const AdminAnalytics = lazyRetry(() => import('@/pages/AdminAnalytics'));
+const AdminAuditLog = lazyRetry(() => import('@/pages/AdminAuditLog'));
+const AdminProviderApplications = lazyRetry(() => import('@/pages/AdminProviderApplications'));
+const AdminSupportTickets = lazyRetry(() => import('@/pages/AdminSupportTickets'));
+const AdminReferenceData = lazyRetry(() => import('@/pages/AdminReferenceData'));
+const AdminTechnicianOnboarding = lazyRetry(() => import('@/pages/AdminTechnicianOnboarding'));
+const AgentPortal = lazyRetry(() => import('@/pages/AgentPortal'));
+const AgentProfile = lazyRetry(() => import('@/pages/AgentProfile'));
+const AgentClientHome = lazyRetry(() => import('@/pages/AgentClientHome'));
+const AgentPurchaseCodes = lazyRetry(() => import('@/pages/AgentPurchaseCodes'));
+const AgentLinkClient = lazyRetry(() => import('@/pages/AgentLinkClient'));
+const TaskDetail = lazyRetry(() => import('@/pages/TaskDetail'));
+const EquipmentDetail = lazyRetry(() => import('@/pages/EquipmentDetail'));
+const Notifications = lazyRetry(() => import('@/pages/Notifications'));
+const Documents = lazyRetry(() => import('@/pages/Documents'));
+const Help = lazyRetry(() => import('@/pages/Help'));
+const WhatsNew = lazyRetry(() => import('@/pages/WhatsNew'));
+const Onboarding = lazyRetry(() => import('@/pages/Onboarding'));
+const ProPortal = lazyRetry(() => import('@/pages/ProPortal'));
+const ProLogin = lazyRetry(() => import('@/pages/ProLogin'));
 // ProJobs removed — obsolete marketplace page, redirects to job-queue
-const ProAvailability = lazy(() => import('@/pages/ProAvailability'));
-const ProProfile = lazy(() => import('@/pages/ProProfile'));
-const CreateTask = lazy(() => import('@/pages/CreateTask'));
-const ProServices = lazy(() => import('@/pages/ProServices'));
-const Visits = lazy(() => import('@/pages/Visits'));
-const ProPlusManage = lazy(() => import('@/pages/ProPlusManage'));
-const Quotes = lazy(() => import('@/pages/Quotes'));
-const Invoices = lazy(() => import('@/pages/Invoices'));
-const ProVisitSchedule = lazy(() => import('@/pages/ProVisitSchedule'));
-const ProQuotesInvoices = lazy(() => import('@/pages/ProQuotesInvoices'));
-const ProJobQueue = lazy(() => import('@/pages/ProJobQueue'));
-const ProInspection = lazy(() => import('@/pages/ProInspection'));
-const HomeAssistant = lazy(() => import('@/pages/HomeAssistant'));
-const SalePrep = lazy(() => import('@/pages/SalePrep'));
-const HomeReport = lazy(() => import('@/pages/HomeReport'));
-const HomeTransfer = lazy(() => import('@/pages/HomeTransfer'));
-const Terms = lazy(() => import('@/pages/Terms'));
-const Privacy = lazy(() => import('@/pages/Privacy'));
-const ContractorTerms = lazy(() => import('@/pages/ContractorTerms'));
-const AIDisclaimer = lazy(() => import('@/pages/AIDisclaimer'));
-const CancellationPolicy = lazy(() => import('@/pages/CancellationPolicy'));
-const PCICompliance = lazy(() => import('@/pages/PCICompliance'));
-const Support = lazy(() => import('@/pages/Support'));
-const ApplyPro = lazy(() => import('@/pages/ApplyPro'));
-const AgentLanding = lazy(() => import('@/pages/AgentLanding'));
-const ProLanding = lazy(() => import('@/pages/ProLanding'));
-const AgentRedeem = lazy(() => import('@/pages/AgentRedeem'));
-const AgentApplication = lazy(() => import('@/pages/AgentApplication'));
-const BuilderApplication = lazy(() => import('@/pages/BuilderApplication'));
-const AdminBuilders = lazy(() => import('@/pages/AdminBuilders'));
-const AdminVerifications = lazy(() => import('@/pages/AdminVerifications'));
-const AdminAffiliateProducts = lazy(() => import('@/pages/AdminAffiliateProducts'));
-const TechnicianOnboarding = lazy(() => import('@/pages/TechnicianOnboarding'));
-const ProOnboardingSuccess = lazy(() => import('@/pages/ProOnboardingSuccess'));
-const ProOnboardingRefresh = lazy(() => import('@/pages/ProOnboardingRefresh'));
-const SignupSuccess = lazy(() => import('@/pages/SignupSuccess'));
-const NotFound = lazy(() => import('@/pages/NotFound'));
+const ProAvailability = lazyRetry(() => import('@/pages/ProAvailability'));
+const ProProfile = lazyRetry(() => import('@/pages/ProProfile'));
+const CreateTask = lazyRetry(() => import('@/pages/CreateTask'));
+const ProServices = lazyRetry(() => import('@/pages/ProServices'));
+const Visits = lazyRetry(() => import('@/pages/Visits'));
+const ProPlusManage = lazyRetry(() => import('@/pages/ProPlusManage'));
+const Quotes = lazyRetry(() => import('@/pages/Quotes'));
+const Invoices = lazyRetry(() => import('@/pages/Invoices'));
+const ProVisitSchedule = lazyRetry(() => import('@/pages/ProVisitSchedule'));
+const ProQuotesInvoices = lazyRetry(() => import('@/pages/ProQuotesInvoices'));
+const ProJobQueue = lazyRetry(() => import('@/pages/ProJobQueue'));
+const ProInspection = lazyRetry(() => import('@/pages/ProInspection'));
+const HomeAssistant = lazyRetry(() => import('@/pages/HomeAssistant'));
+const SalePrep = lazyRetry(() => import('@/pages/SalePrep'));
+const HomeReport = lazyRetry(() => import('@/pages/HomeReport'));
+const HomeTransfer = lazyRetry(() => import('@/pages/HomeTransfer'));
+const Terms = lazyRetry(() => import('@/pages/Terms'));
+const Privacy = lazyRetry(() => import('@/pages/Privacy'));
+const ContractorTerms = lazyRetry(() => import('@/pages/ContractorTerms'));
+const AIDisclaimer = lazyRetry(() => import('@/pages/AIDisclaimer'));
+const CancellationPolicy = lazyRetry(() => import('@/pages/CancellationPolicy'));
+const PCICompliance = lazyRetry(() => import('@/pages/PCICompliance'));
+const Support = lazyRetry(() => import('@/pages/Support'));
+const ApplyPro = lazyRetry(() => import('@/pages/ApplyPro'));
+const AgentLanding = lazyRetry(() => import('@/pages/AgentLanding'));
+const ProLanding = lazyRetry(() => import('@/pages/ProLanding'));
+const AgentRedeem = lazyRetry(() => import('@/pages/AgentRedeem'));
+const AgentApplication = lazyRetry(() => import('@/pages/AgentApplication'));
+const BuilderApplication = lazyRetry(() => import('@/pages/BuilderApplication'));
+const AdminBuilders = lazyRetry(() => import('@/pages/AdminBuilders'));
+const AdminVerifications = lazyRetry(() => import('@/pages/AdminVerifications'));
+const AdminAffiliateProducts = lazyRetry(() => import('@/pages/AdminAffiliateProducts'));
+const TechnicianOnboarding = lazyRetry(() => import('@/pages/TechnicianOnboarding'));
+const ProOnboardingSuccess = lazyRetry(() => import('@/pages/ProOnboardingSuccess'));
+const ProOnboardingRefresh = lazyRetry(() => import('@/pages/ProOnboardingRefresh'));
+const SignupSuccess = lazyRetry(() => import('@/pages/SignupSuccess'));
+const NotFound = lazyRetry(() => import('@/pages/NotFound'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useStore();

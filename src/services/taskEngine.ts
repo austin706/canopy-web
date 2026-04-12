@@ -197,12 +197,18 @@ function generateTasksForHomeImpl(
     })
   );
 
-  // Merge built-in templates with AI-generated/user-created custom templates
-  const builtInIds = new Set(TASK_TEMPLATES.map((t) => t.id));
-  const convertedCustom = customTemplates
-    .filter((db) => db.active && !builtInIds.has(db.id)) // skip duplicates
+  // Use DB templates as source of truth when available; fall back to hardcoded.
+  // DB templates have UUID ids, so dedup by title+category to avoid doubling up
+  // with the hardcoded TASK_TEMPLATES that were seeded into the DB.
+  const convertedDB = customTemplates
+    .filter((db) => db.active)
     .map(dbTemplateToInternal);
-  const allTemplates: TaskTemplate[] = [...TASK_TEMPLATES, ...convertedCustom];
+  const dbTitleKeys = new Set(convertedDB.map((t) => `${t.title}|${t.category}`));
+  // Only include hardcoded templates whose title+category isn't already in the DB
+  const fallbackBuiltIn = TASK_TEMPLATES.filter(
+    (t) => !dbTitleKeys.has(`${t.title}|${t.category}`)
+  );
+  const allTemplates: TaskTemplate[] = [...convertedDB, ...fallbackBuiltIn];
 
   // Process each template
   allTemplates.forEach((template) => {
@@ -499,8 +505,32 @@ function generateSeasonalTasks(
   today: Date,
   userPreferences: UserPreferences = DEFAULT_USER_PREFERENCES
 ) {
-  // For seasonal tasks, generate for each applicable month in the next 18 months
+  // For seasonal tasks, generate for each applicable month in the next 18 months.
+  // Annual tasks use a stable hash to pick ONE month from their applicable_months,
+  // spreading them across the year instead of clustering in the current month.
   const generatedMonths = new Set<string>();
+  const idHash = template.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+  // For annual/as_needed tasks, pick a stable month from applicable_months using hash
+  if ((template.frequency === 'annual' || template.frequency === 'as_needed') && template.applicable_months.length > 1) {
+    const sortedMonths = [...template.applicable_months].sort((a, b) => a - b);
+    const pickedMonth = sortedMonths[idHash % sortedMonths.length];
+
+    // Find the next occurrence of this month (this year or next)
+    let targetYear = currentYear;
+    if (pickedMonth < currentMonth || (pickedMonth === currentMonth && today.getDate() > 25)) {
+      targetYear = currentYear + 1;
+    }
+
+    const dedupKey = `${template.title}|${pickedMonth}|${targetYear}`;
+    if (!existingTaskKeys.has(dedupKey)) {
+      const dayHash = idHash % 28 + 1;
+      const dueDate = new Date(targetYear, pickedMonth - 1, dayHash);
+      const task = createTaskFromTemplate(template, home, equipment, dueDate);
+      newTasks.push(task);
+    }
+    return;
+  }
 
   for (let offset = 0; offset < 18; offset++) {
     const targetMonth = ((currentMonth - 1 + offset) % 12) + 1;
@@ -521,7 +551,7 @@ function generateSeasonalTasks(
     }
 
     // Distribute tasks within the month using a hash of the template ID
-    const dayHash = template.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 28 + 1;
+    const dayHash = idHash % 28 + 1;
     const dueDate = new Date(targetYear, targetMonth - 1, dayHash);
 
     // Don't generate tasks for dates in the past (except current month)

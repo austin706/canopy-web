@@ -27,6 +27,7 @@ export interface TaskTemplate {
   items_to_have_on_hand?: string[];
   applicable_regions?: ClimateRegion[]; // undefined = all regions
   pro_responsible?: boolean; // true = pro provider handles this during visits; false/undefined = homeowner DIY
+  is_cleaning?: boolean; // true = cleaning/tidying task that can be toggled off
 
   // ─── Consumable-aware scheduling (Migration 041) ───
   /**
@@ -83,6 +84,11 @@ export interface TaskTemplate {
    * e.g., ['single_family', 'townhome'] to exclude condos/apartments
    */
   requires_home_type?: string[];
+  /**
+   * Restricts this template to homes with a matching primary_flooring value.
+   * e.g., ['carpet'] for carpet-only tasks, ['hardwood', 'engineered_wood'] for wood floor tasks
+   */
+  requires_flooring_type?: string[];
   /**
    * Restricts this template to equipment with a matching equipment_subtype.
    * Case-insensitive partial match: if the equipment's subtype includes any
@@ -231,7 +237,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'medium',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [4, 10],
+    applicable_months: [4],
     estimated_minutes: 30,
     estimated_cost: 0,
     estimated_pro_cost: 0,
@@ -286,7 +292,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'medium',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [4, 10],
+    applicable_months: [3, 4, 5, 9, 10],
     estimated_minutes: 90,
     estimated_cost: 15,
     estimated_pro_cost: 150,
@@ -662,7 +668,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'medium',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [4, 5],
+    applicable_months: [4],
     estimated_minutes: 120,
     estimated_cost: 0,
     estimated_pro_cost: 75,
@@ -715,7 +721,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'high',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [9, 10],
+    applicable_months: [9, 10, 11],
     estimated_minutes: 60,
     estimated_cost: 150,
     estimated_pro_cost: 150,
@@ -746,6 +752,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_pro_cost: 0,
     requires_home_feature: 'has_fireplace',
     items_to_have_on_hand: ['Fireplace ash bucket (metal)', 'Fireplace shovel and brush', 'Drop cloth', 'Flashlight'],
+    is_cleaning: true,
   },
   {
     id: 'fireplace-gas-inspection',
@@ -766,7 +773,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'high',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [9, 10],
+    applicable_months: [9, 10, 11],
     estimated_minutes: 30,
     estimated_cost: 100,
     estimated_pro_cost: 100,
@@ -895,7 +902,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'medium',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [3, 4],
+    applicable_months: [3, 4, 5, 6],
     estimated_minutes: 30,
     estimated_cost: 0,
     estimated_pro_cost: 0,
@@ -952,6 +959,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 0,
     estimated_pro_cost: 75,
     items_to_have_on_hand: ['Coil brush or vacuum with crevice attachment', 'Flashlight'],
+    is_cleaning: true,
   },
   {
     id: 'garbage-disposal-clean',
@@ -977,6 +985,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 0,
     estimated_pro_cost: 75,
     items_to_have_on_hand: ['Ice cubes', 'Rock salt or coarse salt', 'Lemon or citrus peels', 'Baking soda', 'White vinegar'],
+    is_cleaning: true,
   },
   {
     id: 'vent-hood-degrease',
@@ -1002,6 +1011,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 0,
     estimated_pro_cost: 75,
     items_to_have_on_hand: ['Degreaser spray', 'Hot soapy water', 'Scrub brush or sponge'],
+    is_cleaning: true,
   },
   {
     id: 'dishwasher-clean',
@@ -1028,6 +1038,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 0,
     estimated_pro_cost: 75,
     items_to_have_on_hand: ['White vinegar', 'Baking soda', 'Toothpick or soft brush for spray arm holes'],
+    is_cleaning: true,
   },
   {
     id: 'stone-countertop-seal',
@@ -1048,7 +1059,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'low',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [4],
+    applicable_months: [3, 4, 5, 6],
     estimated_minutes: 30,
     estimated_cost: 20,
     estimated_pro_cost: 20,
@@ -1081,6 +1092,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 0,
     estimated_pro_cost: 75,
     items_to_have_on_hand: ['Washing machine cleaner tablets or white vinegar', 'Microfiber cloth', 'Baking soda'],
+    is_cleaning: true,
   },
   {
     id: 'drain-clearing',
@@ -1107,6 +1119,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 0,
     estimated_pro_cost: 0,
     items_to_have_on_hand: ['Baking soda', 'White vinegar', 'Drain snake or zip-it tool', 'Boiling water'],
+    is_cleaning: true,
   },
   {
     id: 'bathroom-exhaust-fan-clean',
@@ -1134,6 +1147,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 0,
     estimated_pro_cost: 0,
     items_to_have_on_hand: ['Vacuum with brush attachment', 'Damp cloth', 'Screwdriver'],
+    is_cleaning: true,
   },
 
   // ═══ THROUGHOUT THE HOME (from Proventive) ═══
@@ -1162,6 +1176,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 0,
     estimated_pro_cost: 0,
     items_to_have_on_hand: ['Microfiber duster or pillowcase', 'Step stool or ladder'],
+    is_cleaning: true,
   },
   {
     id: 'lightbulb-check',
@@ -1243,6 +1258,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 0,
     estimated_pro_cost: 0,
     applicable_regions: ['north', 'mountain'],
+    is_cleaning: true,
   },
   {
     id: 'water-softener-salt',
@@ -1295,6 +1311,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_minutes: 15,
     estimated_cost: 0,
     estimated_pro_cost: 75,
+    is_cleaning: true,
   },
 
   // ═══════════════════════════════════════════════════
@@ -1320,7 +1337,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'high',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [3, 4],
+    applicable_months: [3, 4, 5],
     estimated_minutes: 60,
     estimated_cost: 100,
     estimated_pro_cost: 100,
@@ -1491,7 +1508,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'medium',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [3, 4],
+    applicable_months: [3],
     estimated_minutes: 30,
     estimated_cost: 0,
     estimated_pro_cost: 0,
@@ -1518,7 +1535,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'high',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [4, 5],
+    applicable_months: [4, 5, 6],
     estimated_minutes: 45,
     estimated_cost: 30,
     estimated_pro_cost: 30,
@@ -1696,7 +1713,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     frequency: 'annual',
     scheduling_type: 'dynamic',
     interval_days: 365,
-    applicable_months: [4],
+    applicable_months: [3, 4, 5, 6],
     estimated_minutes: 10,
     estimated_cost: 10,
     estimated_pro_cost: 10,
@@ -1799,6 +1816,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_pro_cost: 5,
     requires_home_feature: 'has_deck',
     items_to_have_on_hand: ['Mild dish soap', 'Soft bristle brush', 'Garden hose', 'Furniture covers for storage'],
+    is_cleaning: true,
   },
   {
     id: 'inspect-exterior-paint-siding',
@@ -1966,7 +1984,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'high',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [4, 5],
+    applicable_months: [3, 4, 5, 6, 7],
     estimated_minutes: 30,
     estimated_cost: 150,
     estimated_pro_cost: 150,
@@ -2092,7 +2110,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'medium',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [4, 5],
+    applicable_months: [5, 6, 7],
     estimated_minutes: 180,
     estimated_cost: 300,
     estimated_pro_cost: 300,
@@ -2123,6 +2141,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 150,
     estimated_pro_cost: 150,
     items_to_have_on_hand: ['Degrease cleaner', 'Microfiber cloths', 'Rubber gloves', 'Disinfectant spray'],
+    is_cleaning: true,
   },
   {
     id: 'deep-clean-bathroom',
@@ -2149,6 +2168,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 100,
     estimated_pro_cost: 100,
     items_to_have_on_hand: ['Toilet cleaner', 'Bathroom disinfectant spray', 'Tile/grout cleaner', 'Microfiber cloths', 'Rubber gloves'],
+    is_cleaning: true,
   },
 
   // ═══ CHIMNEY ═══
@@ -2278,7 +2298,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'high',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [3, 4],
+    applicable_months: [6],
     estimated_minutes: 5,
     estimated_cost: 0,
     estimated_pro_cost: 75,
@@ -2303,7 +2323,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     frequency: 'as_needed',
     scheduling_type: 'dynamic',
     interval_days: 1460,
-    applicable_months: [4, 5],
+    applicable_months: [3, 4, 5, 6, 7, 8, 9],
     estimated_minutes: 60,
     estimated_cost: 350,
     estimated_pro_cost: 350,
@@ -2355,7 +2375,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'high',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [4, 5],
+    applicable_months: [4, 5, 6, 7],
     estimated_minutes: 15,
     estimated_cost: 100,
     estimated_pro_cost: 100,
@@ -2408,7 +2428,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'high',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [3, 4],
+    applicable_months: [3, 4, 5],
     estimated_minutes: 60,
     estimated_cost: 200,
     estimated_pro_cost: 200,
@@ -2433,7 +2453,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'medium',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [3, 4],
+    applicable_months: [3, 4, 5, 6],
     estimated_minutes: 5,
     estimated_cost: 0,
     estimated_pro_cost: 75,
@@ -2485,7 +2505,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'medium',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [4, 5],
+    applicable_months: [3, 4, 5, 6],
     estimated_minutes: 15,
     estimated_cost: 0,
     estimated_pro_cost: 75,
@@ -2513,7 +2533,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'high',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [4, 5],
+    applicable_months: [5],
     estimated_minutes: 20,
     estimated_cost: 0,
     estimated_pro_cost: 75,
@@ -2539,7 +2559,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'medium',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [4, 5],
+    applicable_months: [5, 6, 7, 8],
     estimated_minutes: 30,
     estimated_cost: 0,
     estimated_pro_cost: 75,
@@ -2548,6 +2568,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'carpet-deep-clean',
     pro_responsible: true,
+    requires_flooring_type: ['carpet'],
     title: 'Annual Professional Carpet Cleaning',
     description: 'Annual deep cleaning extends carpet lifespan, removes embedded dirt and allergens, and restores appearance. Professional hot water extraction is more effective than rental equipment.',
     service_purpose: 'Annual deep cleaning extends carpet lifespan and removes embedded allergens',
@@ -2564,7 +2585,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     priority: 'low',
     frequency: 'annual',
     scheduling_type: 'seasonal',
-    applicable_months: [4, 5],
+    applicable_months: [3, 4, 5, 6, 7, 8],
     estimated_minutes: 120,
     estimated_cost: 250,
     estimated_pro_cost: 250,
@@ -2660,6 +2681,11 @@ export const getTasksForMonth = (
   return TASK_TEMPLATES.filter((task) => {
     if (!task.applicable_months.includes(month)) return false;
     if (task.requires_home_feature && !homeFeatures[task.requires_home_feature]) return false;
+    // Flooring filter: if task requires specific flooring, check primary_flooring
+    if (task.requires_flooring_type && task.requires_flooring_type.length > 0) {
+      const homeFlooring = homeFeatures['primary_flooring'] as string | undefined;
+      if (!homeFlooring || !task.requires_flooring_type.includes(homeFlooring)) return false;
+    }
     // Region filter: if task has applicable_regions, check if homeowner's region matches
     if (task.applicable_regions && !task.applicable_regions.includes('all')) {
       if (!task.applicable_regions.includes(region)) return false;

@@ -40,6 +40,17 @@ export const calculateHealthScore = (tasks: MaintenanceTask[]): HealthScoreResul
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
+  // ─── Exclude non-scoreable tasks ───
+  // Trash/recycling/yard-waste pickups are informational reminders, not maintenance.
+  // Cleaning tasks hidden by the user toggle should also be excluded.
+  const PICKUP_TITLES = ['Take Out Trash', 'Put Out Recycling', 'Yard Waste Pickup'];
+  const scoreableTasks = tasks.filter(t => {
+    // Exclude weekly/biweekly pickup reminders
+    if (PICKUP_TITLES.includes(t.title)) return false;
+    if (t.frequency === 'weekly' || t.frequency === 'biweekly') return false;
+    return true;
+  });
+
   // ─── Time boundaries ───
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -47,7 +58,7 @@ export const calculateHealthScore = (tasks: MaintenanceTask[]): HealthScoreResul
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
   // ─── Component 1: Rolling 90-day completion rate (50% weight) ───
-  const rolling90Tasks = tasks.filter(t => {
+  const rolling90Tasks = scoreableTasks.filter(t => {
     if (t.status === 'skipped') return false;
     const d = new Date(t.due_date);
     return d >= ninetyDaysAgo && d <= now;
@@ -67,7 +78,7 @@ export const calculateHealthScore = (tasks: MaintenanceTask[]): HealthScoreResul
   }
 
   // ─── Component 2: Current month momentum (30% weight) ───
-  const monthTasks = tasks.filter(t => {
+  const monthTasks = scoreableTasks.filter(t => {
     if (t.status === 'skipped') return false;
     const d = new Date(t.due_date);
     return d >= thisMonthStart && d <= thisMonthEnd;
@@ -79,7 +90,7 @@ export const calculateHealthScore = (tasks: MaintenanceTask[]): HealthScoreResul
     : rolling90Rate;
 
   // ─── Component 3: Overdue penalty (20% weight) ───
-  const overdueTasks = tasks.filter(t => {
+  const overdueTasks = scoreableTasks.filter(t => {
     if (t.status === 'completed' || t.status === 'skipped') return false;
     const d = new Date(t.due_date);
     d.setHours(0, 0, 0, 0);

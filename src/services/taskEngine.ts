@@ -165,6 +165,7 @@ function dbTemplateToInternal(db: TaskTemplateDB): TaskTemplate {
     requires_home_feature: db.requires_feature ?? undefined,
     pro_responsible: db.pro_recommended || false,
     task_level: db.task_level || 'standard',
+    is_cleaning: db.is_cleaning || false,
   };
 }
 
@@ -259,6 +260,14 @@ function generateTasksForHomeImpl(
       }
     }
 
+    // Skip if this template requires a specific flooring type the home doesn't have
+    if (template.requires_flooring_type && template.requires_flooring_type.length > 0) {
+      const homeFlooring = home.primary_flooring as string | undefined;
+      if (!homeFlooring || !template.requires_flooring_type.includes(homeFlooring)) {
+        return;
+      }
+    }
+
     // Skip if this template requires specific countertop types
     if (template.requires_countertop_type) {
       const homeCountertop = home.countertop_type as string | undefined;
@@ -310,7 +319,7 @@ function generateTasksForHomeImpl(
 
     // Check user preferences before generating task
     const isProTask = template.pro_responsible ?? false;
-    if (!isTaskVisible(template.id, template.category, userPreferences, isProTask, template.task_level)) {
+    if (!isTaskVisible(template.id, template.category, userPreferences, isProTask, template.task_level, template.is_cleaning)) {
       return;
     }
 
@@ -677,6 +686,7 @@ function createTaskFromTemplate(
     template_id: template.id,
     items_to_have_on_hand: template.items_to_have_on_hand,
     service_purpose: template.service_purpose,
+    is_cleaning: template.is_cleaning || false,
     created_at: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
   };
 }
@@ -862,6 +872,14 @@ export function getSeasonalRecommendations(
     if (template.requires_home_feature) {
       const feature = template.requires_home_feature as keyof typeof homeFeatures;
       if (!homeFeatures[feature]) {
+        return;
+      }
+    }
+
+    // Skip if this template requires a specific flooring type the home doesn't have
+    if (template.requires_flooring_type && template.requires_flooring_type.length > 0) {
+      const homeFlooring = home.primary_flooring as string | undefined;
+      if (!homeFlooring || !template.requires_flooring_type.includes(homeFlooring)) {
         return;
       }
     }

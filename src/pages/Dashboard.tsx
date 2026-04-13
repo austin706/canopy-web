@@ -24,6 +24,7 @@ import SetupChecklist from '@/components/SetupChecklist';
 import RecallAlertBanner from '@/components/RecallAlertBanner';
 import { getDocuments, getHomeMembers } from '@/services/supabase';
 import type { MaintenanceTask, HomeJoinRequest } from '@/types';
+import { TASK_TEMPLATES } from '@/constants/maintenance';
 
 const DEMO_TASKS = [
   { id: 'd1', home_id: '1', title: 'Replace HVAC Air Filters', description: 'Check and replace monthly.', category: 'hvac' as const, priority: 'high' as const, status: 'due' as const, frequency: 'monthly' as const, due_date: new Date().toISOString(), is_weather_triggered: false, applicable_months: [1,2,3,4,5,6,7,8,9,10,11,12], estimated_minutes: 10, created_at: '' },
@@ -32,6 +33,17 @@ const DEMO_TASKS = [
 ];
 
 const DEMO_WEATHER = { temperature: 72, feels_like: 74, humidity: 55, wind_speed: 8, description: 'partly cloudy', icon: '02d', high: 78, low: 58, alerts: [], forecast: [] };
+
+/** Quick lookup: template_id → service_type for badge rendering */
+const SERVICE_TYPE_MAP = new Map(
+  TASK_TEMPLATES.map(t => [t.id, t.service_type || 'diy'] as const)
+);
+
+const SERVICE_BADGE_STYLES: Record<string, { label: string; bg: string; color: string }> = {
+  visit: { label: 'Pro Visit', bg: Colors.sage + '20', color: Colors.sage },
+  add_on: { label: 'Add-On', bg: Colors.copper + '20', color: Colors.copper },
+  // diy tasks get no badge — they're the default
+};
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -573,7 +585,10 @@ export default function Dashboard() {
                   <div className="task-card">
                     <div className="task-priority" style={{ background: PriorityColors[task.priority] || Colors.silver }} />
                     <div className="task-info">
-                      <div className="task-title">{task.title}</div>
+                      <div className="task-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {task.title}
+                        {(() => { const st = SERVICE_TYPE_MAP.get(task.template_id || ''); const badge = st ? SERVICE_BADGE_STYLES[st] : undefined; return badge ? <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>{badge.label}</span> : null; })()}
+                      </div>
                       <div className="task-meta">
                         {task.category} &middot; ~{task.estimated_minutes || '?'} min &middot; {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </div>

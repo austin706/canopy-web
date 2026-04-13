@@ -122,6 +122,22 @@ export interface TaskTemplate {
 
   /** Visibility tier: core = basic/essential, standard = recommended, comprehensive = everything */
   task_level?: 'core' | 'standard' | 'comprehensive';
+
+  // ─── Service classification (Pro Service Audit, April 2026) ───
+  /**
+   * How this task is fulfilled:
+   *   'visit'  — handled by the Canopy pro during bimonthly visits
+   *   'add_on' — requires a licensed/specialized provider (available as add-on subscription)
+   *   'diy'    — homeowner does it themselves
+   * When omitted, defaults to 'diy'.
+   */
+  service_type?: 'visit' | 'add_on' | 'diy';
+
+  /**
+   * Which add-on category this task falls under.
+   * Only meaningful when service_type = 'add_on'.
+   */
+  add_on_category?: 'hvac' | 'pest' | 'chimney' | 'septic' | 'irrigation' | 'cleaning' | 'generator' | 'well' | 'lawn' | 'pool';
 }
 
 /**
@@ -163,6 +179,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'hvac-filter-change',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Replace HVAC Air Filters',
     description: 'Dirty filters restrict airflow, increase energy bills, and reduce air quality. Replace every 90 days for standard pleated filters, or every 30 days for fiberglass.',
     service_purpose: 'Dirty filters reduce efficiency by 15% and worsen indoor air quality',
@@ -191,7 +208,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'hvac-spring-tuneup',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'hvac',
     title: 'Schedule Spring AC Tune-Up',
     description: 'Annual professional AC maintenance before summer. Catches issues early and improves efficiency by up to 15%.',
     service_purpose: 'Annual AC maintenance catches issues early and improves efficiency by up to 15%',
@@ -213,7 +232,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'hvac-fall-furnace',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'hvac',
     title: 'Schedule Fall Furnace Tune-Up',
     description: 'Annual furnace inspection before heating season. Ensures safe operation and catches carbon monoxide risks.',
     service_purpose: 'Professional furnace inspection ensures safe operation and catches carbon monoxide risks',
@@ -239,6 +260,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'water-heater-flush',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Flush Water Heater',
     description: 'Sediment buildup reduces efficiency and shortens tank life. Annual flushing removes buildup and keeps your water heater running efficiently.',
     service_purpose: 'Sediment buildup reduces efficiency and shortens tank life by years',
@@ -265,6 +287,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'water-heater-anode-rod',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Check Anode Rod',
     description: 'Check every 3-5 years. The sacrificial anode rod prevents tank corrosion.',
     service_purpose: 'The sacrificial anode rod prevents tank corrosion and extends water heater lifespan',
@@ -292,6 +315,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'water-heater-tankless-descale',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Descale Tankless Water Heater',
     description: 'Mineral scale buildup inside a tankless water heater reduces flow rate and efficiency. Annual descaling with white vinegar keeps it running at peak performance.',
     service_purpose: 'Scale buildup reduces flow rate, efficiency, and can trigger error codes',
@@ -322,6 +346,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'gutter-clean-spring',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Clean Gutters (Spring)',
     description: 'Remove debris from winter and spring pollen. Clogged gutters cause water damage to fascia, foundation, and landscaping.',
     service_purpose: 'Clogged gutters cause water damage to fascia, foundation, and landscaping',
@@ -347,6 +372,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'gutter-clean-fall',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Clean Gutters (Fall)',
     description: 'Clear leaves before winter. Ice dams form when clogged gutters prevent drainage.',
     service_purpose: 'Clearing leaves before winter prevents ice dams that cause water damage',
@@ -371,6 +397,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'roof-inspection',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Visual Roof Inspection',
     description: 'Look for damaged, missing, or curling shingles. Catching issues early prevents leaks and expensive repairs.',
     service_purpose: 'Catching roof damage early prevents costly leaks and structural damage',
@@ -397,6 +424,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'smoke-co-test',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Test Smoke & CO Detectors',
     description: 'Test every 6 months. Replace batteries annually.',
     service_purpose: 'Working smoke and CO detectors are your first line of defense in emergencies',
@@ -421,6 +449,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'fire-extinguisher-check',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Check Fire Extinguishers',
     description: 'Verify the pressure gauge is in the green zone and the unit is accessible. Replace if expired.',
     service_purpose: 'A functional fire extinguisher can prevent small fires from becoming catastrophic',
@@ -446,6 +475,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'winterize-hose-bibs',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Winterize Hose Bibs',
     description: 'Disconnect hoses and shut off exterior water supply before the first freeze to prevent burst pipes.',
     service_purpose: 'Frozen water lines burst easily, causing expensive water damage inside your home',
@@ -470,6 +500,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'check-for-leaks',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Check for Water Leaks',
     description: 'Inspect under sinks, around toilets, and near the water heater for drips or moisture. Small leaks become big problems fast.',
     service_purpose: 'Small leaks waste thousands of gallons annually and cause hidden mold and damage',
@@ -497,6 +528,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'dryer-vent-clean',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Clean Dryer Vent',
     description: 'Lint buildup in dryer vents is a leading cause of house fires. Clean annually or more often if you notice longer drying times.',
     service_purpose: 'Lint buildup in dryer vents is a leading cause of house fires',
@@ -521,6 +553,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'garage-door-maintenance',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Garage Door Maintenance',
     description: 'Lubricate moving parts and test safety features. A well-maintained garage door lasts 15-30 years.',
     service_purpose: 'Regular maintenance ensures safe operation and extends garage door life 15-30 years',
@@ -546,6 +579,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ LAWN & LANDSCAPE ═══
   {
     id: 'spring-lawn-care',
+    service_type: 'diy',
     title: 'Spring Lawn Care',
     description: 'Rake, dethatch if needed, apply pre-emergent herbicide, and start mowing when grass reaches 3-4 inches.',
     service_purpose: 'Spring feeding and preparation sets the foundation for a healthy lawn all season',
@@ -569,6 +603,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'fall-lawn-care',
+    service_type: 'diy',
     title: 'Fall Lawn Care',
     description: 'Aerate, overseed, and apply fall fertilizer. This is the most impactful time to feed your lawn.',
     service_purpose: 'Fall aeration and overseeding is the most impactful time to improve lawn health',
@@ -593,6 +628,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'tree-inspection',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Inspect Trees & Prune',
     description: 'Look for dead branches, disease, and structural issues. Prune deciduous trees in late winter while dormant.',
     service_purpose: 'Dead branches and weak trees pose safety risks to your home and family',
@@ -617,6 +653,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ POOL ═══
   {
     id: 'pool-opening',
+    service_type: 'diy',
     title: 'Open Pool for Season',
     description: 'Remove cover, clean, balance chemicals, and start the filter system.',
     service_purpose: 'Proper seasonal opening prevents equipment damage and ensures water safety',
@@ -642,6 +679,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'pool-weekly',
+    service_type: 'diy',
     title: 'Monthly Pool Chemistry & Equipment Check',
     description: 'Establish a weekly routine for skimming and vacuuming, with a monthly deep check of chemistry levels, pump operation, filter condition, and water clarity.',
     service_purpose: 'Maintaining water chemistry prevents algae, equipment damage, and protects swimmer health',
@@ -670,6 +708,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ DECK ═══
   {
     id: 'deck-spring-clean',
+    service_type: 'diy',
     title: 'Spring Deck Cleaning & Inspection',
     description: 'Power wash, inspect for damage, and apply sealer/stain if needed. A maintained deck lasts 25+ years.',
     service_purpose: 'A maintained deck lasts 25+ years; neglect leads to rot and safety hazards',
@@ -695,6 +734,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'deck-seal-stain',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Seal or Stain Deck',
     description: 'Apply deck sealer or stain every 2-3 years to protect against moisture, UV, and wear.',
     service_purpose: 'Regular sealing protects against moisture, UV damage, and extends deck life 10+ years',
@@ -722,7 +762,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ FIREPLACE ═══
   {
     id: 'fireplace-chimney-inspection',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'chimney',
     title: 'Annual Chimney Inspection & Sweep',
     description: 'Have a certified chimney sweep inspect and clean your chimney annually before heating season. Creosote buildup is a leading cause of chimney fires.',
     service_purpose: 'Creosote buildup is a leading cause of chimney fires and CO leaks',
@@ -747,6 +789,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'fireplace-wood-burning-clean',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Clean Firebox & Ash Removal (Wood Burning)',
     description: 'Remove ash buildup from wood-burning fireplaces. A thin layer of ash (1 inch) helps insulate and improve combustion, but excess ash restricts airflow.',
     service_purpose: 'Excess ash restricts airflow and reduces heating efficiency and safety',
@@ -773,7 +816,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'fireplace-gas-inspection',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'chimney',
     title: 'Gas Fireplace Annual Service',
     description: 'Have a qualified technician inspect your gas fireplace annually. Check for gas leaks, clean the burner assembly, and verify the pilot light and thermocouple.',
     service_purpose: 'Annual gas inspection catches leaks, blockages, and ensures safe operation',
@@ -799,6 +844,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'fireplace-check-damper',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Check Fireplace Damper & Seal',
     description: 'Ensure your fireplace damper opens and closes properly. A stuck or leaky damper wastes energy and can let moisture, pests, and cold air into your home.',
     service_purpose: 'A leaky damper wastes energy and lets moisture, pests, and cold air inside',
@@ -824,7 +870,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ SPRINKLER SYSTEM ═══
   {
     id: 'sprinkler-spring-startup',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'irrigation',
     title: 'Spring Sprinkler System Startup',
     description: 'Activate your irrigation system for the season. Gradually pressurize the lines and check each zone for leaks, broken heads, and coverage gaps.',
     service_purpose: 'Proper startup prevents equipment damage and ensures efficient watering all season',
@@ -850,7 +898,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'sprinkler-winterize',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'irrigation',
     title: 'Winterize Sprinkler System (Blowout)',
     description: 'Hire a professional to blow out your sprinkler lines with compressed air before the first freeze. Trapped water in lines will freeze and crack pipes.',
     service_purpose: 'Trapped water in lines freezes and cracks pipes, causing expensive damage',
@@ -876,6 +926,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'sprinkler-head-check',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Mid-Season Sprinkler Head Check',
     description: 'Walk your property and check each sprinkler zone for tilted heads, clogged nozzles, and dry spots. Mowing and foot traffic knock heads out of alignment.',
     service_purpose: 'Maintaining proper spray coverage reduces water waste and keeps your lawn healthy',
@@ -903,6 +954,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'spring-exterior-walkthrough',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Spring Exterior Walkthrough',
     description: 'Walk the perimeter of your home checking for winter damage — cracks in foundation, caulk gaps, damaged siding.',
     service_purpose: 'Catching winter damage early prevents small issues from becoming costly repairs',
@@ -927,6 +979,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'fall-winterize',
+    service_type: 'diy',
     title: 'Fall Winterization Checklist',
     description: 'Prepare your entire home for winter — the most important seasonal maintenance event of the year.',
     service_purpose: 'Winterization prevents frozen pipes, chimney fires, and heating failures during winter',
@@ -954,112 +1007,28 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ KITCHEN (from Proventive) ═══
   {
     id: 'refrigerator-coils-clean',
-    title: 'Vacuum Refrigerator Coils & Compressor',
-    description: 'Dust and pet hair buildup on refrigerator coils forces the compressor to work harder, reducing efficiency and lifespan. Clean every 6-12 months.',
-    service_purpose: 'Coil buildup forces the compressor to work harder, reducing efficiency and lifespan',
-    instructions: [
-      'Unplug the refrigerator or turn off the breaker',
-      'Locate the coils — usually behind or underneath the fridge',
-      'Use a coil brush or vacuum with a brush attachment to remove dust and debris',
-      'Clean the condenser fan blade if accessible',
-      'Wipe down the area behind/under the fridge',
-      'Plug the refrigerator back in',
-      'Check the door seals while you are at it — a dollar bill should hold when closed in the seal',
-    ],
-    category: 'appliance',
-    priority: 'medium',
-    frequency: 'biannual',
-    scheduling_type: 'dynamic',
-    interval_days: 180,
-    applicable_months: [3, 9],
-    estimated_minutes: 20,
-    estimated_cost: 0,
-    estimated_pro_cost: 75,
-    items_to_have_on_hand: ['Coil brush or vacuum with crevice attachment', 'Flashlight'],
     is_cleaning: true,
+    service_type: 'diy',
   },
   {
     id: 'garbage-disposal-clean',
-    title: 'Clean & Sharpen Garbage Disposal',
-    description: 'Grease and food buildup causes odors and dulls the blades. Regular cleaning keeps it fresh and cuts efficiently.',
-    service_purpose: 'Regular cleaning prevents odors, dulled blades, and improves cutting performance',
-    instructions: [
-      'Turn off the disposal and NEVER put your hand inside',
-      'Drop a handful of ice cubes and a cup of rock salt into the disposal',
-      'Run the disposal with cold water for 30 seconds — ice sharpens the blades',
-      'Cut a lemon or lime in half and grind it to deodorize',
-      'Pour 1/2 cup baking soda followed by 1 cup vinegar — let foam for 10 minutes',
-      'Flush with hot water for 30 seconds',
-      'Clean the rubber splash guard with a scrub brush and dish soap',
-    ],
-    category: 'appliance',
-    priority: 'low',
-    frequency: 'quarterly',
-    scheduling_type: 'dynamic',
-    interval_days: 90,
-    applicable_months: [2, 5, 8, 11],
-    estimated_minutes: 10,
-    estimated_cost: 0,
-    estimated_pro_cost: 75,
-    items_to_have_on_hand: ['Ice cubes', 'Rock salt or coarse salt', 'Lemon or citrus peels', 'Baking soda', 'White vinegar'],
     is_cleaning: true,
+    service_type: 'diy',
   },
   {
     id: 'vent-hood-degrease',
-    title: 'Degrease & Clean Range Vent Hood',
-    description: 'Grease buildup on your range hood filter restricts airflow, causes odors, and is a fire hazard. Clean the filter and housing quarterly.',
-    service_purpose: 'Grease buildup restricts airflow, causes odors, and is a fire hazard',
-    instructions: [
-      'Remove the vent hood filter(s)',
-      'Soak in hot water with dish soap and baking soda for 15-20 minutes',
-      'Scrub with a non-abrasive brush to remove grease',
-      'Wipe down the hood interior and exterior with a degreasing cleaner',
-      'Rinse and dry the filter completely before reinstalling',
-      'If you have a charcoal filter (recirculating hood), replace it every 3-6 months',
-      'Check that the fan operates on all speeds',
-    ],
-    category: 'appliance',
-    priority: 'medium',
-    frequency: 'quarterly',
-    scheduling_type: 'dynamic',
-    interval_days: 90,
-    applicable_months: [3, 6, 9, 12],
-    estimated_minutes: 20,
-    estimated_cost: 0,
-    estimated_pro_cost: 75,
-    items_to_have_on_hand: ['Degreaser spray', 'Hot soapy water', 'Scrub brush or sponge'],
     is_cleaning: true,
+    service_type: 'diy',
   },
   {
     id: 'dishwasher-clean',
-    title: 'Clean Dishwasher Interior & Filter',
-    description: 'Food particles and mineral deposits build up in the filter and spray arms, reducing cleaning power and causing odors.',
-    service_purpose: 'Cleaning improves dishwashing performance and eliminates odors and mold',
-    instructions: [
-      'Remove the bottom rack and locate the filter (usually at the base)',
-      'Twist and pull out the cylindrical filter',
-      'Rinse under hot water and scrub with a soft brush to remove debris',
-      'Check the spray arms for clogged holes — use a toothpick to clear them',
-      'Wipe down the door edges, gasket, and interior walls',
-      'Place a cup of white vinegar on the top rack and run a hot cycle empty',
-      'Sprinkle 1 cup of baking soda on the bottom and run a short hot cycle',
-      'Reinstall the clean filter',
-    ],
-    category: 'appliance',
-    priority: 'medium',
-    frequency: 'quarterly',
-    scheduling_type: 'dynamic',
-    interval_days: 90,
-    applicable_months: [2, 5, 8, 11],
-    estimated_minutes: 15,
-    estimated_cost: 0,
-    estimated_pro_cost: 75,
-    items_to_have_on_hand: ['White vinegar', 'Baking soda', 'Toothpick or soft brush for spray arm holes'],
     is_cleaning: true,
+    service_type: 'diy',
   },
   {
     id: 'stone-countertop-seal',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Seal Stone Countertops (Annual Test)',
     description: 'Natural stone countertops like granite, marble, and soapstone may need periodic resealing. Do the water bead test annually — if water soaks in within 5 minutes, reseal.',
     service_purpose: 'Unsealed natural stone absorbs liquids and stains permanently',
@@ -1087,33 +1056,13 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ BATHROOM & LAUNDRY (from Proventive) ═══
   {
     id: 'washing-machine-clean',
-    title: 'Clean Washing Machine',
-    description: 'Mold, mildew, and detergent residue build up inside your washer, causing odors and reducing cleaning performance. Deep clean monthly or quarterly.',
-    service_purpose: 'Mold and detergent residue reduce cleaning power and cause odors',
-    instructions: [
-      'Run an empty hot cycle with 2 cups of white vinegar',
-      'Wipe down the rubber door gasket with a vinegar-soaked cloth (front-loaders)',
-      'Pull out and scrub the detergent/softener dispenser tray',
-      'Clean the lint/debris filter (usually at the bottom front of front-loaders)',
-      'Wipe the exterior and control panel',
-      'Leave the door open after each use to prevent mildew',
-      'For top-loaders: clean around the agitator and the rim',
-    ],
-    category: 'appliance',
-    priority: 'medium',
-    frequency: 'quarterly',
-    scheduling_type: 'dynamic',
-    interval_days: 90,
-    applicable_months: [3, 6, 9, 12],
-    estimated_minutes: 15,
-    estimated_cost: 0,
-    estimated_pro_cost: 75,
-    items_to_have_on_hand: ['Washing machine cleaner tablets or white vinegar', 'Microfiber cloth', 'Baking soda'],
     is_cleaning: true,
+    service_type: 'diy',
   },
   {
     id: 'drain-clearing',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Clear & Maintain Household Drains',
     description: 'Hair, soap scum, and grease accumulate in drains over time. Proactive cleaning prevents slow drains and costly clogs.',
     service_purpose: 'Proactive cleaning prevents slow drains, clogs, and expensive plumbing repairs',
@@ -1141,6 +1090,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'bathroom-exhaust-fan-clean',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Clean Bathroom Exhaust Fans',
     description: 'Dust-clogged exhaust fans cannot properly remove moisture, leading to mold growth, peeling paint, and poor air quality.',
     service_purpose: 'Dust-clogged fans cannot remove moisture, leading to mold and peeling paint',
@@ -1171,6 +1121,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'ceiling-fan-clean-reverse',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Clean & Reverse Ceiling Fans',
     description: 'Dusty fan blades spread allergens. Reversing direction seasonally improves comfort — counterclockwise in summer (downdraft), clockwise in winter (updraft to circulate warm air).',
     service_purpose: 'Dusty blades spread allergens and seasonal reversal improves comfort and efficiency',
@@ -1198,6 +1149,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'lightbulb-check',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Check & Replace Burned-Out Lightbulbs',
     description: 'Walk through your home and replace any burned-out or flickering bulbs. Upgrade to LED where possible — they last 25x longer and use 75% less energy.',
     service_purpose: 'LED upgrades last 25x longer and use 75% less energy, saving money over time',
@@ -1225,6 +1177,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'winterize-ac-condenser',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Winterize A/C Condenser Unit',
     description: 'Protect your outdoor AC unit from winter debris and ice damage. Covering and clearing around the unit extends its life.',
     service_purpose: 'Protecting the outdoor unit prevents winter damage and extends its life',
@@ -1252,6 +1205,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'air-exchanger-clean',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Clean & Maintain Air Exchanger (HRV/ERV)',
     description: 'Heat Recovery Ventilators and Energy Recovery Ventilators need regular filter cleaning to maintain indoor air quality and efficiency.',
     service_purpose: 'Clean filters maintain indoor air quality and ensure energy recovery efficiency',
@@ -1280,6 +1234,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'water-softener-salt',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Refill Water Softener Salt',
     description: 'Check salt level monthly and refill as needed. Low salt means hard water passes through, causing scale buildup on pipes, fixtures, and appliances.',
     service_purpose: 'Low salt causes hard water to pass through, causing scale buildup on pipes',
@@ -1307,28 +1262,8 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ OUTDOOR (from Proventive) ═══
   {
     id: 'garbage-bins-clean',
-    title: 'Clean Garbage & Recycling Bins',
-    description: 'Bacteria, odors, and pests thrive in dirty bins. A quarterly scrub keeps them sanitary and reduces attracting wildlife.',
-    service_purpose: 'Regular cleaning prevents bacteria, odors, and pests from establishing in bins',
-    instructions: [
-      'Roll bins to a driveway or concrete surface (not the lawn)',
-      'Rinse the inside with a garden hose',
-      'Spray with a mixture of dish soap, baking soda, and white vinegar',
-      'Scrub the interior with a long-handled brush',
-      'Rinse thoroughly and let air dry in the sun (UV kills bacteria)',
-      'Sprinkle baking soda in the bottom to absorb future odors',
-      'In hot months, consider double-bagging food waste to reduce maggot risk',
-    ],
-    category: 'outdoor',
-    priority: 'low',
-    frequency: 'quarterly',
-    scheduling_type: 'dynamic',
-    interval_days: 90,
-    applicable_months: [3, 6, 9, 12],
-    estimated_minutes: 15,
-    estimated_cost: 0,
-    estimated_pro_cost: 75,
     is_cleaning: true,
+    service_type: 'diy',
   },
 
   // ═══════════════════════════════════════════════════
@@ -1338,7 +1273,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ── South / Hot-Humid Region ──
   {
     id: 'south-termite-inspection',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'pest',
     title: 'Schedule Annual Termite Inspection',
     description: 'Southern climates have year-round termite activity. An annual professional inspection catches infestations before structural damage occurs.',
     service_purpose: 'Annual inspection catches infestations before they cause structural damage',
@@ -1363,6 +1300,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'south-ac-drain-line',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Flush AC Condensate Drain Line',
     description: 'Humid climates cause algae and mold to clog condensate lines. A clogged line can cause water damage, mold growth, and AC shutdowns.',
     service_purpose: 'Clogged condensate lines cause water damage, mold growth, and AC shutdowns',
@@ -1387,6 +1325,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'south-hurricane-prep',
+    service_type: 'diy',
     title: 'Hurricane Season Prep — Review Emergency Plan',
     description: 'Hurricane season runs June-November. Prepare your home and family before storms arrive.',
     service_purpose: 'Preparing before hurricane season protects your home and family from storms',
@@ -1412,6 +1351,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'south-mold-check',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Check for Mold in Humid Areas',
     description: 'High humidity promotes mold growth in bathrooms, under sinks, and in crawlspaces. Catching it early prevents health issues and expensive remediation.',
     service_purpose: 'Catching mold early prevents health issues and expensive remediation',
@@ -1438,6 +1378,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'north-winterize-pipes',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Winterize Outdoor Plumbing',
     description: 'Frozen pipes are the most common cause of winter water damage. Properly winterizing prevents burst pipes and thousands in repairs.',
     service_purpose: 'Frozen pipes are the most common cause of winter water damage',
@@ -1463,6 +1404,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'north-ice-dam-prevention',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Prevent Ice Dams — Check Attic Insulation & Ventilation',
     description: 'Ice dams form when warm attic air melts roof snow that refreezes at the eaves. They cause water to back up under shingles and into your home.',
     service_purpose: 'Preventing ice dams stops water damage to roofs, ceilings, and interiors',
@@ -1487,6 +1429,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'north-furnace-carbon-monoxide',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Test Carbon Monoxide Detectors Before Heating Season',
     description: 'CO is odorless and deadly. Furnaces, water heaters, and fireplaces are common sources. Test all detectors before you start running heat.',
     service_purpose: 'CO is odorless and deadly; testing detectors protects your family',
@@ -1510,6 +1453,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'north-spring-frost-heave',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Inspect for Winter Frost Heave Damage',
     description: 'Freeze-thaw cycles shift concrete, crack foundations, and pop fence posts. Spring is the time to catch and repair damage before it worsens.',
     service_purpose: 'Spring freeze-thaw cycles damage concrete, foundations, and fence posts',
@@ -1535,7 +1479,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ── Desert / Arid Region ──
   {
     id: 'desert-evap-cooler-startup',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'hvac',
     title: 'Start Up Evaporative Cooler (Swamp Cooler)',
     description: 'Evaporative coolers need spring startup — reconnect water, replace pads, and oil the motor. Neglecting this shortens the unit\'s life.',
     service_purpose: 'Neglecting startup shortens the unit\'s life and reduces cooling efficiency',
@@ -1560,6 +1506,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'desert-monsoon-prep',
+    service_type: 'diy',
     title: 'Monsoon Season Prep — Drainage & Roof Check',
     description: 'Desert monsoons bring intense flash flooding and wind damage. Prepare your property before the season starts.',
     service_purpose: 'Preparing for monsoons prevents flash flooding and wind damage',
@@ -1587,6 +1534,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'coastal-salt-air-rinse',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Rinse Exterior for Salt Air Corrosion',
     description: 'Salt air corrodes metal fixtures, hinges, and outdoor equipment. Regular rinsing slows the damage significantly.',
     service_purpose: 'Regular rinsing slows corrosion of metal fixtures and outdoor equipment',
@@ -1611,6 +1559,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'coastal-window-seal-check',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Inspect Window and Door Seals for Salt Damage',
     description: 'Coastal homes take a beating from salt spray and wind-driven rain. Deteriorated seals lead to water infiltration and mold.',
     service_purpose: 'Salt spray and wind-driven rain cause water infiltration and mold',
@@ -1636,6 +1585,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ── Midwest Region ──
   {
     id: 'midwest-tornado-prep',
+    service_type: 'diy',
     title: 'Tornado Season Prep — Review Emergency Plan',
     description: 'Tornado season peaks March-June in the Midwest. Have a plan before severe weather hits.',
     service_purpose: 'Having a plan before severe weather hits protects your family',
@@ -1661,6 +1611,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'midwest-sump-pump-test',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Test Sump Pump Before Spring Thaw',
     description: 'Spring snowmelt and rain saturate the soil. A failed sump pump means a flooded basement. Test it before you need it.',
     service_purpose: 'A failed sump pump means a flooded basement during spring thaw',
@@ -1689,6 +1640,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'gfci-outlet-test',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Test GFCI Outlets',
     description: 'GFCI outlets protect against electrical shock in wet areas. Press the Test button, verify power cuts off, then press Reset. Replace any that fail.',
     service_purpose: 'GFCI outlets prevent electrical shocks in wet areas like kitchens and bathrooms',
@@ -1713,6 +1665,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'water-pressure-check',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Check Water Pressure',
     description: 'Water pressure above 80 PSI damages pipes, fixtures, and appliances over time. Use a gauge on an outdoor spigot to test. Install a pressure regulator if consistently high.',
     service_purpose: 'High water pressure damages pipes, fixtures, and appliances over time',
@@ -1737,6 +1690,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'midwest-storm-shelter-check',
+    service_type: 'diy',
     title: 'Storm Shelter & Emergency Kit Check',
     description: 'Before tornado season, verify your storm shelter is accessible and your emergency kit is stocked with fresh supplies.',
     service_purpose: 'Ensuring your shelter is stocked protects your family during severe weather',
@@ -1763,6 +1717,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'caulk-windows-doors',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Inspect & Recaulk Windows and Doors',
     description: 'Cracked or missing caulk around windows and doors lets in drafts, moisture, and insects. Check annually in fall before heating season.',
     service_purpose: 'Sealing gaps prevents air leaks, water intrusion, and pest entry',
@@ -1789,6 +1744,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'inspect-irrigation-sprinkler',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Inspect & Adjust Sprinkler Heads',
     description: 'Walk each zone while it runs. Straighten or replace tilted/broken heads, clear clogs, and adjust spray patterns to avoid watering sidewalks or the house.',
     service_purpose: 'Straightening and replacing broken heads prevents water waste',
@@ -1812,32 +1768,13 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'deep-clean-outdoor-furniture',
-    title: 'Deep Clean Outdoor Furniture & Cushions',
-    description: 'Remove mildew, pollen, and grime from patio furniture at the start of summer. Clean cushion covers in the wash and scrub frames with soapy water.',
-    service_purpose: 'Removing mildew and grime extends furniture life and maintains appearance',
-    instructions: [
-      'Remove all cushion covers and machine-wash if care label allows',
-      'For non-washable cushions, spray with a 50/50 vinegar-water solution and scrub with a brush',
-      'Hose down metal, wicker, or plastic frames',
-      'Scrub frames with dish soap and water using a soft brush',
-      'Rinse thoroughly and let everything dry completely in the sun',
-      'Apply protectant spray to wicker or wood furniture',
-    ],
-    category: 'deck',
-    priority: 'low',
-    frequency: 'annual',
-    scheduling_type: 'seasonal',
-    applicable_months: [6],
-    estimated_minutes: 45,
-    estimated_cost: 5,
-    estimated_pro_cost: 5,
-    requires_home_feature: 'has_deck',
-    items_to_have_on_hand: ['Mild dish soap', 'Soft bristle brush', 'Garden hose', 'Furniture covers for storage'],
     is_cleaning: true,
+    service_type: 'diy',
   },
   {
     id: 'inspect-exterior-paint-siding',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Inspect Exterior Paint & Siding',
     description: 'Walk the perimeter of your home looking for peeling paint, cracked siding, or gaps. Catching damage early prevents water intrusion and costly repairs.',
     service_purpose: 'Catching damage early prevents water intrusion and costly repairs',
@@ -1862,6 +1799,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'clean-dryer-vent-duct',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Clean Dryer Vent & Exhaust Duct',
     description: 'Lint buildup in the dryer vent is a top cause of house fires. Disconnect the duct and clean it thoroughly at least once a year.',
     service_purpose: 'Lint buildup in the dryer vent is a top cause of house fires',
@@ -1886,6 +1824,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'check-attic-ventilation',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Check Attic Ventilation & Insulation',
     description: 'Hot summer days reveal attic ventilation problems. Check that vents are clear, insulation is intact, and there are no signs of moisture or pests.',
     service_purpose: 'Checking ventilation prevents heat buildup, premature aging, and ice dams',
@@ -1910,6 +1849,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'inspect-driveway-walkways',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Inspect & Repair Driveway and Walkways',
     description: 'Summer is ideal for concrete and asphalt repairs. Fill cracks before they grow and seal-coat asphalt driveways to extend their life.',
     service_purpose: 'Filling cracks before they grow prevents expensive concrete and asphalt failures',
@@ -1934,6 +1874,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'mid-summer-lawn-care',
+    service_type: 'diy',
     title: 'Mid-Summer Lawn Health Check',
     description: 'Check for brown patches, grub damage, and irrigation coverage. Adjust mowing height for summer heat and address any bare spots.',
     service_purpose: 'Addressing brown patches and grub damage prevents permanent lawn damage',
@@ -1959,6 +1900,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'inspect-deck-stain-seal',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Inspect Deck & Reseal if Needed',
     description: 'Sprinkle water on your deck boards. If it soaks in instead of beading up, the seal has worn off and it\'s time to reseal.',
     service_purpose: 'Testing the water bead determines if the deck needs resealing to prevent rot',
@@ -1985,7 +1927,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ PEST CONTROL ═══
   {
     id: 'pest-general-inspection',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'pest',
     title: 'Annual General Pest Inspection',
     description: 'Professional pest inspection to identify termites, carpenter ants, rodents, cockroaches, or other common household pests. Early detection prevents costly damage and infestations.',
     service_purpose: 'Early detection prevents costly damage and infestations from pests',
@@ -2009,7 +1953,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'pest-termite-prevention',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'pest',
     title: 'Annual Termite Prevention Treatment',
     description: 'Termites cause billions in property damage annually. Annual chemical or bait barrier treatment is essential for homes in termite-prone regions, especially with wood-frame or crawlspace construction.',
     service_purpose: 'Annual treatment prevents termites from causing billions in damage',
@@ -2036,7 +1982,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'pest-mosquito-treatment',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'pest',
     title: 'Seasonal Mosquito & Tick Yard Treatment',
     description: 'Professional mosquito and tick spray treatment reduces disease-carrying vectors in your yard. Especially important in spring/summer and in warm humid climates.',
     service_purpose: 'Professional treatment reduces disease-carrying mosquitoes and ticks in your yard',
@@ -2064,7 +2012,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ CLEANING (using 'general' category) ═══
   {
     id: 'window-washing-exterior',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'cleaning',
     title: 'Professional Exterior Window Washing',
     description: 'Clean exterior windows twice yearly to improve natural light, prevent water damage, and maintain home curb appeal. Professional service uses specialized equipment for safety.',
     service_purpose: 'Regular washing improves natural light, prevents water damage, and maintains curb appeal',
@@ -2089,6 +2039,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'window-washing-interior',
     pro_responsible: false,
+    service_type: 'diy',
     title: 'Interior Window & Track Cleaning',
     description: 'Clean interior windows and tracks twice yearly to remove dust, pollen, and grime that accumulates indoors. Dirty tracks cause windows to bind and seal poorly.',
     service_purpose: 'Interior cleaning removes dust and pollen that accumulates indoors',
@@ -2112,7 +2063,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'pressure-wash-exterior',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'cleaning',
     title: 'Pressure Wash Siding & Walkways',
     description: 'Annual pressure wash removes mold, mildew, algae, and built-up grime from siding, walkways, and patios. Protects home exterior and prevents surface deterioration.',
     service_purpose: 'Annual pressure wash removes mold, mildew, and algae that damage home exterior',
@@ -2137,6 +2090,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'deep-clean-kitchen',
     pro_responsible: false,
+    service_type: 'diy',
     title: 'Quarterly Deep Clean Kitchen',
     description: 'Quarterly deep cleaning of kitchen removes grease buildup, disinfects appliances, and cleans out cabinets. Food safety and kitchen hygiene require more frequent deep cleaning than other rooms.',
     service_purpose: 'Deep cleaning removes grease buildup and maintains food safety and hygiene',
@@ -2164,6 +2118,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'deep-clean-bathroom',
     pro_responsible: false,
+    service_type: 'diy',
     title: 'Quarterly Deep Clean Bathrooms',
     description: 'Quarterly deep cleaning of bathrooms prevents mold growth, disinfects high-touch surfaces, and removes soap scum and hard-water deposits that shorten fixture lifespan.',
     service_purpose: 'Deep cleaning prevents mold growth and disinfects high-touch surfaces',
@@ -2192,7 +2147,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ CHIMNEY ═══
   {
     id: 'chimney-sweep-clean',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'chimney',
     title: 'Professional Chimney Sweep & Cleaning',
     description: 'Professional chimney sweep removes creosote, soot, and debris buildup. Essential safety service that prevents chimney fires and improves draft.',
     service_purpose: 'Professional chimney sweep prevents chimney fires and improves draft',
@@ -2219,7 +2176,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ HVAC & AIR QUALITY ═══
   {
     id: 'air-duct-cleaning',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'hvac',
     title: 'Professional Air Duct Cleaning',
     description: 'Deep cleaning of HVAC ductwork removes accumulated dust, pet dander, and debris that impacts indoor air quality and system efficiency. Recommended every 3-5 years.',
     service_purpose: 'Deep duct cleaning removes dust and pet dander that impacts indoor air quality',
@@ -2245,6 +2204,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'humidifier-pad-replace',
     pro_responsible: false,
+    service_type: 'diy',
     title: 'Whole House Humidifier Pad Replacement',
     description: 'Humidifier pads require annual replacement to maintain efficiency and prevent mineral buildup and mold growth. Simple DIY task that takes minutes.',
     service_purpose: 'Annual pad replacement maintains efficiency and prevents mold growth',
@@ -2271,6 +2231,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'air-purifier-filter',
     pro_responsible: false,
+    service_type: 'diy',
     title: 'Air Purifier Filter Replacement',
     description: 'Quarterly replacement of air purifier filters maintains air quality and prevents mold/bacteria growth on saturated filters. Most units require both pre-filters and HEPA filters.',
     service_purpose: 'Regular filter replacement maintains air quality and prevents mold on filters',
@@ -2300,6 +2261,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'water-heater-tpr-valve',
     pro_responsible: false,
+    service_type: 'diy',
     title: 'Test Water Heater T&P Relief Valve',
     description: 'Annual testing of the Temperature & Pressure relief valve prevents dangerous pressure buildup in your water heater tank. This is a critical safety task.',
     service_purpose: 'T&P relief valve prevents dangerous pressure buildup in your water heater tank',
@@ -2324,7 +2286,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'septic-pump',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'septic',
     title: 'Septic Tank Pump Service',
     description: 'Professional septic tank pumping every 3-5 years removes sludge and scum buildup that clogs the drainfield. Critical maintenance for septic system health and lifespan.',
     service_purpose: 'Septic tank pumping removes sludge and scum buildup that clogs the drainfield',
@@ -2350,7 +2314,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'septic-aerobic-inspect',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'septic',
     title: 'Aerobic Septic System Inspection',
     description: 'Quarterly professional inspection of aerobic septic systems ensures the treatment tank aerator is working and tank chemistry is balanced. Required by most counties for aerobic permits.',
     service_purpose: 'Quarterly inspection ensures the aerator is working and tank chemistry is balanced',
@@ -2378,6 +2344,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'septic-aerobic-chlorine',
     pro_responsible: false,
+    service_type: 'visit',
     title: 'Replace Septic Chlorine Tablets',
     description: 'Aerobic septic systems use chlorine tablets (or UV) to disinfect treated effluent before it reaches spray heads. Low chlorine means untreated wastewater on your yard.',
     service_purpose: 'Chlorine disinfects treated wastewater before spray-head discharge',
@@ -2405,6 +2372,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'septic-spray-head-clean',
     pro_responsible: false,
+    service_type: 'visit',
     title: 'Inspect & Clean Septic Spray Heads',
     description: 'Aerobic systems spray treated water across the yard through pop-up spray heads. Clogged or misaligned heads cause pooling, odor, and health code violations.',
     service_purpose: 'Clogged spray heads cause sewage pooling and potential health code violations',
@@ -2431,6 +2399,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'septic-drainfield-inspect',
     pro_responsible: false,
+    service_type: 'visit',
     title: 'Inspect Septic Drainfield / Lateral Lines',
     description: 'Walk the drainfield area and look for warning signs of failure: soggy ground, sewage odor, unusually green grass, or slow drains in the house. Catching problems early can save thousands.',
     service_purpose: 'Early detection of drainfield failure prevents costly full replacement',
@@ -2457,7 +2426,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'well-water-test',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'well',
     title: 'Annual Well Water Quality Test',
     description: 'Annual testing of well water ensures safety and detects contamination from bacteria, nitrates, or chemicals. EPA recommends annual testing for all private wells.',
     service_purpose: 'Annual testing ensures safety and detects contamination from bacteria and chemicals',
@@ -2487,7 +2458,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   // The duplicate that was here has been removed to prevent double task generation.
   {
     id: 'generator-maintenance',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'generator',
     title: 'Annual Generator Service & Test',
     description: 'Annual professional service of standby generators ensures they start reliably during power outages. Includes fuel system check, load testing, and battery maintenance.',
     service_purpose: 'Annual service ensures your generator starts reliably during power outages',
@@ -2514,6 +2487,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'surge-protector-check',
     pro_responsible: false,
+    service_type: 'diy',
     title: 'Whole House Surge Protector Annual Check',
     description: 'Annual inspection of whole-house surge protector ensures it\'s protecting your electrical system. Protectors degrade over time and lose effectiveness, requiring periodic replacement.',
     service_purpose: 'Checking protectors ensures they\'re protecting your electrical system from surges',
@@ -2541,6 +2515,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'solar-panel-clean',
     pro_responsible: false,
+    service_type: 'diy',
     title: 'Biannual Solar Panel Cleaning',
     description: 'Professional solar panel cleaning removes dust, pollen, bird droppings, and mineral deposits that reduce efficiency by up to 25%. Biannual cleaning in spring and fall optimizes output.',
     service_purpose: 'Dust and debris reduce panel efficiency by up to 25%',
@@ -2566,6 +2541,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'ev-charger-inspect',
     pro_responsible: false,
+    service_type: 'diy',
     title: 'Annual EV Charger Inspection',
     description: 'Annual visual inspection of electric vehicle chargers ensures safe operation and detects any wear or damage. DIY check takes minutes; professional service if issues found.',
     service_purpose: 'Annual inspection detects wear or damage that could cause unsafe charging',
@@ -2593,6 +2569,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'foundation-inspection',
     pro_responsible: false,
+    service_type: 'diy',
     title: 'Annual Foundation Inspection',
     description: 'Annual walkthrough of foundation interior and exterior detects settling, cracks, water damage, or structural issues before they become expensive repairs.',
     service_purpose: 'Annual inspection detects settling, cracks, or water damage before expensive repairs',
@@ -2618,6 +2595,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'attic-inspection',
     pro_responsible: false,
+    service_type: 'diy',
     title: 'Annual Attic Inspection',
     description: 'Annual attic walkthrough checks insulation condition, ventilation, roof leaks, pest activity, and moisture issues. Early detection prevents expensive structural damage.',
     service_purpose: 'Annual inspection checks insulation, ventilation, and detects water damage or pests',
@@ -2643,7 +2621,9 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'carpet-deep-clean',
-    pro_responsible: true,
+    pro_responsible: false,
+    service_type: 'add_on',
+    add_on_category: 'cleaning',
     requires_flooring_type: ['carpet'],
     title: 'Annual Professional Carpet Cleaning',
     description: 'Annual deep cleaning extends carpet lifespan, removes embedded dirt and allergens, and restores appearance. Professional hot water extraction is more effective than rental equipment.',
@@ -2672,6 +2652,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   {
     id: 'driveway-seal',
     pro_responsible: true,
+    service_type: 'visit',
     title: 'Asphalt Driveway Sealing',
     description: 'Seal asphalt driveways every 2-3 years to protect from sun damage, water penetration, and oxidation. Sealcoat adds years to driveway life and improves appearance.',
     service_purpose: 'Sealing protects from sun damage, water penetration, and extends driveway life',
@@ -2696,51 +2677,14 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
   {
     id: 'holiday-light-install',
-    title: 'Install Holiday Lights & Decorations',
-    description: 'Install exterior holiday lighting and decorations before the holiday season. Professional installation is recommended for roofline and tall areas.',
-    service_purpose: 'Professional-looking holiday displays increase curb appeal and neighborhood value while keeping you safely off the roof',
-    instructions: [
-      'Plan your lighting layout before climbing any ladders',
-      'Test all light strands before hanging — replace any with damaged wiring',
-      'Use outdoor-rated extension cords and lights rated for exterior use',
-      'Secure lights with clips designed for your roof/gutter type — never use nails or staples',
-      'Ensure all connections are off the ground and protected from moisture',
-      'Use a timer or smart plug to automate on/off times',
-      'Have a partner or spotter when working on ladders',
-    ],
-    category: 'seasonal',
-    priority: 'low',
-    frequency: 'annual',
-    scheduling_type: 'seasonal',
-    applicable_months: [10, 11],
-    estimated_minutes: 120,
-    estimated_cost: 0,
-    estimated_pro_cost: 300,
     pro_responsible: false,
+    service_type: 'diy',
     items_to_have_on_hand: ['Light clips', 'Outdoor extension cords', 'Timer or smart plug', 'Ladder'],
   },
   {
     id: 'holiday-light-remove',
-    title: 'Remove Holiday Lights & Decorations',
-    description: 'Take down exterior holiday lighting and decorations. Store properly to extend the life of your lights and prevent damage to your home.',
-    service_purpose: 'Prompt removal prevents gutter damage, shingle wear, and faded decorations from becoming an eyesore',
-    instructions: [
-      'Remove lights carefully — pulling can damage gutters and shingles',
-      'Wrap each strand neatly around a cord reel or cardboard to prevent tangling',
-      'Inspect strands as you remove them and discard any with frayed wiring',
-      'Remove all clips and fasteners from the roofline',
-      'Store lights in a dry location — moisture causes corrosion and shorts',
-      'Label storage containers by location (front porch, roofline, trees) for easy setup next year',
-    ],
-    category: 'seasonal',
-    priority: 'low',
-    frequency: 'annual',
-    scheduling_type: 'seasonal',
-    applicable_months: [1, 2],
-    estimated_minutes: 90,
-    estimated_cost: 0,
-    estimated_pro_cost: 250,
     pro_responsible: false,
+    service_type: 'diy',
     items_to_have_on_hand: ['Cord reels or cardboard wraps', 'Storage containers', 'Ladder'],
   },
 ];

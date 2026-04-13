@@ -5,6 +5,7 @@ import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/utils';
 import { reopenTask as reopenTaskApi, deleteTask as deleteTaskApi, batchMatchAffiliateLinksForItems, type AffiliateProduct } from '@/services/supabase';
 import { getDisplayStatus } from '@/services/taskEngine';
+import { TASK_TEMPLATES } from '@/constants/maintenance';
 import { supabase } from '@/services/supabase';
 import { showToast } from '@/components/Toast';
 
@@ -224,6 +225,29 @@ export default function TaskDetail() {
       </div>
 
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
+        {/* Service Type Banner */}
+        {(() => {
+          const tpl = TASK_TEMPLATES.find(t => t.id === task.template_id);
+          if (!tpl) return null;
+          if (tpl.service_type === 'visit') return (
+            <div className="card mb-lg" style={{ background: Colors.sage + '10', border: `1px solid ${Colors.sage}30`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>&#128736;</span>
+              <p style={{ fontSize: 13, color: Colors.sage, fontWeight: 500, margin: 0 }}>
+                Your Canopy pro handles this during their bimonthly visit.
+              </p>
+            </div>
+          );
+          if (tpl.service_type === 'add_on') return (
+            <div className="card mb-lg" style={{ background: Colors.copper + '10', border: `1px solid ${Colors.copper}30`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>&#9889;</span>
+              <p style={{ fontSize: 13, color: Colors.copper, fontWeight: 500, margin: 0 }}>
+                This requires a licensed specialist. Available as a Canopy add-on or through your own provider.
+              </p>
+            </div>
+          );
+          return null;
+        })()}
+
         {/* Category & Priority */}
         <div className="card mb-lg">
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>

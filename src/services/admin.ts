@@ -223,6 +223,7 @@ export interface TaskTemplateDB {
   ai_confidence: number | null;
   ai_source_equipment_id: string | null;
   task_level: 'core' | 'standard' | 'comprehensive';
+  is_cleaning: boolean;
   created_at: string;
   updated_at: string;
 }

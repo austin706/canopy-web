@@ -40,6 +40,7 @@ export default function Calendar() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [hideCleaning, setHideCleaning] = useState(false);
 
   // Calendar subscription state
   const [calToken, setCalToken] = useState<string | null>(user?.calendar_token ?? null);
@@ -159,27 +160,33 @@ export default function Calendar() {
     return map;
   }, [enrichedTasks, visits]);
 
+  // Apply cleaning filter to the base task set
+  const visibleTasks = useMemo(() => {
+    if (!hideCleaning) return enrichedTasks;
+    return enrichedTasks.filter(t => !t.is_cleaning);
+  }, [enrichedTasks, hideCleaning]);
+
   // Keep tasksByDate for backwards compat
   const tasksByDate = useMemo(() => {
     const map: Record<string, MaintenanceTask[]> = {};
-    enrichedTasks.forEach(t => {
+    visibleTasks.forEach(t => {
       const d = new Date(t.due_date);
       const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
       if (!map[key]) map[key] = [];
       map[key].push(t);
     });
     return map;
-  }, [enrichedTasks]);
+  }, [visibleTasks]);
 
   // All tasks for the current month, sorted by due date
   const monthTasks = useMemo(() => {
-    return enrichedTasks
+    return visibleTasks
       .filter(t => {
         const d = new Date(t.due_date);
         return d.getMonth() === month && d.getFullYear() === year;
       })
       .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
-  }, [enrichedTasks, month, year]);
+  }, [visibleTasks, month, year]);
 
   // Visits for the current month
   const monthVisits = useMemo(() => {
@@ -564,6 +571,30 @@ export default function Calendar() {
                   ✕
                 </button>
               )}
+            </div>
+
+            {/* Cleaning Task Toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <button
+                onClick={() => setHideCleaning(!hideCleaning)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 10px',
+                  borderRadius: 16,
+                  border: `1px solid ${hideCleaning ? Colors.copper : Colors.lightGray}`,
+                  background: hideCleaning ? `${Colors.copper}15` : 'transparent',
+                  color: hideCleaning ? Colors.copper : Colors.medGray,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <span style={{ fontSize: 14 }}>{hideCleaning ? '🧹' : '🧹'}</span>
+                {hideCleaning ? 'Cleaning hidden' : 'Hide cleaning'}
+              </button>
             </div>
 
             {/* Status Filter Tabs + Select All Option */}

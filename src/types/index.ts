@@ -694,7 +694,7 @@ export interface EquipmentConsumable {
 
 export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low';
 export type TaskStatus = 'upcoming' | 'due' | 'overdue' | 'completed' | 'skipped';
-export type TaskFrequency = 'monthly' | 'quarterly' | 'biannual' | 'annual' | 'as_needed' | 'weekly' | 'biweekly' | 'seasonal' | 'semi_annual';
+export type TaskFrequency = 'monthly' | 'bimonthly' | 'quarterly' | 'biannual' | 'annual' | 'as_needed' | 'weekly' | 'biweekly' | 'seasonal' | 'semi_annual';
 export type TaskSchedulingType = 'dynamic' | 'seasonal';
 
 export interface MaintenanceTask {

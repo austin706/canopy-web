@@ -705,7 +705,7 @@ export default function Calendar() {
                     </div>
                     {!selectMode && task.status !== 'completed' && task.status !== 'skipped' && !isDemo && (
                       <div className="flex gap-sm mt-sm" style={{ marginLeft: 20, position: 'relative' }}>
-                        <button className="btn btn-sm" style={{ background: 'var(--color-sage)', color: Colors.white, border: 'none' }} onClick={() => quickCompleteTask(task)}>Complete</button>
+                        <button className="btn btn-sm" style={{ background: 'var(--color-sage)', color: Colors.white, border: 'none' }} onClick={() => quickCompleteTask(task).catch(() => {})}>Complete</button>
                         <button className="btn btn-ghost btn-sm" onClick={() => setSnoozeMenuId(snoozeMenuId === task.id ? null : task.id)}>Snooze</button>
                         {snoozeMenuId === task.id && (
                           <div style={{
@@ -719,7 +719,7 @@ export default function Calendar() {
                               { label: '2 weeks', days: 14 },
                               { label: '1 month', days: 30 },
                             ].map(opt => (
-                              <button key={opt.days} onClick={() => { quickSnoozeTask(task, opt.days); setSnoozeMenuId(null); }}
+                              <button key={opt.days} onClick={() => { quickSnoozeTask(task, opt.days).catch(() => {}); setSnoozeMenuId(null); }}
                                 style={{ display: 'block', width: '100%', padding: '8px 16px', border: 'none', background: 'none',
                                   textAlign: 'left', fontSize: 13, cursor: 'pointer', color: 'var(--color-charcoal)' }}
                                 onMouseOver={e => (e.currentTarget.style.background = 'var(--color-background)')}
@@ -730,7 +730,7 @@ export default function Calendar() {
                             ))}
                           </div>
                         )}
-                        <button className="btn btn-ghost btn-sm" onClick={() => quickSkipTask(task)}>Skip</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => quickSkipTask(task).catch(() => {})}>Skip</button>
                       </div>
                     )}
                     {!selectMode && task.status === 'completed' && !isDemo && (

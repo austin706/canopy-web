@@ -581,7 +581,7 @@ export default function Dashboard() {
                     <div className="task-actions">
                       <span className="badge" style={{ background: (StatusColors[task.status] || Colors.silver) + '20', color: StatusColors[task.status] || Colors.silver }}>{task.status}</span>
                       {task.status !== 'completed' && !isDemo && (
-                        <button className="btn btn-sage btn-sm" onClick={(e) => { e.stopPropagation(); quickCompleteTask(task); }}>Done</button>
+                        <button className="btn btn-sage btn-sm" onClick={(e) => { e.stopPropagation(); quickCompleteTask(task).catch(() => {}); }}>Done</button>
                       )}
                     </div>
                   </div>

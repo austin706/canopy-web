@@ -31,6 +31,18 @@ export async function initSentry() {
         'Network request failed',
         'Load failed',
         'AbortError',
+        'UnavailableError',           // PayPal Honey / browser extensions
+        'Importing a module script',  // Stale chunks after deploy (handled by lazyRetry)
+      ],
+      // Ignore errors originating from browser extensions
+      denyUrls: [
+        /extensions\//i,
+        /^chrome:\/\//i,
+        /^chrome-extension:\/\//i,
+        /^safari-extension:\/\//i,
+        /^moz-extension:\/\//i,
+        /Honey\.safariextension/i,
+        /PayPal/i,
       ],
       beforeSend(event) {
         // Strip PII from URLs (query params can contain tokens)

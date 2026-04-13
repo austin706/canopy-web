@@ -174,6 +174,8 @@ export const getClimateRegion = (state?: string): ClimateRegion => {
 };
 
 // ─── Monthly & Seasonal Task Templates ───
+// Some entries are DB-only stubs that carry metadata overrides (is_cleaning, service_type, etc.)
+// but rely on the DB for title/description/instructions. They're merged at runtime.
 export const TASK_TEMPLATES: TaskTemplate[] = [
   // ═══ HVAC ═══
   {
@@ -1005,26 +1007,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
 
   // ═══ KITCHEN (from Proventive) ═══
-  {
-    id: 'refrigerator-coils-clean',
-    is_cleaning: true,
-    service_type: 'diy',
-  },
-  {
-    id: 'garbage-disposal-clean',
-    is_cleaning: true,
-    service_type: 'diy',
-  },
-  {
-    id: 'vent-hood-degrease',
-    is_cleaning: true,
-    service_type: 'diy',
-  },
-  {
-    id: 'dishwasher-clean',
-    is_cleaning: true,
-    service_type: 'diy',
-  },
+  // DB-only stubs: metadata overrides, full template lives in task_templates table
+  { id: 'refrigerator-coils-clean', is_cleaning: true, service_type: 'diy' } as any,
+  { id: 'garbage-disposal-clean', is_cleaning: true, service_type: 'diy' } as any,
+  { id: 'vent-hood-degrease', is_cleaning: true, service_type: 'diy' } as any,
+  { id: 'dishwasher-clean', is_cleaning: true, service_type: 'diy' } as any,
   {
     id: 'stone-countertop-seal',
     pro_responsible: true,
@@ -1054,11 +1041,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
 
   // ═══ BATHROOM & LAUNDRY (from Proventive) ═══
-  {
-    id: 'washing-machine-clean',
-    is_cleaning: true,
-    service_type: 'diy',
-  },
+  { id: 'washing-machine-clean', is_cleaning: true, service_type: 'diy' } as any,
   {
     id: 'drain-clearing',
     pro_responsible: true,
@@ -1260,11 +1243,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
 
   // ═══ OUTDOOR (from Proventive) ═══
-  {
-    id: 'garbage-bins-clean',
-    is_cleaning: true,
-    service_type: 'diy',
-  },
+  { id: 'garbage-bins-clean', is_cleaning: true, service_type: 'diy' } as any,
 
   // ═══════════════════════════════════════════════════
   // REGION-SPECIFIC TASKS
@@ -1766,11 +1745,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_pro_cost: 0,
     requires_home_feature: 'has_sprinkler_system',
   },
-  {
-    id: 'deep-clean-outdoor-furniture',
-    is_cleaning: true,
-    service_type: 'diy',
-  },
+  { id: 'deep-clean-outdoor-furniture', is_cleaning: true, service_type: 'diy' } as any,
   {
     id: 'inspect-exterior-paint-siding',
     pro_responsible: true,
@@ -2675,18 +2650,8 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_pro_cost: 300,
     items_to_have_on_hand: ['Photos of any cracks or damage', 'Driveway dimensions for quote'],
   },
-  {
-    id: 'holiday-light-install',
-    pro_responsible: false,
-    service_type: 'diy',
-    items_to_have_on_hand: ['Light clips', 'Outdoor extension cords', 'Timer or smart plug', 'Ladder'],
-  },
-  {
-    id: 'holiday-light-remove',
-    pro_responsible: false,
-    service_type: 'diy',
-    items_to_have_on_hand: ['Cord reels or cardboard wraps', 'Storage containers', 'Ladder'],
-  },
+  { id: 'holiday-light-install', pro_responsible: false, service_type: 'diy', items_to_have_on_hand: ['Light clips', 'Outdoor extension cords', 'Timer or smart plug', 'Ladder'] } as any,
+  { id: 'holiday-light-remove', pro_responsible: false, service_type: 'diy', items_to_have_on_hand: ['Cord reels or cardboard wraps', 'Storage containers', 'Ladder'] } as any,
 ];
 
 // ─── Get tasks applicable for a given month, optionally filtered by region ───

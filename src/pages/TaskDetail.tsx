@@ -453,7 +453,7 @@ export default function TaskDetail() {
 
               <button
                 className="btn btn-primary"
-                onClick={() => quickCompleteTask(task)}
+                onClick={() => quickCompleteTask(task).catch(() => {})}
                 style={{ width: '100%' }}
               >
                 Mark as Complete
@@ -462,7 +462,7 @@ export default function TaskDetail() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <button
                   className="btn btn-ghost"
-                  onClick={() => quickSkipTask(task)}
+                  onClick={() => quickSkipTask(task).catch(() => {})}
                   style={{ width: '100%' }}
                 >
                   Skip
@@ -491,7 +491,7 @@ export default function TaskDetail() {
                         className="btn btn-ghost"
                         style={{ width: '100%', justifyContent: 'flex-start', padding: '12px 16px', borderRadius: 0 }}
                         onClick={() => {
-                          quickSnoozeTask(task, 3);
+                          quickSnoozeTask(task, 3).catch(() => {});
                           setShowSnoozeMenu(false);
                         }}
                       >
@@ -501,7 +501,7 @@ export default function TaskDetail() {
                         className="btn btn-ghost"
                         style={{ width: '100%', justifyContent: 'flex-start', padding: '12px 16px', borderRadius: 0, borderTop: `1px solid ${Colors.lightGray}` }}
                         onClick={() => {
-                          quickSnoozeTask(task, 7);
+                          quickSnoozeTask(task, 7).catch(() => {});
                           setShowSnoozeMenu(false);
                         }}
                       >
@@ -511,7 +511,7 @@ export default function TaskDetail() {
                         className="btn btn-ghost"
                         style={{ width: '100%', justifyContent: 'flex-start', padding: '12px 16px', borderRadius: 0, borderTop: `1px solid ${Colors.lightGray}` }}
                         onClick={() => {
-                          quickSnoozeTask(task, 14);
+                          quickSnoozeTask(task, 14).catch(() => {});
                           setShowSnoozeMenu(false);
                         }}
                       >

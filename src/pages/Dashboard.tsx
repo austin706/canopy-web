@@ -587,7 +587,7 @@ export default function Dashboard() {
                     <div className="task-info">
                       <div className="task-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         {task.title}
-                        {(() => { const st = SERVICE_TYPE_MAP.get(task.template_id || ''); const badge = st ? SERVICE_BADGE_STYLES[st] : undefined; return badge ? <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>{badge.label}</span> : null; })()}
+                        {(() => { const st = SERVICE_TYPE_MAP.get((task as any).template_id || ''); const badge = st ? SERVICE_BADGE_STYLES[st] : undefined; return badge ? <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>{badge.label}</span> : null; })()}
                       </div>
                       <div className="task-meta">
                         {task.category} &middot; ~{task.estimated_minutes || '?'} min &middot; {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}

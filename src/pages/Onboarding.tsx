@@ -191,7 +191,7 @@ export default function Onboarding() {
     foundation_type: '',
     roof_type: '', roof_install_year: '',
     heating_type: '', cooling_type: '',
-    water_source: '', sewer_type: '',
+    water_source: '', sewer_type: '', septic_type: '',
     lawn_type: 'none',
     has_pool: false, has_deck: false, has_sprinkler_system: false,
     has_fireplace: false, has_gutters: true, has_fountain: false,
@@ -591,6 +591,7 @@ export default function Onboarding() {
         cooling_type: systemsForm.cooling_type || null,
         water_source: systemsForm.water_source || null,
         sewer_type: systemsForm.sewer_type || null,
+        septic_type: systemsForm.sewer_type === 'septic' ? (systemsForm.septic_type || null) : null,
         lawn_type: systemsForm.lawn_type || null,
         has_pool: systemsForm.has_pool,
         has_deck: systemsForm.has_deck,
@@ -1558,13 +1559,26 @@ export default function Onboarding() {
             <div className="form-group">
               <label>Sewer Type</label>
               <select className="form-select" value={systemsForm.sewer_type}
-                onChange={e => setSystemsForm({ ...systemsForm, sewer_type: e.target.value })}>
+                onChange={e => setSystemsForm({ ...systemsForm, sewer_type: e.target.value, septic_type: e.target.value === 'septic' ? systemsForm.septic_type : '' })}>
                 <option value="">Select...</option>
                 <option value="municipal">Municipal</option>
                 <option value="septic">Septic</option>
               </select>
             </div>
           </div>
+
+          {systemsForm.sewer_type === 'septic' && (
+            <div className="form-group">
+              <label>Septic System Type</label>
+              <select className="form-select" value={systemsForm.septic_type}
+                onChange={e => setSystemsForm({ ...systemsForm, septic_type: e.target.value })}>
+                <option value="">Select...</option>
+                <option value="aerobic">Aerobic (spray heads, chlorine tablets)</option>
+                <option value="conventional">Conventional (lateral lines / drainfield)</option>
+              </select>
+              <p className="text-xs text-gray" style={{ marginTop: 4 }}>Aerobic systems have a pump, spray heads, and require quarterly inspections</p>
+            </div>
+          )}
 
           <div className="form-group">
             <label>Lawn Type</label>

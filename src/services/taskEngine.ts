@@ -138,7 +138,19 @@ export function generateTasksForHome(
 /**
  * Convert a TaskTemplateDB (from Supabase) to the internal TaskTemplate format.
  */
+/**
+ * Build a lookup map from hardcoded templates so DB overrides can inherit
+ * guard fields that the DB table doesn't have columns for (e.g.,
+ * requires_water_source, requires_sewer_type, requires_pool_type, etc.).
+ */
+const hardcodedByTitleCategory = new Map<string, TaskTemplate>(
+  TASK_TEMPLATES.map(t => [`${t.title}|${t.category}`, t])
+);
+
 function dbTemplateToInternal(db: TaskTemplateDB): TaskTemplate {
+  // Find the matching hardcoded template to inherit guard fields
+  const hardcoded = hardcodedByTitleCategory.get(`${db.title}|${db.category}`);
+
   return {
     id: db.id,
     title: db.title,
@@ -162,10 +174,20 @@ function dbTemplateToInternal(db: TaskTemplateDB): TaskTemplate {
     service_purpose: db.service_purpose ?? undefined,
     items_to_have_on_hand: db.items_to_have_on_hand ?? undefined,
     applicable_regions: db.regions as any,
-    requires_home_feature: db.requires_feature ?? undefined,
+    requires_home_feature: db.requires_feature ?? hardcoded?.requires_home_feature ?? undefined,
     pro_responsible: db.pro_recommended || false,
     task_level: db.task_level || 'standard',
     is_cleaning: db.is_cleaning || false,
+    // Inherit guard fields from hardcoded template — DB table lacks these columns
+    requires_water_source: hardcoded?.requires_water_source,
+    requires_sewer_type: hardcoded?.requires_sewer_type,
+    requires_pool_type: hardcoded?.requires_pool_type,
+    requires_home_type: hardcoded?.requires_home_type,
+    requires_countertop_type: hardcoded?.requires_countertop_type,
+    requires_flooring_type: hardcoded?.requires_flooring_type,
+    requires_construction_type: hardcoded?.requires_construction_type,
+    requires_foundation_type: hardcoded?.requires_foundation_type,
+    requires_septic_type: hardcoded?.requires_septic_type,
   };
 }
 
@@ -317,6 +339,14 @@ function generateTasksForHomeImpl(
     if (template.requires_sewer_type && template.requires_sewer_type.length > 0) {
       const homeSewType = home.sewer_type || 'municipal';
       if (!template.requires_sewer_type.includes(homeSewType)) {
+        return;
+      }
+    }
+
+    // Skip if this template requires specific septic system type and doesn't match
+    if (template.requires_septic_type && template.requires_septic_type.length > 0) {
+      const homeSepticType = (home as any).septic_type as string | undefined;
+      if (!homeSepticType || !template.requires_septic_type.includes(homeSepticType as any)) {
         return;
       }
     }

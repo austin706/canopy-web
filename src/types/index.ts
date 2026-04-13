@@ -44,7 +44,7 @@ export type HeatingType = 'forced_air' | 'heat_pump' | 'radiant' | 'boiler' | 'b
 
 export type CoolingType = 'central_ac' | 'heat_pump' | 'window_units' | 'mini_split' | 'none';
 
-export type SepticType = 'aerobic' | 'anaerobic' | 'mound' | 'chamber';
+export type SepticType = 'aerobic' | 'conventional';
 
 export type SepticDrainfieldType = 'conventional' | 'chamber' | 'mound' | 'drip' | 'sand_filter';
 

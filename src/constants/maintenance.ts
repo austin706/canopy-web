@@ -80,6 +80,11 @@ export interface TaskTemplate {
    */
   requires_sewer_type?: Array<'municipal' | 'septic'>;
   /**
+   * Restricts this template to homes with a specific septic system type.
+   * Only checked when sewer_type = 'septic'. e.g., ['aerobic'] for aerobic-only tasks
+   */
+  requires_septic_type?: Array<'aerobic' | 'conventional'>;
+  /**
    * Restricts this template to homes with a specific home type.
    * e.g., ['single_family', 'townhome'] to exclude condos/apartments
    */
@@ -2347,7 +2352,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     id: 'septic-aerobic-inspect',
     pro_responsible: true,
     title: 'Aerobic Septic System Inspection',
-    description: 'Quarterly professional inspection of aerobic septic systems ensures the treatment tank aerator is working and tank chemistry is balanced. More intensive than anaerobic systems.',
+    description: 'Quarterly professional inspection of aerobic septic systems ensures the treatment tank aerator is working and tank chemistry is balanced. Required by most counties for aerobic permits.',
     service_purpose: 'Quarterly inspection ensures the aerator is working and tank chemistry is balanced',
     instructions: [
       'Schedule inspections quarterly (every 3 months)',
@@ -2367,7 +2372,88 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 150,
     estimated_pro_cost: 150,
     requires_sewer_type: ['septic'],
+    requires_septic_type: ['aerobic'],
     items_to_have_on_hand: ['Septic service company contact info', 'Previous inspection reports if available'],
+  },
+  {
+    id: 'septic-aerobic-chlorine',
+    pro_responsible: false,
+    title: 'Replace Septic Chlorine Tablets',
+    description: 'Aerobic septic systems use chlorine tablets (or UV) to disinfect treated effluent before it reaches spray heads. Low chlorine means untreated wastewater on your yard.',
+    service_purpose: 'Chlorine disinfects treated wastewater before spray-head discharge',
+    instructions: [
+      'Open the chlorine contact chamber (usually a small access lid near the spray field)',
+      'Check how many tablets remain — replace when 1 or fewer are left',
+      'Use ONLY septic-rated calcium hypochlorite tablets (NOT pool chlorine)',
+      'Drop 2-4 tablets into the tube depending on tube size',
+      'Check that water is flowing through the chamber and not bypassing',
+      'Record date and number of tablets added',
+    ],
+    category: 'plumbing',
+    priority: 'high',
+    frequency: 'bimonthly',
+    scheduling_type: 'dynamic',
+    interval_days: 60,
+    applicable_months: [1, 3, 5, 7, 9, 11],
+    estimated_minutes: 10,
+    estimated_cost: 15,
+    estimated_pro_cost: 75,
+    requires_sewer_type: ['septic'],
+    requires_septic_type: ['aerobic'],
+    items_to_have_on_hand: ['Septic-rated calcium hypochlorite tablets', 'Gloves'],
+  },
+  {
+    id: 'septic-spray-head-clean',
+    pro_responsible: false,
+    title: 'Inspect & Clean Septic Spray Heads',
+    description: 'Aerobic systems spray treated water across the yard through pop-up spray heads. Clogged or misaligned heads cause pooling, odor, and health code violations.',
+    service_purpose: 'Clogged spray heads cause sewage pooling and potential health code violations',
+    instructions: [
+      'Locate all spray heads in the yard (usually 3-6)',
+      'Check each head for clogs — remove and rinse with a hose if blocked',
+      'Verify heads pop up and spray in the correct arc',
+      'Look for pooling or soggy areas near any head',
+      'Trim grass or weeds away from heads so they spray freely',
+      'Replace any cracked or broken heads',
+    ],
+    category: 'plumbing',
+    priority: 'medium',
+    frequency: 'biannual',
+    scheduling_type: 'seasonal',
+    applicable_months: [4, 10],
+    estimated_minutes: 20,
+    estimated_cost: 0,
+    estimated_pro_cost: 100,
+    requires_sewer_type: ['septic'],
+    requires_septic_type: ['aerobic'],
+    items_to_have_on_hand: ['Garden hose', 'Replacement spray heads (if needed)', 'Trimmer for nearby vegetation'],
+  },
+  {
+    id: 'septic-drainfield-inspect',
+    pro_responsible: false,
+    title: 'Inspect Septic Drainfield / Lateral Lines',
+    description: 'Walk the drainfield area and look for warning signs of failure: soggy ground, sewage odor, unusually green grass, or slow drains in the house. Catching problems early can save thousands.',
+    service_purpose: 'Early detection of drainfield failure prevents costly full replacement',
+    instructions: [
+      'Walk the entire drainfield area slowly',
+      'Look for soggy or spongy ground — sign of surfacing effluent',
+      'Check for unusually lush or green grass patches (nutrient-rich wastewater)',
+      'Sniff for sewage or rotten-egg odor',
+      'Check that no vehicles, heavy equipment, or structures are on the drainfield',
+      'Verify roof drains and surface water are diverted away from the field',
+      'Note any slow drains or gurgling toilets inside the house',
+    ],
+    category: 'plumbing',
+    priority: 'medium',
+    frequency: 'annual',
+    scheduling_type: 'seasonal',
+    applicable_months: [4, 5],
+    estimated_minutes: 15,
+    estimated_cost: 0,
+    estimated_pro_cost: 0,
+    requires_sewer_type: ['septic'],
+    requires_septic_type: ['conventional'],
+    items_to_have_on_hand: ['Diagram of drainfield location if available'],
   },
   {
     id: 'well-water-test',
@@ -2671,6 +2757,16 @@ export const getTasksForMonth = (
   return TASK_TEMPLATES.filter((task) => {
     if (!task.applicable_months.includes(month)) return false;
     if (task.requires_home_feature && !homeFeatures[task.requires_home_feature]) return false;
+    // Sewer type filter
+    if (task.requires_sewer_type && task.requires_sewer_type.length > 0) {
+      const homeSewer = homeFeatures['sewer_type'] as string | undefined;
+      if (!homeSewer || !task.requires_sewer_type.includes(homeSewer as any)) return false;
+    }
+    // Septic type filter (aerobic vs conventional)
+    if (task.requires_septic_type && task.requires_septic_type.length > 0) {
+      const homeSeptic = homeFeatures['septic_type'] as string | undefined;
+      if (!homeSeptic || !task.requires_septic_type.includes(homeSeptic as any)) return false;
+    }
     // Flooring filter: if task requires specific flooring, check primary_flooring
     if (task.requires_flooring_type && task.requires_flooring_type.length > 0) {
       const homeFlooring = homeFeatures['primary_flooring'] as string | undefined;

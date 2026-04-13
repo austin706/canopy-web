@@ -34,7 +34,7 @@ export default function HomeDetails() {
     garage_spaces: home?.garage_spaces?.toString() || '2',
     roof_type: home?.roof_type || '', roof_install_year: home?.roof_install_year?.toString() || '',
     heating_type: home?.heating_type || '', cooling_type: home?.cooling_type || '',
-    water_source: home?.water_source || '', sewer_type: home?.sewer_type || '',
+    water_source: home?.water_source || '', sewer_type: home?.sewer_type || '', septic_type: (home as any)?.septic_type || '',
     has_pool: home?.has_pool || false, has_deck: home?.has_deck || false, has_sprinkler_system: home?.has_sprinkler_system || false,
     has_fireplace: home?.has_fireplace || false,
     has_fountain: home?.has_fountain || false,
@@ -208,6 +208,7 @@ export default function HomeDetails() {
         has_sump_pump: form.has_sump_pump,
         has_storm_shelter: form.has_storm_shelter,
         countertop_type: form.countertop_type || null,
+        septic_type: form.sewer_type === 'septic' ? (form.septic_type || null) : null,
         fireplace_count: form.has_fireplace ? (parseInt(form.fireplace_count) || 1) : null,
         // Advanced Home Details (InterNACHI Building Standards) — H-3
         structure_type: form.structure_type || null,
@@ -483,7 +484,7 @@ export default function HomeDetails() {
             </div>
             <div className="form-group">
               <label>Sewer Type</label>
-              <select className="form-select" value={form.sewer_type} onChange={e => setForm({...form, sewer_type: e.target.value})}>
+              <select className="form-select" value={form.sewer_type} onChange={e => setForm({...form, sewer_type: e.target.value, septic_type: e.target.value === 'septic' ? form.septic_type : ''})}>
                 <option value="">Select...</option>
                 <option value="municipal">Public sewer</option>
                 <option value="septic">Septic</option>
@@ -491,6 +492,19 @@ export default function HomeDetails() {
               </select>
             </div>
           </div>
+          {form.sewer_type === 'septic' && (
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Septic System Type</label>
+                <select className="form-select" value={form.septic_type} onChange={e => setForm({...form, septic_type: e.target.value})}>
+                  <option value="">Select...</option>
+                  <option value="aerobic">Aerobic (spray heads, chlorine tablets)</option>
+                  <option value="conventional">Conventional (lateral lines / drainfield)</option>
+                </select>
+              </div>
+              <div className="form-group"><label>&nbsp;</label><p className="text-xs text-gray" style={{ padding: '10px 0' }}>Aerobic systems need quarterly inspections; conventional just need pumping every 3-5 years</p></div>
+            </div>
+          )}
           <div className="grid-2">
             <div className="form-group">
               <label>Lawn Type</label>

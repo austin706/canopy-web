@@ -90,6 +90,18 @@ export interface TaskTemplate {
    */
   requires_flooring_type?: string[];
   /**
+   * Restricts to homes with matching construction_type (OR logic with requires_foundation_type).
+   * e.g., ['wood_frame', 'log'] for termite-prone construction
+   */
+  requires_construction_type?: string[];
+  /**
+   * Restricts to homes with matching foundation_type (OR logic with requires_construction_type).
+   * e.g., ['crawlspace', 'pier_and_beam'] for termite-prone foundations
+   * When BOTH requires_construction_type and requires_foundation_type are set, the task generates
+   * if EITHER condition matches (OR logic — the home is at risk if it has wood frame OR crawlspace).
+   */
+  requires_foundation_type?: string[];
+  /**
    * Restricts this template to equipment with a matching equipment_subtype.
    * Case-insensitive partial match: if the equipment's subtype includes any
    * of these strings, the template applies.
@@ -318,7 +330,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     ],
     category: 'roof',
     priority: 'high',
-    frequency: 'biannual',
+    frequency: 'annual',
     scheduling_type: 'seasonal',
     applicable_months: [4, 5],
     estimated_minutes: 60,
@@ -342,7 +354,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     ],
     category: 'roof',
     priority: 'high',
-    frequency: 'biannual',
+    frequency: 'annual',
     scheduling_type: 'seasonal',
     applicable_months: [11],
     estimated_minutes: 60,
@@ -2013,7 +2025,8 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     estimated_cost: 300,
     estimated_pro_cost: 300,
     applicable_regions: ['south', 'midwest'],
-    requires_home_feature: 'wood_frame_or_crawlspace',
+    requires_construction_type: ['wood_frame', 'log'],
+    requires_foundation_type: ['crawlspace', 'pier_and_beam'],
     items_to_have_on_hand: ['Bait station keys or tools (may be provided by company)', 'Documentation of last treatment'],
   },
   {
@@ -2384,31 +2397,8 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   },
 
   // ═══ ELECTRICAL ═══
-  {
-    id: 'gfci-outlet-test',
-    pro_responsible: false,
-    title: 'Test GFCI Outlets (Quarterly)',
-    description: 'Monthly testing of Ground Fault Circuit Interrupter outlets ensures they\'re functioning properly. GFCI outlets prevent serious electrical shocks in wet areas like kitchens and bathrooms.',
-    service_purpose: 'GFCI outlets prevent electrical shocks in wet areas like kitchens and bathrooms',
-    instructions: [
-      'Locate all GFCI outlets in kitchen, bathroom, laundry, and exterior',
-      'Press the TEST button on the outlet — it should trip the outlet',
-      'Verify that power is cut to the outlet and any outlet downstream',
-      'Press the RESET button — power should return',
-      'If TEST or RESET button doesn\'t work, outlet may need replacement',
-      'Test all GFCI outlets quarterly (January, April, July, October)',
-    ],
-    category: 'electrical',
-    priority: 'high',
-    frequency: 'quarterly',
-    scheduling_type: 'dynamic',
-    interval_days: 90,
-    applicable_months: [1, 4, 7, 10],
-    estimated_minutes: 10,
-    estimated_cost: 0,
-    estimated_pro_cost: 75,
-    items_to_have_on_hand: ['Notebook to record which outlets trip', 'Appliance to test if needed'],
-  },
+  // NOTE: gfci-outlet-test template is defined earlier in the ELECTRICAL section (line ~1685).
+  // The duplicate that was here has been removed to prevent double task generation.
   {
     id: 'generator-maintenance',
     pro_responsible: true,

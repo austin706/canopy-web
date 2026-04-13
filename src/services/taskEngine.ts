@@ -268,6 +268,19 @@ function generateTasksForHomeImpl(
       }
     }
 
+    // Skip if this template requires specific construction/foundation type (OR logic)
+    if (template.requires_construction_type || template.requires_foundation_type) {
+      const matchesConstruction = template.requires_construction_type?.length
+        ? template.requires_construction_type.includes(home.construction_type as string)
+        : false;
+      const matchesFoundation = template.requires_foundation_type?.length
+        ? template.requires_foundation_type.includes(home.foundation_type as string)
+        : false;
+      if (!matchesConstruction && !matchesFoundation) {
+        return;
+      }
+    }
+
     // Skip if this template requires specific countertop types
     if (template.requires_countertop_type) {
       const homeCountertop = home.countertop_type as string | undefined;

@@ -530,14 +530,15 @@ export function isTaskVisible(
   prefs: UserPreferences,
   isProTask: boolean = false,
   taskLevel?: TaskLevel,
+  isCleaning?: boolean,
 ): boolean {
   // Check per-category override first (highest priority)
   const categoryKey = taskCategory as TaskCategoryKey;
   if (prefs.task_category_overrides[categoryKey] === false) return false;
   if (prefs.task_category_overrides[categoryKey] === true) return true;
 
-  // Check cleaning toggle
-  if (taskCategory === 'cleaning' && !prefs.show_cleaning_tasks) return false;
+  // Check cleaning toggle — works on the is_cleaning flag, not category
+  if (isCleaning && !prefs.show_cleaning_tasks) return false;
 
   // Check pro task visibility
   if (isProTask && !prefs.show_pro_tasks) return false;
@@ -693,7 +694,7 @@ export interface EquipmentConsumable {
 
 export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low';
 export type TaskStatus = 'upcoming' | 'due' | 'overdue' | 'completed' | 'skipped';
-export type TaskFrequency = 'monthly' | 'quarterly' | 'biannual' | 'annual' | 'as_needed' | 'weekly' | 'seasonal' | 'semi_annual';
+export type TaskFrequency = 'monthly' | 'quarterly' | 'biannual' | 'annual' | 'as_needed' | 'weekly' | 'biweekly' | 'seasonal' | 'semi_annual';
 export type TaskSchedulingType = 'dynamic' | 'seasonal';
 
 export interface MaintenanceTask {
@@ -738,6 +739,9 @@ export interface MaintenanceTask {
   purchase_url?: string;
   /** ID of the consumable that generated this task (for equipment_keyed templates) */
   consumable_id?: string;
+
+  /** Whether this is a cleaning/tidying task (for show/hide toggle) */
+  is_cleaning?: boolean;
 
   created_at: string;
 }

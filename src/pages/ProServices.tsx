@@ -8,6 +8,7 @@ import { getErrorMessage } from '@/utils/errors';
 const Visits = lazy(() => import('@/pages/Visits'));
 const Quotes = lazy(() => import('@/pages/Quotes'));
 const Invoices = lazy(() => import('@/pages/Invoices'));
+const AddOns = lazy(() => import('@/pages/AddOns'));
 
 interface ServiceRequest {
   id: string;
@@ -141,7 +142,7 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-type SubTab = 'services' | 'visits' | 'quotes' | 'invoices';
+type SubTab = 'services' | 'add-ons' | 'visits' | 'quotes' | 'invoices';
 
 export default function ProServices() {
   const { user, home } = useStore();
@@ -390,6 +391,7 @@ export default function ProServices() {
 
   const tabs: { key: SubTab; label: string }[] = [
     { key: 'services', label: 'Services' },
+    { key: 'add-ons', label: 'Add-Ons' },
     { key: 'visits', label: 'Visits' },
     { key: 'quotes', label: 'Quotes' },
     { key: 'invoices', label: 'Invoices' },
@@ -414,6 +416,7 @@ export default function ProServices() {
         <h1 style={{ fontSize: 24, fontWeight: 600, color: Colors.charcoal, marginBottom: 16 }}>Pro Services</h1>
         {tabBar}
         <Suspense fallback={<p style={{ color: Colors.medGray }}>Loading...</p>}>
+          {activeTab === 'add-ons' && <AddOns />}
           {activeTab === 'visits' && <Visits />}
           {activeTab === 'quotes' && <Quotes />}
           {activeTab === 'invoices' && <Invoices />}

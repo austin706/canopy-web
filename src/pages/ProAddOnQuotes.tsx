@@ -101,7 +101,7 @@ export default function ProAddOnQuotes() {
   const handleSubmitQuote = async (addOnId: string) => {
     const price = parseFloat(quotePrice);
     if (!price || price <= 0) {
-      showToast('Enter a valid price', 'error');
+      showToast({ message: 'Enter a valid price' });
       return;
     }
 
@@ -128,13 +128,13 @@ export default function ProAddOnQuotes() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to submit quote');
 
-      showToast(`Quote submitted: $${price}/${quoteFrequency}`, 'success');
+      showToast({ message: `Quote submitted: $${price}/${quoteFrequency}` });
       setQuotingId(null);
       setQuotePrice('');
       setQuoteNotes('');
       await loadData();
     } catch (err: any) {
-      showToast(err.message || 'Failed to submit quote', 'error');
+      showToast({ message: err?.message || 'Failed to submit quote' });
     } finally {
       setSubmitting(false);
     }

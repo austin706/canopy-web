@@ -28,6 +28,7 @@ export default function ProLayout() {
     { to: '/pro-portal/job-queue', label: 'Job Queue', icon: '📋' },
     { to: '/pro-portal/visit-schedule', label: 'Visit Schedule', icon: '📅' },
     { to: '/pro-portal/quotes-invoices', label: 'Quotes & Invoices', icon: '💰' },
+    { to: '/pro-portal/add-on-quotes', label: 'Add-On Quotes', icon: '🏷️' },
     { to: '/pro-portal/availability', label: 'Availability', icon: '🕐' },
     { to: '/pro-portal/profile', label: 'My Profile', icon: '👤' },
   ];

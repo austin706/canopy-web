@@ -165,6 +165,7 @@ export default function AdminLayout() {
       title: 'Operations',
       items: [
         { to: '/admin/pro-requests', label: 'Pro Requests', icon: <Icon.Briefcase /> },
+        { to: '/admin/add-ons', label: 'Add-On Quotes', icon: <Icon.Wrench /> },
         { to: '/admin/service-areas', label: 'Service Areas', icon: <Icon.MapPin /> },
         { to: '/admin/gift-codes', label: 'Gift Codes', icon: <Icon.GiftCode /> },
         { to: '/admin/support-tickets', label: 'Support Tickets', icon: <Icon.Ticket /> },

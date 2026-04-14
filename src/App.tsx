@@ -95,6 +95,7 @@ const Invoices = lazyRetry(() => import('@/pages/Invoices'));
 const ProVisitSchedule = lazyRetry(() => import('@/pages/ProVisitSchedule'));
 const ProQuotesInvoices = lazyRetry(() => import('@/pages/ProQuotesInvoices'));
 const ProJobQueue = lazyRetry(() => import('@/pages/ProJobQueue'));
+const ProAddOnQuotes = lazyRetry(() => import('@/pages/ProAddOnQuotes'));
 const ProInspection = lazyRetry(() => import('@/pages/ProInspection'));
 const HomeAssistant = lazyRetry(() => import('@/pages/HomeAssistant'));
 const SalePrep = lazyRetry(() => import('@/pages/SalePrep'));
@@ -116,6 +117,7 @@ const BuilderApplication = lazyRetry(() => import('@/pages/BuilderApplication'))
 const AdminBuilders = lazyRetry(() => import('@/pages/AdminBuilders'));
 const AdminVerifications = lazyRetry(() => import('@/pages/AdminVerifications'));
 const AdminAffiliateProducts = lazyRetry(() => import('@/pages/AdminAffiliateProducts'));
+const AdminAddOns = lazyRetry(() => import('@/pages/AdminAddOns'));
 const TechnicianOnboarding = lazyRetry(() => import('@/pages/TechnicianOnboarding'));
 const ProOnboardingSuccess = lazyRetry(() => import('@/pages/ProOnboardingSuccess'));
 const ProOnboardingRefresh = lazyRetry(() => import('@/pages/ProOnboardingRefresh'));
@@ -417,6 +419,7 @@ export default function App() {
             <Route path="/pro-portal/quotes-invoices" element={<ProQuotesInvoices />} />
             <Route path="/pro-portal/job-queue" element={<ProJobQueue />} />
             <Route path="/pro-portal/inspection/:visitId" element={<ProInspection />} />
+            <Route path="/pro-portal/add-on-quotes" element={<ProAddOnQuotes />} />
             <Route path="/pro-portal/onboarding" element={<TechnicianOnboarding />} />
             <Route path="/pro-portal/onboarding/success" element={<ProOnboardingSuccess />} />
             <Route path="/pro-portal/onboarding/refresh" element={<ProOnboardingRefresh />} />
@@ -444,6 +447,7 @@ export default function App() {
             <Route path="/admin/builders" element={<AdminBuilders />} />
             <Route path="/admin/verifications" element={<AdminVerifications />} />
             <Route path="/admin/affiliate-products" element={<AdminAffiliateProducts />} />
+            <Route path="/admin/add-ons" element={<AdminAddOns />} />
           </Route>
 
           {/* ═══════════════════════════════════════════════════════

@@ -50,6 +50,7 @@ const Weather = lazyRetry(() => import('@/pages/Weather'));
 const Equipment = lazyRetry(() => import('@/pages/Equipment'));
 const Profile = lazyRetry(() => import('@/pages/Profile'));
 const Subscription = lazyRetry(() => import('@/pages/Subscription'));
+const Refer = lazyRetry(() => import('@/pages/Refer'));
 const ProRequest = lazyRetry(() => import('@/pages/ProRequest'));
 const AgentView = lazyRetry(() => import('@/pages/AgentView'));
 const MaintenanceLogs = lazyRetry(() => import('@/pages/MaintenanceLogs'));
@@ -108,6 +109,8 @@ const AIDisclaimer = lazyRetry(() => import('@/pages/AIDisclaimer'));
 const CancellationPolicy = lazyRetry(() => import('@/pages/CancellationPolicy'));
 const PCICompliance = lazyRetry(() => import('@/pages/PCICompliance'));
 const Support = lazyRetry(() => import('@/pages/Support'));
+const Unsubscribe = lazyRetry(() => import('@/pages/Unsubscribe'));
+const AddOnsLanding = lazyRetry(() => import('@/pages/AddOnsLanding'));
 const ApplyPro = lazyRetry(() => import('@/pages/ApplyPro'));
 const AgentLanding = lazyRetry(() => import('@/pages/AgentLanding'));
 const ProLanding = lazyRetry(() => import('@/pages/ProLanding'));
@@ -206,6 +209,7 @@ export default function App() {
             email: authUser.email || '',
             full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
             subscription_tier: profile?.subscription_tier || 'free',
+            subscription_status: profile?.subscription_status,
             onboarding_complete: profile?.onboarding_complete || false,
             email_confirmed: !!authUser.email_confirmed_at,
             created_at: authUser.created_at,
@@ -297,6 +301,7 @@ export default function App() {
             email: authUser.email || '',
             full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
             subscription_tier: profile?.subscription_tier || 'free',
+            subscription_status: profile?.subscription_status,
             onboarding_complete: profile?.onboarding_complete || false,
             email_confirmed: !!authUser.email_confirmed_at,
             created_at: authUser.created_at,
@@ -386,6 +391,8 @@ export default function App() {
           <Route path="/cancellation" element={<CancellationPolicy />} />
           <Route path="/pci-compliance" element={<PCICompliance />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/unsubscribe" element={<Unsubscribe />} />
+          <Route path="/add-ons" element={<AddOnsLanding />} />
           <Route path="/apply-pro" element={<ApplyPro />} />
           <Route path="/for-agents" element={<AgentLanding />} />
           <Route path="/for-pros" element={<ProLanding />} />
@@ -469,6 +476,7 @@ export default function App() {
             <Route path="/whats-new" element={<WhatsNew />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/subscription" element={<Subscription />} />
+            <Route path="/refer" element={<Refer />} />
             <Route path="/pro-request" element={<ProRequest />} />
             <Route path="/pro-services" element={<ProServices />} />
             <Route path="/visits" element={<Visits />} />

@@ -515,7 +515,7 @@ export default function Onboarding() {
         }
       }
     } catch (err) {
-      console.error('Duplicate address check failed:', err);
+      logger.error('Duplicate address check failed:', err);
       // Proceed — don't block onboarding, but log the error
     }
 
@@ -764,7 +764,7 @@ export default function Onboarding() {
           }
         }
       } catch (error) {
-        console.error('Error generating tasks:', error);
+        logger.error('Error generating tasks:', error);
       } finally {
         setGeneratingTasks(false);
       }

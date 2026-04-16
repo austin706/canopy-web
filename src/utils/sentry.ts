@@ -23,6 +23,7 @@ export async function initSentry() {
     sentryModule.init({
       dsn: SENTRY_DSN,
       environment: import.meta.env.MODE, // 'development' | 'production'
+      release: import.meta.env.VITE_SENTRY_RELEASE as string || `canopy-web@${import.meta.env.MODE}`,
       // Only send 20% of transactions in production to stay within quota
       tracesSampleRate: import.meta.env.PROD ? 0.2 : 1.0,
       // Ignore common noisy errors

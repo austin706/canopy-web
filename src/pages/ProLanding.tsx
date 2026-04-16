@@ -288,6 +288,28 @@ export default function ProLanding() {
               </div>
             ))}
           </div>
+
+          {/* Fee disclosure — required for transparency on contractor terms */}
+          <div
+            style={{
+              marginTop: isMobile ? 40 : 56,
+              padding: '20px 24px',
+              background: Colors.cream,
+              border: `1px solid ${Colors.lightGray}`,
+              borderRadius: 12,
+              textAlign: 'left',
+            }}
+          >
+            <h3 style={{ fontSize: 16, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>
+              Straightforward pricing
+            </h3>
+            <p style={{ fontSize: 14, color: Colors.medGray, lineHeight: 1.6, margin: '0 0 6px 0' }}>
+              Canopy charges a <strong>15% platform fee</strong> on completed jobs. No monthly fees, no lead-bidding, no subscription — you only pay when you get paid. Payouts are handled through Stripe Connect (standard processing fees apply).
+            </p>
+            <p style={{ fontSize: 13, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>
+              Full terms in the <a href="/contractor-terms" style={{ color: Colors.copper, textDecoration: 'underline' }}>Contractor Agreement</a>.
+            </p>
+          </div>
         </div>
       </section>
 

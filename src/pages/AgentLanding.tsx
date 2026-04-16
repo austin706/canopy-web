@@ -288,6 +288,28 @@ export default function AgentLanding() {
               </div>
             ))}
           </div>
+
+          {/* Compensation disclosure — agents are a lead/retention channel, not paid contractors */}
+          <div
+            style={{
+              marginTop: isMobile ? 40 : 56,
+              padding: '20px 24px',
+              background: Colors.cream,
+              border: `1px solid ${Colors.lightGray}`,
+              borderRadius: 12,
+              textAlign: 'left',
+            }}
+          >
+            <h3 style={{ fontSize: 16, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>
+              About the agent program
+            </h3>
+            <p style={{ fontSize: 14, color: Colors.medGray, lineHeight: 1.6, margin: '0 0 6px 0' }}>
+              Canopy's agent program is a <strong>referral and client-retention tool</strong> — agents don't receive commissions or referral fees from Canopy. The value is relationship-building: your clients get a branded home-maintenance app under your name, and you stay top-of-mind for their next move.
+            </p>
+            <p style={{ fontSize: 13, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>
+              Gift codes and custom agent pages are offered at no cost. Canopy-certified service providers (separate program) pay a 15% platform fee when they complete jobs through the app.
+            </p>
+          </div>
         </div>
       </section>
 

@@ -12,6 +12,7 @@ import type { SubscriptionTier } from '@/types';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import ServiceAreaMap from '@/components/ServiceAreaMap';
 import { trackEvent } from '@/utils/analytics';
+import logger from '@/utils/logger';
 import { PageSkeleton } from '@/components/Skeleton';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
@@ -235,7 +236,7 @@ export default function Subscription() {
       const result = await enrollProSubscriber(userId);
       setEnrollmentResult(result);
     } catch (err) {
-      console.warn('Pro enrollment automation failed (non-blocking):', err);
+      logger.warn('Pro enrollment automation failed (non-blocking):', err);
     } finally {
       setEnrolling(false);
     }

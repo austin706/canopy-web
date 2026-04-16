@@ -109,6 +109,8 @@ export interface User {
   agent_id?: string;
   subscription_tier: SubscriptionTier;
   subscription_expires_at?: string;
+  /** Stripe-reported status: 'active' | 'past_due' | 'canceled' | 'incomplete' | etc. */
+  subscription_status?: string;
   onboarding_complete: boolean;
   email_confirmed?: boolean;
   /** Persisted state for the Set Up Your Home dashboard checklist. */
@@ -135,6 +137,8 @@ export interface SetupChecklistState {
   invited_partner: boolean;
   connected_agent: boolean;
   phone_added: boolean;
+  /** Auto-completes on first add-on subscription OR when user clicks "Explore" from the checklist. */
+  explored_add_ons: boolean;
   dismissed: boolean;
   dismissed_at: string | null;
 }
@@ -150,6 +154,7 @@ export const DEFAULT_SETUP_CHECKLIST_STATE: SetupChecklistState = {
   invited_partner: false,
   connected_agent: false,
   phone_added: false,
+  explored_add_ons: false,
   dismissed: false,
   dismissed_at: null,
 };

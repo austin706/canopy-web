@@ -6,7 +6,7 @@ export default function Terms() {
       </div>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Terms of Service</h1>
-      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>Last updated: March 22, 2026</p>
+      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>Last updated: April 14, 2026</p>
 
       <p>Welcome to Canopy ("we," "us," or "our"). These Terms of Service ("Terms") govern your use of the Canopy mobile application, web platform, and related services (collectively, the "Service"). By accessing or using the Service, you agree to be bound by these Terms.</p>
 

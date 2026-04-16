@@ -5,6 +5,7 @@
 // and displays a shareable link with copy button + referral stats.
 
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { getReferralStats } from '@/services/referrals';
 import { Colors } from '@/constants/theme';
 import { trackEvent } from '@/utils/analytics';
@@ -163,6 +164,18 @@ export default function ReferralCard() {
         >
           Share
         </button>
+        <Link
+          to="/refer"
+          className="btn btn-sm"
+          style={{
+            background: 'transparent',
+            color: Colors.copper,
+            border: `1px solid ${Colors.copper}`,
+            textDecoration: 'none',
+          }}
+        >
+          View details
+        </Link>
       </div>
     </div>
   );

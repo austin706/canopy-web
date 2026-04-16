@@ -6,6 +6,8 @@ import { Colors } from '@/constants/theme';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import { PageSkeleton } from '@/components/Skeleton';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
+import ProOnboardingExplainer from '@/components/ProOnboardingExplainer';
 
 interface ProProvider {
   id: string;
@@ -159,7 +161,7 @@ export default function ProPortal() {
         pendingRequests: pendingReqRes.count || 0,
       });
     } catch (error) {
-      console.error('Error loading admin dashboard:', error);
+      logger.error('Error loading admin dashboard:', error);
     } finally {
       setLoading(false);
     }
@@ -205,7 +207,7 @@ export default function ProPortal() {
 
       setProviderClients(clientList);
     } catch (err) {
-      console.error('Error loading provider clients:', err);
+      logger.error('Error loading provider clients:', err);
     }
   };
 
@@ -437,7 +439,7 @@ export default function ProPortal() {
         setProNotifications(notifs);
       } catch {}
     } catch (error) {
-      console.error('Error loading dashboard:', error);
+      logger.error('Error loading dashboard:', error);
     } finally {
       setLoading(false);
     }
@@ -729,6 +731,14 @@ export default function ProPortal() {
           </button>
         </div>
       </div>
+
+      {/* First-login onboarding explainer — dismissible, auto-hides after first completed job */}
+      {user?.id && (
+        <ProOnboardingExplainer
+          userId={user.id}
+          hasCompletedJobs={stats.completedThisMonth > 0}
+        />
+      )}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>

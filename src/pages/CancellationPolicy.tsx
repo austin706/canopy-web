@@ -6,7 +6,7 @@ export default function CancellationPolicy() {
       </div>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Cancellation & Refund Policy</h1>
-      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>Last updated: April 3, 2026</p>
+      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>Last updated: April 14, 2026</p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Overview</h2>
       <p>Canopy offers flexible subscription management. You can cancel at any time, and we aim to make the process straightforward and fair. This policy explains how to cancel your subscription, what happens to your data and access, and our refund terms.</p>

@@ -77,26 +77,30 @@ export default function ApplyPro() {
 
     try {
       // Insert into provider_applications table
-      const { error: dbError } = await supabase.from('provider_applications').insert([
-        {
-          business_name: formData.businessName,
-          contact_name: formData.contactName,
-          email: formData.email,
-          phone: formData.phone,
-          years_experience: formData.yearsExperience ? parseInt(formData.yearsExperience) : null,
-          license_number: formData.licenseNumber,
-          license_state: formData.licenseState,
-          insurance_carrier: formData.insuranceCarrier,
-          insurance_policy_number: formData.insurancePolicyNumber,
-          insurance_expires_at: formData.insuranceExpiresAt,
-          service_categories: formData.serviceCategories,
-          service_area_zips: formData.serviceAreaZips,
-          bio: formData.bio,
-          agreed_to_terms: true,
-          status: 'pending',
-          requested_type: formData.requestedType,
-        },
-      ]);
+      const { data: inserted, error: dbError } = await supabase
+        .from('provider_applications')
+        .insert([
+          {
+            business_name: formData.businessName,
+            contact_name: formData.contactName,
+            email: formData.email,
+            phone: formData.phone,
+            years_experience: formData.yearsExperience ? parseInt(formData.yearsExperience) : null,
+            license_number: formData.licenseNumber,
+            license_state: formData.licenseState,
+            insurance_carrier: formData.insuranceCarrier,
+            insurance_policy_number: formData.insurancePolicyNumber,
+            insurance_expires_at: formData.insuranceExpiresAt,
+            service_categories: formData.serviceCategories,
+            service_area_zips: formData.serviceAreaZips,
+            bio: formData.bio,
+            agreed_to_terms: true,
+            status: 'pending',
+            requested_type: formData.requestedType,
+          },
+        ])
+        .select('id')
+        .single();
 
       if (dbError) throw dbError;
 
@@ -114,26 +118,26 @@ export default function ApplyPro() {
         console.error('Applicant confirmation email error:', emailErr);
       }
 
-      // Send admin notification email
+      // Send admin notification email via the dedicated Resend-backed edge function.
+      // (Previously this called `send-email`, which is the Supabase Auth Hook and
+      // silently rejects free-form payloads.)
       try {
-        await supabase.functions.invoke('send-email', {
+        await supabase.functions.invoke('notify-pro-application', {
           body: {
-            to: 'support@canopyhome.app',
-            subject: `New Pro Provider Application: ${formData.businessName}`,
-            html: `
-              <h2>New Pro Provider Application</h2>
-              <p><strong>Business Name:</strong> ${formData.businessName}</p>
-              <p><strong>Contact Name:</strong> ${formData.contactName}</p>
-              <p><strong>Email:</strong> ${formData.email}</p>
-              <p><strong>Phone:</strong> ${formData.phone}</p>
-              <p><strong>Years of Experience:</strong> ${formData.yearsExperience}</p>
-              <p><strong>License State:</strong> ${formData.licenseState}</p>
-              <p><strong>Service Categories:</strong> ${formData.serviceCategories.map((c) => SERVICE_CATEGORIES[c]).join(', ')}</p>
-              <p><strong>Service Area ZIPs:</strong> ${formData.serviceAreaZips}</p>
-              <hr />
-              <h3>Bio/Description:</h3>
-              <p>${formData.bio.replace(/\n/g, '<br>')}</p>
-            `,
+            application_id: inserted?.id,
+            business_name: formData.businessName,
+            contact_name: formData.contactName,
+            email: formData.email,
+            phone: formData.phone,
+            years_experience: formData.yearsExperience ? parseInt(formData.yearsExperience) : undefined,
+            license_number: formData.licenseNumber,
+            license_state: formData.licenseState,
+            service_categories: formData.serviceCategories.map((c) => SERVICE_CATEGORIES[c]),
+            service_area_zips: formData.serviceAreaZips,
+            requested_type: formData.requestedType,
+            bio: formData.bio,
+            insurance_carrier: formData.insuranceCarrier,
+            insurance_expires_at: formData.insuranceExpiresAt,
           },
         });
       } catch (adminEmailErr) {

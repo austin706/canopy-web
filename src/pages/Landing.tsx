@@ -939,6 +939,7 @@ export default function Landing() {
             {
               title: 'Company',
               links: [
+                { label: 'Add-On Services', href: '/add-ons' },
                 { label: 'For Agents', href: '/for-agents' },
                 { label: 'For Pros', href: '/for-pros' },
                 { label: 'Support', href: '/support' },

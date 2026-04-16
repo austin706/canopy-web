@@ -4,6 +4,7 @@ import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import { PageSkeleton } from '@/components/Skeleton';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -107,7 +108,7 @@ export default function AdminAddOns() {
         .order('company_name');
       setProviders(provData || []);
     } catch (err) {
-      console.error('Failed to load add-on data:', err);
+      logger.error('Failed to load add-on data:', err);
     } finally {
       setLoading(false);
     }

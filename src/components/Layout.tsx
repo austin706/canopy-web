@@ -278,6 +278,44 @@ export default function Layout() {
             </button>
           </div>
         )}
+        {user && user.subscription_status === 'past_due' && (
+          <div
+            role="alert"
+            style={{
+              background: '#FEF3C7',
+              border: '1px solid #F59E0B',
+              color: '#92400E',
+              padding: '12px 16px',
+              borderRadius: 8,
+              margin: '0 0 16px 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ fontSize: 14, fontWeight: 500 }}>
+              ⚠️ Your last payment didn't go through. Update your card to keep your Canopy subscription active and avoid service interruption.
+            </span>
+            <button
+              onClick={() => navigate('/subscription')}
+              style={{
+                backgroundColor: '#F59E0B',
+                color: 'white',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Update Payment
+            </button>
+          </div>
+        )}
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>

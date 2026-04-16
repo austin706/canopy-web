@@ -37,6 +37,7 @@ interface Props {
   equipment: Equipment[];
   inspectionCount: number;
   householdMemberCount: number; // 1 = owner only
+  homeAddOnCount?: number; // active add-on subscriptions — auto-completes explored_add_ons
 }
 
 type ItemKey = Exclude<keyof SetupChecklistState, 'dismissed' | 'dismissed_at'>;
@@ -59,6 +60,7 @@ const ITEMS: Item[] = [
   { key: 'invited_partner',     title: 'Invite a household member',  description: 'Share tasks and documents with your spouse or co-owner.', action: 'Invite',        route: '/home' },
   { key: 'connected_agent',     title: 'Link your real-estate agent', description: 'Gift codes, referrals, and transfer-ready reports.', action: 'Link agent',    route: '/profile' },
   { key: 'phone_added',         title: 'Add your phone number',      description: 'For SMS reminders and service-appointment coordination.', action: 'Add phone',     route: '/profile' },
+  { key: 'explored_add_ons',    title: 'Explore add-on services',    description: 'Pest, lawn, pool, septic, cleaning — managed from your Canopy plan.', action: 'Explore',       route: '/add-ons' },
 ];
 
 function deriveState(
@@ -69,6 +71,7 @@ function deriveState(
   householdMemberCount: number,
   phone: string | null | undefined,
   agentId: string | null | undefined,
+  homeAddOnCount: number,
 ): SetupChecklistState {
   return {
     ...base,
@@ -81,10 +84,11 @@ function deriveState(
     invited_partner:     base.invited_partner     || householdMemberCount > 1,
     connected_agent:     base.connected_agent     || !!agentId,
     phone_added:         base.phone_added         || !!phone,
+    explored_add_ons:    base.explored_add_ons    || homeAddOnCount > 0,
   };
 }
 
-export default function SetupChecklist({ home, equipment, inspectionCount, householdMemberCount }: Props) {
+export default function SetupChecklist({ home, equipment, inspectionCount, householdMemberCount, homeAddOnCount = 0 }: Props) {
   const navigate = useNavigate();
   const { user, setUser } = useStore();
   const [persisting, setPersisting] = useState(false);
@@ -93,8 +97,8 @@ export default function SetupChecklist({ home, equipment, inspectionCount, house
   const baseState: SetupChecklistState = user?.setup_checklist_state ?? DEFAULT_SETUP_CHECKLIST_STATE;
 
   const derived = useMemo(
-    () => deriveState(baseState, home, equipment, inspectionCount, householdMemberCount, user?.phone, user?.agent_id),
-    [baseState, home, equipment, inspectionCount, householdMemberCount, user?.phone, user?.agent_id],
+    () => deriveState(baseState, home, equipment, inspectionCount, householdMemberCount, user?.phone, user?.agent_id, homeAddOnCount),
+    [baseState, home, equipment, inspectionCount, householdMemberCount, user?.phone, user?.agent_id, homeAddOnCount],
   );
 
   const completedCount = ITEMS.filter((i) => derived[i.key]).length;
@@ -120,7 +124,7 @@ export default function SetupChecklist({ home, equipment, inspectionCount, house
       .catch(() => { /* non-fatal — derived state still shown */ })
       .finally(() => setPersisting(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [derived.equipment_scanned, derived.inspection_uploaded, derived.roof_year_added, derived.fireplace_details, derived.pool_details, derived.filter_sizes, derived.invited_partner, derived.connected_agent, derived.phone_added]);
+  }, [derived.equipment_scanned, derived.inspection_uploaded, derived.roof_year_added, derived.fireplace_details, derived.pool_details, derived.filter_sizes, derived.invited_partner, derived.connected_agent, derived.phone_added, derived.explored_add_ons]);
 
   const handleMinimize = async () => {
     if (!user) return;

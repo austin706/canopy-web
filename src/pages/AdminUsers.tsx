@@ -4,6 +4,7 @@ import { useStore } from '@/store/useStore';
 import { logAdminAction } from '@/services/auditLog';
 import { PageSkeleton } from '@/components/Skeleton';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 const TIER_COLORS: Record<string, string> = {
   free: '#6B7280',
@@ -42,6 +43,8 @@ export default function AdminUsers() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detailCache, setDetailCache] = useState<Record<string, UserDetail>>({});
   const [detailLoading, setDetailLoading] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
 
   useEffect(() => { getAllUsers().then(setUsers).catch(() => {}).finally(() => setLoading(false)); }, []);
 
@@ -63,7 +66,7 @@ export default function AdminUsers() {
         const detail = await getUserDetailData(userId);
         setDetailCache(prev => ({ ...prev, [userId]: detail }));
       } catch (e: any) {
-        console.error('Failed to load user detail:', e.message);
+        logger.error('Failed to load user detail:', e.message);
       } finally {
         setDetailLoading(null);
       }
@@ -157,10 +160,10 @@ export default function AdminUsers() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filtered.length && filtered.length > 0) {
+    if (selectedIds.size === paginated.length && paginated.length > 0) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filtered.map(u => u.id)));
+      setSelectedIds(new Set(paginated.map(u => u.id)));
     }
   };
 
@@ -171,6 +174,11 @@ export default function AdminUsers() {
     return matchesSearch && matchesTier && matchesRole;
   });
 
+  // Reset to first page when filters change
+  useEffect(() => { setPage(0); }, [search, tierFilter, roleFilter]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const colCount = 8;
 
   return (
@@ -261,7 +269,7 @@ export default function AdminUsers() {
                 <th style={{ width: 40, padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>
                   <input
                     type="checkbox"
-                    checked={selectedIds.size === filtered.length && filtered.length > 0}
+                    checked={selectedIds.size === paginated.length && paginated.length > 0}
                     onChange={toggleSelectAll}
                     style={{ cursor: 'pointer' }}
                   />
@@ -276,7 +284,7 @@ export default function AdminUsers() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(u => {
+              {paginated.map(u => {
                 const isExpanded = expandedId === u.id;
                 const detail = detailCache[u.id];
                 const isLoadingDetail = detailLoading === u.id;
@@ -462,6 +470,19 @@ export default function AdminUsers() {
               })}
             </tbody>
           </table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderTop: '1px solid var(--color-border)', fontSize: 13 }}>
+              <span style={{ color: 'var(--text-secondary)' }}>
+                Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-sm" disabled={page === 0} onClick={() => setPage(p => p - 1)} style={{ minWidth: 70 }}>Previous</button>
+                <button className="btn btn-sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} style={{ minWidth: 70 }}>Next</button>
+              </div>
+            </div>
+          )}
         )}
       </div>
     </div>

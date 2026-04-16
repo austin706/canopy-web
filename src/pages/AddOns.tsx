@@ -3,6 +3,7 @@ import { Colors } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
 import { useNavigate } from 'react-router-dom';
+import logger from '@/utils/logger';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 
@@ -106,7 +107,7 @@ export default function AddOns() {
         if (addOns) setMyAddOns(addOns);
       }
     } catch (err) {
-      console.warn('Failed to load add-on data:', err);
+      logger.warn('Failed to load add-on data:', err);
     } finally {
       setLoading(false);
     }

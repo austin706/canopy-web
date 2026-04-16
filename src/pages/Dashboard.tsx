@@ -21,8 +21,9 @@ import { CanopyLogo, NavWeather, NavHome } from '@/components/icons/CanopyLogo';
 import { generateCostForecast, FORECAST_DISCLAIMER } from '@/services/costForecast';
 import PendingInvites from '@/components/PendingInvites';
 import SetupChecklist from '@/components/SetupChecklist';
+import AddOnNudge, { nudgeAddOnFromTaskCategory } from '@/components/AddOnNudge';
 import RecallAlertBanner from '@/components/RecallAlertBanner';
-import { getDocuments, getHomeMembers } from '@/services/supabase';
+import { getDocuments, getHomeMembers, supabase } from '@/services/supabase';
 import type { MaintenanceTask, HomeJoinRequest } from '@/types';
 import { TASK_TEMPLATES } from '@/constants/maintenance';
 
@@ -96,6 +97,7 @@ export default function Dashboard() {
   // Load inspection-doc count + household member count for the SetupChecklist.
   const [inspectionCount, setInspectionCount] = useState(0);
   const [memberCount, setMemberCount] = useState(1);
+  const [homeAddOnCount, setHomeAddOnCount] = useState(0);
   useEffect(() => {
     if (!home?.id) return;
     getDocuments(home.id)
@@ -107,6 +109,16 @@ export default function Dashboard() {
       .then((members) => setMemberCount(Math.max(1, (members || []).length)))
       .catch((err) => {
         logger.warn('Failed to fetch home members:', err?.message);
+      });
+    // Active add-on count drives auto-completion of the "Explore add-ons" checklist item.
+    supabase
+      .from('home_add_ons')
+      .select('id', { count: 'exact', head: true })
+      .eq('home_id', home.id)
+      .in('status', ['active', 'paused', 'pending_quote', 'quoted'])
+      .then(({ count, error }) => {
+        if (error) { logger.warn('Failed to fetch home_add_ons count:', error.message); return; }
+        setHomeAddOnCount(count ?? 0);
       });
   }, [home?.id]);
 
@@ -451,7 +463,11 @@ export default function Dashboard() {
         equipment={equipment}
         inspectionCount={inspectionCount}
         householdMemberCount={memberCount}
+        homeAddOnCount={homeAddOnCount}
       />
+
+      {/* Post-task add-on nudge (fires from quickCompleteTask handlers below) */}
+      <AddOnNudge />
 
       <div className="dashboard-layout">
         <div className="flex-col gap-lg">
@@ -596,7 +612,7 @@ export default function Dashboard() {
                     <div className="task-actions">
                       <span className="badge" style={{ background: (StatusColors[task.status] || Colors.silver) + '20', color: StatusColors[task.status] || Colors.silver }}>{task.status}</span>
                       {task.status !== 'completed' && !isDemo && (
-                        <button className="btn btn-sage btn-sm" onClick={(e) => { e.stopPropagation(); quickCompleteTask(task).catch(() => {}); }}>Done</button>
+                        <button className="btn btn-sage btn-sm" onClick={(e) => { e.stopPropagation(); quickCompleteTask(task).then(() => nudgeAddOnFromTaskCategory((task as any).category)).catch(() => {}); }}>Done</button>
                       )}
                     </div>
                   </div>

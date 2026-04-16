@@ -1,10 +1,24 @@
 import { useState, useEffect } from 'react';
-import { getAllUsers, updateProfile, deleteUserAccount, getUserDetailData } from '@/services/supabase';
+import { getAllUsers, updateProfile, deleteUserAccount, getUserDetailData, supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { logAdminAction } from '@/services/auditLog';
 import { PageSkeleton } from '@/components/Skeleton';
 import { showToast } from '@/components/Toast';
 import logger from '@/utils/logger';
+
+type BillingAction = 'refund' | 'credit';
+type RefundReason = 'duplicate' | 'fraudulent' | 'requested_by_customer';
+
+interface BillingModalState {
+  userId: string;
+  userLabel: string;
+  action: BillingAction;
+  amount: string;          // raw dollar input, e.g. "12.50"
+  reason: string;
+  chargeId: string;
+  refundReason: RefundReason;
+  submitting: boolean;
+}
 
 const TIER_COLORS: Record<string, string> = {
   free: '#6B7280',
@@ -29,7 +43,28 @@ interface UserDetail {
   agent: { name: string; brokerage: string } | null;
   giftCode: string | null;
   giftCodeDetails: { code: string; tier: string; agent_id: string } | null;
+  recentTasks?: Array<{
+    id: string;
+    home_id: string;
+    title: string;
+    status: string;
+    priority: string;
+    category: string;
+    due_date: string;
+    completed_date: string | null;
+    completed_by: string | null;
+    created_by_pro_id: string | null;
+    estimated_cost: number | null;
+  }>;
 }
+
+const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
+  completed: { bg: 'var(--color-sage-muted, #E8F0EA)', fg: 'var(--color-sage, #5B7E5A)' },
+  overdue: { bg: '#FEE2E2', fg: '#B91C1C' },
+  upcoming: { bg: 'var(--color-border)', fg: 'var(--text-secondary)' },
+  due: { bg: '#FEF3C7', fg: '#92400E' },
+  skipped: { bg: 'var(--color-border)', fg: 'var(--text-secondary)' },
+};
 
 export default function AdminUsers() {
   const { user: currentUser, setUser } = useStore();
@@ -44,6 +79,7 @@ export default function AdminUsers() {
   const [detailCache, setDetailCache] = useState<Record<string, UserDetail>>({});
   const [detailLoading, setDetailLoading] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+  const [billingModal, setBillingModal] = useState<BillingModalState | null>(null);
   const PAGE_SIZE = 50;
 
   useEffect(() => { getAllUsers().then(setUsers).catch(() => {}).finally(() => setLoading(false)); }, []);
@@ -102,6 +138,74 @@ export default function AdminUsers() {
       syncCurrentUser(userId, { subscription_tier: newTier, subscription_expires_at: expires });
       await logAdminAction('user.tier_change', 'user', userId, { old_tier: oldTier, new_tier: newTier, email: user?.email });
     } catch (e: any) { showToast({ message: e?.message || 'Failed to change tier' }); }
+  };
+
+  const openBillingModal = (userId: string, userLabel: string, action: BillingAction) => {
+    setBillingModal({
+      userId,
+      userLabel,
+      action,
+      amount: '',
+      reason: '',
+      chargeId: '',
+      refundReason: 'requested_by_customer',
+      submitting: false,
+    });
+  };
+
+  const closeBillingModal = () => setBillingModal(null);
+
+  const submitBillingAction = async () => {
+    if (!billingModal) return;
+    const { userId, action, amount, reason, chargeId, refundReason } = billingModal;
+
+    const parsed = Number.parseFloat(amount);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      showToast({ message: 'Enter a positive dollar amount' });
+      return;
+    }
+    const amountCents = Math.round(parsed * 100);
+    if (amountCents > 1_000_000) {
+      showToast({ message: 'Amount exceeds the $10,000 safety cap. Escalate to finance.' });
+      return;
+    }
+    if (reason.trim().length < 4) {
+      showToast({ message: 'Reason must be at least 4 characters' });
+      return;
+    }
+    if (!confirm(`${action === 'refund' ? 'Refund' : 'Credit'} $${(amountCents / 100).toFixed(2)} to ${billingModal.userLabel}?`)) return;
+
+    setBillingModal({ ...billingModal, submitting: true });
+    try {
+      const payload: Record<string, unknown> = {
+        target_user_id: userId,
+        action,
+        amount_cents: amountCents,
+        reason: reason.trim(),
+      };
+      if (action === 'refund') {
+        payload.refund_reason = refundReason;
+        if (chargeId.trim()) payload.charge_id = chargeId.trim();
+      }
+      const { data, error } = await supabase.functions.invoke('admin-refund-credit', { body: payload });
+      if (error) throw error;
+      const stripeRef = (data as { stripe_ref?: string } | null)?.stripe_ref;
+      await logAdminAction(`user.billing_${action}`, 'user', userId, {
+        amount_cents: amountCents,
+        reason: reason.trim(),
+        stripe_ref: stripeRef,
+      });
+      showToast({
+        message: action === 'refund'
+          ? `Refund issued (${stripeRef ?? 'ok'})`
+          : `Credit applied (${stripeRef ?? 'ok'})`,
+      });
+      setBillingModal(null);
+    } catch (e: any) {
+      logger.error('admin-refund-credit failed:', e?.message || e);
+      showToast({ message: e?.message || `Failed to ${action}` });
+      setBillingModal(billingModal ? { ...billingModal, submitting: false } : null);
+    }
   };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
@@ -263,6 +367,7 @@ export default function AdminUsers() {
             <p>No users found</p>
           </div>
         ) : (
+          <>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -365,15 +470,33 @@ export default function AdminUsers() {
                         {u.created_at ? new Date(u.created_at).toLocaleDateString() : '\u2014'}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                        {u.role !== 'admin' && (
+                        <div style={{ display: 'inline-flex', gap: 6, justifyContent: 'flex-end' }}>
                           <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => handleDeleteUser(u.id, u.full_name)}
-                            style={{ fontSize: 12, padding: '4px 12px' }}
+                            className="btn btn-sm"
+                            onClick={() => openBillingModal(u.id, u.full_name || u.email || u.id, 'refund')}
+                            style={{ fontSize: 12, padding: '4px 10px' }}
+                            title="Issue a Stripe refund against a charge"
                           >
-                            Delete
+                            Refund
                           </button>
-                        )}
+                          <button
+                            className="btn btn-sm"
+                            onClick={() => openBillingModal(u.id, u.full_name || u.email || u.id, 'credit')}
+                            style={{ fontSize: 12, padding: '4px 10px' }}
+                            title="Add a balance credit to next invoice"
+                          >
+                            Credit
+                          </button>
+                          {u.role !== 'admin' && (
+                            <button
+                              className="btn btn-danger btn-sm"
+                              onClick={() => handleDeleteUser(u.id, u.full_name)}
+                              style={{ fontSize: 12, padding: '4px 12px' }}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
 
@@ -458,6 +581,53 @@ export default function AdminUsers() {
                                   </div>
                                 )}
                               </div>
+
+                              {/* Tasks panel (spans both columns) */}
+                              {detail.recentTasks && detail.recentTasks.length > 0 && (
+                                <div style={{ gridColumn: '1 / -1', marginTop: 4 }}>
+                                  <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', margin: '0 0 10px 0' }}>
+                                    Recent Tasks ({detail.recentTasks.length}{detail.taskCount > detail.recentTasks.length ? ` of ${detail.taskCount}` : ''})
+                                  </h4>
+                                  <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'hidden' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 0.8fr 0.8fr 0.8fr 0.6fr', padding: '8px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-secondary)', background: 'var(--color-background)', borderBottom: '1px solid var(--color-border)' }}>
+                                      <span>Title</span>
+                                      <span>Category</span>
+                                      <span>Status</span>
+                                      <span>Due / Done</span>
+                                      <span style={{ textAlign: 'right' }}>Cost</span>
+                                    </div>
+                                    <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                                      {detail.recentTasks.map(t => {
+                                        const sc = STATUS_COLORS[t.status] || STATUS_COLORS.upcoming;
+                                        const date = t.completed_date || t.due_date;
+                                        const completedByPro = t.completed_by === 'pro' || !!t.created_by_pro_id;
+                                        return (
+                                          <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '1.8fr 0.8fr 0.8fr 0.8fr 0.6fr', padding: '8px 12px', fontSize: 12, borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface, white)' }}>
+                                            <span style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                              {t.title}
+                                              {completedByPro && (
+                                                <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: 'var(--color-sage-muted, #E8F0EA)', color: 'var(--color-sage, #5B7E5A)' }}>Pro</span>
+                                              )}
+                                            </span>
+                                            <span style={{ color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{t.category}</span>
+                                            <span>
+                                              <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: sc.bg, color: sc.fg, textTransform: 'capitalize' }}>
+                                                {t.status}
+                                              </span>
+                                            </span>
+                                            <span style={{ color: 'var(--text-secondary)' }}>
+                                              {date ? new Date(date).toLocaleDateString() : '\u2014'}
+                                            </span>
+                                            <span style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
+                                              {t.estimated_cost ? `$${t.estimated_cost}` : '\u2014'}
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <p style={{ fontSize: 13, color: 'var(--text-secondary)', padding: '12px 0' }}>Failed to load details</p>
@@ -483,8 +653,119 @@ export default function AdminUsers() {
               </div>
             </div>
           )}
+          </>
         )}
       </div>
+
+      {/* Refund / Credit Modal */}
+      {billingModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="billing-modal-title"
+          onClick={closeBillingModal}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--color-surface, white)',
+              borderRadius: 12,
+              padding: 24,
+              width: '100%',
+              maxWidth: 480,
+              boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+            }}
+          >
+            <h3 id="billing-modal-title" style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+              {billingModal.action === 'refund' ? 'Issue Refund' : 'Apply Credit'}
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 16px' }}>
+              {billingModal.userLabel}
+              {billingModal.action === 'refund'
+                ? ' — refunds are processed by Stripe against the latest successful charge if no Charge ID is provided.'
+                : ' — credit is applied to the customer\u2019s Stripe balance and consumed by the next invoice.'}
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                <span style={{ fontWeight: 600 }}>Amount (USD)</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0.00"
+                  value={billingModal.amount}
+                  onChange={e => setBillingModal({ ...billingModal, amount: e.target.value })}
+                  style={{ padding: '8px 10px', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 14 }}
+                />
+              </label>
+
+              {billingModal.action === 'refund' && (
+                <>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                    <span style={{ fontWeight: 600 }}>Charge ID (optional)</span>
+                    <input
+                      type="text"
+                      placeholder="ch_... (leave blank to use latest successful charge)"
+                      value={billingModal.chargeId}
+                      onChange={e => setBillingModal({ ...billingModal, chargeId: e.target.value })}
+                      style={{ padding: '8px 10px', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 14 }}
+                    />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                    <span style={{ fontWeight: 600 }}>Refund Reason</span>
+                    <select
+                      value={billingModal.refundReason}
+                      onChange={e => setBillingModal({ ...billingModal, refundReason: e.target.value as RefundReason })}
+                      style={{ padding: '8px 10px', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 14 }}
+                    >
+                      <option value="requested_by_customer">Requested by customer</option>
+                      <option value="duplicate">Duplicate charge</option>
+                      <option value="fraudulent">Fraudulent</option>
+                    </select>
+                  </label>
+                </>
+              )}
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                <span style={{ fontWeight: 600 }}>Internal Reason</span>
+                <textarea
+                  rows={3}
+                  placeholder="What prompted this? (visible in audit log)"
+                  value={billingModal.reason}
+                  onChange={e => setBillingModal({ ...billingModal, reason: e.target.value })}
+                  style={{ padding: '8px 10px', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', resize: 'vertical' }}
+                />
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+              <button className="btn btn-sm" onClick={closeBillingModal} disabled={billingModal.submitting}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={submitBillingAction}
+                disabled={billingModal.submitting}
+              >
+                {billingModal.submitting
+                  ? 'Working\u2026'
+                  : billingModal.action === 'refund' ? 'Issue Refund' : 'Apply Credit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

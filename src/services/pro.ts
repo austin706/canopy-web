@@ -147,22 +147,36 @@ export const getStripeConnectStatus = async (providerId: string): Promise<{
   };
 };
 
-// ─── Background Check (Placeholder) ───
+// ─── Background Check (Checkr) ───
+// Wired through the `checkr-initiate` edge function (see
+// Canopy-App/supabase/functions/checkr-initiate/index.ts).
+// The function:
+//   1. Creates a Checkr candidate + report (or reuses existing ids)
+//   2. Stores checkr_candidate_id / checkr_report_id on pro_providers
+//   3. Flips background_check_status to 'pending'
+//   4. Writes an admin_audit_log entry
+// If CHECKR_API_KEY isn't configured server-side, the function falls back to
+// placeholder refs so pre-launch testing still works; the response includes
+// `fallback: true` so the UI can surface a notice.
 
-export const initiateBackgroundCheck = async (providerId: string): Promise<{ checkId: string; status: string }> => {
-  // TODO: Integrate with Checkr API
-  // For now, update the provider's background_check_status to 'pending'
-  const { error } = await supabase
-    .from('pro_providers')
-    .update({
-      background_check_status: 'pending',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', providerId);
+export const initiateBackgroundCheck = async (
+  providerId: string,
+): Promise<{ checkId: string; status: string; fallback?: boolean }> => {
+  const { data, error } = await supabase.functions.invoke('checkr-initiate', {
+    body: { provider_id: providerId },
+  });
   if (error) throw error;
-
-  // Note: caller should call logAdminAction separately
-  return { checkId: `placeholder_${providerId}`, status: 'pending' };
+  const result = (data || {}) as {
+    candidate_id?: string;
+    report_id?: string;
+    status?: string;
+    fallback?: boolean;
+  };
+  return {
+    checkId: result.report_id || result.candidate_id || `placeholder_${providerId}`,
+    status: result.status || 'pending',
+    fallback: result.fallback,
+  };
 };
 
 export const updateBackgroundCheckStatus = async (

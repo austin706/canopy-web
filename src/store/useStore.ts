@@ -151,6 +151,7 @@ export const useStore = create<CanopyState>()(
         activeHomeId: state.activeHomeId,
         equipment: state.equipment,
         consumables: state.consumables,
+        customTemplates: state.customTemplates,
         tasks: state.tasks,
         maintenanceLogs: state.maintenanceLogs,
         weather: state.weather,

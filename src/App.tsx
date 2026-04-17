@@ -224,15 +224,18 @@ export default function App() {
           setUser(userData);
 
           // Load home data + custom templates
+          // IMPORTANT: setHome MUST fire AFTER equipment/tasks/templates resolve,
+          // otherwise Dashboard's task-generation effect races and runs against
+          // an empty customTemplates array, producing 0 tasks.
           try {
             const homeData = await getHome(authUser.id);
             if (homeData) {
-              setHome(homeData);
               const [equip, consumables, tasks, templates] = await Promise.all([getEquipment(homeData.id), getHomeConsumables(homeData.id), getTasks(homeData.id), getTaskTemplates()]);
               setEquipment(equip);
               setConsumables(consumables);
               setTasks(tasks);
               setCustomTemplates(templates);
+              setHome(homeData);
             }
           } catch (err) {
             logger.warn('[Auth] SIGNED_IN home/equipment/tasks bootstrap failed:', err);
@@ -322,15 +325,18 @@ export default function App() {
           setUser(userData);
 
           // Load home data + custom templates
+          // IMPORTANT: setHome MUST fire AFTER equipment/tasks/templates resolve,
+          // otherwise Dashboard's task-generation effect races and runs against
+          // an empty customTemplates array, producing 0 tasks.
           try {
             const homeData = await getHome(authUser.id);
             if (homeData) {
-              setHome(homeData);
               const [equip, consumables, tasks, templates] = await Promise.all([getEquipment(homeData.id), getHomeConsumables(homeData.id), getTasks(homeData.id), getTaskTemplates()]);
               setEquipment(equip);
               setConsumables(consumables);
               setTasks(tasks);
               setCustomTemplates(templates);
+              setHome(homeData);
             }
           } catch (err) {
             logger.warn('[Auth] INITIAL_SESSION home/equipment/tasks bootstrap failed:', err);

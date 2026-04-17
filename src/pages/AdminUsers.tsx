@@ -473,6 +473,14 @@ export default function AdminUsers() {
                         <div style={{ display: 'inline-flex', gap: 6, justifyContent: 'flex-end' }}>
                           <button
                             className="btn btn-sm"
+                            onClick={() => window.open(`/admin/users/${u.id}/view`, '_blank')}
+                            style={{ fontSize: 12, padding: '4px 10px' }}
+                            title="Open this user's account in a read-only snapshot for support triage"
+                          >
+                            View As
+                          </button>
+                          <button
+                            className="btn btn-sm"
                             onClick={() => openBillingModal(u.id, u.full_name || u.email || u.id, 'refund')}
                             style={{ fontSize: 12, padding: '4px 10px' }}
                             title="Issue a Stripe refund against a charge"

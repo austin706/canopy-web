@@ -24,6 +24,7 @@ import {
 import { createNextDynamicTask } from '@/services/taskEngine';
 import { createTask } from '@/services/supabase';
 import { proposeNextVisit } from '@/services/proEnrollment';
+import type { MaintenanceTask, TaskPriority } from '@/types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 
@@ -200,6 +201,90 @@ export default function ProInspection() {
         console.error('Error saving notes:', error);
       }
     }, 500);
+  };
+
+  // ─── Track which items have had tasks created from them so we can
+  //     grey-out the button after the Pro clicks it. Keyed by inspection
+  //     item id; value is the created task id for optional future linking.
+  const [tasksFromFindings, setTasksFromFindings] = useState<Record<string, string>>({});
+  const [creatingTaskForItem, setCreatingTaskForItem] = useState<string | null>(null);
+
+  // ─── Create a maintenance task from an inspection finding ────────────
+  //     The Pro clicks "Add as task" when they find something that needs
+  //     follow-up. We mark it is_custom=true + created_by_pro_id so it
+  //     shows up in the homeowner's calendar with a Pro badge.
+  const handleCreateTaskFromFinding = async (
+    inspectionId: string,
+    item: VisitInspectionItem,
+    priority: TaskPriority = 'medium',
+  ) => {
+    if (!user || !visit || !home) {
+      showToast({ message: 'Missing visit context — cannot add task.' });
+      return;
+    }
+    if (tasksFromFindings[item.id]) {
+      showToast({ message: 'Already added as a task.' });
+      return;
+    }
+    try {
+      setCreatingTaskForItem(item.id);
+      const inspection = inspections.find((i) => i.id === inspectionId);
+      const equipmentLabel = inspection?.equipment_name ? ` — ${inspection.equipment_name}` : '';
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 14); // default 2-week window for follow-up
+      const description = [
+        item.notes?.trim(),
+        `Flagged during Pro inspection on ${new Date().toLocaleDateString()}.`,
+      ].filter(Boolean).join(' ');
+
+      // Map inspection category (HVAC/plumbing/etc.) to MaintenanceTask category.
+      type TaskCat = MaintenanceTask['category'];
+      const guessedCategory = (inspection?.equipment_name || 'general').toLowerCase();
+      const categoryMap: Record<string, TaskCat> = {
+        hvac: 'hvac',
+        furnace: 'hvac',
+        'air conditioner': 'hvac',
+        plumbing: 'plumbing',
+        electrical: 'electrical',
+        roof: 'roof',
+        outdoor: 'outdoor',
+        appliance: 'appliance',
+        appliances: 'appliance',
+        pool: 'pool',
+        fireplace: 'fireplace',
+        water_heater: 'water_heater',
+        safety: 'safety',
+      };
+      const resolvedCategory: TaskCat = (Object.entries(categoryMap).find(
+        ([k]) => guessedCategory.includes(k)
+      )?.[1]) || 'general';
+
+      const newTask: Partial<MaintenanceTask> = {
+        home_id: home.id,
+        title: `${item.label}${equipmentLabel}`,
+        description,
+        category: resolvedCategory,
+        priority,
+        status: 'upcoming',
+        frequency: 'as_needed',
+        due_date: dueDate.toISOString(),
+        is_weather_triggered: false,
+        applicable_months: [],
+        is_custom: true,
+        created_by_pro_id: user.id,
+      };
+
+      const created = await createTask(newTask);
+      if (created?.id) {
+        setTasksFromFindings((prev) => ({ ...prev, [item.id]: created.id }));
+        showToast({ message: `Task added to homeowner's calendar: ${item.label}` });
+      }
+    } catch (err) {
+      console.error('Failed to create task from finding:', err);
+      showToast({ message: 'Could not add task. Please try again.' });
+    } finally {
+      setCreatingTaskForItem(null);
+    }
   };
 
   // ─── Photo Upload (uses service layer → visit-photos bucket + visit_photos table) ───
@@ -671,6 +756,66 @@ export default function ProInspection() {
                           resize: 'vertical',
                         }}
                       />
+
+                      {/* Pro → Task: add this finding to the homeowner's calendar */}
+                      <div style={{ marginTop: Spacing.sm, display: 'flex', gap: Spacing.sm, alignItems: 'center', flexWrap: 'wrap' }}>
+                        {tasksFromFindings[item.id] ? (
+                          <div
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              padding: `6px 12px`,
+                              borderRadius: BorderRadius.full,
+                              background: Colors.sageMuted,
+                              color: Colors.sage,
+                              fontSize: FontSize.xs,
+                              fontWeight: FontWeight.semibold,
+                            }}
+                          >
+                            ✓ Task added to calendar
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleCreateTaskFromFinding(activeInspection.id, item, 'medium')}
+                              disabled={creatingTaskForItem === item.id}
+                              style={{
+                                padding: `${Spacing.sm}px ${Spacing.md}px`,
+                                borderRadius: BorderRadius.md,
+                                border: `1px solid ${Colors.copper}`,
+                                background: Colors.copper,
+                                color: Colors.white,
+                                cursor: 'pointer',
+                                fontSize: FontSize.sm,
+                                fontWeight: FontWeight.semibold,
+                                opacity: creatingTaskForItem === item.id ? 0.6 : 1,
+                              }}
+                              title="Add this finding as a maintenance task on the homeowner's calendar"
+                            >
+                              {creatingTaskForItem === item.id ? 'Adding…' : '+ Add as task'}
+                            </button>
+                            <button
+                              onClick={() => handleCreateTaskFromFinding(activeInspection.id, item, 'high')}
+                              disabled={creatingTaskForItem === item.id}
+                              style={{
+                                padding: `${Spacing.sm}px ${Spacing.md}px`,
+                                borderRadius: BorderRadius.md,
+                                border: `1px solid ${Colors.error}`,
+                                background: 'transparent',
+                                color: Colors.error,
+                                cursor: 'pointer',
+                                fontSize: FontSize.sm,
+                                fontWeight: FontWeight.semibold,
+                                opacity: creatingTaskForItem === item.id ? 0.6 : 1,
+                              }}
+                              title="Add this finding as a HIGH-priority task"
+                            >
+                              {creatingTaskForItem === item.id ? 'Adding…' : '+ Add as urgent'}
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   )}
 

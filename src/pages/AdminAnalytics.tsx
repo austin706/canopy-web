@@ -37,6 +37,31 @@ interface AnalyticsData {
   proRequestsTotal: number;
   proRequestsByStatus: { status: string; count: number }[];
   avgTimeToAssignment: number;
+
+  // Task Template Performance (Item 17)
+  templateStats: TemplateStat[];
+  templateTotals: {
+    totalTemplates: number;
+    totalGenerated: number;
+    totalCompleted: number;
+    avgCompletionRate: number;
+    overdueCount: number;
+  };
+}
+
+interface TemplateStat {
+  id: string;
+  title: string;
+  category: string;
+  source: string;
+  task_level: string;
+  generated: number;
+  completed: number;
+  skipped: number;
+  overdue: number;
+  completionRate: number; // %
+  avgDaysToComplete: number | null;
+  lastCompletedAt: string | null;
 }
 
 const TIER_PRICES = { free: 0, home: 7.99, pro: 149.99, pro_plus: 249.99 };
@@ -71,17 +96,19 @@ export default function AdminAnalytics() {
       setLoading(true);
       const dateFilter = getDateFilter();
 
-      const [profilesRes, tasksRes, giftCodesRes, proReqRes] = await Promise.all([
+      const [profilesRes, tasksRes, giftCodesRes, proReqRes, templatesRes] = await Promise.all([
         supabase.from('profiles').select('id,created_at,subscription_tier'),
-        supabase.from('maintenance_tasks').select('id,user_id,created_at,status'),
+        supabase.from('maintenance_tasks').select('id,user_id,created_at,status,template_id,due_date,completed_date'),
         supabase.from('gift_codes').select('id,tier,redeemed_by,redeemed_at,created_at,expires_at'),
         supabase.from('pro_requests').select('id,status,created_at,matched_at'),
+        supabase.from('task_templates').select('id,title,category,source,task_level,active'),
       ]);
 
       const profiles = profilesRes.data || [];
       const tasks = tasksRes.data || [];
       const giftCodes = giftCodesRes.data || [];
       const proRequests = proReqRes.data || [];
+      const templatesList = templatesRes.data || [];
 
       // User Growth & Cohorts
       const now = new Date();
@@ -201,6 +228,65 @@ export default function AdminAnalytics() {
         ? Math.round((timesToAssignment.reduce((a, b) => a + b, 0) / timesToAssignment.length) * 10) / 10
         : 0;
 
+      // Task Template Performance (Item 17)
+      const templateBuckets = new Map<string, { generated: number; completed: number; skipped: number; overdue: number; daysToComplete: number[]; lastCompleted: string | null }>();
+      const todayIso = new Date().toISOString().slice(0, 10);
+      tasks.forEach((t: any) => {
+        if (!t.template_id) return;
+        const b = templateBuckets.get(t.template_id) || { generated: 0, completed: 0, skipped: 0, overdue: 0, daysToComplete: [], lastCompleted: null };
+        b.generated += 1;
+        if (t.status === 'completed') {
+          b.completed += 1;
+          if (t.due_date && t.completed_date) {
+            const due = new Date(t.due_date).getTime();
+            const done = new Date(t.completed_date).getTime();
+            if (Number.isFinite(due) && Number.isFinite(done)) {
+              b.daysToComplete.push(Math.round((done - due) / 86400000));
+            }
+          }
+          if (t.completed_date && (!b.lastCompleted || new Date(t.completed_date) > new Date(b.lastCompleted))) {
+            b.lastCompleted = t.completed_date;
+          }
+        } else if (t.status === 'skipped') {
+          b.skipped += 1;
+        } else if (t.status !== 'completed' && t.due_date && t.due_date < todayIso) {
+          b.overdue += 1;
+        }
+        templateBuckets.set(t.template_id, b);
+      });
+      const templateStats: TemplateStat[] = templatesList.map((tpl: any) => {
+        const b = templateBuckets.get(tpl.id) || { generated: 0, completed: 0, skipped: 0, overdue: 0, daysToComplete: [], lastCompleted: null };
+        const nonSkipped = b.generated - b.skipped;
+        const completionRate = nonSkipped > 0 ? Math.round((b.completed / nonSkipped) * 1000) / 10 : 0;
+        const avgDays = b.daysToComplete.length > 0
+          ? Math.round((b.daysToComplete.reduce((a, c) => a + c, 0) / b.daysToComplete.length) * 10) / 10
+          : null;
+        return {
+          id: tpl.id,
+          title: tpl.title,
+          category: tpl.category,
+          source: tpl.source || 'built_in',
+          task_level: tpl.task_level || 'standard',
+          generated: b.generated,
+          completed: b.completed,
+          skipped: b.skipped,
+          overdue: b.overdue,
+          completionRate,
+          avgDaysToComplete: avgDays,
+          lastCompletedAt: b.lastCompleted,
+        };
+      }).sort((a, b) => b.generated - a.generated);
+
+      const totalGenerated = templateStats.reduce((s, t) => s + t.generated, 0);
+      const totalCompleted = templateStats.reduce((s, t) => s + t.completed, 0);
+      const avgCompletionRate = templateStats.length > 0
+        ? Math.round(
+            (templateStats.filter(t => t.generated > 0).reduce((s, t) => s + t.completionRate, 0) /
+              Math.max(templateStats.filter(t => t.generated > 0).length, 1)) * 10,
+          ) / 10
+        : 0;
+      const overdueCount = templateStats.reduce((s, t) => s + t.overdue, 0);
+
       setData({
         monthlySignups,
         totalUsers,
@@ -223,6 +309,14 @@ export default function AdminAnalytics() {
         proRequestsTotal,
         proRequestsByStatus,
         avgTimeToAssignment,
+        templateStats,
+        templateTotals: {
+          totalTemplates: templatesList.length,
+          totalGenerated,
+          totalCompleted,
+          avgCompletionRate,
+          overdueCount,
+        },
       });
     } catch (err) {
       console.error('Analytics error:', err);
@@ -748,6 +842,104 @@ export default function AdminAnalytics() {
                 );
               })}
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Task Template Performance — Item 17 */}
+      <div
+        className="admin-section"
+        style={{
+          marginBottom: 16,
+          background: 'white',
+          border: '1px solid var(--border-color)',
+          borderRadius: 8,
+        }}
+      >
+        <div
+          onClick={() => toggleSection('template-performance')}
+          style={{ padding: '16px 20px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: expandedSections.has('template-performance') ? '1px solid var(--border-color)' : 'none' }}
+        >
+          <h2 style={{ margin: 0, fontSize: 16 }}>Task Template Performance</h2>
+          <span style={{ fontSize: 18, color: Colors.medGray }}>{expandedSections.has('template-performance') ? '−' : '+'}</span>
+        </div>
+        {expandedSections.has('template-performance') && (
+          <div style={{ padding: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
+              <div style={{ padding: 12, background: Colors.sage + '15', borderRadius: 6 }}>
+                <p style={{ fontSize: 11, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>Templates</p>
+                <p style={{ fontSize: 20, fontWeight: 700, color: Colors.sage, margin: 0 }}>{data.templateTotals.totalTemplates}</p>
+              </div>
+              <div style={{ padding: 12, background: Colors.info + '15', borderRadius: 6 }}>
+                <p style={{ fontSize: 11, color: Colors.info, fontWeight: 600, margin: '0 0 4px 0' }}>Generated</p>
+                <p style={{ fontSize: 20, fontWeight: 700, color: Colors.info, margin: 0 }}>{data.templateTotals.totalGenerated.toLocaleString()}</p>
+              </div>
+              <div style={{ padding: 12, background: Colors.success + '15', borderRadius: 6 }}>
+                <p style={{ fontSize: 11, color: Colors.success, fontWeight: 600, margin: '0 0 4px 0' }}>Completed</p>
+                <p style={{ fontSize: 20, fontWeight: 700, color: Colors.success, margin: 0 }}>{data.templateTotals.totalCompleted.toLocaleString()}</p>
+              </div>
+              <div style={{ padding: 12, background: Colors.copper + '15', borderRadius: 6 }}>
+                <p style={{ fontSize: 11, color: Colors.copper, fontWeight: 600, margin: '0 0 4px 0' }}>Avg Completion</p>
+                <p style={{ fontSize: 20, fontWeight: 700, color: Colors.copper, margin: 0 }}>{data.templateTotals.avgCompletionRate}%</p>
+              </div>
+              <div style={{ padding: 12, background: Colors.error + '15', borderRadius: 6 }}>
+                <p style={{ fontSize: 11, color: Colors.error, fontWeight: 600, margin: '0 0 4px 0' }}>Overdue</p>
+                <p style={{ fontSize: 20, fontWeight: 700, color: Colors.error, margin: 0 }}>{data.templateTotals.overdueCount}</p>
+              </div>
+            </div>
+
+            <p style={{ fontSize: 12, fontWeight: 600, color: Colors.medGray, margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Top 25 templates by tasks generated
+            </p>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: Colors.medGray }}>
+                    <th style={{ padding: '8px 6px', fontWeight: 600 }}>Title</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600 }}>Category</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600 }}>Level</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }}>Generated</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }}>Completed</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }}>Skipped</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }}>Overdue</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }}>Rate</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }}>Avg Δ Days</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600 }}>Last Done</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.templateStats.slice(0, 25).map(t => (
+                    <tr key={t.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <td style={{ padding: '6px', fontWeight: 600 }}>{t.title}</td>
+                      <td style={{ padding: '6px', color: Colors.medGray }}>{t.category}</td>
+                      <td style={{ padding: '6px', color: Colors.medGray, textTransform: 'capitalize' }}>{t.task_level}</td>
+                      <td style={{ padding: '6px', textAlign: 'right' }}>{t.generated.toLocaleString()}</td>
+                      <td style={{ padding: '6px', textAlign: 'right', color: Colors.success, fontWeight: 600 }}>{t.completed.toLocaleString()}</td>
+                      <td style={{ padding: '6px', textAlign: 'right', color: Colors.medGray }}>{t.skipped.toLocaleString()}</td>
+                      <td style={{ padding: '6px', textAlign: 'right', color: t.overdue > 0 ? Colors.error : Colors.medGray }}>{t.overdue.toLocaleString()}</td>
+                      <td style={{ padding: '6px', textAlign: 'right', fontWeight: 600, color: t.completionRate >= 70 ? Colors.success : t.completionRate >= 40 ? Colors.warning : Colors.error }}>
+                        {t.generated === 0 ? '—' : `${t.completionRate}%`}
+                      </td>
+                      <td style={{ padding: '6px', textAlign: 'right', color: Colors.medGray }}>
+                        {t.avgDaysToComplete == null ? '—' : `${t.avgDaysToComplete > 0 ? '+' : ''}${t.avgDaysToComplete}d`}
+                      </td>
+                      <td style={{ padding: '6px', color: Colors.medGray }}>
+                        {t.lastCompletedAt ? new Date(t.lastCompletedAt).toLocaleDateString() : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                  {data.templateStats.length === 0 && (
+                    <tr><td colSpan={10} style={{ padding: 16, textAlign: 'center', color: Colors.medGray }}>No template data yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <p style={{ fontSize: 11, color: Colors.medGray, marginTop: 12, lineHeight: 1.4 }}>
+              <strong>Avg Δ Days</strong> = average days between due date and completion (negative = done early, positive = done late).
+              <br />
+              <strong>Rate</strong> = completed ÷ (generated − skipped). Non-skipped denominator avoids penalizing templates users opt out of.
+            </p>
           </div>
         )}
       </div>

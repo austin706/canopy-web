@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { upsertEquipment, deleteEquipment as deleteEquipApi, createProRequest } from '@/services/supabase';
+import { upsertEquipment, deleteEquipment as deleteEquipApi, createProRequest, getWarrantiesForEquipment, deleteWarranty, upsertWarranty } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { ROOF_LIFESPANS } from '@/services/taskEngine';
 import { showToast } from '@/components/Toast';
-import type { Equipment as EquipmentType, EquipmentCategory } from '@/types';
+import { WarrantyForm } from '@/components/WarrantyForm';
+import type { Equipment as EquipmentType, EquipmentCategory, Warranty } from '@/types';
 
 const CATEGORIES: { value: EquipmentCategory; label: string }[] = [
   { value: 'hvac', label: 'HVAC' },
@@ -32,6 +33,12 @@ export default function EquipmentDetail() {
   const [requestingPro, setRequestingPro] = useState(false);
   const [proRequested, setProRequested] = useState(false);
 
+  // Warranties
+  const [warranties, setWarranties] = useState<Warranty[]>([]);
+  const [loadingWarranties, setLoadingWarranties] = useState(true);
+  const [showAddWarranty, setShowAddWarranty] = useState(false);
+  const [editingWarranty, setEditingWarranty] = useState<Warranty | null>(null);
+
   // Edit form state
   const [editForm, setEditForm] = useState({
     name: item?.name || '',
@@ -51,6 +58,17 @@ export default function EquipmentDetail() {
     fuel_type: item?.fuel_type || '',
   });
 
+  // Load warranties when equipment loads
+  useEffect(() => {
+    if (id) {
+      setLoadingWarranties(true);
+      getWarrantiesForEquipment(id)
+        .then(setWarranties)
+        .catch(err => console.error('Error loading warranties:', err))
+        .finally(() => setLoadingWarranties(false));
+    }
+  }, [id]);
+
   if (!item) {
     return (
       <div className="page">
@@ -61,6 +79,33 @@ export default function EquipmentDetail() {
       </div>
     );
   }
+
+  const handleSaveWarranty = async (warranty: Warranty) => {
+    try {
+      const saved = await upsertWarranty(warranty);
+      setWarranties(prev => {
+        const idx = prev.findIndex(w => w.id === warranty.id);
+        if (idx >= 0) {
+          return [...prev.slice(0, idx), saved, ...prev.slice(idx + 1)];
+        }
+        return [...prev, saved];
+      });
+      setShowAddWarranty(false);
+      setEditingWarranty(null);
+    } catch (err: any) {
+      showToast({ message: 'Error saving warranty: ' + (err.message || 'Unknown error') });
+    }
+  };
+
+  const handleDeleteWarranty = async (warrantyId: string) => {
+    if (!confirm('Delete this warranty?')) return;
+    try {
+      await deleteWarranty(warrantyId);
+      setWarranties(prev => prev.filter(w => w.id !== warrantyId));
+    } catch (err: any) {
+      showToast({ message: 'Error deleting warranty: ' + (err.message || 'Unknown error') });
+    }
+  };
 
   // Compute lifespan — roof uses ROOF_LIFESPANS, others use install_date + lifespan
   let age = 0;
@@ -477,11 +522,127 @@ export default function EquipmentDetail() {
           </div>
         )}
 
+        {/* Warranties Section */}
+        {!showAddWarranty && !editingWarranty && (
+          <div className="card mb-lg">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontWeight: 600, margin: 0 }}>Warranties</p>
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={() => setShowAddWarranty(true)}
+              >
+                + Add Warranty
+              </button>
+            </div>
+
+            {loadingWarranties ? (
+              <p className="text-sm text-gray">Loading warranties...</p>
+            ) : warranties.length === 0 ? (
+              <p className="text-sm text-gray">No warranties recorded for this equipment</p>
+            ) : (
+              <div className="flex-col gap-md">
+                {warranties.map(warranty => {
+                  const daysLeft = warranty.days_until_expiry ?? 0;
+                  const isExpired = warranty.status === 'expired' || daysLeft < 0;
+                  const isExpiringSoon = daysLeft >= 0 && daysLeft <= 60;
+
+                  return (
+                    <div
+                      key={warranty.id}
+                      style={{
+                        border: `1px solid ${isExpiringSoon && !isExpired ? Colors.warning : Colors.lightGray}`,
+                        borderRadius: 8,
+                        padding: 12,
+                        background: isExpired ? 'rgba(244, 67, 54, 0.05)' : 'transparent',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                        <div>
+                          <p style={{ fontWeight: 600, margin: '0 0 4px', color: Colors.charcoal }}>{warranty.title}</p>
+                          {warranty.provider && (
+                            <p className="text-xs text-gray" style={{ margin: '0 0 4px' }}>{warranty.provider}</p>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            className="btn btn-xs btn-ghost"
+                            onClick={() => setEditingWarranty(warranty)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn btn-xs btn-danger"
+                            onClick={() => handleDeleteWarranty(warranty.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
+                        <div>
+                          <p className="text-xs text-gray">Expires</p>
+                          <p style={{ fontSize: 13, fontWeight: 500, color: Colors.charcoal }}>
+                            {new Date(warranty.end_date).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray">Status</p>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            {isExpired ? (
+                              <span className="badge" style={{ background: 'rgba(244, 67, 54, 0.1)', color: Colors.error }}>
+                                Expired
+                              </span>
+                            ) : isExpiringSoon ? (
+                              <span className="badge" style={{ background: 'rgba(255, 152, 0, 0.1)', color: Colors.warning }}>
+                                {daysLeft} days left
+                              </span>
+                            ) : (
+                              <span className="badge" style={{ background: Colors.sageMuted, color: Colors.sage }}>
+                                {daysLeft} days left
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {warranty.policy_number && (
+                        <p className="text-xs" style={{ margin: '4px 0', color: Colors.medGray }}>
+                          Policy: {warranty.policy_number}
+                        </p>
+                      )}
+                      {warranty.claim_phone && (
+                        <p className="text-xs" style={{ margin: '4px 0', color: Colors.medGray }}>
+                          Claim: <a href={`tel:${warranty.claim_phone}`}>{warranty.claim_phone}</a>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {(showAddWarranty || editingWarranty) && (
+          <WarrantyForm
+            warranty={editingWarranty || undefined}
+            equipmentId={id}
+            onSave={handleSaveWarranty}
+            onCancel={() => {
+              setShowAddWarranty(false);
+              setEditingWarranty(null);
+            }}
+          />
+        )}
+
         {/* Actions */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <button className="btn btn-primary" onClick={() => setIsEditing(true)}>Edit</button>
-          <button className="btn btn-danger" onClick={handleDelete}>Delete</button>
-        </div>
+        {!showAddWarranty && !editingWarranty && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <button className="btn btn-primary" onClick={() => setIsEditing(true)}>Edit</button>
+            <button className="btn btn-danger" onClick={handleDelete}>Delete</button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -757,7 +757,7 @@ export default function ProPortal() {
       </div>
 
       {/* Quick Actions */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 32 }}>
         <button className="card" onClick={() => navigate('/pro-portal/visit-schedule')}
           style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: `2px solid ${Colors.sage}`, fontWeight: 600, fontSize: 15 }}>
           Service Calendar
@@ -769,6 +769,10 @@ export default function ProPortal() {
         <button className="card" onClick={() => navigate('/pro-portal/quotes-invoices')}
           style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: '2px solid transparent', fontWeight: 600, fontSize: 15 }}>
           Quotes & Invoices
+        </button>
+        <button className="card" onClick={() => navigate('/pro-portal/payouts')}
+          style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: '2px solid transparent', fontWeight: 600, fontSize: 15 }}>
+          Payouts
         </button>
       </div>
 

@@ -321,3 +321,70 @@ export async function calculateCompletenessScore(homeId: string): Promise<number
 
   return finalScore;
 }
+
+/** Generate Home Token share URL for QR code */
+export function generateHomeTokenShareUrl(transferToken: string): string {
+  const baseUrl = window.location.origin;
+  return `${baseUrl}/home-token/share/${transferToken}`;
+}
+
+/** Look up a pending transfer by its token (for the public share view).
+ *  Returns the transfer + joined home summary when the token is active, or null otherwise.
+ *  Note: RLS on home_transfers must permit reading by transfer_token. */
+export async function getTransferByToken(
+  transferToken: string
+): Promise<{ transfer: HomeTransfer; home: any } | null> {
+  const { data: transfer, error: tErr } = await supabase
+    .from('home_transfers')
+    .select('*')
+    .eq('transfer_token', transferToken)
+    .maybeSingle();
+  if (tErr) { logger.warn('Failed to resolve transfer token:', tErr); return null; }
+  if (!transfer) return null;
+  const { data: home, error: hErr } = await supabase
+    .from('homes')
+    .select('id,address,city,state,zip_code,photo_url,year_built,square_footage,record_completeness_score,agent_attested_at,ownership_verified')
+    .eq('id', transfer.home_id)
+    .maybeSingle();
+  if (hErr) { logger.warn('Failed to load home for transfer:', hErr); return null; }
+  return { transfer, home };
+}
+
+/** Interface for home token attestations */
+export interface HomeTokenAttestation {
+  id: string;
+  home_id: string;
+  attestor_user_id: string;
+  attestor_name: string;
+  attestor_role: 'agent' | 'inspector' | 'contractor' | 'pro';
+  statement: string;
+  signed_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Get all attestations for a home */
+export async function getHomeTokenAttestations(homeId: string): Promise<HomeTokenAttestation[]> {
+  const { data, error } = await supabase
+    .from('home_token_attestations')
+    .select('*')
+    .eq('home_id', homeId)
+    .order('signed_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+/** Add agent/pro attestation to a home token */
+export async function addHomeTokenAttestation(
+  homeId: string,
+  statement: string,
+  role: 'agent' | 'inspector' | 'contractor' | 'pro' = 'agent'
+): Promise<HomeTokenAttestation> {
+  const { data, error } = await supabase.rpc('add_home_token_attestation', {
+    p_home_id: homeId,
+    p_statement: statement,
+    p_attestor_role: role,
+  });
+  if (error) throw error;
+  return data;
+}

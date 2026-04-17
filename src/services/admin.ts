@@ -5,6 +5,206 @@ import { supabase } from './supabaseClient';
 import logger from '@/utils/logger';
 import { verifyAgentOwnership } from './agents';
 
+// --- Admin Broadcast (segmented email/SMS/push) ---
+
+export interface BroadcastSegment {
+  tiers?: Array<'free' | 'home' | 'pro' | 'pro_plus'>;
+  roles?: Array<'user' | 'agent' | 'admin' | 'pro_provider'>;
+  states?: string[];                // 2-letter codes
+  hasAgent?: boolean | null;        // true = linked to an agent; false = no agent; null/undefined = any
+  smsVerifiedOnly?: boolean;        // require phone + sms_verified=true
+  signedUpAfter?: string | null;    // ISO date (YYYY-MM-DD)
+  signedUpBefore?: string | null;   // ISO date (YYYY-MM-DD)
+  lastActiveAfter?: string | null;  // ISO date; null = any
+  testUserIds?: string[];           // optional: override segment with explicit user ids (for test sends)
+}
+
+export interface BroadcastPreview {
+  total: number;
+  emailReachable: number;
+  smsReachable: number;
+  sample: Array<{ id: string; email: string | null; full_name: string | null; phone: string | null; sms_verified: boolean }>;
+}
+
+/**
+ * Apply a segment filter to the profiles table and return (count + a sample of matches).
+ * Used by the Admin Broadcast composer to show reach before sending.
+ *
+ * Why server-side filter: RLS admin policies let admins read all profiles, and doing
+ * the filter in SQL keeps the payload tiny on large tenant bases.
+ */
+export const previewBroadcastAudience = async (seg: BroadcastSegment): Promise<BroadcastPreview> => {
+  if (seg.testUserIds?.length) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, email, full_name, phone, sms_verified')
+      .in('id', seg.testUserIds);
+    const rows = (data || []) as Array<{ id: string; email: string | null; full_name: string | null; phone: string | null; sms_verified: boolean | null }>;
+    return {
+      total: rows.length,
+      emailReachable: rows.filter(r => r.email).length,
+      smsReachable: rows.filter(r => r.phone && r.sms_verified).length,
+      sample: rows.slice(0, 10).map(r => ({ ...r, sms_verified: !!r.sms_verified })),
+    };
+  }
+
+  let q = supabase
+    .from('profiles')
+    .select('id, email, full_name, phone, sms_verified, subscription_tier, role, state, agent_id, created_at, last_active_at', { count: 'exact' });
+
+  if (seg.tiers?.length) q = q.in('subscription_tier', seg.tiers);
+  if (seg.roles?.length) q = q.in('role', seg.roles);
+  if (seg.states?.length) q = q.in('state', seg.states);
+  if (seg.hasAgent === true) q = q.not('agent_id', 'is', null);
+  if (seg.hasAgent === false) q = q.is('agent_id', null);
+  if (seg.smsVerifiedOnly) q = q.eq('sms_verified', true).not('phone', 'is', null);
+  if (seg.signedUpAfter) q = q.gte('created_at', seg.signedUpAfter);
+  if (seg.signedUpBefore) q = q.lte('created_at', seg.signedUpBefore);
+  if (seg.lastActiveAfter) q = q.gte('last_active_at', seg.lastActiveAfter);
+
+  // Cap at 10k to avoid accidentally blasting an entire tenant.
+  const { data, count, error } = await q.limit(10);
+  if (error) throw error;
+
+  const sample = (data || []).map((r: any) => ({
+    id: r.id as string,
+    email: (r.email as string | null) ?? null,
+    full_name: (r.full_name as string | null) ?? null,
+    phone: (r.phone as string | null) ?? null,
+    sms_verified: !!r.sms_verified,
+  }));
+
+  // Second (tiny) round-trip to get email/sms reachable counts — cheaper than pulling all rows.
+  let emailReachable = 0;
+  let smsReachable = 0;
+  if ((count ?? 0) > 0) {
+    const base = (qq: any) => {
+      if (seg.tiers?.length) qq = qq.in('subscription_tier', seg.tiers);
+      if (seg.roles?.length) qq = qq.in('role', seg.roles);
+      if (seg.states?.length) qq = qq.in('state', seg.states);
+      if (seg.hasAgent === true) qq = qq.not('agent_id', 'is', null);
+      if (seg.hasAgent === false) qq = qq.is('agent_id', null);
+      if (seg.signedUpAfter) qq = qq.gte('created_at', seg.signedUpAfter);
+      if (seg.signedUpBefore) qq = qq.lte('created_at', seg.signedUpBefore);
+      if (seg.lastActiveAfter) qq = qq.gte('last_active_at', seg.lastActiveAfter);
+      return qq;
+    };
+    const er = await base(supabase.from('profiles').select('*', { count: 'exact', head: true })).not('email', 'is', null);
+    emailReachable = er.count ?? 0;
+    const sr = await base(supabase.from('profiles').select('*', { count: 'exact', head: true })).eq('sms_verified', true).not('phone', 'is', null);
+    smsReachable = sr.count ?? 0;
+  }
+
+  return {
+    total: count ?? 0,
+    emailReachable,
+    smsReachable,
+    sample,
+  };
+};
+
+export interface BroadcastPayload {
+  title: string;
+  body: string;
+  action_url?: string;
+  channel: 'email' | 'sms' | 'both';
+  /** If true the segment is ignored and only the testUserIds in seg are targeted. */
+  testMode?: boolean;
+}
+
+export interface BroadcastResult {
+  sent: number;
+  skipped: number;
+  errors: string[];
+}
+
+/**
+ * Insert one notification row per matched user. Downstream:
+ *  - send-notifications process-queue cron picks up rows with emailed=false and mails them
+ *  - SMS delivery requires a "critical" category; we use 'security' so SMS fires
+ *    (non-SMS broadcasts use 'admin_broadcast' which skips SMS)
+ *  - Push delivery is automatic for any user with a push token
+ *
+ * We page through matching user ids in chunks of 500 to keep the insert payload sane
+ * and avoid hitting Supabase row-limit ceilings on very large tenants.
+ */
+export const sendAdminBroadcast = async (
+  seg: BroadcastSegment,
+  payload: BroadcastPayload,
+): Promise<BroadcastResult> => {
+  const errors: string[] = [];
+  let sent = 0;
+  let skipped = 0;
+
+  // 1. Resolve target user ids
+  let targetIds: string[] = [];
+  if (payload.testMode && seg.testUserIds?.length) {
+    targetIds = seg.testUserIds;
+  } else {
+    let q = supabase.from('profiles').select('id, email, phone, sms_verified').limit(10000);
+    if (seg.tiers?.length) q = q.in('subscription_tier', seg.tiers);
+    if (seg.roles?.length) q = q.in('role', seg.roles);
+    if (seg.states?.length) q = q.in('state', seg.states);
+    if (seg.hasAgent === true) q = q.not('agent_id', 'is', null);
+    if (seg.hasAgent === false) q = q.is('agent_id', null);
+    if (seg.signedUpAfter) q = q.gte('created_at', seg.signedUpAfter);
+    if (seg.signedUpBefore) q = q.lte('created_at', seg.signedUpBefore);
+    if (seg.lastActiveAfter) q = q.gte('last_active_at', seg.lastActiveAfter);
+
+    const { data, error } = await q;
+    if (error) throw error;
+
+    const rows = (data || []) as Array<{ id: string; email: string | null; phone: string | null; sms_verified: boolean | null }>;
+    // Channel-based reachability filter
+    const reachable = rows.filter((r) => {
+      if (payload.channel === 'email') return !!r.email;
+      if (payload.channel === 'sms') return !!(r.phone && r.sms_verified);
+      if (payload.channel === 'both') return !!r.email || !!(r.phone && r.sms_verified);
+      return false;
+    });
+    skipped = rows.length - reachable.length;
+    targetIds = reachable.map((r) => r.id);
+  }
+
+  if (!targetIds.length) {
+    return { sent: 0, skipped, errors: ['No reachable recipients match this segment'] };
+  }
+
+  // 2. Insert notifications in chunks (500 per insert)
+  // category controls whether SMS fires downstream (critical list only). `admin_broadcast_sms`
+  // is recognized by the send-notifications edge function as critical; `admin_broadcast` is not
+  // so email/push go out but SMS is skipped.
+  const category = payload.channel === 'email' ? 'admin_broadcast' : 'admin_broadcast_sms';
+
+  const now = new Date().toISOString();
+  const chunkSize = 500;
+  for (let i = 0; i < targetIds.length; i += chunkSize) {
+    const chunk = targetIds.slice(i, i + chunkSize);
+    const rows = chunk.map((uid) => ({
+      user_id: uid,
+      title: payload.title,
+      body: payload.body,
+      category,
+      action_url: payload.action_url || null,
+      data: { broadcast: true, channel: payload.channel },
+      read: false,
+      pushed: false,
+      emailed: false,
+      email_next_retry_at: now,
+    }));
+    const { error } = await supabase.from('notifications').insert(rows);
+    if (error) {
+      errors.push(`Chunk ${i}/${targetIds.length}: ${error.message}`);
+      logger.error('sendAdminBroadcast insert failed', error);
+    } else {
+      sent += chunk.length;
+    }
+  }
+
+  return { sent, skipped, errors };
+};
+
+
 
 export const getAllAgents = async () => {
   const { data, error } = await supabase.from('agents').select('*').order('name');
@@ -92,6 +292,19 @@ export const getUserDetailData = async (userId: string) => {
   // Count maintenance tasks and logs
   let taskCount = 0;
   let logCount = 0;
+  let recentTasks: Array<{
+    id: string;
+    home_id: string;
+    title: string;
+    status: string;
+    priority: string;
+    category: string;
+    due_date: string;
+    completed_date: string | null;
+    completed_by: string | null;
+    created_by_pro_id: string | null;
+    estimated_cost: number | null;
+  }> = [];
   if (homeIds.length > 0) {
     const { count: tc } = await supabase
       .from('maintenance_tasks')
@@ -104,6 +317,14 @@ export const getUserDetailData = async (userId: string) => {
       .select('*', { count: 'exact', head: true })
       .in('home_id', homeIds);
     if (lc !== null) logCount = lc;
+
+    const { data: rtRows } = await supabase
+      .from('maintenance_tasks')
+      .select('id, home_id, title, status, priority, category, due_date, completed_date, completed_by, created_by_pro_id, estimated_cost')
+      .in('home_id', homeIds)
+      .order('due_date', { ascending: false })
+      .limit(25);
+    recentTasks = (rtRows || []) as typeof recentTasks;
   }
 
   return {
@@ -115,6 +336,7 @@ export const getUserDetailData = async (userId: string) => {
     agent,
     giftCode: profile?.gift_code || null,
     giftCodeDetails,
+    recentTasks,
   };
 };
 
@@ -224,6 +446,21 @@ export interface TaskTemplateDB {
   ai_source_equipment_id: string | null;
   task_level: 'core' | 'standard' | 'comprehensive';
   is_cleaning: boolean;
+  // Added in migration 061 — previously only lived in the hardcoded TASK_TEMPLATES constant.
+  requires_flooring_type: string[] | null;
+  requires_water_source: string[] | null;
+  requires_sewer_type: string[] | null;
+  requires_septic_type: string[] | null;
+  requires_construction_type: string[] | null;
+  requires_foundation_type: string[] | null;
+  requires_countertop_type: string[] | null;
+  requires_pool_type: string[] | null;
+  requires_home_type: string[] | null;
+  add_on_category: string | null;
+  safety_warnings: string[] | null;
+  /** C-11 (migration 066): auto-bumped by trigger when any material field changes.
+   *  Snapshot onto generated maintenance_tasks so stale tasks can be surfaced. */
+  template_version: number;
   created_at: string;
   updated_at: string;
 }

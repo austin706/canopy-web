@@ -141,7 +141,70 @@ export default function SetupChecklist({ home, equipment, inspectionCount, house
   };
 
   if (!user) return null;
-  if (baseState.dismissed) return null;
+
+  // If the user dismissed but still has incomplete items, render a compact pill
+  // so they can always re-open the checklist. (Fixes feedback_setup_checklist_ux:
+  // previously dismiss was one-way, hiding unfinished setup with no recovery.)
+  if (baseState.dismissed) {
+    if (allDone) return null;
+    return (
+      <button
+        className="card mb-lg"
+        onClick={async () => {
+          if (!user) return;
+          const next: SetupChecklistState = { ...derived, dismissed: false, dismissed_at: null };
+          setPersisting(true);
+          try {
+            await updateProfile(user.id, { setup_checklist_state: next });
+            setUser({ ...user, setup_checklist_state: next });
+            setIsExpanded(true);
+          } finally {
+            setPersisting(false);
+          }
+        }}
+        disabled={persisting}
+        aria-label="Re-open setup checklist"
+        style={{
+          width: '100%',
+          background: 'var(--color-cream, #faf7f1)',
+          border: '1px dashed var(--color-primary)40',
+          textAlign: 'left',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '10px 14px',
+        }}
+      >
+        <div
+          style={{
+            width: 26,
+            height: 26,
+            borderRadius: 13,
+            background: 'var(--color-primary)20',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            fontSize: 13,
+            fontWeight: 700,
+            color: 'var(--color-primary)',
+          }}
+        >
+          ✓
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>
+            Setup: {completedCount}/{total} complete
+          </p>
+          <p className="text-xs text-gray" style={{ margin: 0 }}>
+            Tap to finish setting up your home.
+          </p>
+        </div>
+        <span style={{ fontSize: 16, color: 'var(--color-text-secondary)' }}>▸</span>
+      </button>
+    );
+  }
 
   return (
     <div className="card mb-lg" style={{ border: '1px solid var(--color-primary)30' }}>

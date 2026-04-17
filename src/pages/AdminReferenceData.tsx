@@ -25,6 +25,208 @@ const TYPE_LABELS: Record<string, string> = {
   task_templates: 'Task Templates',
 };
 
+/**
+ * Minimal RFC-4180-ish CSV parser. Handles quoted fields, escaped quotes, and embedded newlines.
+ * Returns array of row objects keyed by header.
+ */
+function parseCSV(text: string): Record<string, string>[] {
+  const rows: string[][] = [];
+  let field = '';
+  let row: string[] = [];
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } else { inQuotes = false; }
+      } else {
+        field += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ',') {
+      row.push(field); field = '';
+    } else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); field = '';
+      if (row.length > 1 || row[0] !== '') rows.push(row);
+      row = [];
+    } else {
+      field += ch;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  if (!rows.length) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).map(r => {
+    const obj: Record<string, string> = {};
+    headers.forEach((h, i) => { obj[h] = (r[i] || '').trim(); });
+    return obj;
+  });
+}
+
+/** Split a pipe- or semicolon-delimited string into a trimmed array, or pass through arrays. */
+function splitList(v: any): string[] | null {
+  if (v == null || v === '') return null;
+  if (Array.isArray(v)) return v.map(String).map(s => s.trim()).filter(Boolean);
+  if (typeof v === 'string') {
+    const trimmed = v.trim();
+    if (trimmed.startsWith('[')) {
+      try { const parsed = JSON.parse(trimmed); if (Array.isArray(parsed)) return parsed.map(String); } catch {}
+    }
+    return trimmed.split(/[|;]/).map(s => s.trim()).filter(Boolean);
+  }
+  return null;
+}
+
+function toBool(v: any, fallback = false): boolean {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') return ['true', '1', 'yes', 'y'].includes(v.toLowerCase().trim());
+  return fallback;
+}
+
+function toNumOrNull(v: any): number | null {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Normalize a raw CSV/JSON row into a TaskTemplateDB-shaped upsert payload. */
+function normalizeImportedTemplate(row: any): Partial<TaskTemplateDB> & { title: string; category: string } {
+  const months = row.applicable_months;
+  let monthsArr: number[] = [];
+  if (Array.isArray(months)) monthsArr = months.map(Number).filter(n => n >= 1 && n <= 12);
+  else if (typeof months === 'string' && months.trim()) {
+    monthsArr = months.split(/[|;,]/).map(s => Number(s.trim())).filter(n => n >= 1 && n <= 12);
+  }
+  if (!monthsArr.length) monthsArr = [1,2,3,4,5,6,7,8,9,10,11,12];
+
+  return {
+    id: row.id || undefined,
+    title: String(row.title || '').trim(),
+    category: String(row.category || '').trim(),
+    description: row.description ?? null,
+    instructions: row.instructions ?? null,
+    instructions_json: splitList(row.instructions_json ?? row.steps),
+    items_to_have_on_hand: splitList(row.items_to_have_on_hand ?? row.tools),
+    safety_warnings: splitList(row.safety_warnings ?? row.warnings),
+    service_purpose: row.service_purpose ?? null,
+    priority: row.priority || 'medium',
+    frequency: row.frequency || 'annual',
+    applicable_months: monthsArr,
+    estimated_minutes: toNumOrNull(row.estimated_minutes),
+    estimated_cost_low: toNumOrNull(row.estimated_cost_low ?? row.cost_low),
+    estimated_cost_high: toNumOrNull(row.estimated_cost_high ?? row.cost_high),
+    regions: splitList(row.regions) || ['all'],
+    requires_feature: row.requires_feature ?? null,
+    requires_equipment: row.requires_equipment ?? null,
+    requires_equipment_subtype: splitList(row.requires_equipment_subtype),
+    excludes_equipment_subtype: splitList(row.excludes_equipment_subtype),
+    requires_home_type: splitList(row.requires_home_type),
+    requires_flooring_type: splitList(row.requires_flooring_type),
+    requires_water_source: splitList(row.requires_water_source) as any,
+    requires_sewer_type: splitList(row.requires_sewer_type) as any,
+    requires_septic_type: splitList(row.requires_septic_type) as any,
+    requires_construction_type: splitList(row.requires_construction_type),
+    requires_foundation_type: splitList(row.requires_foundation_type),
+    requires_countertop_type: splitList(row.requires_countertop_type),
+    requires_pool_type: splitList(row.requires_pool_type) as any,
+    add_on_category: row.add_on_category ?? null,
+    pro_recommended: toBool(row.pro_recommended, false),
+    service_type: (row.service_type as any) || 'diy',
+    is_weather_triggered: toBool(row.is_weather_triggered, false),
+    equipment_keyed: toBool(row.equipment_keyed, false),
+    consumable_spec: row.consumable_spec ?? null,
+    consumable_replacement_months: toNumOrNull(row.consumable_replacement_months),
+    scheduling_type: (row.scheduling_type as any) || 'seasonal',
+    interval_days: toNumOrNull(row.interval_days),
+    is_cleaning: toBool(row.is_cleaning, false),
+    task_level: (row.task_level as any) || 'standard',
+    sort_order: toNumOrNull(row.sort_order) ?? 100,
+    active: row.active == null ? true : toBool(row.active, true),
+    source: (row.source as any) || 'user_created',
+  };
+}
+
+/**
+ * StringListEditor — inline editor for string[] fields (how-to steps, tools list, safety warnings).
+ * Adds a numbered prefix when `ordered` is true and a red warning tint when `warning` is true.
+ */
+function StringListEditor({
+  label,
+  value,
+  onChange,
+  placeholder,
+  ordered = false,
+  warning = false,
+}: {
+  label: string;
+  value: string[];
+  onChange: (next: string[]) => void;
+  placeholder?: string;
+  ordered?: boolean;
+  warning?: boolean;
+}) {
+  const updateAt = (idx: number, text: string) => {
+    const next = [...value];
+    next[idx] = text;
+    onChange(next);
+  };
+  const removeAt = (idx: number) => {
+    const next = [...value];
+    next.splice(idx, 1);
+    onChange(next);
+  };
+  const moveUp = (idx: number) => {
+    if (idx === 0) return;
+    const next = [...value];
+    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+    onChange(next);
+  };
+  const moveDown = (idx: number) => {
+    if (idx === value.length - 1) return;
+    const next = [...value];
+    [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+    onChange(next);
+  };
+  const add = () => onChange([...value, '']);
+
+  return (
+    <div style={{
+      marginTop: 12,
+      padding: 8,
+      border: `1px solid ${warning ? '#FBCFCF' : 'var(--color-border)'}`,
+      borderRadius: 6,
+      background: warning ? '#FFF8F8' : 'transparent',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <label style={{ flex: 1, fontSize: 11, fontWeight: 600, color: warning ? '#A04040' : undefined }}>{label}</label>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={add} style={{ fontSize: 11 }}>+ Add</button>
+      </div>
+      {value.length === 0 && (
+        <div style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '4px 0' }}>None — click Add to create one.</div>
+      )}
+      {value.map((text, idx) => (
+        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+          {ordered && (
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', width: 20, textAlign: 'right' }}>{idx + 1}.</span>
+          )}
+          <input
+            className="form-input"
+            style={{ flex: 1, fontSize: 12 }}
+            value={text}
+            onChange={e => updateAt(idx, e.target.value)}
+            placeholder={placeholder}
+          />
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => moveUp(idx)} disabled={idx === 0} style={{ fontSize: 11, padding: '2px 6px' }}>▲</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => moveDown(idx)} disabled={idx === value.length - 1} style={{ fontSize: 11, padding: '2px 6px' }}>▼</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeAt(idx)} style={{ fontSize: 11, padding: '2px 6px', color: '#A04040' }}>✕</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminReferenceData() {
   const [types, setTypes] = useState<string[]>([]);
   const [selectedType, setSelectedType] = useState<string>('');
@@ -33,6 +235,8 @@ export default function AdminReferenceData() {
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<Partial<ReferenceData> | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<Partial<TaskTemplateDB> | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ inserted: number; updated: number; errors: string[] } | null>(null);
 
   useEffect(() => {
     loadTypes();
@@ -114,6 +318,68 @@ export default function AdminReferenceData() {
     } catch (err: any) {
       showToast({ message: err.message });
     }
+  };
+
+  const handleBulkImport = async (file: File) => {
+    setImporting(true);
+    setImportResult(null);
+    const errors: string[] = [];
+    let inserted = 0;
+    let updated = 0;
+    try {
+      const text = await file.text();
+      let rows: any[] = [];
+      if (file.name.toLowerCase().endsWith('.json')) {
+        const parsed = JSON.parse(text);
+        rows = Array.isArray(parsed) ? parsed : (parsed.templates || []);
+      } else {
+        // CSV — naive parser (handles quoted fields)
+        rows = parseCSV(text);
+      }
+      if (!rows.length) {
+        errors.push('No rows found in file.');
+        setImportResult({ inserted: 0, updated: 0, errors });
+        return;
+      }
+      const existingIds = new Set(templates.map(t => t.id));
+      for (const row of rows) {
+        try {
+          const normalized = normalizeImportedTemplate(row);
+          if (!normalized.title || !normalized.category) {
+            errors.push(`Row "${row.title || '(unnamed)'}" missing title or category`);
+            continue;
+          }
+          await upsertTaskTemplate(normalized);
+          if (normalized.id && existingIds.has(normalized.id)) updated += 1;
+          else inserted += 1;
+        } catch (e: any) {
+          errors.push(`Row "${row.title || '(unnamed)'}": ${e?.message || 'unknown error'}`);
+        }
+      }
+      await logAdminAction('reference.bulk_import', 'task_template', 'bulk', {
+        filename: file.name,
+        inserted,
+        updated,
+        errors: errors.length,
+      });
+      await loadData();
+      setImportResult({ inserted, updated, errors });
+    } catch (err: any) {
+      errors.push(err?.message || 'Parse failed');
+      setImportResult({ inserted, updated, errors });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleExportTemplates = () => {
+    const blob = new Blob([JSON.stringify(templates, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `canopy-task-templates-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleDeleteTemplate = async (t: TaskTemplateDB) => {
@@ -250,15 +516,53 @@ export default function AdminReferenceData() {
       {/* Task Templates Table */}
       {isTemplateMode && (
         <div className="admin-table-wrapper">
-          <div className="admin-table-toolbar mb-md">
+          <div className="admin-table-toolbar mb-md" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 600, fontSize: 14 }}>{templates.length} templates</span>
+            <div style={{ flex: 1 }} />
+            <label className="btn btn-ghost btn-sm" style={{ cursor: importing ? 'not-allowed' : 'pointer', opacity: importing ? 0.5 : 1 }}>
+              {importing ? 'Importing…' : '⬆ Bulk Import (CSV/JSON)'}
+              <input
+                type="file"
+                accept=".csv,.json,text/csv,application/json"
+                style={{ display: 'none' }}
+                disabled={importing}
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) handleBulkImport(f);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+            <button className="btn btn-ghost btn-sm" onClick={handleExportTemplates} disabled={templates.length === 0}>⬇ Export JSON</button>
             <button
               className="btn btn-primary btn-sm"
-              onClick={() => setEditingTemplate({ title: '', category: 'hvac', priority: 'medium', frequency: 'annual', applicable_months: [1,2,3,4,5,6,7,8,9,10,11,12], regions: ['all'], active: true, sort_order: templates.length + 1, service_type: 'diy', pro_recommended: false })}
+              onClick={() => setEditingTemplate({ title: '', category: 'hvac', priority: 'medium', frequency: 'annual', applicable_months: [1,2,3,4,5,6,7,8,9,10,11,12], regions: ['all'], active: true, sort_order: templates.length + 1, service_type: 'diy', pro_recommended: false, source: 'user_created' })}
             >
               + Add Template
             </button>
           </div>
+
+          {importResult && (
+            <div style={{
+              background: importResult.errors.length ? '#FFF8F0' : '#F0FAF0',
+              border: `1px solid ${importResult.errors.length ? '#F5C27F' : '#9BC99B'}`,
+              borderRadius: 6,
+              padding: 12,
+              marginBottom: 12,
+              fontSize: 12,
+            }}>
+              <strong>Import complete.</strong> Inserted: {importResult.inserted}. Updated: {importResult.updated}. Errors: {importResult.errors.length}.
+              {importResult.errors.length > 0 && (
+                <ul style={{ marginTop: 6, paddingLeft: 18 }}>
+                  {importResult.errors.slice(0, 10).map((err, i) => (
+                    <li key={i} style={{ color: '#A04040' }}>{err}</li>
+                  ))}
+                  {importResult.errors.length > 10 && <li>…and {importResult.errors.length - 10} more.</li>}
+                </ul>
+              )}
+              <button className="btn btn-ghost btn-sm" onClick={() => setImportResult(null)} style={{ fontSize: 11, marginTop: 4 }}>Dismiss</button>
+            </div>
+          )}
 
           {/* Template edit form */}
           {editingTemplate && (
@@ -300,8 +604,39 @@ export default function AdminReferenceData() {
                 <textarea className="form-input" value={editingTemplate.description || ''} onChange={e => setEditingTemplate({ ...editingTemplate, description: e.target.value })} style={{ minHeight: 40 }} />
               </div>
               <div style={{ marginTop: 8 }}>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Instructions (step-by-step)</label>
-                <textarea className="form-input" value={editingTemplate.instructions || ''} onChange={e => setEditingTemplate({ ...editingTemplate, instructions: e.target.value })} style={{ minHeight: 60 }} />
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Legacy Instructions (single paragraph — prefer Steps below)</label>
+                <textarea className="form-input" value={editingTemplate.instructions || ''} onChange={e => setEditingTemplate({ ...editingTemplate, instructions: e.target.value })} style={{ minHeight: 40, fontSize: 12 }} />
+              </div>
+
+              {/* Ordered How-To Steps (instructions_json) */}
+              <StringListEditor
+                label="How-To Steps (ordered — shown numbered on TaskDetail)"
+                value={editingTemplate.instructions_json || []}
+                onChange={arr => setEditingTemplate({ ...editingTemplate, instructions_json: arr.length ? arr : null })}
+                placeholder="e.g., Turn off breaker at the panel"
+                ordered
+              />
+
+              {/* Items to Have on Hand */}
+              <StringListEditor
+                label="Items to Have on Hand"
+                value={editingTemplate.items_to_have_on_hand || []}
+                onChange={arr => setEditingTemplate({ ...editingTemplate, items_to_have_on_hand: arr.length ? arr : null })}
+                placeholder="e.g., 20x25x1 filter, screwdriver"
+              />
+
+              {/* Safety Warnings */}
+              <StringListEditor
+                label="Safety Warnings (red-bordered panel on TaskDetail)"
+                value={editingTemplate.safety_warnings || []}
+                onChange={arr => setEditingTemplate({ ...editingTemplate, safety_warnings: arr.length ? arr : null })}
+                placeholder="e.g., Turn off breaker before opening panel"
+                warning
+              />
+
+              <div style={{ marginTop: 8 }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Service Purpose (what the Pro actually does on-site)</label>
+                <input className="form-input" value={editingTemplate.service_purpose || ''} onChange={e => setEditingTemplate({ ...editingTemplate, service_purpose: e.target.value || null })} placeholder="e.g., Inspect & flush water heater" />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, marginTop: 8 }}>
                 <div>

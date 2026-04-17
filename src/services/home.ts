@@ -275,9 +275,39 @@ export const addStructure = async (
   return created;
 };
 
-/** Delete a structure (child home) */
+/** Soft-delete a structure (child home). See migration_068_soft_delete_homes.sql.
+ *  Uses the soft_delete_home RPC so the row + its maintenance history survive a
+ *  30-day restore window before the nightly purge cron hard-deletes it. */
 export const deleteStructure = async (structureId: string): Promise<void> => {
-  const { error } = await supabase.from('homes').delete().eq('id', structureId);
+  const { error } = await supabase.rpc('soft_delete_home', { p_home_id: structureId });
+  if (error) throw error;
+};
+
+/** A home that was soft-deleted but is still within the 30-day restore window.
+ *  Surfaced in the "Recently deleted" UI on HomeDetails / Settings. */
+export interface DeletedHomeSummary {
+  id: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  nickname: string | null;
+  deleted_at: string;
+  days_remaining: number;
+}
+
+/** List homes the caller can restore (owner, original deleter, or admin).
+ *  Powers the homeowner-facing "Recently deleted" surface.
+ *  See migration_070_owner_restore.sql. */
+export const listDeletedHomesForOwner = async (): Promise<DeletedHomeSummary[]> => {
+  const { data, error } = await supabase.rpc('list_deleted_homes_for_owner');
+  if (error) throw error;
+  return (data ?? []) as DeletedHomeSummary[];
+};
+
+/** Restore a soft-deleted home within the 30-day window.
+ *  See migration_070_owner_restore.sql (owner, deleter, or admin). */
+export const restoreHome = async (homeId: string): Promise<void> => {
+  const { error } = await supabase.rpc('restore_home', { p_home_id: homeId });
   if (error) throw error;
 };
 

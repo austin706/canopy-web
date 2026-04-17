@@ -697,6 +697,38 @@ export interface EquipmentConsumable {
   updated_at: string;
 }
 
+/**
+ * Warranty tracking for home/structural items and equipment.
+ * Tied to either home_id (structural) or equipment_id (appliance-level).
+ */
+export interface Warranty {
+  id: string;
+  home_id?: string | null;
+  equipment_id?: string | null;
+  user_id: string;
+  title: string;
+  provider?: string | null;
+  category: 'appliance' | 'hvac' | 'water_heater' | 'roof' | 'siding' | 'windows' | 'doors' | 'plumbing' | 'electrical' | 'foundation' | 'flooring' | 'pool' | 'other';
+  coverage_type: 'manufacturer' | 'extended' | 'home_warranty' | 'builder' | 'service_plan' | 'other';
+  start_date: string; // ISO date
+  end_date: string; // ISO date
+  days_until_expiry?: number; // Calculated by trigger
+  cost_cents?: number | null;
+  claim_phone?: string | null;
+  claim_email?: string | null;
+  claim_url?: string | null;
+  policy_number?: string | null;
+  document_urls?: string[]; // Supabase Storage URLs
+  notes?: string | null;
+  transferred_with_home?: boolean;
+  status: 'active' | 'expired' | 'claimed' | 'cancelled' | 'transferred';
+  reminder_90d_sent_at?: string | null;
+  reminder_30d_sent_at?: string | null;
+  reminder_7d_sent_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low';
 export type TaskStatus = 'upcoming' | 'due' | 'overdue' | 'completed' | 'skipped';
 export type TaskFrequency = 'monthly' | 'bimonthly' | 'quarterly' | 'biannual' | 'annual' | 'as_needed' | 'weekly' | 'biweekly' | 'seasonal' | 'semi_annual';
@@ -707,6 +739,10 @@ export interface MaintenanceTask {
   home_id: string;
   equipment_id?: string;
   template_id?: string; // M-10: tracks which template generated this task for dedup & analytics
+  /** C-11 (migration 066): snapshot of task_templates.template_version at generation time.
+   *  Used by list_stale_template_tasks RPC to surface tasks whose underlying template was edited
+   *  after the task was created, so we can offer a "refresh stale tasks" action. */
+  template_version?: number;
   title: string;
   description: string;
   instructions?: string[];
@@ -716,12 +752,13 @@ export interface MaintenanceTask {
   frequency: TaskFrequency;
   due_date: string;
   completed_date?: string;
-  completed_by?: string;
   completion_photo_url?: string;
   completion_notes?: string;
   estimated_minutes?: number;
   estimated_cost?: number;
   is_weather_triggered: boolean;
+  weather_alert_id?: string | null;
+  weather_trigger_type?: 'freeze' | 'wind' | 'hail' | 'heat' | 'storm' | 'tornado' | 'flood' | 'fire' | null;
   applicable_months: number[];
   applicable_climate_zones?: string[];
 
@@ -732,6 +769,13 @@ export interface MaintenanceTask {
   // Custom task support
   is_custom?: boolean;
   created_by_user?: boolean;
+  /** If set, this task was created by a Pro during an inspection (points at profiles.id). */
+  created_by_pro_id?: string;
+  /** If set, this task was completed by a Pro rather than the homeowner. */
+  completed_by_pro_id?: string;
+  /** 'homeowner' | 'pro' | 'contractor' — set by complete_task_with_recurrence RPC. */
+  completed_by?: 'homeowner' | 'pro' | 'contractor';
+  safety_warnings?: string[];
 
   // Pro service scheduler fields
   service_purpose?: string;

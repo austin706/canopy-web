@@ -2,7 +2,7 @@ import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { supabase, getProfile, getHome, getEquipment, getTasks, getHomeConsumables, getTaskTemplates, getAgent, redeemReferralCode } from '@/services/supabase';
-import { setUser as sentrySetUser } from '@/utils/sentry';
+import { setUser as sentrySetUser, captureException } from '@/utils/sentry';
 import { loadServiceAreas, subscribeToServiceAreaChanges } from '@/services/subscriptionGate';
 import logger from '@/utils/logger';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -48,6 +48,7 @@ const Dashboard = lazyRetry(() => import('@/pages/Dashboard'));
 const Calendar = lazyRetry(() => import('@/pages/Calendar'));
 const Weather = lazyRetry(() => import('@/pages/Weather'));
 const Equipment = lazyRetry(() => import('@/pages/Equipment'));
+const Warranties = lazyRetry(() => import('@/pages/Warranties'));
 const Profile = lazyRetry(() => import('@/pages/Profile'));
 const Subscription = lazyRetry(() => import('@/pages/Subscription'));
 const Refer = lazyRetry(() => import('@/pages/Refer'));
@@ -58,6 +59,7 @@ const HomeDetails = lazyRetry(() => import('@/pages/HomeDetails'));
 const AdminDashboard = lazyRetry(() => import('@/pages/AdminDashboard'));
 const AdminAgents = lazyRetry(() => import('@/pages/AdminAgents'));
 const AdminUsers = lazyRetry(() => import('@/pages/AdminUsers'));
+const AdminUserView = lazyRetry(() => import('@/pages/AdminUserView'));
 const AdminGiftCodes = lazyRetry(() => import('@/pages/AdminGiftCodes'));
 const AdminProRequests = lazyRetry(() => import('@/pages/AdminProRequests'));
 const AdminProProviders = lazyRetry(() => import('@/pages/AdminProProviders'));
@@ -83,6 +85,7 @@ const Help = lazyRetry(() => import('@/pages/Help'));
 const WhatsNew = lazyRetry(() => import('@/pages/WhatsNew'));
 const Onboarding = lazyRetry(() => import('@/pages/Onboarding'));
 const ProPortal = lazyRetry(() => import('@/pages/ProPortal'));
+const ProPayouts = lazyRetry(() => import('@/pages/ProPayouts'));
 const ProLogin = lazyRetry(() => import('@/pages/ProLogin'));
 // ProJobs removed — obsolete marketplace page, redirects to job-queue
 const ProAvailability = lazyRetry(() => import('@/pages/ProAvailability'));
@@ -102,6 +105,7 @@ const HomeAssistant = lazyRetry(() => import('@/pages/HomeAssistant'));
 const SalePrep = lazyRetry(() => import('@/pages/SalePrep'));
 const HomeReport = lazyRetry(() => import('@/pages/HomeReport'));
 const HomeTransfer = lazyRetry(() => import('@/pages/HomeTransfer'));
+const HomeTokenShareView = lazyRetry(() => import('@/pages/HomeTokenShareView'));
 const Terms = lazyRetry(() => import('@/pages/Terms'));
 const Privacy = lazyRetry(() => import('@/pages/Privacy'));
 const ContractorTerms = lazyRetry(() => import('@/pages/ContractorTerms'));
@@ -230,14 +234,20 @@ export default function App() {
               setTasks(tasks);
               setCustomTemplates(templates);
             }
-          } catch {}
+          } catch (err) {
+            logger.warn('[Auth] SIGNED_IN home/equipment/tasks bootstrap failed:', err);
+            captureException(err, { context: 'SIGNED_IN home bootstrap' });
+          }
 
           // Load agent
           if (userData.agent_id) {
             try {
               const a = await getAgent(userData.agent_id);
               setAgent(a);
-            } catch {}
+            } catch (err) {
+              logger.warn('[Auth] SIGNED_IN agent load failed:', err);
+              captureException(err, { context: 'SIGNED_IN agent load' });
+            }
           }
 
           // Redeem referral code if one was stored during signup
@@ -322,14 +332,20 @@ export default function App() {
               setTasks(tasks);
               setCustomTemplates(templates);
             }
-          } catch {}
+          } catch (err) {
+            logger.warn('[Auth] INITIAL_SESSION home/equipment/tasks bootstrap failed:', err);
+            captureException(err, { context: 'INITIAL_SESSION home bootstrap' });
+          }
 
           // Load agent
           if (userData.agent_id) {
             try {
               const a = await getAgent(userData.agent_id);
               setAgent(a);
-            } catch {}
+            } catch (err) {
+              logger.warn('[Auth] INITIAL_SESSION agent load failed:', err);
+              captureException(err, { context: 'INITIAL_SESSION agent load' });
+            }
           }
 
           sentrySetUser({
@@ -427,6 +443,7 @@ export default function App() {
             <Route path="/pro-portal/job-queue" element={<ProJobQueue />} />
             <Route path="/pro-portal/inspection/:visitId" element={<ProInspection />} />
             <Route path="/pro-portal/add-on-quotes" element={<ProAddOnQuotes />} />
+            <Route path="/pro-portal/payouts" element={<ProPayouts />} />
             <Route path="/pro-portal/onboarding" element={<TechnicianOnboarding />} />
             <Route path="/pro-portal/onboarding/success" element={<ProOnboardingSuccess />} />
             <Route path="/pro-portal/onboarding/refresh" element={<ProOnboardingRefresh />} />
@@ -439,6 +456,7 @@ export default function App() {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/agents" element={<AdminAgents />} />
             <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/users/:userId/view" element={<AdminUserView />} />
             <Route path="/admin/gift-codes" element={<AdminGiftCodes />} />
             <Route path="/admin/pro-providers" element={<AdminProProviders />} />
             <Route path="/admin/pro-requests" element={<AdminProRequests />} />
@@ -469,6 +487,7 @@ export default function App() {
             <Route path="/task/create" element={<CreateTask />} />
             <Route path="/equipment" element={<Equipment />} />
             <Route path="/equipment/:id" element={<EquipmentDetail />} />
+            <Route path="/warranties" element={<Warranties />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/assistant" element={<HomeAssistant />} />
@@ -490,6 +509,7 @@ export default function App() {
             <Route path="/home-report" element={<HomeReport />} />
             <Route path="/transfer" element={<HomeTransfer />} />
             <Route path="/transfer/accept" element={<HomeTransfer />} />
+            <Route path="/home-token/share/:transferToken" element={<HomeTokenShareView />} />
           </Route>
 
           {/* Catch-all */}

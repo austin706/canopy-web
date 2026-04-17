@@ -11,6 +11,7 @@ export { supabase, SUPABASE_URL, SUPABASE_ANON_KEY, checkAuthRateLimit } from '.
 export * from './auth';
 export * from './home';
 export * from './equipment';
+export * from './warranties';
 export * from './tasks';
 export * from './maintenanceLogs';
 export * from './documents';

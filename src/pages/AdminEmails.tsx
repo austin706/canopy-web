@@ -9,6 +9,13 @@ import {
   sendTestEmail,
   type EmailTemplate,
 } from '@/services/emailTemplates';
+import {
+  previewBroadcastAudience,
+  sendAdminBroadcast,
+  type BroadcastSegment,
+  type BroadcastPreview,
+} from '@/services/admin';
+import { logAdminAction } from '@/services/auditLog';
 import { getErrorMessage } from '@/utils/errors';
 
 export default function AdminEmails() {
@@ -19,9 +26,106 @@ export default function AdminEmails() {
   const [testEmail, setTestEmail] = useState('');
   const [testSending, setTestSending] = useState(false);
   const [updateMap, setUpdateMap] = useState<Record<string, Partial<EmailTemplate>>>({});
-  const [activeTab, setActiveTab] = useState<'admin' | 'user_transactional' | 'user_automated'>(
-    'admin'
-  );
+  const [activeTab, setActiveTab] = useState<
+    'admin' | 'user_transactional' | 'user_automated' | 'broadcast'
+  >('admin');
+
+  // --- Broadcast composer state ---
+  const [bcTiers, setBcTiers] = useState<Array<'free' | 'home' | 'pro' | 'pro_plus'>>([]);
+  const [bcRoles, setBcRoles] = useState<Array<'user' | 'agent' | 'admin' | 'pro_provider'>>([]);
+  const [bcStates, setBcStates] = useState<string>(''); // comma-separated 2-letter codes
+  const [bcHasAgent, setBcHasAgent] = useState<'any' | 'yes' | 'no'>('any');
+  const [bcSmsVerifiedOnly, setBcSmsVerifiedOnly] = useState(false);
+  const [bcSignedUpAfter, setBcSignedUpAfter] = useState('');
+  const [bcSignedUpBefore, setBcSignedUpBefore] = useState('');
+  const [bcLastActiveAfter, setBcLastActiveAfter] = useState('');
+  const [bcChannel, setBcChannel] = useState<'email' | 'sms' | 'both'>('email');
+  const [bcTitle, setBcTitle] = useState('');
+  const [bcBody, setBcBody] = useState('');
+  const [bcActionUrl, setBcActionUrl] = useState('');
+  const [bcPreview, setBcPreview] = useState<BroadcastPreview | null>(null);
+  const [bcLoadingPreview, setBcLoadingPreview] = useState(false);
+  const [bcSending, setBcSending] = useState(false);
+  const [bcTestUserIdsText, setBcTestUserIdsText] = useState(''); // newline-separated ids for a safe test blast
+
+  const buildSegment = (): BroadcastSegment => ({
+    tiers: bcTiers.length ? bcTiers : undefined,
+    roles: bcRoles.length ? bcRoles : undefined,
+    states: bcStates.trim()
+      ? bcStates.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean)
+      : undefined,
+    hasAgent: bcHasAgent === 'yes' ? true : bcHasAgent === 'no' ? false : undefined,
+    // SMS channel implicitly requires verified phone; otherwise honor the checkbox.
+    smsVerifiedOnly: bcChannel !== 'email' ? true : bcSmsVerifiedOnly || undefined,
+    signedUpAfter: bcSignedUpAfter || null,
+    signedUpBefore: bcSignedUpBefore || null,
+    lastActiveAfter: bcLastActiveAfter || null,
+    testUserIds: bcTestUserIdsText.trim()
+      ? bcTestUserIdsText.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean)
+      : undefined,
+  });
+
+  const runPreview = async () => {
+    try {
+      setBcLoadingPreview(true);
+      const p = await previewBroadcastAudience(buildSegment());
+      setBcPreview(p);
+    } catch (err) {
+      showToast({ message: `Preview failed: ${getErrorMessage(err)}` });
+    } finally {
+      setBcLoadingPreview(false);
+    }
+  };
+
+  const runBroadcast = async (testMode: boolean) => {
+    if (!bcTitle.trim() || !bcBody.trim()) {
+      showToast({ message: 'Title and body are required' });
+      return;
+    }
+    if (!testMode) {
+      const ok = window.confirm(
+        `Send "${bcTitle}" to ${bcPreview?.total ?? '?'} users via ${bcChannel.toUpperCase()}? This cannot be undone.`,
+      );
+      if (!ok) return;
+    }
+    try {
+      setBcSending(true);
+      const seg = buildSegment();
+      const result = await sendAdminBroadcast(seg, {
+        title: bcTitle.trim(),
+        body: bcBody.trim(),
+        action_url: bcActionUrl.trim() || undefined,
+        channel: bcChannel,
+        testMode,
+      });
+      await logAdminAction('admin_broadcast_send', 'notification', 'broadcast', {
+        segment: seg,
+        channel: bcChannel,
+        title: bcTitle,
+        sent: result.sent,
+        skipped: result.skipped,
+        testMode,
+      });
+      showToast({
+        message: `Queued ${result.sent} notification${result.sent === 1 ? '' : 's'}${result.skipped ? ` (${result.skipped} unreachable skipped)` : ''}`,
+      });
+      if (result.errors.length) setError(result.errors.join('; '));
+      if (!testMode) {
+        setBcTitle('');
+        setBcBody('');
+        setBcActionUrl('');
+      }
+    } catch (err) {
+      showToast({ message: `Broadcast failed: ${getErrorMessage(err)}` });
+    } finally {
+      setBcSending(false);
+    }
+  };
+
+  const toggleTier = (t: 'free' | 'home' | 'pro' | 'pro_plus') =>
+    setBcTiers((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+  const toggleRole = (r: 'user' | 'agent' | 'admin' | 'pro_provider') =>
+    setBcRoles((prev) => (prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]));
 
   // Body editor state
   const [bodyEditorOpen, setBodyEditorOpen] = useState<string | null>(null);
@@ -205,6 +309,8 @@ export default function AdminEmails() {
         return Colors.sage;
       case 'user_automated':
         return Colors.info;
+      case 'broadcast':
+        return Colors.warning;
       default:
         return Colors.medGray;
     }
@@ -218,15 +324,18 @@ export default function AdminEmails() {
         return 'User Transactional';
       case 'user_automated':
         return 'User Automated';
+      case 'broadcast':
+        return 'Broadcast';
       default:
         return category;
     }
   };
 
-  const tabs: Array<'admin' | 'user_transactional' | 'user_automated'> = [
+  const tabs: Array<'admin' | 'user_transactional' | 'user_automated' | 'broadcast'> = [
     'admin',
     'user_transactional',
     'user_automated',
+    'broadcast',
   ];
 
   const filteredTemplates = templates.filter((t) => t.category === activeTab);
@@ -282,20 +391,265 @@ export default function AdminEmails() {
                 }}
               >
                 {getCategoryLabel(tab)}
-                <span
-                  style={{
-                    marginLeft: 8,
-                    opacity: 0.6,
-                    fontSize: 12,
-                  }}
-                >
-                  ({templates.filter((t) => t.category === tab).length})
-                </span>
+                {tab !== 'broadcast' && (
+                  <span
+                    style={{
+                      marginLeft: 8,
+                      opacity: 0.6,
+                      fontSize: 12,
+                    }}
+                  >
+                    ({templates.filter((t) => t.category === tab).length})
+                  </span>
+                )}
               </button>
             ))}
           </div>
 
+          {/* Broadcast Composer */}
+          {activeTab === 'broadcast' && (
+            <div style={{ display: 'grid', gap: 16, maxWidth: 960 }}>
+              <div
+                style={{
+                  background: Colors.warning + '15',
+                  border: `1px dashed ${Colors.warning}`,
+                  borderRadius: 8,
+                  padding: 12,
+                  fontSize: 13,
+                  color: Colors.charcoal,
+                }}
+              >
+                <strong>Send an ad-hoc broadcast</strong> to a filtered slice of users. All sends
+                are audited. SMS only fires for users with a verified phone. Preview the audience
+                before sending.
+              </div>
+
+              {/* Segment filters */}
+              <div className="card" style={{ padding: 16 }}>
+                <h3 style={{ margin: 0, marginBottom: 12 }}>Audience</h3>
+                <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                  <div>
+                    <label style={bcLabelStyle}>Subscription tier</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {(['free', 'home', 'pro', 'pro_plus'] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => toggleTier(t)}
+                          style={bcPillStyle(bcTiers.includes(t))}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={bcLabelStyle}>Role</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {(['user', 'agent', 'pro_provider', 'admin'] as const).map((r) => (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => toggleRole(r)}
+                          style={bcPillStyle(bcRoles.includes(r))}
+                        >
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={bcLabelStyle}>States (comma-separated, 2-letter)</label>
+                    <input
+                      type="text"
+                      value={bcStates}
+                      onChange={(e) => setBcStates(e.target.value)}
+                      placeholder="OK, TX, MO"
+                      style={bcInputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label style={bcLabelStyle}>Has linked agent?</label>
+                    <select
+                      value={bcHasAgent}
+                      onChange={(e) => setBcHasAgent(e.target.value as 'any' | 'yes' | 'no')}
+                      style={bcInputStyle}
+                    >
+                      <option value="any">Any</option>
+                      <option value="yes">Yes — linked to an agent</option>
+                      <option value="no">No — unlinked</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={bcLabelStyle}>Signed up after</label>
+                    <input
+                      type="date"
+                      value={bcSignedUpAfter}
+                      onChange={(e) => setBcSignedUpAfter(e.target.value)}
+                      style={bcInputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label style={bcLabelStyle}>Signed up before</label>
+                    <input
+                      type="date"
+                      value={bcSignedUpBefore}
+                      onChange={(e) => setBcSignedUpBefore(e.target.value)}
+                      style={bcInputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label style={bcLabelStyle}>Active since</label>
+                    <input
+                      type="date"
+                      value={bcLastActiveAfter}
+                      onChange={(e) => setBcLastActiveAfter(e.target.value)}
+                      style={bcInputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label style={bcLabelStyle}>Options</label>
+                    <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={bcSmsVerifiedOnly}
+                        onChange={(e) => setBcSmsVerifiedOnly(e.target.checked)}
+                      />
+                      SMS-verified only
+                    </label>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={runPreview}
+                    disabled={bcLoadingPreview}
+                  >
+                    {bcLoadingPreview ? 'Loading…' : 'Preview audience'}
+                  </button>
+                  {bcPreview && (
+                    <span style={{ fontSize: 13, color: Colors.medGray, alignSelf: 'center' }}>
+                      <strong style={{ color: Colors.charcoal }}>{bcPreview.total.toLocaleString()}</strong> match ·{' '}
+                      {bcPreview.emailReachable.toLocaleString()} email · {bcPreview.smsReachable.toLocaleString()} SMS-eligible
+                    </span>
+                  )}
+                </div>
+
+                {bcPreview?.sample?.length ? (
+                  <div style={{ marginTop: 12, border: `1px solid ${Colors.lightGray}`, borderRadius: 6, padding: 10 }}>
+                    <div style={{ fontSize: 11, color: Colors.medGray, marginBottom: 6 }}>Sample (first 10)</div>
+                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+                      {bcPreview.sample.map((s) => (
+                        <li key={s.id}>
+                          {s.full_name || s.email || s.id} {s.email && <span style={{ color: Colors.medGray }}>· {s.email}</span>}
+                          {s.sms_verified && <span style={{ color: Colors.sage, marginLeft: 6 }}>📱</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Message composer */}
+              <div className="card" style={{ padding: 16 }}>
+                <h3 style={{ margin: 0, marginBottom: 12 }}>Message</h3>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <div>
+                    <label style={bcLabelStyle}>Channel</label>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {(['email', 'sms', 'both'] as const).map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setBcChannel(c)}
+                          style={bcPillStyle(bcChannel === c)}
+                        >
+                          {c.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                    <p style={{ fontSize: 11, color: Colors.medGray, marginTop: 6 }}>
+                      SMS fires via Twilio; recipients must be SMS-verified. Push delivery happens
+                      automatically for any user with a registered push token.
+                    </p>
+                  </div>
+                  <div>
+                    <label style={bcLabelStyle}>Title / SMS preview</label>
+                    <input
+                      type="text"
+                      value={bcTitle}
+                      onChange={(e) => setBcTitle(e.target.value)}
+                      placeholder="e.g., Planned maintenance tonight"
+                      maxLength={140}
+                      style={bcInputStyle}
+                    />
+                    <div style={{ fontSize: 11, color: Colors.medGray, marginTop: 4 }}>
+                      {bcTitle.length}/140 · shown first on both email and SMS
+                    </div>
+                  </div>
+                  <div>
+                    <label style={bcLabelStyle}>Body</label>
+                    <textarea
+                      value={bcBody}
+                      onChange={(e) => setBcBody(e.target.value)}
+                      placeholder="Full message body. For SMS, first 140 characters of title+body are sent."
+                      rows={5}
+                      style={{ ...bcInputStyle, fontFamily: 'inherit', resize: 'vertical' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={bcLabelStyle}>Action URL (optional)</label>
+                    <input
+                      type="url"
+                      value={bcActionUrl}
+                      onChange={(e) => setBcActionUrl(e.target.value)}
+                      placeholder="https://canopyhome.app/dashboard"
+                      style={bcInputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label style={bcLabelStyle}>Test recipients (override segment)</label>
+                    <textarea
+                      value={bcTestUserIdsText}
+                      onChange={(e) => setBcTestUserIdsText(e.target.value)}
+                      placeholder="user-uuid-1 user-uuid-2 (space or newline separated)"
+                      rows={2}
+                      style={{ ...bcInputStyle, fontFamily: 'monospace', fontSize: 12 }}
+                    />
+                    <p style={{ fontSize: 11, color: Colors.medGray, marginTop: 4 }}>
+                      Send yourself a test before blasting. When populated, test-send targets these
+                      ids only and ignores the segment filter above.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => runBroadcast(true)}
+                    disabled={bcSending || !bcTestUserIdsText.trim()}
+                    title={!bcTestUserIdsText.trim() ? 'Add at least one test user id' : 'Send to test ids only'}
+                  >
+                    {bcSending ? 'Sending…' : 'Send test'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => runBroadcast(false)}
+                    disabled={bcSending || !bcTitle.trim() || !bcBody.trim()}
+                  >
+                    {bcSending ? 'Sending…' : `Send broadcast${bcPreview ? ` (${bcPreview.total})` : ''}`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Card Grid */}
+          {activeTab !== 'broadcast' && (
           <div className="admin-card-grid">
             {filteredTemplates.length === 0 ? (
               <div className="admin-empty">
@@ -415,6 +769,7 @@ export default function AdminEmails() {
               ))
             )}
           </div>
+          )}
         </>
       )}
 
@@ -715,3 +1070,37 @@ export default function AdminEmails() {
     </div>
   );
 }
+
+// --- Broadcast composer styles ---
+const bcLabelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 11,
+  fontWeight: 600,
+  color: Colors.medGray,
+  textTransform: 'uppercase',
+  marginBottom: 6,
+  letterSpacing: 0.5,
+};
+
+const bcInputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '8px 10px',
+  border: `1px solid ${Colors.lightGray}`,
+  borderRadius: 4,
+  fontSize: 13,
+  boxSizing: 'border-box',
+  background: 'var(--color-card-background)',
+  color: Colors.charcoal,
+};
+
+const bcPillStyle = (active: boolean): React.CSSProperties => ({
+  padding: '6px 12px',
+  borderRadius: 16,
+  fontSize: 12,
+  fontWeight: 500,
+  cursor: 'pointer',
+  border: `1px solid ${active ? Colors.sage : Colors.lightGray}`,
+  background: active ? Colors.sage : 'transparent',
+  color: active ? Colors.white : Colors.charcoal,
+  transition: 'all 0.15s ease',
+});

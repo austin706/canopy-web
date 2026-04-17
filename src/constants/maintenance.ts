@@ -28,6 +28,10 @@ export interface TaskTemplate {
   applicable_regions?: ClimateRegion[]; // undefined = all regions
   pro_responsible?: boolean; // true = pro provider handles this during visits; false/undefined = homeowner DIY
   is_cleaning?: boolean; // true = cleaning/tidying task that can be toggled off
+  /** C-11 (migration 066): auto-bumped when admin edits the template. Snapshotted
+   *  onto generated tasks so we can detect and refresh stale tasks. Absent for
+   *  hardcoded TASK_TEMPLATES (only DB-backed templates carry a version). */
+  template_version?: number;
 
   // ─── Consumable-aware scheduling (Migration 041) ───
   /**
@@ -138,6 +142,14 @@ export interface TaskTemplate {
    * Only meaningful when service_type = 'add_on'.
    */
   add_on_category?: 'hvac' | 'pest' | 'chimney' | 'septic' | 'irrigation' | 'cleaning' | 'generator' | 'well' | 'lawn' | 'pool';
+
+  /**
+   * Structured safety warnings. Rendered as a red-bordered panel on TaskDetail.
+   * Authored by admin via the how-to editor (migration 061 / AdminReferenceData).
+   * The hardcoded TASK_TEMPLATES array doesn't set this; it's populated per-template
+   * in the DB once an admin edits the template.
+   */
+  safety_warnings?: string[];
 }
 
 /**

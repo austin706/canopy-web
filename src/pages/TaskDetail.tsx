@@ -391,6 +391,38 @@ export default function TaskDetail() {
           </a>
         )}
 
+        {/* Why this matters (service_purpose) */}
+        {task.service_purpose && (
+          <div className="card mb-lg" style={{ background: Colors.sage + '08', border: `1px solid ${Colors.sage}30` }}>
+            <p style={{ fontWeight: 700, marginBottom: 6, color: Colors.sage, fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.4 }}>Why this matters</p>
+            <p style={{ fontSize: 14, color: Colors.charcoal, lineHeight: 1.5, margin: 0 }}>{task.service_purpose}</p>
+          </div>
+        )}
+
+        {/* Safety warnings */}
+        {task.safety_warnings && task.safety_warnings.length > 0 && (
+          <div className="card mb-lg" style={{ background: Colors.error + '08', border: `1px solid ${Colors.error}40` }}>
+            <p style={{ fontWeight: 700, marginBottom: 8, color: Colors.error, fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.4, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span role="img" aria-label="warning">&#9888;&#65039;</span> Safety first
+            </p>
+            <ul style={{ paddingLeft: 18, margin: 0 }}>
+              {task.safety_warnings.map((w: string, i: number) => (
+                <li key={`${i}-${w.slice(0, 20)}`} style={{ fontSize: 14, color: Colors.charcoal, lineHeight: 1.5, marginBottom: 4 }}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Weather-triggered indicator */}
+        {task.is_weather_triggered && (
+          <div className="card mb-lg" style={{ background: Colors.copper + '08', border: `1px solid ${Colors.copper}30`, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
+            <span style={{ fontSize: 18 }} role="img" aria-label="storm">&#9928;</span>
+            <p style={{ fontSize: 13, color: Colors.copper, fontWeight: 500, margin: 0 }}>
+              Triggered by recent weather &mdash; we scheduled this based on conditions in your area.
+            </p>
+          </div>
+        )}
+
         {/* Instructions */}
         {task.instructions && task.instructions.length > 0 && (
           <div className="card mb-lg">
@@ -543,6 +575,38 @@ export default function TaskDetail() {
             <p style={{ fontSize: 18, fontWeight: 700, color: Colors.sage, marginBottom: 8 }}>
               {task.status === 'completed' ? 'Completed' : 'Skipped'}
             </p>
+            {(task.completed_by === 'pro' || !!task.completed_by_pro_id) && (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: Colors.sage,
+                color: Colors.white,
+                padding: '4px 12px',
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 700,
+                marginBottom: 8,
+              }}>
+                <span role="img" aria-label="wrench">&#128295;</span> Completed by Pro
+              </span>
+            )}
+            {task.completed_by === 'contractor' && (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: Colors.copper,
+                color: Colors.white,
+                padding: '4px 12px',
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 700,
+                marginBottom: 8,
+              }}>
+                <span role="img" aria-label="hammer">&#128296;</span> Completed by Contractor
+              </span>
+            )}
             {task.completed_date && (
               <p className="text-xs text-gray">{new Date(task.completed_date).toLocaleDateString()}</p>
             )}

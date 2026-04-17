@@ -1869,6 +1869,37 @@ export default function Onboarding() {
             Start free or unlock the full Canopy experience. You can change your plan anytime.
           </p>
 
+          {/* A2-5: Pre-flight service-area explainer. Pro / Pro+ are launched in Tulsa
+               first; this is front-and-center so homeowners outside the area understand
+               they can still use Free + Home and join the waitlist for Pro visits. */}
+          <div
+            style={{
+              background: proAvailable ? `${Colors.sage}10` : `${Colors.copper}15`,
+              borderLeft: `3px solid ${proAvailable ? Colors.sage : Colors.copper}`,
+              borderRadius: 8,
+              padding: '12px 14px',
+              marginBottom: 20,
+              fontSize: 13,
+              lineHeight: 1.5,
+              color: Colors.charcoal,
+            }}
+          >
+            {proAvailable ? (
+              <>
+                <strong>Good news — in-person Pro visits are available in your area.</strong>{' '}
+                Free and Home plans are available everywhere. Pro and Pro+ include a Certified Pro maintenance
+                visit every 2 months, which we currently run in and around Tulsa, OK.
+              </>
+            ) : (
+              <>
+                <strong>Pro visits aren't live in your area yet.</strong>{' '}
+                You can still use the Free or Home plan — every digital feature works anywhere. Pro and Pro+
+                include in-person Certified Pro visits, currently launching in Tulsa, OK. Tap <em>Notify Me</em>{' '}
+                on those plans below to join the waitlist — we'll email you when we're live near you.
+              </>
+            )}
+          </div>
+
           {planMessage && (
             <div style={{
               padding: '10px 16px', borderRadius: 8,
@@ -2080,18 +2111,38 @@ export default function Onboarding() {
             </div>
           </div>
 
-          {/* Skip button */}
-          <div className="flex gap-sm">
+          {/* A2-3: explicit Skip-for-now block so homeowners don't feel trapped on this step. */}
+          <div
+            style={{
+              marginTop: 8,
+              marginBottom: 16,
+              padding: '12px 14px',
+              background: 'var(--color-cream)',
+              borderRadius: 10,
+              border: `1px dashed ${Colors.medGray}40`,
+              fontSize: 13,
+              color: Colors.charcoal,
+              lineHeight: 1.5,
+            }}
+          >
+            <strong>No equipment info handy?</strong> That's fine — Canopy works without it. You'll still get a full
+            maintenance plan based on your home's square footage, roof type, HVAC, and climate. You can scan equipment
+            anytime from the Equipment tab.
+          </div>
+
+          {/* Nav buttons */}
+          <div className="flex gap-sm" style={{ flexWrap: 'wrap' }}>
             <button className="btn btn-ghost" onClick={() => setStep(3)} disabled={saving || generatingTasks}>Back</button>
-            <button className="btn btn-primary" onClick={() => setStep(5)} disabled={saving || generatingTasks} style={{ flex: 1 }}>
+            <button className="btn btn-primary" onClick={() => setStep(5)} disabled={saving || generatingTasks} style={{ flex: 1, minWidth: 160 }}>
               {skipEquipmentScanning ? 'Continue' : 'Continue to Next'}
             </button>
             <button
-              className="btn btn-ghost btn-sm"
+              className="btn btn-outline"
               onClick={() => { setSkipEquipmentScanning(true); setStep(5); }}
-              style={{ fontSize: 12 }}
+              style={{ fontSize: 13 }}
+              disabled={saving || generatingTasks}
             >
-              Skip for now
+              Skip — add equipment later
             </button>
           </div>
         </div>

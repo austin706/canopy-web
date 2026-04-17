@@ -6,9 +6,12 @@ import { canAccess, getTaskLimit, getHistoryDaysLimit, PLANS } from '@/services/
 import { Colors, PriorityColors, StatusColors } from '@/constants/theme';
 import DashboardChat from '@/components/DashboardChat';
 import { quickCompleteTask, calculateHealthScore } from '@/services/utils';
+import { sortTasksByHealthUrgency } from '@/services/taskOrdering';
 import { ImageViewer } from '@/components/ImageViewer';
 import { showToast } from '@/components/Toast';
-import { getTasks, createTasks, getHomeJoinRequests, approveHomeJoinRequest, denyHomeJoinRequest, getNotifications, markNotificationRead } from '@/services/supabase';
+import { getTasks, createTasks, getHomeJoinRequests, approveHomeJoinRequest, denyHomeJoinRequest, getNotifications, markNotificationRead, getExpiringWarranties } from '@/services/supabase';
+import type { Warranty } from '@/types';
+import { listStaleTemplateTasks, clearStaleTemplateTasks, type StaleTemplateTask } from '@/services/tasks';
 import { fetchWeather } from '@/services/weather';
 import { Skeleton } from '@/components/Skeleton';
 import { HealthGauge } from '@/components/HealthGauge';
@@ -68,6 +71,24 @@ export default function Dashboard() {
   // Upgrade banner state
   const [historyWarningDismissed, setHistoryWarningDismissed] = useState(false);
 
+  // Home Health Alert banner state (Item 13). One active alert per home, newest
+  // undismissed row from `home_health_alerts`.
+  const [homeHealthAlert, setHomeHealthAlert] = useState<{
+    id: string;
+    alert_type: 'score_drop' | 'below_threshold' | 'high_overdue';
+    current_score: number;
+    previous_score: number | null;
+    delta: number | null;
+    overdue_count: number;
+    reason: string | null;
+    created_at: string;
+  } | null>(null);
+  const [homeHealthAlertDismissing, setHomeHealthAlertDismissing] = useState(false);
+
+  // Expiring warranties banner
+  const [expiringWarranties, setExpiringWarranties] = useState<Warranty[]>([]);
+  const [warrantiesLoading, setWarrantiesLoading] = useState(false);
+
   // Load notifications
   useEffect(() => {
     if (!user?.id) return;
@@ -93,6 +114,46 @@ export default function Dashboard() {
       });
     }
   }, [user?.id]);
+
+  // Load active Home Health alert (Item 13). Picks the most recent undismissed
+  // row; home-score-weekly emits new ones at most once per 10 days per type.
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('home_health_alerts')
+          .select('id,alert_type,current_score,previous_score,delta,overdue_count,reason,created_at')
+          .eq('user_id', user.id)
+          .is('dismissed_at', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (cancelled) return;
+        if (error) {
+          logger.warn('Failed to fetch home health alert:', error.message);
+          return;
+        }
+        setHomeHealthAlert((data as typeof homeHealthAlert) || null);
+      } catch (err) {
+        logger.warn('Failed to fetch home health alert:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  // Load expiring warranties (60-day window)
+  useEffect(() => {
+    if (!home?.id) return;
+    setWarrantiesLoading(true);
+    getExpiringWarranties(home.id, 60)
+      .then(setExpiringWarranties)
+      .catch(err => {
+        logger.warn('Failed to fetch expiring warranties:', err?.message);
+      })
+      .finally(() => setWarrantiesLoading(false));
+  }, [home?.id]);
 
   // Load inspection-doc count + household member count for the SetupChecklist.
   const [inspectionCount, setInspectionCount] = useState(0);
@@ -128,6 +189,10 @@ export default function Dashboard() {
       navigate('/onboarding', { replace: true });
     }
   }, [user, home, navigate]);
+
+  // C-11 (migration 066): tasks whose underlying template was edited after generation.
+  const [staleTasks, setStaleTasks] = useState<StaleTemplateTask[]>([]);
+  const [staleRefreshing, setStaleRefreshing] = useState(false);
 
   // Fetch tasks on mount; auto-generate ONCE if home exists but no tasks in DB
   const [tasksInitialized, setTasksInitialized] = useState(false);
@@ -165,6 +230,53 @@ export default function Dashboard() {
     };
     loadTasks();
   }, [home?.id, tasksInitialized]);
+
+  // C-11: pull stale-template-task list after home loads. Silently ignore errors —
+  // this is a nicety, not a critical path.
+  useEffect(() => {
+    if (!home?.id) return;
+    listStaleTemplateTasks(home.id)
+      .then(setStaleTasks)
+      .catch((err) => console.warn('listStaleTemplateTasks failed:', err));
+  }, [home?.id, tasksInitialized]);
+
+  const handleRefreshStaleTasks = async () => {
+    if (!home || staleTasks.length === 0 || staleRefreshing) return;
+    setStaleRefreshing(true);
+    try {
+      const staleIds = staleTasks.map((t) => t.task_id);
+      await clearStaleTemplateTasks(staleIds);
+      // Regenerate from templates against the tasks that remain.
+      const remaining = tasks.filter((t) => !staleIds.includes(t.id));
+      const generated = generateTasksForHome(
+        home,
+        equipment,
+        remaining,
+        consumables || [],
+        user?.user_preferences,
+        customTemplates,
+      );
+      // Only the newly-generated tasks need persisting (generateTasksForHome dedups).
+      const toPersist = generated.filter((g) => !remaining.some((r) => r.id === g.id));
+      if (toPersist.length > 0) {
+        try {
+          await createTasks(toPersist);
+        } catch (persistErr) {
+          console.warn('Failed to persist regenerated stale tasks:', persistErr);
+        }
+      }
+      // Reload tasks + stale list.
+      const fresh = await getTasks(home.id);
+      setTasks(fresh || []);
+      setStaleTasks([]);
+      showToast(`Refreshed ${staleIds.length} task${staleIds.length === 1 ? '' : 's'}`, 'success');
+    } catch (err) {
+      console.warn('handleRefreshStaleTasks failed:', err);
+      showToast('Could not refresh tasks — try again', 'error');
+    } finally {
+      setStaleRefreshing(false);
+    }
+  };
 
   // Auto-geocode home address if lat/long are missing (needed for weather)
   useEffect(() => {
@@ -224,7 +336,19 @@ export default function Dashboard() {
   const historyDaysLimit = getHistoryDaysLimit(tier);
 
   const isDemo = !user?.onboarding_complete && (!tasks || tasks.length === 0);
-  const displayTasks = isDemo ? DEMO_TASKS : tasks.map(t => ({ ...t, status: getDisplayStatus(t) }));
+  const displayTasksRaw = useMemo(
+    () => (isDemo ? DEMO_TASKS : tasks.map(t => ({ ...t, status: getDisplayStatus(t) }))),
+    [isDemo, tasks],
+  );
+  // Health-aware ordering (Item 13). When the home health score drops, the
+  // overdue + high-priority tasks bubble to the top so homeowners can clear
+  // the items actually dragging the score. Health data is computed below; we
+  // use tasks-as-raw here and then re-sort after the score is known.
+  const healthDataForSort = useMemo(() => calculateHealthScore(tasks), [tasks]);
+  const displayTasks = useMemo(
+    () => sortTasksByHealthUrgency(displayTasksRaw, { healthScore: healthDataForSort.score }),
+    [displayTasksRaw, healthDataForSort.score],
+  );
   const tasksToShow = taskLimit ? displayTasks.slice(0, taskLimit) : displayTasks;
   const displayWeather = weather || DEMO_WEATHER;
   const unreadNotifications = notifications.filter(n => !n.read);
@@ -256,8 +380,47 @@ export default function Dashboard() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-  const healthData = useMemo(() => calculateHealthScore(tasks), [tasks]);
+  // Weekly cost estimate: active tasks due this week + any completed this week
+  const weekStart = new Date(now);
+  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const weekCost = useMemo(() => {
+    const upcomingThisWeek = tasks.filter(t => {
+      const d = new Date(t.due_date);
+      return d >= weekStart && d < weekEnd && t.status !== 'completed';
+    });
+    return upcomingThisWeek.reduce((sum, t) => sum + (t.estimated_cost || 0), 0);
+  }, [tasks, weekStart.getTime(), weekEnd.getTime()]);
+
+  // Reuse the health score computed above for task ordering — avoids recomputing.
+  const healthData = healthDataForSort;
   const { score: healthScore, completedCount, totalCount, overdueCount, label: healthLabel } = healthData;
+
+  // Dismiss the active home-health alert banner (Item 13).
+  const dismissHomeHealthAlert = async () => {
+    if (!homeHealthAlert || homeHealthAlertDismissing) return;
+    setHomeHealthAlertDismissing(true);
+    try {
+      const { error } = await supabase.rpc('dismiss_home_health_alert', { p_alert_id: homeHealthAlert.id });
+      if (error) {
+        logger.warn('dismiss_home_health_alert failed:', error.message);
+      } else {
+        setHomeHealthAlert(null);
+      }
+    } finally {
+      setHomeHealthAlertDismissing(false);
+    }
+  };
+
+  const homeHealthAlertCopy = homeHealthAlert
+    ? (homeHealthAlert.alert_type === 'score_drop'
+        ? { title: `Your Home Health Score dropped ${Math.abs(homeHealthAlert.delta ?? 0)} points`, accent: '#FF9800' }
+        : homeHealthAlert.alert_type === 'below_threshold'
+          ? { title: 'Your Home Health Score needs attention', accent: '#E53935' }
+          : { title: `${homeHealthAlert.overdue_count} overdue tasks — let's knock a few out`, accent: '#FF9800' })
+    : null;
 
   const costForecast = useMemo(() => generateCostForecast(equipment, home ? {
     square_footage: home.square_footage,
@@ -329,6 +492,47 @@ export default function Dashboard() {
               style={{ whiteSpace: 'nowrap', fontSize: 12 }}
             >
               View all &rarr;
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Expiring Warranties Banner */}
+      {!warrantiesLoading && expiringWarranties.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.08) 0%, rgba(255, 193, 7, 0.04) 100%)',
+          border: `1px solid ${Colors.warning}40`,
+          borderRadius: 12,
+          padding: '16px',
+          marginBottom: 20,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <span style={{ fontSize: 20 }}>📋</span>
+            <div>
+              <p style={{ fontWeight: 700, margin: '0 0 2px', color: Colors.charcoal, fontSize: 14 }}>
+                {expiringWarranties.length} warranty{expiringWarranties.length > 1 ? 'ies' : ''} expiring soon
+              </p>
+              <p style={{ margin: 0, fontSize: 13, color: Colors.medGray }}>
+                Review before coverage lapses
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              className="btn btn-sm"
+              style={{
+                background: Colors.warning,
+                color: 'white',
+                border: 'none',
+                borderRadius: 6,
+                padding: '8px 16px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+              onClick={() => navigate('/warranties')}
+            >
+              View Warranties &rarr;
             </button>
           </div>
         </div>
@@ -457,6 +661,68 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Home Health Score alert banner (Item 13) */}
+      {homeHealthAlert && homeHealthAlertCopy && (
+        <div style={{
+          background: `linear-gradient(135deg, ${homeHealthAlertCopy.accent}15 0%, ${homeHealthAlertCopy.accent}05 100%)`,
+          border: `1px solid ${homeHealthAlertCopy.accent}66`,
+          borderRadius: 12,
+          padding: '16px 18px',
+          marginBottom: 20,
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 12,
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-charcoal)', marginBottom: 6 }}>
+              {homeHealthAlertCopy.title}
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0, marginBottom: 10 }}>
+              {homeHealthAlert.reason || 'Clear the overdue items below to bring your Home Health Score back up.'}
+            </p>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={() => navigate('/calendar')}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: 'var(--color-white)',
+                  background: homeHealthAlertCopy.accent,
+                  border: 'none',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                }}
+              >
+                Review tasks
+              </button>
+              <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                {homeHealthAlert.previous_score != null
+                  ? `Previous: ${homeHealthAlert.previous_score} → Current: ${homeHealthAlert.current_score}`
+                  : `Current score: ${homeHealthAlert.current_score}`}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={dismissHomeHealthAlert}
+            disabled={homeHealthAlertDismissing}
+            aria-label="Dismiss home health alert"
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: 20,
+              cursor: homeHealthAlertDismissing ? 'wait' : 'pointer',
+              padding: 0,
+              color: 'var(--color-text-secondary)',
+              opacity: homeHealthAlertDismissing ? 0.5 : 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Post-onboarding setup checklist */}
       <SetupChecklist
         home={home}
@@ -563,7 +829,38 @@ export default function Dashboard() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
               <HealthGauge score={healthScore} size={100} />
               <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>Home Health Score</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <p style={{ fontWeight: 600, fontSize: 16, margin: 0 }}>Home Health Score</p>
+                  {/* A3-2: info tooltip explaining the score. */}
+                  <button
+                    type="button"
+                    aria-label="What is the Home Health Score?"
+                    title={
+                      'Your Home Health Score (0–100) tracks how well-maintained your home is. '
+                      + 'We weight completed tasks, overdue items, and equipment age. '
+                      + 'Keep overdue items near zero and complete this month\'s tasks to stay 70+.'
+                    }
+                    onClick={() => navigate('/help#health-score')}
+                    style={{
+                      background: 'none',
+                      border: `1px solid ${Colors.medGray}40`,
+                      borderRadius: '50%',
+                      width: 18,
+                      height: 18,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: Colors.medGray,
+                      cursor: 'pointer',
+                      lineHeight: 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0,
+                    }}
+                  >
+                    i
+                  </button>
+                </div>
                 <p className="text-sm" style={{ color: healthData.color === 'green' ? Colors.success : healthData.color === 'yellow' ? '#FF9800' : Colors.error, fontWeight: 600, marginBottom: 8 }}>{healthLabel}</p>
                 <p className="text-sm" style={{ color: Colors.charcoal }}>
                   <strong>{completedCount}</strong> of <strong>{totalCount}</strong> {currentMonth} tasks complete
@@ -580,9 +877,32 @@ export default function Dashboard() {
                     ? `Complete ${totalCount - completedCount} more task${totalCount - completedCount > 1 ? 's' : ''} this month to keep your score strong`
                     : 'All caught up this month — great work!'}
                 </p>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => navigate('/help#health-score')}
+                  style={{ marginTop: 6, padding: 0, fontSize: 12, color: Colors.copper, fontWeight: 600 }}
+                >
+                  How to improve &rarr;
+                </button>
               </div>
             </div>
           </div>
+
+          {/* Weekly cost strip */}
+          {weekCost > 0 && (
+            <div className="card mb-md" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: Colors.copper + '10', border: `1px solid ${Colors.copper}30` }}>
+              <span role="img" aria-label="dollar" style={{ fontSize: 16 }}>&#128181;</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: Colors.copper, margin: 0 }}>
+                  This week: ~${weekCost.toLocaleString()} in estimated parts &amp; supplies
+                </p>
+                <p style={{ fontSize: 11, color: Colors.medGray, margin: 0 }}>
+                  Across {tasks.filter(t => { const d = new Date(t.due_date); return d >= weekStart && d < weekEnd && t.status !== 'completed'; }).length} upcoming task{tasks.filter(t => { const d = new Date(t.due_date); return d >= weekStart && d < weekEnd && t.status !== 'completed'; }).length === 1 ? '' : 's'} &middot; Cash float, not a bill
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Tasks */}
           <div>
@@ -590,6 +910,77 @@ export default function Dashboard() {
               <h2 style={{ fontSize: 18, fontWeight: 600 }}>Due This Month</h2>
               <button className="btn btn-ghost btn-sm" onClick={() => navigate('/calendar')}>See All &rarr;</button>
             </div>
+
+            {/* C-11: stale-template banner — shown when the task template an existing task was
+                generated from has been edited since. One-click "Refresh" clears + regenerates. */}
+            {!isDemo && staleTasks.length > 0 && (
+              <div
+                style={{
+                  background: `${Colors.sage}10`,
+                  border: `1px dashed ${Colors.sage}80`,
+                  borderRadius: 10,
+                  padding: '12px 14px',
+                  marginBottom: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, color: Colors.charcoal }}>
+                    {staleTasks.length} task{staleTasks.length === 1 ? ' was' : 's were'} updated in our catalog
+                  </p>
+                  <p style={{ fontSize: 12, color: Colors.charcoal, opacity: 0.8, lineHeight: 1.45 }}>
+                    Refresh to pull the newest instructions, safety warnings, and timing.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-sage btn-sm"
+                  disabled={staleRefreshing}
+                  onClick={handleRefreshStaleTasks}
+                  style={{ fontSize: 12, padding: '6px 12px' }}
+                >
+                  {staleRefreshing ? 'Refreshing…' : 'Refresh tasks'}
+                </button>
+              </div>
+            )}
+
+            {/* A3-5: demo-mode banner so example tasks aren't mistaken for real ones. */}
+            {isDemo && (
+              <div
+                style={{
+                  background: `${Colors.copper}12`,
+                  border: `1px dashed ${Colors.copper}80`,
+                  borderRadius: 10,
+                  padding: '14px 16px',
+                  marginBottom: 12,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                }}
+              >
+                {/* ASSET-PLACEHOLDER: ILLUS-1 — dashboard empty-state illustration */}
+                <div style={{ fontSize: 28, flexShrink: 0 }} data-asset-key="ILLUS-1">&#128075;</div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, color: Colors.charcoal }}>
+                    These are sample tasks
+                  </p>
+                  <p style={{ fontSize: 13, color: Colors.charcoal, lineHeight: 1.5, marginBottom: 8 }}>
+                    Finish setup so we can generate a maintenance plan tailored to your home's square footage,
+                    climate, and equipment.
+                  </p>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => navigate('/onboarding')}
+                    style={{ fontSize: 13 }}
+                  >
+                    Finish setting up &rarr;
+                  </button>
+                </div>
+              </div>
+            )}
+
             {tasksLoading ? (
               <div className="flex-col gap-sm">
                 <Skeleton variant="card" count={3} />
@@ -604,6 +995,11 @@ export default function Dashboard() {
                       <div className="task-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         {task.title}
                         {(() => { const st = SERVICE_TYPE_MAP.get((task as any).template_id || ''); const badge = st ? SERVICE_BADGE_STYLES[st] : undefined; return badge ? <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>{badge.label}</span> : null; })()}
+                        {(task as any).created_by_pro_id && (
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12, background: 'var(--color-copper-muted, #FFF3E0)', color: 'var(--color-copper)', whiteSpace: 'nowrap' }}>
+                            Pro flagged
+                          </span>
+                        )}
                       </div>
                       <div className="task-meta">
                         {task.category} &middot; ~{task.estimated_minutes || '?'} min &middot; {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -810,6 +1206,35 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+
+          {/* A1-4: Sale Prep CTA — visible to all tiers, always free */}
+          <div
+            className="card card-clickable"
+            style={{
+              background: 'var(--color-cream)',
+              borderLeft: `4px solid ${Colors.sage}`,
+              cursor: 'pointer',
+            }}
+            onClick={() => navigate('/sale-prep')}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              {/* ASSET-PLACEHOLDER: ILLUS-10 — selling-your-home icon (emoji placeholder) */}
+              <div style={{ fontSize: 24, marginTop: 2 }} data-asset-key="ILLUS-10">&#127969;</div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: 600, marginBottom: 4 }}>Selling your home?</p>
+                <p className="text-xs text-gray" style={{ marginBottom: 8, lineHeight: 1.5 }}>
+                  Your Home Token + maintenance history can add thousands to your list price. Start the sale-prep checklist.
+                </p>
+                <button
+                  className="btn btn-sage btn-sm"
+                  style={{ fontSize: 12, padding: '6px 10px' }}
+                  onClick={(e) => { e.stopPropagation(); navigate('/sale-prep'); }}
+                >
+                  Open Sale Prep &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
 
           {/* Equipment Summary */}
           <div className="card">

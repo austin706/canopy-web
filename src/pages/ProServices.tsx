@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { Colors } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
 import { supabase, sendNotification } from '@/services/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getErrorMessage } from '@/utils/errors';
 
 const Visits = lazy(() => import('@/pages/Visits'));
@@ -144,10 +144,37 @@ const STATUS_LABELS: Record<string, string> = {
 
 type SubTab = 'services' | 'add-ons' | 'visits' | 'quotes' | 'invoices';
 
+const VALID_TABS: SubTab[] = ['services', 'add-ons', 'visits', 'quotes', 'invoices'];
+
 export default function ProServices() {
   const { user, home } = useStore();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<SubTab>('services');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Respect ?tab=<name> on first render so deep links (and the /add-ons
+  // redirect for authenticated users) drop into the right sub-view.
+  const initialTab: SubTab = (() => {
+    const raw = searchParams.get('tab');
+    return raw && (VALID_TABS as string[]).includes(raw) ? (raw as SubTab) : 'services';
+  })();
+  const [activeTab, setActiveTab] = useState<SubTab>(initialTab);
+
+  // Keep the URL in sync with tab changes so back-button/bookmarking work,
+  // but skip re-writing the same value to avoid history spam.
+  useEffect(() => {
+    const current = searchParams.get('tab');
+    if (activeTab === 'services') {
+      if (current) {
+        const next = new URLSearchParams(searchParams);
+        next.delete('tab');
+        setSearchParams(next, { replace: true });
+      }
+    } else if (current !== activeTab) {
+      const next = new URLSearchParams(searchParams);
+      next.set('tab', activeTab);
+      setSearchParams(next, { replace: true });
+    }
+  }, [activeTab, searchParams, setSearchParams]);
 
   // Bimonthly visit state
   const [nextVisit, setNextVisit] = useState<NextVisit | null>(null);

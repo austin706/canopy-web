@@ -195,6 +195,15 @@ export default function HomeTransfer() {
               Initiated: {new Date(activeTransfer.initiated_at).toLocaleDateString()} •
               Expires: {activeTransfer.expires_at ? new Date(activeTransfer.expires_at).toLocaleDateString() : 'N/A'}
             </p>
+            {activeTransfer.transfer_token && (
+              <button
+                className="btn btn-primary"
+                onClick={() => navigate(`/home-token/share/${activeTransfer.transfer_token}`)}
+                style={{ width: '100%', marginBottom: 8 }}
+              >
+                Show QR / Share Link
+              </button>
+            )}
             <button className="btn btn-secondary" onClick={handleCancel} style={{ width: '100%' }}>
               Cancel Transfer
             </button>

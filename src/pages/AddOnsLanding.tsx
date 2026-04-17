@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Colors, FontSize, FontWeight, BorderRadius } from '@/constants/theme';
+import { useStore } from '@/store/useStore';
 
 interface AddOnCard {
   name: string;
@@ -92,7 +93,17 @@ const SEASONAL = [
 
 export default function AddOnsLanding() {
   const navigate = useNavigate();
+  const { user } = useStore();
   const [isMobile, setIsMobile] = useState(false);
+
+  // Authenticated users land on the in-app Add-Ons tab instead of the
+  // marketing page — they already know what add-ons are; they want to
+  // request one. Unauthenticated visitors see the marketing page.
+  useEffect(() => {
+    if (user?.id) {
+      navigate('/pro-services?tab=add-ons', { replace: true });
+    }
+  }, [user?.id, navigate]);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');

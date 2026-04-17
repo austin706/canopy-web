@@ -41,6 +41,51 @@ export const getTasks = async (homeId: string) => {
   return data || [];
 };
 
+/**
+ * Atomic RPC: update task + insert log + spawn next dynamic task.
+ * Called by quickCompleteTask for the normal completion path. Returns
+ * the server-side rows so the client can reconcile its optimistic ids.
+ */
+export interface CompleteTaskRpcResult {
+  completed_task: MaintenanceTask;
+  log: { id: string; [k: string]: unknown };
+  next_task: MaintenanceTask | null;
+  already_completed: boolean;
+}
+
+export const completeTaskWithRecurrence = async (args: {
+  taskId: string;
+  notes?: string;
+  photoUrl?: string;
+  completedBy?: 'homeowner' | 'pro' | 'contractor';
+  cost?: number | null;
+  completedByProId?: string | null;
+  nextTask?: MaintenanceTask | null;
+}): Promise<CompleteTaskRpcResult> => {
+  const { data, error } = await supabase.rpc('complete_task_with_recurrence', {
+    p_task_id: args.taskId,
+    p_notes: args.notes ?? null,
+    p_photo_url: args.photoUrl ?? null,
+    p_completed_by: args.completedBy ?? 'homeowner',
+    p_cost: args.cost ?? null,
+    p_completed_by_pro_id: args.completedByProId ?? null,
+    p_next_task: args.nextTask ? (args.nextTask as unknown as Record<string, unknown>) : null,
+  });
+  if (error) throw error;
+  const result = data as CompleteTaskRpcResult;
+
+  // Fan out notifications (homeowner/members) only on first completion.
+  const completed = result?.completed_task;
+  if (completed?.home_id && !result?.already_completed) {
+    const actorId = (completed as unknown as { user_id?: string }).user_id || '';
+    notifyHomeMembers(completed.home_id, actorId,
+      'Task Completed',
+      `"${completed.title || 'A maintenance task'}" has been marked as complete.`,
+      'task', '/dashboard');
+  }
+  return result;
+};
+
 export const completeTask = async (taskId: string, notes?: string, photoUrl?: string) => {
   const { data, error } = await supabase
     .from('maintenance_tasks')
@@ -107,8 +152,22 @@ export const createTask = async (task: Partial<MaintenanceTask>) => {
   return data;
 };
 
+/**
+ * Bulk-insert generated tasks. Uses upsert with `ignoreDuplicates: true`
+ * so concurrent generator passes (e.g. web tab + mobile app) can't
+ * produce duplicate rows for the same (home, template, equipment,
+ * due_date) tuple — the partial UNIQUE INDEX defined in migration 060
+ * silently drops conflicts.
+ */
 export const createTasks = async (tasks: Partial<MaintenanceTask>[]) => {
-  const { data, error } = await supabase.from('maintenance_tasks').insert(tasks).select();
+  if (!tasks.length) return [];
+  const { data, error } = await supabase
+    .from('maintenance_tasks')
+    .upsert(tasks, {
+      onConflict: 'home_id,template_id,equipment_id,due_date',
+      ignoreDuplicates: true,
+    })
+    .select();
   if (error) throw error;
   return data || [];
 };
@@ -118,5 +177,38 @@ export const deleteTask = async (taskId: string) => {
     .from('maintenance_tasks')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', taskId);
+  if (error) throw error;
+};
+
+// ─── C-11 (migration 066): stale template tasks ───
+export interface StaleTemplateTask {
+  task_id: string;
+  template_id: string;
+  task_title: string;
+  /** The template_version the template is at now (higher = admin edited it). */
+  current_template_version: number;
+  /** The template_version this task was generated at (lower = stale). */
+  task_template_version: number | null;
+}
+
+/** Return pending/overdue tasks whose underlying template has been edited since
+ *  the task was generated. Used to power the "Refresh stale tasks" affordance
+ *  on the dashboard and HomeDetails. Any authenticated user can query their own
+ *  homes; admins can query any home. See migration_066_template_version.sql. */
+export const listStaleTemplateTasks = async (homeId: string): Promise<StaleTemplateTask[]> => {
+  const { data, error } = await supabase.rpc('list_stale_template_tasks', { p_home_id: homeId });
+  if (error) throw error;
+  return (data ?? []) as StaleTemplateTask[];
+};
+
+/** Soft-delete the given stale tasks so the next generation pass can
+ *  recreate them at the current template_version. We intentionally do not
+ *  hard-delete — homeowners have history to preserve. */
+export const clearStaleTemplateTasks = async (taskIds: string[]): Promise<void> => {
+  if (taskIds.length === 0) return;
+  const { error } = await supabase
+    .from('maintenance_tasks')
+    .update({ deleted_at: new Date().toISOString() })
+    .in('id', taskIds);
   if (error) throw error;
 };

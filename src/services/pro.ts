@@ -147,6 +147,103 @@ export const getStripeConnectStatus = async (providerId: string): Promise<{
   };
 };
 
+// ─── Pro Payouts ───
+
+export interface ProPayoutRow {
+  id: string;
+  visit_id: string;
+  provider_id: string;
+  provider_user_id: string;
+  amount_cents: number;
+  stripe_transfer_id: string | null;
+  stripe_connect_account: string | null;
+  stripe_error: string | null;
+  status: 'processing' | 'paid' | 'failed';
+  paid_at: string | null;
+  failed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  visit?: {
+    id: string;
+    scheduled_date: string | null;
+    completed_at: string | null;
+    payout_status: string | null;
+    homeowner_id: string | null;
+  } | null;
+}
+
+/** Fetch payout history for a provider, newest first. */
+export const getProviderPayouts = async (providerId: string): Promise<ProPayoutRow[]> => {
+  const { data, error } = await supabase
+    .from('pro_payouts')
+    .select(
+      `
+      id, visit_id, provider_id, provider_user_id, amount_cents,
+      stripe_transfer_id, stripe_connect_account, stripe_error,
+      status, paid_at, failed_at, created_at, updated_at,
+      visit:pro_monthly_visits ( id, scheduled_date, completed_at, payout_status, homeowner_id )
+    `,
+    )
+    .eq('provider_id', providerId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []) as unknown as ProPayoutRow[];
+};
+
+/** Payout totals grouped by status — for the Pro Portal earnings card. */
+export const getProviderPayoutSummary = async (
+  providerId: string,
+): Promise<{ paidCents: number; processingCents: number; failedCents: number; count: number }> => {
+  const { data, error } = await supabase
+    .from('pro_payouts')
+    .select('amount_cents, status')
+    .eq('provider_id', providerId);
+  if (error) throw error;
+  const rows = (data || []) as Array<{ amount_cents: number; status: string }>;
+  return rows.reduce(
+    (acc, r) => {
+      if (r.status === 'paid') acc.paidCents += r.amount_cents || 0;
+      else if (r.status === 'processing') acc.processingCents += r.amount_cents || 0;
+      else if (r.status === 'failed') acc.failedCents += r.amount_cents || 0;
+      acc.count += 1;
+      return acc;
+    },
+    { paidCents: 0, processingCents: 0, failedCents: 0, count: 0 },
+  );
+};
+
+/**
+ * List completed visits for this provider that haven't been paid yet.
+ * Used by the "Request payout" UI so the pro can manually kick off a
+ * transfer for a visit whose auto-payout failed or was skipped.
+ */
+export const getUnpaidCompletedVisits = async (
+  providerId: string,
+): Promise<Array<{ id: string; completed_at: string | null; scheduled_date: string | null; payout_status: string | null; payout_amount_cents: number | null }>> => {
+  const { data, error } = await supabase
+    .from('pro_monthly_visits')
+    .select('id, completed_at, scheduled_date, payout_status, payout_amount_cents')
+    .eq('pro_provider_id', providerId)
+    .eq('status', 'completed')
+    .or('payout_status.is.null,payout_status.neq.paid')
+    .order('completed_at', { ascending: false });
+  if (error) throw error;
+  return (data || []) as Array<{ id: string; completed_at: string | null; scheduled_date: string | null; payout_status: string | null; payout_amount_cents: number | null }>;
+};
+
+/** Manually trigger payout for a specific completed visit via process-pro-payout edge function. */
+export const triggerManualPayout = async (visitId: string): Promise<{ success: boolean; payout_id?: string; amount_cents?: number; error?: string }> => {
+  const { data, error } = await supabase.functions.invoke('process-pro-payout', {
+    body: { visit_id: visitId },
+  });
+  if (error) {
+    logger.error('triggerManualPayout failed', error);
+    return { success: false, error: error.message };
+  }
+  if (data?.error) return { success: false, error: data.error };
+  return { success: true, payout_id: data?.payout_id, amount_cents: data?.amount_cents };
+};
+
 // ─── Background Check (Checkr) ───
 // Wired through the `checkr-initiate` edge function (see
 // Canopy-App/supabase/functions/checkr-initiate/index.ts).

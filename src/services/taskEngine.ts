@@ -178,16 +178,24 @@ function dbTemplateToInternal(db: TaskTemplateDB): TaskTemplate {
     pro_responsible: db.pro_recommended || false,
     task_level: db.task_level || 'standard',
     is_cleaning: db.is_cleaning || false,
-    // Inherit guard fields from hardcoded template — DB table lacks these columns
-    requires_water_source: hardcoded?.requires_water_source,
-    requires_sewer_type: hardcoded?.requires_sewer_type,
-    requires_pool_type: hardcoded?.requires_pool_type,
-    requires_home_type: hardcoded?.requires_home_type,
-    requires_countertop_type: hardcoded?.requires_countertop_type,
-    requires_flooring_type: hardcoded?.requires_flooring_type,
-    requires_construction_type: hardcoded?.requires_construction_type,
-    requires_foundation_type: hardcoded?.requires_foundation_type,
-    requires_septic_type: hardcoded?.requires_septic_type,
+    safety_warnings: (db.safety_warnings && db.safety_warnings.length > 0)
+      ? db.safety_warnings
+      : undefined,
+    add_on_category: db.add_on_category ?? hardcoded?.add_on_category ?? undefined,
+    // Prefer DB values (migration 061 adds these columns); fall back to the
+    // hardcoded template only for legacy rows that predate the migration.
+    requires_water_source: (db.requires_water_source as any) ?? hardcoded?.requires_water_source,
+    requires_sewer_type: (db.requires_sewer_type as any) ?? hardcoded?.requires_sewer_type,
+    requires_pool_type: (db.requires_pool_type as any) ?? hardcoded?.requires_pool_type,
+    requires_home_type: (db.requires_home_type as any) ?? hardcoded?.requires_home_type,
+    requires_countertop_type: (db.requires_countertop_type as any) ?? hardcoded?.requires_countertop_type,
+    requires_flooring_type: (db.requires_flooring_type as any) ?? hardcoded?.requires_flooring_type,
+    requires_construction_type: (db.requires_construction_type as any) ?? hardcoded?.requires_construction_type,
+    requires_foundation_type: (db.requires_foundation_type as any) ?? hardcoded?.requires_foundation_type,
+    requires_septic_type: (db.requires_septic_type as any) ?? hardcoded?.requires_septic_type,
+    // C-11 (migration 066): snapshot the current template version so generated tasks
+    // remember which revision they were created from.
+    template_version: db.template_version,
   };
 }
 
@@ -221,20 +229,24 @@ function generateTasksForHomeImpl(
     })
   );
 
-  // Use DB templates as source of truth when available; fall back to hardcoded.
-  // DB templates have UUID ids, so dedup by title+category to avoid doubling up
-  // with the hardcoded TASK_TEMPLATES that were seeded into the DB.
+  // Use DB templates as the source of truth (migration 061 seeds all built-in
+  // templates as source='built_in' rows with stable TEXT ids). A hardcoded
+  // template is only used as a fallback when no DB row with the same id AND no
+  // DB row with the same title|category exists — which should only happen in
+  // fresh-dev environments that haven't run migration 061.
   const convertedDB = customTemplates
     .filter((db) => db.active)
     .map(dbTemplateToInternal);
-  // Build key set from ALL DB templates (including inactive) so that deactivated
-  // DB templates also suppress their hardcoded counterparts from sneaking back in.
-  const allDbTitleKeys = new Set(
+  // Dedup by stable id (primary) AND by title|category (legacy fallback, since
+  // AI-generated rows may still have UUID ids while matching a hardcoded slug).
+  const dbIdSet = new Set(customTemplates.map((db) => db.id));
+  const dbTitleKeySet = new Set(
     customTemplates.map((db) => `${db.title}|${db.category}`)
   );
-  // Only include hardcoded templates whose title+category doesn't exist in the DB at all
   const fallbackBuiltIn = TASK_TEMPLATES.filter(
-    (t) => !allDbTitleKeys.has(`${t.title}|${t.category}`)
+    (t) =>
+      !dbIdSet.has(t.id) &&
+      !dbTitleKeySet.has(`${t.title}|${t.category}`)
   );
   const allTemplates: TaskTemplate[] = [...convertedDB, ...fallbackBuiltIn];
 
@@ -727,8 +739,12 @@ function createTaskFromTemplate(
     scheduling_type: template.scheduling_type,
     interval_days: template.interval_days,
     template_id: template.id,
+    // C-11 (migration 066): snapshot the template version so we can detect stale
+    // tasks later. Absent for hardcoded TASK_TEMPLATES — only DB templates carry a version.
+    template_version: template.template_version,
     items_to_have_on_hand: template.items_to_have_on_hand,
     service_purpose: template.service_purpose,
+    safety_warnings: template.safety_warnings,
     is_cleaning: template.is_cleaning || false,
     created_at: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
   };

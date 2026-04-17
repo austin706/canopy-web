@@ -11,7 +11,7 @@ import { showToast } from '@/components/Toast';
 import type { Home } from '@/types';
 import HomeQRCode from '@/components/HomeQRCode';
 import { findExistingProperty } from '@/services/addressVerification';
-import { createHomeJoinRequest } from '@/services/home';
+import { createHomeJoinRequest, listDeletedHomesForOwner, restoreHome, type DeletedHomeSummary } from '@/services/home';
 
 export default function HomeDetails() {
   const navigate = useNavigate();
@@ -23,6 +23,8 @@ export default function HomeDetails() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [structures, setStructures] = useState<Home[]>([]);
+  const [deletedHomes, setDeletedHomes] = useState<DeletedHomeSummary[]>([]);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
   const [showAddStructure, setShowAddStructure] = useState(false);
   const [structureFormType, setStructureFormType] = useState<keyof typeof STRUCTURE_TYPES>('guest_house');
   const [structureFormLabel, setStructureFormLabel] = useState('');
@@ -112,6 +114,38 @@ export default function HomeDetails() {
     };
     loadStructures();
   }, [home?.id]);
+
+  // Recently-deleted homes available to restore (30-day window). See migration_070_owner_restore.sql.
+  useEffect(() => {
+    const loadDeleted = async () => {
+      if (!user) { setDeletedHomes([]); return; }
+      try {
+        const rows = await listDeletedHomesForOwner();
+        setDeletedHomes(rows);
+      } catch (err) {
+        console.warn('Failed to load deleted homes:', err);
+        setDeletedHomes([]);
+      }
+    };
+    loadDeleted();
+  }, [user?.id, home?.id]);
+
+  const handleRestoreHome = async (homeId: string) => {
+    setRestoringId(homeId);
+    try {
+      await restoreHome(homeId);
+      setDeletedHomes(prev => prev.filter(h => h.id !== homeId));
+      // Reload structures in case the restored row is a child structure
+      if (home && !home.parent_home_id) {
+        try { setStructures(await getStructures(home.id)); } catch { /* non-fatal */ }
+      }
+      showToast({ message: 'Home restored.' });
+    } catch (err: any) {
+      showToast({ message: err?.message || 'Failed to restore home' });
+    } finally {
+      setRestoringId(null);
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -928,6 +962,51 @@ export default function HomeDetails() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Recently deleted — restore within 30-day window (migration_068/070) */}
+              {deletedHomes.length > 0 && (
+                <div style={{
+                  padding: 12,
+                  border: `1px dashed ${Colors.copper}`,
+                  borderRadius: 8,
+                  marginBottom: 16,
+                  backgroundColor: Colors.warmWhite,
+                }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Recently deleted</div>
+                  <p className="text-sm text-gray" style={{ marginBottom: 10 }}>
+                    Deleted homes and structures can be restored within 30 days.
+                  </p>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {deletedHomes.map(d => (
+                      <div key={d.id} style={{
+                        padding: 10,
+                        border: `1px solid var(--light-gray)`,
+                        borderRadius: 6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontWeight: 600, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {d.nickname || d.address || 'Untitled home'}
+                          </p>
+                          <p className="text-sm text-gray">
+                            {[d.city, d.state].filter(Boolean).join(', ')}
+                            {d.days_remaining != null && ` · ${d.days_remaining} day${d.days_remaining === 1 ? '' : 's'} left`}
+                          </p>
+                        </div>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleRestoreHome(d.id)}
+                          disabled={restoringId === d.id}
+                        >
+                          {restoringId === d.id ? 'Restoring...' : 'Restore'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

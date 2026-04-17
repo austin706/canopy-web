@@ -3,6 +3,7 @@
 // ===============================================================
 import type { MaintenanceTask, MaintenanceLog } from '@/types';
 import { completeTask, addMaintenanceLog, createTask, supabase } from '@/services/supabase';
+import { completeTaskWithRecurrence } from '@/services/tasks';
 import { createNextDynamicTask } from '@/services/taskEngine';
 import { useStore } from '@/store/useStore';
 import { showToast } from '@/components/Toast';
@@ -154,40 +155,82 @@ export const quickCompleteTask = async (task: MaintenanceTask): Promise<void> =>
 
   // Store previous state for undo
   const previousTask = { ...task };
-  let logEntryId: string;
+  const completedAt = new Date().toISOString();
 
   // 1. Optimistic local update
   store.completeTask(task.id);
 
-  // 2. Build & persist maintenance log
-  const logEntry: MaintenanceLog = {
+  // 2. Build optimistic maintenance log for local store.
+  //    The RPC owns the authoritative row; we'll reconcile the id once it returns.
+  const optimisticLog: MaintenanceLog = {
     id: generateUUID(),
     home_id: homeId,
     task_id: task.id,
     title: task.title,
     description: task.description,
     category: task.category,
-    completed_date: new Date().toISOString(),
+    completed_date: completedAt,
     completed_by: 'homeowner',
     photos: [],
-    created_at: new Date().toISOString(),
+    created_at: completedAt,
   };
-  logEntryId = logEntry.id;
-  store.addMaintenanceLog(logEntry);
+  let logEntryId: string = optimisticLog.id;
+  store.addMaintenanceLog(optimisticLog);
 
-  // 3. Persist to Supabase (non-blocking — UI already updated)
-  try { await completeTask(task.id); } catch (err) { logger.warn('Task complete API call failed:', err); }
-  try { await addMaintenanceLog(logEntry); } catch (err) { logger.warn('Maintenance log save failed:', err); }
-
-  // 4. If this is a dynamic task, schedule the next occurrence
+  // 3. Build the optional next-dynamic-task client-side (TASK_TEMPLATES
+  //    lives in app code so we can't do this in PL/pgSQL yet). The RPC
+  //    inserts it atomically with the completion + log row.
   let nextTask: MaintenanceTask | null = null;
-  const nextDynamicTask = createNextDynamicTask(task, new Date().toISOString());
+  const nextDynamicTask = createNextDynamicTask(task, completedAt);
   if (nextDynamicTask) {
     nextTask = nextDynamicTask;
-    // Add to local store immediately
     useStore.getState().addTask(nextTask);
-    // Persist to Supabase
-    try { await createTask(nextTask); } catch (err) { logger.warn('Next dynamic task creation failed:', err); }
+  }
+
+  // 4. Call the RPC. If it's unavailable (old database), fall back to
+  //    the legacy multi-step flow so clients don't break mid-rollout.
+  let rpcOk = false;
+  try {
+    const result = await completeTaskWithRecurrence({
+      taskId: task.id,
+      notes: undefined,
+      photoUrl: undefined,
+      completedBy: 'homeowner',
+      nextTask,
+    });
+    rpcOk = true;
+
+    // Reconcile log id so Undo deletes the right row.
+    if (result?.log?.id) {
+      const storeNow = useStore.getState();
+      const logs = storeNow.maintenanceLogs || [];
+      storeNow.setMaintenanceLogs(
+        logs.map((l) => (l.id === optimisticLog.id ? { ...l, id: result.log.id } : l))
+      );
+      logEntryId = result.log.id;
+    }
+    // If the server skipped the next task (conflict), drop it from the store.
+    if (nextTask && !result?.next_task) {
+      useStore.getState().removeTask(nextTask.id);
+      nextTask = null;
+    } else if (nextTask && result?.next_task?.id && result.next_task.id !== nextTask.id) {
+      // Server used its own id; reconcile.
+      const storeNow = useStore.getState();
+      storeNow.removeTask(nextTask.id);
+      nextTask = { ...nextTask, id: result.next_task.id };
+      storeNow.addTask(nextTask);
+    }
+  } catch (err) {
+    logger.warn('complete_task_with_recurrence RPC failed, falling back:', err);
+  }
+
+  if (!rpcOk) {
+    // Legacy fallback: update + log + next-task as three separate calls.
+    try { await completeTask(task.id); } catch (e) { logger.warn('Task complete API call failed:', e); }
+    try { await addMaintenanceLog(optimisticLog); } catch (e) { logger.warn('Maintenance log save failed:', e); }
+    if (nextTask) {
+      try { await createTask(nextTask); } catch (e) { logger.warn('Next dynamic task creation failed:', e); }
+    }
   }
 
   // 4b. If this is an as_needed task, prompt user to schedule next occurrence

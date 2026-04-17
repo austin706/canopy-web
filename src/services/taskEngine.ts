@@ -243,10 +243,24 @@ function generateTasksForHomeImpl(
   const dbTitleKeySet = new Set(
     customTemplates.map((db) => `${db.title}|${db.category}`)
   );
+  // CRITICAL FILTER: Skip DB-only "stub" templates (cast as `any` in TASK_TEMPLATES)
+  // that only provide metadata overrides (is_cleaning, service_type, etc.) and
+  // rely on the DB for the full template body. If their matching DB row is missing
+  // (e.g., because migration 061 hasn't been seeded with that specific id), the
+  // stub would fall through here WITHOUT applicable_months/title/category — and
+  // the forEach below would crash on `template.applicable_months.includes(...)`.
+  // See: refrigerator-coils-clean, garbage-disposal-clean, vent-hood-degrease,
+  // dishwasher-clean, washing-machine-clean, garbage-bins-clean,
+  // deep-clean-outdoor-furniture, holiday-light-install, holiday-light-remove.
   const fallbackBuiltIn = TASK_TEMPLATES.filter(
     (t) =>
       !dbIdSet.has(t.id) &&
-      !dbTitleKeySet.has(`${t.title}|${t.category}`)
+      !dbTitleKeySet.has(`${t.title}|${t.category}`) &&
+      // Defensive guards: a complete template MUST have these fields.
+      !!t.title &&
+      !!t.category &&
+      Array.isArray(t.applicable_months) &&
+      t.applicable_months.length > 0
   );
   const allTemplates: TaskTemplate[] = [...convertedDB, ...fallbackBuiltIn];
 
@@ -910,9 +924,16 @@ export function getSeasonalRecommendations(
 
   const relevantTemplates = TASK_TEMPLATES.filter(
     (t) =>
-      t.applicable_months.includes(month) ||
-      t.applicable_months.includes(month === 12 ? 1 : month + 1) ||
-      t.applicable_months.includes(month >= 11 ? month - 10 : month + 2)
+      // Skip DB-only stub templates that lack applicable_months/title/category.
+      Array.isArray(t.applicable_months) &&
+      t.applicable_months.length > 0 &&
+      !!t.title &&
+      !!t.category &&
+      (
+        t.applicable_months.includes(month) ||
+        t.applicable_months.includes(month === 12 ? 1 : month + 1) ||
+        t.applicable_months.includes(month >= 11 ? month - 10 : month + 2)
+      )
   );
 
   const homeFeatures = {

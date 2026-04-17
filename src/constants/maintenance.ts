@@ -2676,6 +2676,9 @@ export const getTasksForMonth = (
 ): TaskTemplate[] => {
   const region = getClimateRegion(state);
   return TASK_TEMPLATES.filter((task) => {
+    // Skip DB-only stub templates that lack applicable_months/title/category.
+    if (!Array.isArray(task.applicable_months) || task.applicable_months.length === 0) return false;
+    if (!task.title || !task.category) return false;
     if (!task.applicable_months.includes(month)) return false;
     if (task.requires_home_feature && !homeFeatures[task.requires_home_feature]) return false;
     // Sewer type filter

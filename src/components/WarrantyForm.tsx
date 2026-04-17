@@ -85,7 +85,7 @@ export function WarrantyForm({ warranty, equipmentId, homeId, onSave, onCancel }
   };
 
   return (
-    <div style={{ background: Colors.cream, borderRadius: BorderRadius.large, padding: Spacing.lg, marginBottom: Spacing.lg }}>
+    <div style={{ background: Colors.cream, borderRadius: BorderRadius.lg, padding: Spacing.lg, marginBottom: Spacing.lg }}>
       <h3 style={{ marginTop: 0, marginBottom: Spacing.md, color: Colors.charcoal }}>
         {warranty ? 'Edit Warranty' : 'Add Warranty'}
       </h3>

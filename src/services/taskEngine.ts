@@ -181,7 +181,7 @@ function dbTemplateToInternal(db: TaskTemplateDB): TaskTemplate {
     safety_warnings: (db.safety_warnings && db.safety_warnings.length > 0)
       ? db.safety_warnings
       : undefined,
-    add_on_category: db.add_on_category ?? hardcoded?.add_on_category ?? undefined,
+    add_on_category: (db.add_on_category as any) ?? hardcoded?.add_on_category ?? undefined,
     // Prefer DB values (migration 061 adds these columns); fall back to the
     // hardcoded template only for legacy rows that predate the migration.
     requires_water_source: (db.requires_water_source as any) ?? hardcoded?.requires_water_source,

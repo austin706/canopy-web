@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+// @ts-ignore — qrcode.react ships without types
 import QRCode from 'qrcode.react';
 import { Colors } from '@/constants/theme';
 import {

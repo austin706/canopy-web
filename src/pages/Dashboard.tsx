@@ -269,10 +269,10 @@ export default function Dashboard() {
       const fresh = await getTasks(home.id);
       setTasks(fresh || []);
       setStaleTasks([]);
-      showToast(`Refreshed ${staleIds.length} task${staleIds.length === 1 ? '' : 's'}`, 'success');
+      showToast({ message: `Refreshed ${staleIds.length} task${staleIds.length === 1 ? '' : 's'}` });
     } catch (err) {
       console.warn('handleRefreshStaleTasks failed:', err);
-      showToast('Could not refresh tasks — try again', 'error');
+      showToast({ message: 'Could not refresh tasks — try again' });
     } finally {
       setStaleRefreshing(false);
     }

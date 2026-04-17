@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-// @ts-ignore — qrcode.react ships without types
-import QRCode from 'qrcode.react';
+import { QRCodeSVG as QRCode } from 'qrcode.react';
 import { Colors } from '@/constants/theme';
 import {
   getHomeTokenAttestations,
@@ -132,7 +131,7 @@ export default function HomeTokenShare({
           display: 'inline-block',
           position: 'relative',
         }}>
-          <QRCode value={shareUrl} size={256} level="H" includeMargin={true} />
+          <QRCode value={shareUrl} size={256} level="H" marginSize={4} />
           <div style={{
             position: 'absolute',
             top: 12,

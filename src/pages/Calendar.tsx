@@ -133,9 +133,26 @@ export default function Calendar() {
     return days;
   }, [year, month]);
 
-  // Enrich tasks with computed display status (auto-calculates overdue/due/upcoming)
+  // Enrich tasks with computed display status + dedup on (title|month|year).
+  // Historical rows can contain duplicates (fix parity with mobile for IMG_7409).
   const enrichedTasks = useMemo(() => {
-    return tasks.map(t => ({ ...t, status: getDisplayStatus(t) }));
+    const statusRank: Record<string, number> = { completed: 3, scheduled: 2, snoozed: 1, skipped: 0 };
+    const byKey = new Map<string, (typeof tasks)[number]>();
+    for (const t of tasks) {
+      const d = new Date(t.due_date);
+      const key = `${t.title}|${d.getMonth() + 1}|${d.getFullYear()}`;
+      const existing = byKey.get(key);
+      if (!existing) { byKey.set(key, t); continue; }
+      const tRank = statusRank[t.status as string] ?? 0;
+      const eRank = statusRank[existing.status as string] ?? 0;
+      if (tRank > eRank) { byKey.set(key, t); continue; }
+      if (tRank === eRank) {
+        const tCreated = t.created_at ? new Date(t.created_at).getTime() : 0;
+        const eCreated = existing.created_at ? new Date(existing.created_at).getTime() : 0;
+        if (tCreated > eCreated) byKey.set(key, t);
+      }
+    }
+    return Array.from(byKey.values()).map(t => ({ ...t, status: getDisplayStatus(t) }));
   }, [tasks]);
 
   // Map visits into a calendar-friendly shape
@@ -792,8 +809,32 @@ export default function Calendar() {
           }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowCalendarModal(false); }}
         >
-          <div className="card" style={{ maxWidth: 480, width: '100%', padding: 24 }}>
-            <h3 style={{ fontSize: 18, marginBottom: 12 }}>Link Your Calendar</h3>
+          <div className="card" style={{ maxWidth: 480, width: '100%', padding: 24, position: 'relative' }}>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setShowCalendarModal(false)}
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--color-med-gray)',
+                fontSize: 22,
+                lineHeight: 1,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              &times;
+            </button>
+            <h3 style={{ fontSize: 18, marginBottom: 12, paddingRight: 28 }}>Link Your Calendar</h3>
             <p className="text-sm text-gray" style={{ marginBottom: 16, lineHeight: 1.6 }}>
               Link your calendar app (Apple Calendar, Google Calendar, Outlook) to get maintenance tasks automatically with reminders. Updates every 15 minutes.
             </p>

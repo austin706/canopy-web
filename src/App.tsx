@@ -82,6 +82,7 @@ const EquipmentDetail = lazyRetry(() => import('@/pages/EquipmentDetail'));
 const Notifications = lazyRetry(() => import('@/pages/Notifications'));
 const Documents = lazyRetry(() => import('@/pages/Documents'));
 const Help = lazyRetry(() => import('@/pages/Help'));
+const HealthScore = lazyRetry(() => import('@/pages/HealthScore'));
 const WhatsNew = lazyRetry(() => import('@/pages/WhatsNew'));
 const Onboarding = lazyRetry(() => import('@/pages/Onboarding'));
 const ProPortal = lazyRetry(() => import('@/pages/ProPortal'));
@@ -498,6 +499,7 @@ export default function App() {
             <Route path="/documents" element={<Documents />} />
             <Route path="/assistant" element={<HomeAssistant />} />
             <Route path="/help" element={<Help />} />
+            <Route path="/health-score" element={<HealthScore />} />
             <Route path="/whats-new" element={<WhatsNew />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/subscription" element={<Subscription />} />

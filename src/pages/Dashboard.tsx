@@ -336,10 +336,29 @@ export default function Dashboard() {
   const historyDaysLimit = getHistoryDaysLimit(tier);
 
   const isDemo = !user?.onboarding_complete && (!tasks || tasks.length === 0);
-  const displayTasksRaw = useMemo(
-    () => (isDemo ? DEMO_TASKS : tasks.map(t => ({ ...t, status: getDisplayStatus(t) }))),
-    [isDemo, tasks],
-  );
+  // Task dedup (parity with mobile fix for IMG_7409 Clean Gutters duplicate).
+  // Historical DB rows can contain duplicates with the same (title|month|year).
+  // Keep the row with the "most progressed" status; tie-break on most recent created.
+  const displayTasksRaw = useMemo(() => {
+    if (isDemo) return DEMO_TASKS;
+    const statusRank: Record<string, number> = { completed: 3, scheduled: 2, snoozed: 1, skipped: 0 };
+    const byKey = new Map<string, (typeof tasks)[number]>();
+    for (const t of tasks) {
+      const d = new Date(t.due_date);
+      const key = `${t.title}|${d.getMonth() + 1}|${d.getFullYear()}`;
+      const existing = byKey.get(key);
+      if (!existing) { byKey.set(key, t); continue; }
+      const tRank = statusRank[t.status as string] ?? 0;
+      const eRank = statusRank[existing.status as string] ?? 0;
+      if (tRank > eRank) { byKey.set(key, t); continue; }
+      if (tRank === eRank) {
+        const tCreated = t.created_at ? new Date(t.created_at).getTime() : 0;
+        const eCreated = existing.created_at ? new Date(existing.created_at).getTime() : 0;
+        if (tCreated > eCreated) byKey.set(key, t);
+      }
+    }
+    return Array.from(byKey.values()).map(t => ({ ...t, status: getDisplayStatus(t) }));
+  }, [isDemo, tasks]);
   // Health-aware ordering (Item 13). When the home health score drops, the
   // overdue + high-priority tasks bubble to the top so homeowners can clear
   // the items actually dragging the score. Health data is computed below; we
@@ -365,15 +384,6 @@ export default function Dashboard() {
       oldestLogDaysAway = Math.max(0, 90 - daysOld);
     }
   }
-
-  // Get current season
-  const getSeason = (): string => {
-    const month = now.getMonth();
-    if (month >= 2 && month <= 4) return 'Spring';
-    if (month >= 5 && month <= 7) return 'Summer';
-    if (month >= 8 && month <= 10) return 'Fall';
-    return 'Winter';
-  };
 
   const now = new Date();
   const currentMonth = now.toLocaleString('default', { month: 'long' });
@@ -737,8 +747,10 @@ export default function Dashboard() {
 
       <div className="dashboard-layout">
         <div className="flex-col gap-lg">
-          {/* Weather */}
-          {hasWeather ? (
+          {/* Weather — only shown for tiers with weather access.
+              Free-tier upgrade messaging lives in the consolidated upgrade card below,
+              so we no longer render a duplicate Weather teaser here. */}
+          {hasWeather && (
             <div
               className="card"
               style={{ background: `linear-gradient(135deg, var(--color-sage)20, var(--color-cream))`, cursor: 'pointer' }}
@@ -785,38 +797,6 @@ export default function Dashboard() {
                 </>
               )}
             </div>
-          ) : (
-            <div
-              className="card"
-              style={{
-                background: 'var(--color-background)',
-                borderLeft: `4px solid ${Colors.sage}`,
-                cursor: 'pointer',
-                opacity: 0.85,
-              }}
-              onClick={() => navigate('/subscription')}
-            >
-              <div className="flex items-center gap-md">
-                <div style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 12,
-                  background: Colors.sageMuted,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 24,
-                }}>
-                  🔒
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 600, marginBottom: 4 }}>
-                    {displayWeather.alerts && displayWeather.alerts.length > 0 ? `${displayWeather.alerts.length} weather alerts` : 'Weather Alerts'}
-                  </p>
-                  <p className="text-sm text-gray">Weather alerts available. Upgrade to Home.</p>
-                </div>
-              </div>
-            </div>
           )}
 
           {/* Weather Insights (Smart Weather-to-Task Scheduling) */}
@@ -840,7 +820,7 @@ export default function Dashboard() {
                       + 'We weight completed tasks, overdue items, and equipment age. '
                       + 'Keep overdue items near zero and complete this month\'s tasks to stay 70+.'
                     }
-                    onClick={() => navigate('/help#health-score')}
+                    onClick={() => navigate('/health-score')}
                     style={{
                       background: 'none',
                       border: `1px solid ${Colors.medGray}40`,
@@ -880,7 +860,7 @@ export default function Dashboard() {
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
-                  onClick={() => navigate('/help#health-score')}
+                  onClick={() => navigate('/health-score')}
                   style={{ marginTop: 6, padding: 0, fontSize: 12, color: Colors.copper, fontWeight: 600 }}
                 >
                   How to improve &rarr;
@@ -1135,74 +1115,43 @@ export default function Dashboard() {
             {tier === 'free' && <button className="btn btn-primary btn-sm mt-md" onClick={() => navigate('/subscription')}>Upgrade</button>}
           </div>
 
-          {/* Document Vault Teaser (Free Tier) */}
+          {/* Consolidated upgrade teaser (Free Tier) — mirrors Canopy-App/app/(tabs)/index.tsx for feature parity */}
           {tier === 'free' && (
             <div
-              className="card"
+              className="card card-clickable"
               style={{
-                background: 'var(--color-background)',
-                borderLeft: `4px solid ${Colors.sage}`,
-                cursor: 'pointer',
-                opacity: 0.9,
-              }}
-              onClick={() => navigate('/subscription')}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ fontSize: 24, marginTop: 2 }}>🔒</div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 600, marginBottom: 4 }}>Secure Document Vault</p>
-                  <p className="text-xs text-gray" style={{ marginBottom: 8 }}>Store warranties, receipts, and insurance docs</p>
-                  <button
-                    style={{
-                      fontSize: 11,
-                      color: Colors.sage,
-                      background: 'transparent',
-                      border: `1px solid ${Colors.sage}`,
-                      borderRadius: 3,
-                      padding: '4px 8px',
-                      cursor: 'pointer',
-                      fontWeight: 500,
-                    }}
-                  >
-                    Learn More
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Seasonal Recommendations Teaser (Free Tier) */}
-          {tier === 'free' && (
-            <div
-              className="card"
-              style={{
-                background: 'var(--color-background)',
+                background: 'var(--color-copper-muted, #FFF3E0)',
                 borderLeft: `4px solid ${Colors.copper}`,
                 cursor: 'pointer',
-                opacity: 0.9,
               }}
               onClick={() => navigate('/subscription')}
+              role="button"
+              aria-label="Upgrade to Home plan"
             >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ fontSize: 24, marginTop: 2 }}>🌿</div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 600, marginBottom: 4 }}>{getSeason()} Maintenance</p>
-                  <p className="text-xs text-gray" style={{ marginBottom: 8 }}>4 tasks recommended for your home</p>
-                  <button
-                    style={{
-                      fontSize: 11,
-                      color: Colors.copper,
-                      background: 'transparent',
-                      border: `1px solid ${Colors.copper}`,
-                      borderRadius: 3,
-                      padding: '4px 8px',
-                      cursor: 'pointer',
-                      fontWeight: 500,
-                    }}
-                  >
-                    Upgrade to see
-                  </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    background: Colors.copper + '20',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{ fontSize: 20 }}>✨</span>
                 </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontWeight: 600, color: 'var(--color-charcoal)', marginBottom: 2 }}>
+                    Unlock the full Canopy experience
+                  </p>
+                  <p className="text-xs text-gray" style={{ margin: 0 }}>
+                    Weather alerts, document vault, seasonal plan & unlimited AI scans.
+                  </p>
+                </div>
+                <span style={{ color: Colors.copper, fontSize: 18, flexShrink: 0 }}>›</span>
               </div>
             </div>
           )}

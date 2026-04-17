@@ -231,6 +231,7 @@ export default function Onboarding() {
   // C11: Inline error banner (replaces alert() calls throughout onboarding)
   const [inlineError, setInlineError] = useState<string | null>(null);
   const inlineErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inlineErrorRef = useRef<HTMLDivElement>(null);
   const showInlineError = (msg: string) => {
     setInlineError(msg);
     if (inlineErrorTimer.current) clearTimeout(inlineErrorTimer.current);
@@ -241,6 +242,12 @@ export default function Onboarding() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+  // Focus error banner when it appears (accessibility)
+  useEffect(() => {
+    if (inlineError && inlineErrorRef.current) {
+      inlineErrorRef.current.focus();
+    }
+  }, [inlineError]);
   // Clear the banner when the user changes steps
   useEffect(() => {
     setInlineError(null);
@@ -1000,8 +1007,10 @@ export default function Onboarding() {
       {/* C11: Inline error banner (replaces alert() dialogs) */}
       {inlineError && (
         <div
+          ref={inlineErrorRef}
           role="alert"
           aria-live="assertive"
+          tabIndex={-1}
           style={{
             backgroundColor: 'var(--color-error-muted, #E539351A)',
             border: `1px solid var(--color-error)`,
@@ -1014,6 +1023,7 @@ export default function Onboarding() {
             display: 'flex',
             alignItems: 'flex-start',
             gap: 12,
+            outline: 'none',
           }}
         >
           <span aria-hidden="true" style={{ fontSize: 18, lineHeight: 1, marginTop: 1 }}>⚠️</span>

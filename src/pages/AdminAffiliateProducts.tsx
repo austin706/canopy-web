@@ -642,16 +642,16 @@ export default function AdminAffiliateProducts() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: `2px solid ${Colors.lightGray}`, textAlign: 'left' }}>
-                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }}>Type</th>
-                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }}>Spec</th>
-                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }}>Equipment</th>
-                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }}>Product</th>
-                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }}>Tier</th>
-                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }}>Price</th>
-                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }}>URL</th>
-                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }}>Pri</th>
-                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }}>Status</th>
-                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }}>Actions</th>
+                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }} scope="col">Type</th>
+                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }} scope="col">Spec</th>
+                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }} scope="col">Equipment</th>
+                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }} scope="col">Product</th>
+                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }} scope="col">Tier</th>
+                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }} scope="col">Price</th>
+                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }} scope="col">URL</th>
+                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }} scope="col">Pri</th>
+                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }} scope="col">Status</th>
+                  <th style={{ padding: '10px 12px', color: Colors.medGray, fontWeight: 600 }} scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>

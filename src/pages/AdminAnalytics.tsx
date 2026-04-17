@@ -895,16 +895,16 @@ export default function AdminAnalytics() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: Colors.medGray }}>
-                    <th style={{ padding: '8px 6px', fontWeight: 600 }}>Title</th>
-                    <th style={{ padding: '8px 6px', fontWeight: 600 }}>Category</th>
-                    <th style={{ padding: '8px 6px', fontWeight: 600 }}>Level</th>
-                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }}>Generated</th>
-                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }}>Completed</th>
-                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }}>Skipped</th>
-                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }}>Overdue</th>
-                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }}>Rate</th>
-                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }}>Avg Δ Days</th>
-                    <th style={{ padding: '8px 6px', fontWeight: 600 }}>Last Done</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600 }} scope="col">Title</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600 }} scope="col">Category</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600 }} scope="col">Level</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }} scope="col">Generated</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }} scope="col">Completed</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }} scope="col">Skipped</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }} scope="col">Overdue</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }} scope="col">Rate</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'right' }} scope="col">Avg Δ Days</th>
+                    <th style={{ padding: '8px 6px', fontWeight: 600 }} scope="col">Last Done</th>
                   </tr>
                 </thead>
                 <tbody>

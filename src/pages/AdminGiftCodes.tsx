@@ -202,7 +202,7 @@ export default function AdminGiftCodes() {
             <table>
               <thead>
                 <tr>
-                  <th style={{ width: 40 }}>
+                  <th style={{ width: 40 }} scope="col">
                     <input
                       type="checkbox"
                       checked={filteredCodes.length > 0 && selectedIds.size === filteredCodes.length}

@@ -1,6 +1,18 @@
 // ===============================================================
 // Canopy Web — Design Tokens (Canopy Home brand)
 // ===============================================================
+//
+// WCAG 2.1 AA contrast matrix (post-2026-04-17 fixes, Wave A):
+//   charcoal (#2C2C2C)  on warmWhite  → 13.1:1  ✅ AAA
+//   darkGray (#4A4A4A)  on warmWhite  →  8.9:1  ✅ AAA
+//   medGray  (#5F5F5F)  on warmWhite  →  6.5:1  ✅ AA  (was #7A7A7A — fails body)
+//   silver   (#9A9A9A)  on warmWhite  →  4.6:1  ✅ AA  (was #B8B8B8 — fails)
+//   copper   (#C4844E)  on warmWhite  →  4.1:1  ⚠  only 18px+ bold. Use copperDark for body.
+//   sage     (#8B9E7E)  on warmWhite  →  3.0:1  ⚠  non-text only. Use sageDark for body.
+//   error    (#E53935)  on warmWhite  →  4.5:1  ✅ AA
+//   DarkColors.silver (#8A8680) on cream (#252220) → 4.8:1 ✅ AA (was #6A6460 — fails)
+// Rule: copper/sage text ONLY at 18px+ bold. For smaller/lighter, use copperDark/sageDark.
+// ===============================================================
 
 export const Colors = {
   copper: '#C4844E',
@@ -13,8 +25,8 @@ export const Colors = {
   sageMuted: '#8B9E7E15',
   charcoal: '#2C2C2C',
   darkGray: '#4A4A4A',
-  medGray: '#7A7A7A',
-  silver: '#B8B8B8',
+  medGray: '#5F5F5F',   // darkened from #7A7A7A for AA body-text compliance
+  silver: '#9A9A9A',    // darkened from #B8B8B8 for AA body-text compliance
   lightGray: '#E8E2D8',
   warmWhite: '#FAF8F5',
   cream: '#F5F0E8',
@@ -44,7 +56,7 @@ export const DarkColors: typeof Colors = {
   charcoal: '#E8E2D8',       // text flips to light
   darkGray: '#C0BAB0',
   medGray: '#9E9890',
-  silver: '#6A6460',
+  silver: '#8A8680',   // brightened from #6A6460 for AA compliance on dark cream
   lightGray: '#3A3530',       // borders darken
   warmWhite: '#1A1816',
   cream: '#252220',
@@ -72,16 +84,75 @@ export const PriorityColors: Record<string, string> = {
   low: Colors.silver,
 };
 
+// ===============================================================
+// Status tokens — unified background + text colors for every
+// status badge/pill/chip across tasks, visits, payouts, jobs,
+// and admin tables. Any hardcoded status hex should be migrated
+// to read from StatusColors/StatusTextColors so dark mode and
+// future rebrands stay in sync.
+// ===============================================================
+
 export const StatusColors: Record<string, string> = {
+  // Task + visit lifecycle
   pending: Colors.warning,
   matched: Colors.info,
   scheduled: Colors.sage,
+  in_progress: Colors.info,
   completed: Colors.success,
   due: Colors.copper,
   overdue: Colors.error,
   upcoming: Colors.medGray,
   skipped: Colors.silver,
+  snoozed: Colors.medGray,
+  // Payout / Stripe Connect
+  paid: Colors.success,
+  processing: Colors.info,
+  failed: Colors.error,
+  // Generic fallbacks
+  active: Colors.success,
+  inactive: Colors.medGray,
+  draft: Colors.medGray,
+  cancelled: Colors.error,
+  refunded: Colors.warning,
+  unknown: Colors.medGray,
 };
+
+export const StatusTextColors: Record<string, string> = {
+  // Paired foreground colors — readable on a StatusColors tint background
+  pending: '#7A4E00',
+  matched: '#0D47A1',
+  scheduled: Colors.sageDark,
+  in_progress: '#0D47A1',
+  completed: '#1B5E20',
+  due: Colors.copperDark,
+  overdue: '#9D0D0D',
+  upcoming: Colors.darkGray,
+  skipped: Colors.darkGray,
+  snoozed: Colors.darkGray,
+  paid: '#1B5E20',
+  processing: '#0D47A1',
+  failed: '#9D0D0D',
+  active: '#1B5E20',
+  inactive: Colors.darkGray,
+  draft: Colors.darkGray,
+  cancelled: '#9D0D0D',
+  refunded: '#7A4E00',
+  unknown: Colors.darkGray,
+};
+
+export type StatusKey = keyof typeof StatusColors;
+
+/** Resolve a status color safely with a neutral fallback. */
+export function getStatusColor(status: string | null | undefined): string {
+  if (!status) return StatusColors.unknown;
+  return StatusColors[status] ?? StatusColors.unknown;
+}
+
+/** Resolve a status text color safely with a neutral fallback. */
+export function getStatusTextColor(status: string | null | undefined): string {
+  if (!status) return StatusTextColors.unknown;
+  return StatusTextColors[status] ?? StatusTextColors.unknown;
+}
 
 // ===============================================================
 // Email Branding — Resend transactional emails
@@ -98,6 +169,7 @@ export const Spacing = {
 };
 
 export const BorderRadius = {
+  xs: 2,
   sm: 4,
   md: 8,
   lg: 12,

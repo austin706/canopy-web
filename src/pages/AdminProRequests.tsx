@@ -247,7 +247,7 @@ export default function AdminProRequests() {
           <table>
             <thead>
               <tr>
-                <th style={{ width: 24 }}></th>
+                <th style={{ width: 24 }} scope="col"></th>
                 <th>Category</th>
                 <th>ZIP</th>
                 <th>Homeowner</th>

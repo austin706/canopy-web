@@ -95,44 +95,45 @@ export default function SignupSuccess() {
           </p>
         </div>
 
-        <div style={{ padding: 0 }}>
-          {/* Column headers */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 120px 120px',
-            background: Colors.cream, padding: '12px 16px',
-            fontWeight: 600, fontSize: 13, color: Colors.medGray,
-            textTransform: 'uppercase' as const, letterSpacing: '0.5px',
-          }}>
-            <span>Feature</span>
-            <span style={{ textAlign: 'center' }}>Free</span>
-            <span style={{ textAlign: 'center', color: Colors.copper }}>Home</span>
-          </div>
-
-          {/* Feature rows */}
-          {features.map((f) => (
-            <div
-              key={f.label}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 120px 120px',
-                background: f.highlight ? `${Colors.copper}08` : 'transparent',
-              }}
-            >
-              <span style={{ ...cell, fontWeight: f.highlight ? 600 : 400, color: Colors.charcoal }}>
-                {f.label}
-              </span>
-              <span style={{ ...cell, textAlign: 'center', color: Colors.medGray }}>
-                {f.free}
-              </span>
-              <span style={{
-                ...cell, textAlign: 'center', fontWeight: 600,
-                color: f.home === '—' ? Colors.medGray : Colors.sage,
-              }}>
-                {f.home}
-              </span>
-            </div>
-          ))}
-        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', padding: 0 }}>
+          <thead>
+            <tr style={{
+              background: Colors.cream,
+              fontWeight: 600,
+              fontSize: 13,
+              color: Colors.medGray,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}>
+              <th scope="col" style={{ ...cell, textAlign: 'left' }}>Feature</th>
+              <th scope="col" style={{ ...cell, textAlign: 'center' }}>Free</th>
+              <th scope="col" style={{ ...cell, textAlign: 'center', color: Colors.copper }}>Home</th>
+            </tr>
+          </thead>
+          <tbody>
+            {features.map((f) => (
+              <tr
+                key={f.label}
+                style={{
+                  background: f.highlight ? `${Colors.copper}08` : 'transparent',
+                }}
+              >
+                <th scope="row" style={{ ...cell, fontWeight: f.highlight ? 600 : 400, color: Colors.charcoal, textAlign: 'left' }}>
+                  {f.label}
+                </th>
+                <td style={{ ...cell, textAlign: 'center', color: Colors.medGray }}>
+                  {f.free}
+                </td>
+                <td style={{
+                  ...cell, textAlign: 'center', fontWeight: 600,
+                  color: f.home === '—' ? Colors.medGray : Colors.sage,
+                }}>
+                  {f.home}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
         {/* CTA section */}
         <div style={{

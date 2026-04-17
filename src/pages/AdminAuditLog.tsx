@@ -245,13 +245,13 @@ export default function AdminAuditLog() {
             <table>
               <thead>
                 <tr>
-                  <th style={{ width: '140px' }}>Timestamp</th>
-                  <th style={{ width: '140px' }}>Admin</th>
-                  <th style={{ width: '140px' }}>Action</th>
-                  <th style={{ width: '100px' }}>Entity Type</th>
-                  <th style={{ width: '120px' }}>Entity ID</th>
-                  <th style={{ flex: 1 }}>Details</th>
-                  <th style={{ width: '40px' }}></th>
+                  <th style={{ width: '140px' }} scope="col">Timestamp</th>
+                  <th style={{ width: '140px' }} scope="col">Admin</th>
+                  <th style={{ width: '140px' }} scope="col">Action</th>
+                  <th style={{ width: '100px' }} scope="col">Entity Type</th>
+                  <th style={{ width: '120px' }} scope="col">Entity ID</th>
+                  <th style={{ flex: 1 }} scope="col">Details</th>
+                  <th style={{ width: '40px' }} scope="col"></th>
                 </tr>
               </thead>
               <tbody>

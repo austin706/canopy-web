@@ -821,7 +821,7 @@ export default function AdminServiceAreas() {
                       <th>Price</th>
                       <th>Time</th>
                       <th>Active</th>
-                      <th style={{ width: 80 }}>Actions</th>
+                      <th style={{ width: 80 }} scope="col">Actions</th>
                     </tr>
                   </thead>
                   <tbody>

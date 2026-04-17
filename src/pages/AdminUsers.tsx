@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getAllUsers, updateProfile, deleteUserAccount, getUserDetailData, supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { logAdminAction } from '@/services/auditLog';
@@ -80,9 +80,44 @@ export default function AdminUsers() {
   const [detailLoading, setDetailLoading] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [billingModal, setBillingModal] = useState<BillingModalState | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const PAGE_SIZE = 50;
 
   useEffect(() => { getAllUsers().then(setUsers).catch(() => {}).finally(() => setLoading(false)); }, []);
+
+  // Modal focus trap and Esc handler
+  useEffect(() => {
+    if (!billingModal) return;
+    previousFocusRef.current = document.activeElement as HTMLElement;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setBillingModal(null);
+      }
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll(
+          'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        ) as NodeListOf<HTMLElement>;
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    const firstButton = modalRef.current?.querySelector('button');
+    firstButton?.focus();
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, [billingModal]);
 
   const syncCurrentUser = (userId: string, updates: Record<string, any>) => {
     if (currentUser && currentUser.id === userId) {
@@ -371,7 +406,7 @@ export default function AdminUsers() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                <th style={{ width: 40, padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>
+                <th style={{ width: 40, padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }} scope="col">
                   <input
                     type="checkbox"
                     checked={selectedIds.size === paginated.length && paginated.length > 0}
@@ -379,13 +414,13 @@ export default function AdminUsers() {
                     style={{ cursor: 'pointer' }}
                   />
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Name</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Email</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Tier</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Role</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Override</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Joined</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: 13 }}>Action</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }} scope="col">Name</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }} scope="col">Email</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }} scope="col">Tier</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }} scope="col">Role</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }} scope="col">Override</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: 13 }} scope="col">Joined</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: 13 }} scope="col">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -683,6 +718,7 @@ export default function AdminUsers() {
           }}
         >
           <div
+            ref={modalRef}
             onClick={e => e.stopPropagation()}
             style={{
               background: 'var(--color-surface, white)',

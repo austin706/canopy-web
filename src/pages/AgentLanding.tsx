@@ -45,7 +45,20 @@ export default function AgentLanding() {
             style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
             onClick={() => navigate('/')}
           >
-            <img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+            <picture>
+              <source srcSet="/canopy-watercolor-logo.avif" type="image/avif" />
+              <source srcSet="/canopy-watercolor-logo.webp" type="image/webp" />
+              <img
+                src="/canopy-watercolor-logo.png"
+                alt="Canopy"
+                width={44}
+                height={32}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+                style={{ objectFit: 'contain' }}
+              />
+            </picture>
             <span style={{ fontSize: 20, fontWeight: FontWeight.bold, color: Colors.charcoal }}>Canopy</span>
             <span style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.copper, marginLeft: 4 }}>for Agents</span>
           </div>

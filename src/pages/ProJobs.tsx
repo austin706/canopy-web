@@ -4,6 +4,8 @@ import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import { showToast } from '@/components/Toast';
+import ConfirmModal from '@/components/ConfirmModal';
+import DatePickerModal from '@/components/DatePickerModal';
 
 interface Job {
   id: string;
@@ -22,6 +24,12 @@ interface Job {
 
 type FilterTab = 'all' | 'pending' | 'scheduled' | 'completed';
 
+interface ModalState {
+  type: 'accept' | 'schedule' | 'complete' | null;
+  jobId: string | null;
+  isLoading: boolean;
+}
+
 export default function ProJobs() {
   const navigate = useNavigate();
   const { user } = useStore();
@@ -30,6 +38,7 @@ export default function ProJobs() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [providerId, setProviderId] = useState<string | null>(null);
+  const [modal, setModal] = useState<ModalState>({ type: null, jobId: null, isLoading: false });
 
   useEffect(() => {
     loadProviderAndJobs();
@@ -138,7 +147,13 @@ export default function ProJobs() {
       console.error('Error checking capacity:', err);
     }
 
-    if (!window.confirm('Accept this service request?')) return;
+    // Show modal confirmation instead of window.confirm
+    setModal({ type: 'accept', jobId, isLoading: false });
+  };
+
+  const confirmAcceptJob = async (jobId: string) => {
+    if (!providerId) return;
+    setModal(prev => ({ ...prev, isLoading: true }));
 
     try {
       const { error } = await supabase
@@ -149,32 +164,32 @@ export default function ProJobs() {
       if (!error) {
         setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, provider_id: providerId, status: 'matched' } : j)));
         showToast({ message: 'You have been matched with this job.' });
+        setModal({ type: null, jobId: null, isLoading: false });
       }
     } catch (err) {
       showToast({ message: 'Failed to accept job' });
+      setModal(prev => ({ ...prev, isLoading: false }));
     }
   };
 
   const handleScheduleJob = async (jobId: string) => {
-    const dateStr = window.prompt('Enter scheduled date (YYYY-MM-DD):');
-    if (!dateStr) return;
+    // Show modal for date picking instead of window.prompt
+    setModal({ type: 'schedule', jobId, isLoading: false });
+  };
 
-    // Validate date format
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(dateStr)) {
-      showToast({ message: 'Please enter date in YYYY-MM-DD format' });
-      return;
-    }
+  const confirmScheduleJob = async (dateStr: string) => {
+    if (!modal.jobId || !providerId) return;
+    setModal(prev => ({ ...prev, isLoading: true }));
 
     try {
-      const job = jobs.find(j => j.id === jobId);
-      if (!job) return;
+      const job = jobs.find(j => j.id === modal.jobId);
+      if (!job) throw new Error('Job not found');
 
       // Update request status to scheduled
       const { error: reqError } = await supabase
         .from('pro_requests')
         .update({ status: 'scheduled', scheduled_date: dateStr })
-        .eq('id', jobId);
+        .eq('id', modal.jobId);
 
       if (reqError) throw reqError;
 
@@ -189,21 +204,28 @@ export default function ProJobs() {
           status: 'scheduled',
           service_purpose: job.description,
           pro_provider_id: providerId,
-          request_id: jobId,
+          request_id: modal.jobId,
           notes: `Matched from service request`,
         });
 
       if (apptError) console.warn('Failed to create linked appointment:', apptError);
 
-      setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, status: 'scheduled', scheduled_date: dateStr } : j)));
+      setJobs(prev => prev.map(j => (j.id === modal.jobId ? { ...j, status: 'scheduled', scheduled_date: dateStr } : j)));
       showToast({ message: 'Job scheduled successfully.' });
+      setModal({ type: null, jobId: null, isLoading: false });
     } catch (err) {
       showToast({ message: 'Failed to schedule job' });
+      setModal(prev => ({ ...prev, isLoading: false }));
     }
   };
 
   const handleCompleteJob = async (jobId: string) => {
-    if (!window.confirm('Mark this job as completed?')) return;
+    // Show modal confirmation instead of window.confirm
+    setModal({ type: 'complete', jobId, isLoading: false });
+  };
+
+  const confirmCompleteJob = async (jobId: string) => {
+    setModal(prev => ({ ...prev, isLoading: true }));
 
     try {
       const { error } = await supabase.from('pro_requests').update({ status: 'completed' }).eq('id', jobId);
@@ -217,9 +239,11 @@ export default function ProJobs() {
 
         setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, status: 'completed' } : j)));
         showToast({ message: 'Job marked as completed.' });
+        setModal({ type: null, jobId: null, isLoading: false });
       }
     } catch (err) {
       showToast({ message: 'Failed to complete job' });
+      setModal(prev => ({ ...prev, isLoading: false }));
     }
   };
 
@@ -282,8 +306,44 @@ export default function ProJobs() {
   }
 
   return (
-    <div className="page" style={{ maxWidth: 900 }}>
-      <div className="page-header">
+    <>
+      {/* Accept Confirm Modal */}
+      {modal.type === 'accept' && (
+        <ConfirmModal
+          title="Accept Service Request?"
+          message="You'll be matched with this service request and can schedule a visit."
+          confirmLabel="Accept"
+          onConfirm={() => confirmAcceptJob(modal.jobId!)}
+          onCancel={() => setModal({ type: null, jobId: null, isLoading: false })}
+          isLoading={modal.isLoading}
+        />
+      )}
+
+      {/* Schedule Date Picker Modal */}
+      {modal.type === 'schedule' && (
+        <DatePickerModal
+          title="Schedule Service Visit"
+          message="Select the date for this service visit."
+          onConfirm={confirmScheduleJob}
+          onCancel={() => setModal({ type: null, jobId: null, isLoading: false })}
+          isLoading={modal.isLoading}
+        />
+      )}
+
+      {/* Complete Confirm Modal */}
+      {modal.type === 'complete' && (
+        <ConfirmModal
+          title="Mark Job Complete?"
+          message="The homeowner will be notified that this service request is complete."
+          confirmLabel="Complete"
+          onConfirm={() => confirmCompleteJob(modal.jobId!)}
+          onCancel={() => setModal({ type: null, jobId: null, isLoading: false })}
+          isLoading={modal.isLoading}
+        />
+      )}
+
+      <div className="page" style={{ maxWidth: 900 }}>
+        <div className="page-header">
         <div>
           <button className="btn btn-ghost btn-sm mb-sm" onClick={() => navigate('/pro-portal')}>
             ← Back
@@ -401,6 +461,7 @@ export default function ProJobs() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

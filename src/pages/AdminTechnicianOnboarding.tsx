@@ -634,7 +634,7 @@ export default function AdminTechnicianOnboarding() {
                 </span>
                 <h2 style={{ margin: 0, fontSize: 20, color: Colors.charcoal }}>{selectedMaterial.title}</h2>
               </div>
-              <button onClick={() => setSelectedMaterial(null)} style={{
+              <button onClick={() => setSelectedMaterial(null)} aria-label="Close modal" style={{
                 background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: Colors.medGray, padding: 4,
               }}>✕</button>
             </div>
@@ -702,7 +702,7 @@ export default function AdminTechnicianOnboarding() {
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 20, color: Colors.charcoal }}>Step {selectedStep.sort_order}: {selectedStep.title}</h2>
-              <button onClick={() => setSelectedStep(null)} style={{
+              <button onClick={() => setSelectedStep(null)} aria-label="Close modal" style={{
                 background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: Colors.medGray, padding: 4,
               }}>✕</button>
             </div>

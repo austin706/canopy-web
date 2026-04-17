@@ -218,9 +218,9 @@ function StringListEditor({
             onChange={e => updateAt(idx, e.target.value)}
             placeholder={placeholder}
           />
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => moveUp(idx)} disabled={idx === 0} style={{ fontSize: 11, padding: '2px 6px' }}>▲</button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => moveDown(idx)} disabled={idx === value.length - 1} style={{ fontSize: 11, padding: '2px 6px' }}>▼</button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeAt(idx)} style={{ fontSize: 11, padding: '2px 6px', color: '#A04040' }}>✕</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => moveUp(idx)} disabled={idx === 0} aria-label="Move up" style={{ fontSize: 11, padding: '2px 6px' }}>▲</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => moveDown(idx)} disabled={idx === value.length - 1} aria-label="Move down" style={{ fontSize: 11, padding: '2px 6px' }}>▼</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeAt(idx)} aria-label="Remove item" style={{ fontSize: 11, padding: '2px 6px', color: '#A04040' }}>✕</button>
         </div>
       ))}
     </div>
@@ -479,12 +479,12 @@ export default function AdminReferenceData() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Key</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Label</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Value</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: 12, fontWeight: 600 }}>Order</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: 12, fontWeight: 600 }}>Active</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: 12, fontWeight: 600 }}>Actions</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }} scope="col">Key</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }} scope="col">Label</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }} scope="col">Value</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: 12, fontWeight: 600 }} scope="col">Order</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: 12, fontWeight: 600 }} scope="col">Active</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: 12, fontWeight: 600 }} scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -699,14 +699,14 @@ export default function AdminReferenceData() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Title</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Category</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Level</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Service Type</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Priority</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }}>Frequency</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: 12, fontWeight: 600 }}>Active</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: 12, fontWeight: 600 }}>Actions</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }} scope="col">Title</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }} scope="col">Category</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }} scope="col">Level</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }} scope="col">Service Type</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }} scope="col">Priority</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600 }} scope="col">Frequency</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: 12, fontWeight: 600 }} scope="col">Active</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: 12, fontWeight: 600 }} scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>

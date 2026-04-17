@@ -127,6 +127,7 @@ export default function Subscription() {
   const [enrollmentResult, setEnrollmentResult] = useState<{ provider: { business_name: string } | null; visitCreated: boolean } | null>(null);
   const [requestingProPlus, setRequestingProPlus] = useState(false);
   const [proPlusMessage, setProPlusMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState<{ text: string; plan: string } | null>(null);
   const [notifyMeSubmitted, setNotifyMeSubmitted] = useState<Record<string, boolean>>({});
   const [notifyMeLoading, setNotifyMeLoading] = useState<string | null>(null);
 
@@ -205,7 +206,9 @@ export default function Subscription() {
       window.history.replaceState({}, '', '/subscription');
       // GA4: conversion — paid plan activated via Stripe redirect
       trackEvent('upgrade_complete', { plan, source: 'stripe_redirect', surface: 'subscription' });
-      setMessage(`Successfully upgraded to ${PLANS.find(p => p.value === plan)?.name || plan}! Your subscription is now active.`);
+      const planName = PLANS.find(p => p.value === plan)?.name || plan;
+      const successText = `Welcome to ${planName}! Your subscription is now active.`;
+      setSuccessMessage({ text: successText, plan: plan || '' });
       // Refresh user profile to pick up new tier
       if (user?.id) {
         supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }) => {
@@ -409,6 +412,44 @@ export default function Subscription() {
       </div>
 
       {message && <MessageBanner message={message} />}
+
+      {/* Persistent Success Card (Stripe redirect) */}
+      {successMessage && (
+        <div
+          className="card mb-lg"
+          style={{
+            background: 'var(--color-sage)',
+            color: 'var(--color-white)',
+            padding: '20px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div>
+            <p style={{ fontWeight: 700, fontSize: 16, margin: '0 0 4px' }}>✅ {successMessage.text}</p>
+            <p style={{ fontSize: 13, margin: 0, opacity: 0.95 }}>
+              Your payment has been processed and your subscription is now active.
+            </p>
+          </div>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--color-white)',
+              fontSize: 20,
+              cursor: 'pointer',
+              padding: 0,
+              marginLeft: 16,
+              flexShrink: 0,
+            }}
+            aria-label="Dismiss success message"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Free Tier Limits Summary Banner */}
       {tier === 'free' && (

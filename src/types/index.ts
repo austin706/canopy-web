@@ -111,6 +111,8 @@ export interface User {
   subscription_expires_at?: string;
   /** Stripe-reported status: 'active' | 'past_due' | 'canceled' | 'incomplete' | etc. */
   subscription_status?: string;
+  /** Where the current subscription is billed from. Null = no subscription or legacy row. */
+  subscription_source?: 'stripe' | 'revenuecat' | 'gift' | null;
   onboarding_complete: boolean;
   email_confirmed?: boolean;
   /** Persisted state for the Set Up Your Home dashboard checklist. */

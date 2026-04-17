@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, ReactNode } from 'react';
 
 interface Props {
   imageFile: File;
@@ -16,6 +16,8 @@ interface Props {
  */
 export default function PhotoCropModal({ imageFile, onCrop, onCancel, shape = 'circle', outputSize = 500 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const [imageSrc, setImageSrc] = useState<string>('');
   const [imageSize, setImageSize] = useState({ w: 0, h: 0 });
   const [zoom, setZoom] = useState(1);
@@ -23,6 +25,38 @@ export default function PhotoCropModal({ imageFile, onCrop, onCancel, shape = 'c
   const [dragging, setDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
   const [processing, setProcessing] = useState(false);
+
+  // Focus trap and Esc handler for modal
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll(
+          'button, input, [tabindex]:not([tabindex="-1"])'
+        ) as NodeListOf<HTMLElement>;
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    const firstButton = modalRef.current?.querySelector('button');
+    firstButton?.focus();
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, [onCancel]);
 
   // Load image from file
   useEffect(() => {
@@ -152,10 +186,13 @@ export default function PhotoCropModal({ imageFile, onCrop, onCancel, shape = 'c
       }}
       onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
     >
-      <div style={{
-        background: 'var(--color-card-background, #fff)', borderRadius: 16,
-        padding: 24, maxWidth: 400, width: '100%',
-      }}>
+      <div
+        ref={modalRef}
+        style={{
+          background: 'var(--color-card-background, #fff)', borderRadius: 16,
+          padding: 24, maxWidth: 400, width: '100%',
+        }}
+      >
         <h3 style={{ fontSize: 18, marginBottom: 8 }}>Position Your Photo</h3>
         <p className="text-sm text-gray" style={{ marginBottom: 16 }}>
           Drag to reposition. Scroll to zoom.

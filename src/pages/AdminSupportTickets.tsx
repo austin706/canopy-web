@@ -220,19 +220,19 @@ export default function AdminSupportTickets() {
           <table style={{ width: '100%' }}>
             <thead>
               <tr style={{ borderBottom: `1px solid var(--border-color)` }}>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }} scope="col">
                   Name
                 </th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }} scope="col">
                   Subject
                 </th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }} scope="col">
                   Category
                 </th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }} scope="col">
                   Status
                 </th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: Colors.medGray, textTransform: 'uppercase', letterSpacing: 0.5 }} scope="col">
                   Date
                 </th>
               </tr>

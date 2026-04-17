@@ -224,11 +224,11 @@ export default function AdminUserView() {
           <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${Colors.lightGray}` }}>
-                <th style={thStyle}>Title</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Priority</th>
-                <th style={thStyle}>Due</th>
-                <th style={thStyle}>Completed</th>
+                <th style={thStyle} scope="col">Title</th>
+                <th style={thStyle} scope="col">Status</th>
+                <th style={thStyle} scope="col">Priority</th>
+                <th style={thStyle} scope="col">Due</th>
+                <th style={thStyle} scope="col">Completed</th>
               </tr>
             </thead>
             <tbody>

@@ -56,6 +56,8 @@ export default function Documents() {
   const [isPinUnlocked, setIsPinUnlocked] = useState(true); // Default unlocked; lock screen shows only when PIN exists
   const [showPinSetup, setShowPinSetup] = useState(false);
   const [pinError, setPinError] = useState('');
+  const [pinMode, setPinMode] = useState<'setup' | 'change' | 'unlock' | null>(null); // Track PIN operation mode
+  const [oldPinInput, setOldPinInput] = useState(''); // For Change PIN: store old PIN entry
 
   // PIN hashing is now handled server-side via pgcrypto bcrypt RPCs
 
@@ -98,6 +100,21 @@ export default function Documents() {
 
   const handleSetPin = async () => {
     setPinError('');
+    // For Change mode: verify old PIN first
+    if (pinMode === 'change') {
+      if (oldPinInput.length === 0) {
+        setPinError('Please enter your current PIN to change it.');
+        return;
+      }
+      if (!user?.id) return;
+      const oldValid = await verifyVaultPin(user.id, oldPinInput);
+      if (!oldValid) {
+        setPinError('The PIN you entered does not match your current PIN.');
+        setOldPinInput('');
+        return;
+      }
+    }
+
     if (pinInput.length < 4) {
       setPinError('PIN must be at least 4 digits.');
       return;
@@ -110,6 +127,8 @@ export default function Documents() {
       setIsPinUnlocked(true);
       setShowPinSetup(false);
       setPinInput('');
+      setOldPinInput('');
+      setPinMode(null);
     } catch (err) {
       console.warn('Failed to save PIN:', err);
       setPinError('Failed to save PIN. Please try again.');
@@ -122,6 +141,7 @@ export default function Documents() {
     const valid = await verifyVaultPin(user.id, pinInput);
     if (valid) {
       setIsPinUnlocked(true);
+      setPinMode(null);
       setPinInput('');
     } else {
       setPinError('Incorrect PIN. Try again.');
@@ -288,30 +308,31 @@ export default function Documents() {
           <InspectionUploader />
         </div>
 
-        {/* Secure Notes PIN Protection */}
-        {hasSecureNotesAccess && hasPinSet && !isPinUnlocked && (
+        {/* PIN Protection — Distinct modals per operation */}
+        {pinMode === 'unlock' && hasSecureNotesAccess && hasPinSet && !isPinUnlocked && (
           <div className="card" style={{
-            background: 'var(--color-copper-muted, #FFF3E0)',
-            border: `2px solid var(--color-copper)`,
+            borderLeft: `4px solid var(--color-copper)`,
             marginBottom: 24,
-            padding: 32,
-            textAlign: 'center'
+            padding: 24
           }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--color-copper-muted, #FFF3E0)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 16, color: 'var(--color-copper)' }}>PIN</div>
-            <h3 style={{ color: Colors.charcoal, marginBottom: 8 }}>Vault Locked</h3>
-            <p className="text-sm text-gray" style={{ marginBottom: 16, lineHeight: 1.6 }}>
-              Enter your PIN to access secure notes and sensitive information.
-            </p>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+              <div style={{ fontSize: 24 }}>🔓</div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ color: Colors.charcoal, marginBottom: 4, fontSize: 16, fontWeight: 600 }}>Unlock Vault</h3>
+                <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>Enter your PIN to access documents</p>
+              </div>
+            </div>
             <input
               type="password"
               inputMode="numeric"
-              placeholder="Enter PIN"
+              placeholder="PIN"
               value={pinInput}
               onChange={(e) => {
                 setPinInput(e.target.value.replace(/\D/g, ''));
                 setPinError('');
               }}
               maxLength={8}
+              autoFocus
               style={{
                 width: '100%',
                 padding: '12px',
@@ -327,12 +348,45 @@ export default function Documents() {
             {pinError && (
               <p style={{ color: 'var(--color-warning)', fontSize: 12, marginBottom: 16 }}>{pinError}</p>
             )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn btn-ghost"
+                onClick={() => { setPinMode(null); setPinInput(''); }}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleUnlockPin}
+                style={{ flex: 1 }}
+              >
+                Unlock
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Locked state card */}
+        {hasSecureNotesAccess && hasPinSet && !isPinUnlocked && pinMode !== 'unlock' && (
+          <div className="card" style={{
+            background: 'var(--color-copper-muted, #FFF3E0)',
+            border: `2px solid var(--color-copper)`,
+            marginBottom: 24,
+            padding: 32,
+            textAlign: 'center'
+          }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--color-copper-muted, #FFF3E0)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontWeight: 700, fontSize: 16, color: 'var(--color-copper)' }}>🔒</div>
+            <h3 style={{ color: Colors.charcoal, marginBottom: 8 }}>Vault Locked</h3>
+            <p className="text-sm text-gray" style={{ marginBottom: 16, lineHeight: 1.6 }}>
+              Documents are locked until you unlock with your PIN.
+            </p>
             <button
               className="btn btn-primary"
-              onClick={handleUnlockPin}
+              onClick={() => { setPinMode('unlock'); setPinInput(''); }}
               style={{ width: '100%' }}
             >
-              Unlock
+              🔓 Unlock Vault
             </button>
           </div>
         )}
@@ -342,12 +396,13 @@ export default function Documents() {
           <button
             onClick={() => {
               if (hasPinSet) {
-                if (confirm('Change your vault PIN?')) {
-                  setPinInput('');
-                  setShowPinSetup(true);
-                }
+                setPinMode('change');
+                setPinInput('');
+                setOldPinInput('');
+                setPinError('');
               } else {
-                setShowPinSetup(true);
+                setPinMode('setup');
+                setPinInput('');
               }
             }}
             style={{
@@ -368,12 +423,16 @@ export default function Documents() {
           </button>
         )}
 
-        {/* PIN Setup Form */}
-        {hasSecureNotesAccess && showPinSetup && isPinUnlocked && (
-          <div className="card" style={{ marginBottom: 24 }}>
-            <h3 style={{ color: Colors.charcoal, marginBottom: 12, fontSize: 16, fontWeight: 600 }}>
-              {hasPinSet ? 'Change' : 'Set'} Vault PIN
-            </h3>
+        {/* Set PIN Modal */}
+        {pinMode === 'setup' && hasSecureNotesAccess && (
+          <div className="card" style={{ marginBottom: 24, borderLeft: `4px solid var(--color-sage)` }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+              <div style={{ fontSize: 24 }}>🔒</div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ color: Colors.charcoal, marginBottom: 4, fontSize: 16, fontWeight: 600 }}>Set Up Security</h3>
+                <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>Create a 4+ digit PIN for your vault</p>
+              </div>
+            </div>
             <input
               type="password"
               inputMode="numeric"
@@ -384,6 +443,7 @@ export default function Documents() {
                 setPinError('');
               }}
               maxLength={8}
+              autoFocus
               style={{
                 width: '100%',
                 padding: '12px',
@@ -402,11 +462,7 @@ export default function Documents() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 className="btn btn-ghost"
-                onClick={() => {
-                  setShowPinSetup(false);
-                  setPinInput('');
-                  setPinError('');
-                }}
+                onClick={() => { setPinMode(null); setPinInput(''); setPinError(''); }}
                 style={{ flex: 1 }}
               >
                 Cancel
@@ -416,7 +472,86 @@ export default function Documents() {
                 onClick={handleSetPin}
                 style={{ flex: 1 }}
               >
-                Save PIN
+                Set PIN
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Change PIN Modal */}
+        {pinMode === 'change' && hasSecureNotesAccess && (
+          <div className="card" style={{ marginBottom: 24, borderLeft: `4px solid var(--color-info)` }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+              <div style={{ fontSize: 24 }}>🔄</div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ color: Colors.charcoal, marginBottom: 4, fontSize: 16, fontWeight: 600 }}>Change PIN</h3>
+                <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>Enter your current PIN, then your new PIN</p>
+              </div>
+            </div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: Colors.charcoal, marginBottom: 8 }}>Current PIN</label>
+            <input
+              type="password"
+              inputMode="numeric"
+              placeholder="Enter current PIN"
+              value={oldPinInput}
+              onChange={(e) => {
+                setOldPinInput(e.target.value.replace(/\D/g, ''));
+                setPinError('');
+              }}
+              maxLength={8}
+              autoFocus
+              style={{
+                width: '100%',
+                padding: '12px',
+                marginBottom: 12,
+                fontSize: 14,
+                letterSpacing: 4,
+                textAlign: 'center',
+                border: `1px solid var(--color-border)`,
+                borderRadius: 4,
+                fontFamily: 'monospace'
+              }}
+            />
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: Colors.charcoal, marginBottom: 8 }}>New PIN</label>
+            <input
+              type="password"
+              inputMode="numeric"
+              placeholder="Enter new PIN"
+              value={pinInput}
+              onChange={(e) => {
+                setPinInput(e.target.value.replace(/\D/g, ''));
+                setPinError('');
+              }}
+              maxLength={8}
+              style={{
+                width: '100%',
+                padding: '12px',
+                marginBottom: 8,
+                fontSize: 14,
+                letterSpacing: 4,
+                textAlign: 'center',
+                border: `1px solid var(--color-border)`,
+                borderRadius: 4,
+                fontFamily: 'monospace'
+              }}
+            />
+            {pinError && (
+              <p style={{ color: 'var(--color-warning)', fontSize: 12, marginBottom: 16 }}>{pinError}</p>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn btn-ghost"
+                onClick={() => { setPinMode(null); setPinInput(''); setOldPinInput(''); setPinError(''); }}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSetPin}
+                style={{ flex: 1 }}
+              >
+                Change PIN
               </button>
             </div>
           </div>

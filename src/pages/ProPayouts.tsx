@@ -163,27 +163,51 @@ export default function ProPayouts() {
         <SummaryCard label="Total payouts" value={String(summary.count)} accent={Colors.charcoal} />
       </div>
 
-      {/* Stripe Connect warning */}
+      {/* Stripe Connect warning — elevated danger styling */}
       {!connectReady && (
         <div
+          role="alert"
           style={{
-            background: Colors.warning + '15',
-            border: `1px dashed ${Colors.warning}`,
-            borderRadius: 8,
-            padding: 12,
-            marginBottom: 20,
+            background: Colors.error + '15',
+            border: `2px solid ${Colors.error}`,
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 24,
             fontSize: 13,
           }}
         >
-          <strong>Stripe Connect onboarding incomplete.</strong> Finish your Stripe setup before
-          payouts can be processed.{' '}
-          <button
-            className="btn btn-sm btn-primary"
-            onClick={() => navigate('/pro-portal/onboarding')}
-            style={{ marginLeft: 8 }}
-          >
-            Finish setup
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            <div>
+              <strong style={{ color: Colors.error, display: 'block', marginBottom: 8 }}>
+                ⚠️ Stripe Connect setup incomplete
+              </strong>
+              <p style={{ margin: '0 0 12px', color: Colors.medGray, lineHeight: 1.5 }}>
+                Your payouts are blocked until you complete Stripe setup. Complete this now to receive earnings.
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-primary"
+              onClick={() => window.open('https://dashboard.stripe.com/', '_blank')}
+              style={{ fontWeight: 600 }}
+            >
+              Finish Stripe Setup
+            </button>
+            <a
+              href="/pro-portal/onboarding-success"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                fontSize: 13,
+                color: Colors.sage,
+                textDecoration: 'none',
+                fontWeight: 500,
+              }}
+            >
+              Check Status →
+            </a>
+          </div>
         </div>
       )}
 

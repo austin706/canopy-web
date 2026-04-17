@@ -127,7 +127,20 @@ export default function Landing() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+          <picture>
+            <source srcSet="/canopy-watercolor-logo.avif" type="image/avif" />
+            <source srcSet="/canopy-watercolor-logo.webp" type="image/webp" />
+            <img
+              src="/canopy-watercolor-logo.png"
+              alt="Canopy"
+              width={44}
+              height={32}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              style={{ objectFit: 'contain' }}
+            />
+          </picture>
           <span style={{ fontSize: 20, fontWeight: FontWeight.bold, color: Colors.charcoal }}>Canopy</span>
         </div>
 
@@ -644,7 +657,7 @@ export default function Landing() {
             </div>
 
             {/* Home — Most Popular */}
-            <div style={featuredCard}>
+            <div style={featuredCard} aria-label="Most popular plan">
               <div style={{
                 position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
                 background: Colors.copper, color: Colors.white,

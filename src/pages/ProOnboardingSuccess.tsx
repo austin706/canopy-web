@@ -62,6 +62,11 @@ export default function ProOnboardingSuccess() {
     };
   }, [user?.id]);
 
+  const getStripeConnectDashboardUrl = () => {
+    // Standard Stripe Connect dashboard URL for the account owner
+    return 'https://dashboard.stripe.com/';
+  };
+
   const containerStyle: React.CSSProperties = {
     maxWidth: 560,
     margin: '0 auto',
@@ -155,8 +160,34 @@ export default function ProOnboardingSuccess() {
           <div>Charges enabled: {status?.chargesEnabled ? '✅' : '❌'}</div>
           <div>Payouts enabled: {status?.payoutsEnabled ? '✅' : '❌'}</div>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate('/pro-portal/onboarding')}>
-          Finish Onboarding
+
+        <div style={{ marginBottom: 20 }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => window.open(getStripeConnectDashboardUrl(), '_blank')}
+            style={{ width: '100%', marginBottom: 10 }}
+          >
+            Complete Stripe Setup →
+          </button>
+          <a
+            href="mailto:support@canopyhome.app"
+            style={{
+              display: 'inline-block',
+              fontSize: 13,
+              color: Colors.sage,
+              textDecoration: 'none',
+              fontWeight: 500,
+            }}
+          >
+            Need help? Contact support
+          </a>
+        </div>
+
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={() => navigate('/pro-portal/onboarding')}
+        >
+          Back to Onboarding
         </button>
       </div>
     </div>

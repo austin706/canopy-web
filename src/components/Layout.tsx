@@ -217,10 +217,14 @@ export default function Layout() {
               <div className="user-tier">{PLANS.find(p => p.value === tier)?.name || 'Free'}</div>
             </div>
           </div>
+          {/* Settings + Sign Out row. Theme toggle was previously wedged
+              between the two text buttons (a floating emoji between links);
+              it now lives in /profile → Appearance. Sign Out is no longer
+              colored error-red — it's a neutral secondary action, confirmed
+              by the modal before it fires. */}
           <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
             <NavLink to="/profile" className="btn btn-ghost btn-sm" style={{ flex: 1, textDecoration: 'none', fontSize: 12 }}>Settings</NavLink>
-            <ThemeToggleIcon />
-            <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 12, color: 'var(--color-error)' }} onClick={handleLogout}>Sign Out</button>
+            <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: 12 }} onClick={handleLogout}>Sign Out</button>
           </div>
           <div style={{ display: 'flex', gap: 12, marginTop: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href="/terms" style={{ fontSize: 10, color: 'var(--color-text-secondary)', textDecoration: 'none' }}>Terms</a>

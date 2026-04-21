@@ -14,7 +14,6 @@ import type { Warranty } from '@/types';
 import { listStaleTemplateTasks, clearStaleTemplateTasks, type StaleTemplateTask } from '@/services/tasks';
 import { fetchWeather } from '@/services/weather';
 import { Skeleton } from '@/components/Skeleton';
-import { HealthGauge } from '@/components/HealthGauge';
 import { generateTasksForHome, getDisplayStatus } from '@/services/taskEngine';
 import { generateWeatherInsights } from '@/services/weatherInsights';
 import { WeatherInsightCards } from '@/components/WeatherInsightCards';
@@ -34,7 +33,6 @@ import { TASK_TEMPLATES } from '@/constants/maintenance';
 import { EmptyState } from '@/components/ui';
 import { NextActionHero } from '@/components/NextActionHero';
 import { DashboardHeroStrip } from '@/components/DashboardHeroStrip';
-import { HealthScoreInfoPopover } from '@/components/HealthScoreInfoPopover';
 
 // DD-6 (Wave B): DEMO_TASKS were removed in favor of a proper EmptyState. If
 // onboarding is incomplete the UI now surfaces a clear "finish setup" call to
@@ -416,7 +414,6 @@ export default function Dashboard() {
   }
 
   const now = new Date();
-  const currentMonth = now.toLocaleString('default', { month: 'long' });
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
@@ -435,8 +432,10 @@ export default function Dashboard() {
   }, [tasks, weekStart.getTime(), weekEnd.getTime()]);
 
   // Reuse the health score computed above for task ordering — avoids recomputing.
-  const healthData = healthDataForSort;
-  const { score: healthScore, completedCount, totalCount, overdueCount, label: healthLabel } = healthData;
+  // Only `score` is still needed: DashboardHeroStrip renders the glance; the old
+  // HealthGauge card (which consumed label/completedCount/totalCount/overdueCount)
+  // was removed 2026-04-21 during the Wave E jank pass.
+  const { score: healthScore } = healthDataForSort;
 
   // Dismiss the active home-health alert banner (Item 13).
   const dismissHomeHealthAlert = async () => {
@@ -474,13 +473,15 @@ export default function Dashboard() {
 
   return (
     <div className="page">
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-        <div>
-          <p className="text-sm text-gray">{greeting}</p>
-          <h1 style={{ fontSize: 28, fontWeight: 700 }}>{user?.full_name || 'Homeowner'}</h1>
-        </div>
-        <img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 40, width: 'auto', objectFit: 'contain' }} />
+      {/* Header — greeting + name only. Canopy logo lives in sidebar; no
+          duplicate in the content area. */}
+      <div style={{ marginBottom: 24 }}>
+        <p style={{ fontSize: 15, color: 'var(--color-text-secondary)', margin: 0, fontWeight: 500 }}>
+          {greeting}
+        </p>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '2px 0 0', lineHeight: 1.2 }}>
+          {user?.full_name || 'Homeowner'}
+        </h1>
       </div>
 
       {/* Notification Banner */}
@@ -924,45 +925,11 @@ export default function Dashboard() {
             <WeatherInsightCards insights={generateWeatherInsights(weather.forecast, displayTasks)} />
           )}
 
-          {/* Health Score Gauge */}
-          <div className="card card-elevated">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-              <HealthGauge score={healthScore} size={100} />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <p style={{ fontWeight: 600, fontSize: 16, margin: 0 }}>Home Health Score</p>
-                  {/* DD-3: Health Score explainer popover — replaces the
-                      older `title` tooltip with a keyboard-accessible
-                      hover/click popover plus drill-down CTA. */}
-                  <HealthScoreInfoPopover score={healthScore} />
-                </div>
-                <p className="text-sm" style={{ color: healthData.color === 'green' ? Colors.success : healthData.color === 'yellow' ? '#FF9800' : Colors.error, fontWeight: 600, marginBottom: 8 }}>{healthLabel}</p>
-                <p className="text-sm" style={{ color: Colors.charcoal }}>
-                  <strong>{completedCount}</strong> of <strong>{totalCount}</strong> {currentMonth} tasks complete
-                </p>
-                {overdueCount > 0 && (
-                  <p className="text-xs mt-xs" style={{ color: Colors.error }}>
-                    {overdueCount} overdue task{overdueCount > 1 ? 's' : ''} — complete or skip to improve your score
-                  </p>
-                )}
-                <p className="text-xs text-gray mt-sm">
-                  {totalCount === 0
-                    ? 'Set up your home to generate maintenance tasks'
-                    : totalCount > completedCount
-                    ? `Complete ${totalCount - completedCount} more task${totalCount - completedCount > 1 ? 's' : ''} this month to keep your score strong`
-                    : 'All caught up this month — great work!'}
-                </p>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => navigate('/health-score')}
-                  style={{ marginTop: 6, padding: 0, fontSize: 12, color: Colors.copper, fontWeight: 600 }}
-                >
-                  How to improve &rarr;
-                </button>
-              </div>
-            </div>
-          </div>
+          {/* Home Health Score gauge removed 2026-04-21 (Wave E jank pass).
+              DashboardHeroStrip above owns the score-at-a-glance; the
+              drill-down lives on /health-score via "See what's moving the
+              needle →" in the hero strip. Previously this card rendered
+              the same 40/Fair value as the hero strip — duplicate cruft. */}
 
           {/* Weekly cost strip */}
           {weekCost > 0 && (
@@ -1129,9 +1096,33 @@ export default function Dashboard() {
               </div>
             </div>
           ) : (
-            <div className="card card-clickable" style={{ textAlign: 'center', padding: 32, border: '2px dashed var(--color-copper)', cursor: 'pointer' }} onClick={() => navigate('/home')}>
-              <NavHome size={28} />
-              <p className="text-sm text-copper fw-600 mt-sm">{home ? 'Add a photo of your home' : 'Set up your home'}</p>
+            <div
+              className="card card-clickable"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate('/home')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/home'); } }}
+              style={{ textAlign: 'center', padding: 28, cursor: 'pointer' }}
+              aria-label={home ? 'Add a photo of your home' : 'Set up your home'}
+            >
+              <div
+                aria-hidden="true"
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  background: 'var(--color-sage)18',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 8,
+                }}
+              >
+                <NavHome size={22} />
+              </div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-charcoal)', margin: 0 }}>
+                {home ? 'Add a photo of your home' : 'Set up your home'}
+              </p>
               <p className="text-xs text-gray" style={{ marginTop: 4 }}>Tap to get started</p>
             </div>
           )}

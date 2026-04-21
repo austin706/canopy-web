@@ -157,13 +157,25 @@ export function NextActionHero({
         {hero && (
           <button
             type="button"
-            className="btn btn-primary"
             onClick={handleClick}
             style={{
               minHeight: 44,
               padding: '10px 20px',
               whiteSpace: 'nowrap',
+              // Match the urgency accent rail so red = red, sage = sage, etc.
+              // Keeps the CTA and the left-side status stripe visually unified
+              // instead of the old "red-rail + copper-button" mismatch.
+              background: accent,
+              color: colors.white,
+              border: 'none',
+              borderRadius: 10,
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'opacity 0.15s',
             }}
+            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.92'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
           >
             {hero.source === 'setup'
               ? 'Continue setup'

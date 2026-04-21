@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Colors } from '@/constants/theme';
 
 interface ConfirmModalProps {
@@ -21,6 +22,43 @@ export default function ConfirmModal({
   isLoading = false,
   isDanger = false,
 }: ConfirmModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll(
+          'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        ) as NodeListOf<HTMLElement>;
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    const firstButton = modalRef.current?.querySelector('button');
+    firstButton?.focus();
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, [onCancel]);
+
   return (
     <div
       role="dialog"
@@ -39,6 +77,7 @@ export default function ConfirmModal({
       onClick={onCancel}
     >
       <div
+        ref={modalRef}
         style={{
           background: '#fff',
           borderRadius: 16,

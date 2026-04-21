@@ -10,6 +10,7 @@ import {
   acceptTransfer,
   declineTransfer,
   notifyBuyerOfTransfer,
+  calculateCompletenessScore,
   type HomeTransfer as HomeTransferType,
 } from '@/services/homeTransfer';
 import { getErrorMessage } from '@/utils/errors';
@@ -26,6 +27,7 @@ export default function HomeTransfer() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [completenessScore, setCompletenessScore] = useState<number | null>(null);
 
   // Check if arriving via accept link
   const acceptToken = searchParams.get('token');
@@ -38,12 +40,14 @@ export default function HomeTransfer() {
     if (!home?.id || !user?.email) { setLoading(false); return; }
     try {
       setLoading(true);
-      const [active, incoming] = await Promise.all([
+      const [active, incoming, score] = await Promise.all([
         getActiveTransfer(home.id),
         getIncomingTransfers(user.email),
+        calculateCompletenessScore(home.id).catch(() => null),
       ]);
       setActiveTransfer(active);
       setIncomingTransfers(incoming);
+      setCompletenessScore(score);
     } catch (err: any) {
       setError(getErrorMessage(err) || 'Failed to load transfers');
     } finally {
@@ -125,6 +129,37 @@ export default function HomeTransfer() {
 
       {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', fontSize: 14, marginBottom: 16 }}>{error}</div>}
       {success && <div style={{ padding: '10px 16px', borderRadius: 8, background: Colors.sageMuted, color: Colors.sageDark, fontSize: 14, marginBottom: 16, border: `1px solid ${Colors.sage}` }}>{success}</div>}
+
+      {/* Home Token Overview Card */}
+      {home && (
+        <div className="card" style={{ padding: 20, marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+            <div>
+              <h3 style={{ fontSize: 18, fontWeight: 600, margin: 0, marginBottom: 4 }}>Home Token</h3>
+              <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>
+                {home.address ? `${home.address}, ${home.city}` : 'Your home'}
+              </p>
+            </div>
+            {home.ownership_verified ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600, background: 'rgba(139,158,126,0.15)', color: Colors.sageDark, whiteSpace: 'nowrap' }}>
+                &#x2713; Verified
+              </span>
+            ) : (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600, background: 'rgba(0,0,0,0.06)', color: Colors.medGray, whiteSpace: 'nowrap' }}>
+                Unverified
+              </span>
+            )}
+          </div>
+          <div style={{ height: 1, background: 'var(--color-border, #E5E7EB)', margin: '12px 0' }} />
+          <div style={{ marginBottom: 12 }}>
+            <p style={{ fontSize: 13, color: Colors.medGray, margin: 0, marginBottom: 4, fontWeight: 500 }}>Record Completeness</p>
+            <p style={{ fontSize: 28, fontWeight: 700, color: Colors.sage, margin: 0, marginBottom: 8 }}>{completenessScore ?? 0}%</p>
+            <div style={{ height: 8, background: 'var(--color-border, #E5E7EB)', borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{ height: '100%', background: Colors.sage, width: `${completenessScore ?? 0}%`, borderRadius: 999 }} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Incoming transfers — shown to buyers */}
       {incomingTransfers.length > 0 && (

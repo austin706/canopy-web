@@ -370,6 +370,10 @@ export interface Home {
   has_sump_pump: boolean;
   has_storm_shelter: boolean;
 
+  // ─── LIFECYCLE FLAGS ───
+  /** DD-7/DL-4: owner-declared flag — planning to sell in next ~12 months. */
+  selling_soon?: boolean;
+
   // ─── RENEWABLE ENERGY & MODERN SYSTEMS ───
   has_generator: boolean;
   generator_type?: GeneratorType;

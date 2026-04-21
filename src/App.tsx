@@ -10,6 +10,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/theme';
 import { useCanonical, usePageMeta } from '@/utils/seo';
 import { ProgressProvider } from '@/components/ProgressBar';
+import { ConfirmProvider } from '@/components/ui';
 // Layout shells stay eager — they wrap every route
 import Layout from '@/components/Layout';
 import AgentLayout from '@/components/AgentLayout';
@@ -104,11 +105,15 @@ const ProAddOnQuotes = lazyRetry(() => import('@/pages/ProAddOnQuotes'));
 const ProInspection = lazyRetry(() => import('@/pages/ProInspection'));
 const HomeAssistant = lazyRetry(() => import('@/pages/HomeAssistant'));
 const SalePrep = lazyRetry(() => import('@/pages/SalePrep'));
+const SalePrepPreview = lazyRetry(() => import('@/pages/SalePrepPreview'));
 const HomeReport = lazyRetry(() => import('@/pages/HomeReport'));
 const HomeTransfer = lazyRetry(() => import('@/pages/HomeTransfer'));
 const HomeTokenShareView = lazyRetry(() => import('@/pages/HomeTokenShareView'));
 const Terms = lazyRetry(() => import('@/pages/Terms'));
 const Privacy = lazyRetry(() => import('@/pages/Privacy'));
+const Security = lazyRetry(() => import('@/pages/Security'));
+const TestimonialSubmit = lazyRetry(() => import('@/pages/TestimonialSubmit'));
+const AdminTestimonials = lazyRetry(() => import('@/pages/AdminTestimonials'));
 const ContractorTerms = lazyRetry(() => import('@/pages/ContractorTerms'));
 const AIDisclaimer = lazyRetry(() => import('@/pages/AIDisclaimer'));
 const CancellationPolicy = lazyRetry(() => import('@/pages/CancellationPolicy'));
@@ -392,6 +397,7 @@ export default function App() {
     <ThemeProvider>
     <BrowserRouter>
       <ProgressProvider>
+        <ConfirmProvider>
         <SEOManager />
         <Toast />
         <ErrorBoundary>
@@ -409,6 +415,7 @@ export default function App() {
           <Route path="/pro-login" element={<ProLogin />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/security" element={<Security />} />
           <Route path="/contractor-terms" element={<ContractorTerms />} />
           <Route path="/ai-disclaimer" element={<AIDisclaimer />} />
           <Route path="/cancellation" element={<CancellationPolicy />} />
@@ -416,6 +423,8 @@ export default function App() {
           <Route path="/support" element={<Support />} />
           <Route path="/unsubscribe" element={<Unsubscribe />} />
           <Route path="/add-ons" element={<AddOnsLanding />} />
+          <Route path="/sale-prep-preview" element={<SalePrepPreview />} />
+          <Route path="/testimonial/submit" element={<TestimonialSubmit />} />
           <Route path="/apply-pro" element={<ApplyPro />} />
           <Route path="/for-agents" element={<AgentLanding />} />
           <Route path="/for-pros" element={<ProLanding />} />
@@ -480,6 +489,7 @@ export default function App() {
             <Route path="/admin/verifications" element={<AdminVerifications />} />
             <Route path="/admin/affiliate-products" element={<AdminAffiliateProducts />} />
             <Route path="/admin/add-ons" element={<AdminAddOns />} />
+            <Route path="/admin/testimonials" element={<AdminTestimonials />} />
           </Route>
 
           {/* ═══════════════════════════════════════════════════════
@@ -525,6 +535,7 @@ export default function App() {
           </Routes>
           </Suspense>
         </ErrorBoundary>
+        </ConfirmProvider>
       </ProgressProvider>
     </BrowserRouter>
     </ThemeProvider>

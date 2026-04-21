@@ -399,10 +399,10 @@ export default function AdminNotifications() {
               <table>
                 <thead>
                   <tr>
-                    <th>Title</th>
-                    <th>Target</th>
-                    <th>Category</th>
-                    <th>Sent</th>
+                    <th scope="col">Title</th>
+                    <th scope="col">Target</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Sent</th>
                   </tr>
                 </thead>
                 <tbody>

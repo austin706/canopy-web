@@ -24,17 +24,22 @@ import { CanopyLogo, NavWeather, NavHome } from '@/components/icons/CanopyLogo';
 import { generateCostForecast, FORECAST_DISCLAIMER } from '@/services/costForecast';
 import PendingInvites from '@/components/PendingInvites';
 import SetupChecklist from '@/components/SetupChecklist';
+import FirstVisitOrientationCard from '@/components/FirstVisitOrientationCard';
 import AddOnNudge, { nudgeAddOnFromTaskCategory } from '@/components/AddOnNudge';
 import RecallAlertBanner from '@/components/RecallAlertBanner';
 import { getDocuments, getHomeMembers, supabase } from '@/services/supabase';
 import type { MaintenanceTask, HomeJoinRequest } from '@/types';
+import { trackEvent } from '@/utils/analytics';
 import { TASK_TEMPLATES } from '@/constants/maintenance';
+import { EmptyState } from '@/components/ui';
+import { NextActionHero } from '@/components/NextActionHero';
+import { DashboardHeroStrip } from '@/components/DashboardHeroStrip';
+import { HealthScoreInfoPopover } from '@/components/HealthScoreInfoPopover';
 
-const DEMO_TASKS = [
-  { id: 'd1', home_id: '1', title: 'Replace HVAC Air Filters', description: 'Check and replace monthly.', category: 'hvac' as const, priority: 'high' as const, status: 'due' as const, frequency: 'monthly' as const, due_date: new Date().toISOString(), is_weather_triggered: false, applicable_months: [1,2,3,4,5,6,7,8,9,10,11,12], estimated_minutes: 10, created_at: '' },
-  { id: 'd2', home_id: '1', title: 'Clean Gutters (Spring)', description: 'Remove debris and check drainage.', category: 'roof' as const, priority: 'medium' as const, status: 'upcoming' as const, frequency: 'biannual' as const, due_date: new Date(Date.now() + 7*86400000).toISOString(), is_weather_triggered: false, applicable_months: [4,5], estimated_minutes: 60, created_at: '' },
-  { id: 'd3', home_id: '1', title: 'Test Smoke & CO Detectors', description: 'Press test button on every detector.', category: 'safety' as const, priority: 'high' as const, status: 'upcoming' as const, frequency: 'monthly' as const, due_date: new Date(Date.now() + 3*86400000).toISOString(), is_weather_triggered: false, applicable_months: [1,2,3,4,5,6,7,8,9,10,11,12], estimated_minutes: 10, created_at: '' },
-];
+// DD-6 (Wave B): DEMO_TASKS were removed in favor of a proper EmptyState. If
+// onboarding is incomplete the UI now surfaces a clear "finish setup" call to
+// action instead of pretending to have data — which used to mislead users
+// (Gatlin bug, onboarding loop). See Product/CANOPY_DESIGN_AUDIT.md §DD-6.
 
 const DEMO_WEATHER = { temperature: 72, feels_like: 74, humidity: 55, wind_speed: 8, description: 'partly cloudy', icon: '02d', high: 78, low: 58, alerts: [], forecast: [] };
 
@@ -88,6 +93,30 @@ export default function Dashboard() {
   // Expiring warranties banner
   const [expiringWarranties, setExpiringWarranties] = useState<Warranty[]>([]);
   const [warrantiesLoading, setWarrantiesLoading] = useState(false);
+
+  // DD-7 — Session-scoped dismiss for the Selling-Soon banner. We deliberately
+  // don't persist this to the profile: the banner is the primary Sale Prep
+  // affordance for users who flipped `home.selling_soon`, so we show it again
+  // on next login until they toggle the flag off or open Sale Prep.
+  const sellingSoonBannerKey = home?.id ? `canopy.sellingSoonBanner.dismissed.${home.id}` : null;
+  const [sellingSoonDismissed, setSellingSoonDismissed] = useState<boolean>(() => {
+    try {
+      return sellingSoonBannerKey
+        ? sessionStorage.getItem(sellingSoonBannerKey) === '1'
+        : false;
+    } catch {
+      return false;
+    }
+  });
+  const dismissSellingSoonBanner = () => {
+    try {
+      if (sellingSoonBannerKey) sessionStorage.setItem(sellingSoonBannerKey, '1');
+    } catch {
+      // private mode — non-fatal, still set local state
+    }
+    setSellingSoonDismissed(true);
+    trackEvent('dashboard_selling_soon_banner_dismiss', {});
+  };
 
   // Load notifications
   useEffect(() => {
@@ -340,7 +369,8 @@ export default function Dashboard() {
   // Historical DB rows can contain duplicates with the same (title|month|year).
   // Keep the row with the "most progressed" status; tie-break on most recent created.
   const displayTasksRaw = useMemo(() => {
-    if (isDemo) return DEMO_TASKS;
+    // DD-6: demo-mode now shows an EmptyState instead of seeded tasks.
+    if (isDemo) return [] as MaintenanceTask[];
     const statusRank: Record<string, number> = { completed: 3, scheduled: 2, snoozed: 1, skipped: 0 };
     const byKey = new Map<string, (typeof tasks)[number]>();
     for (const t of tasks) {
@@ -733,6 +763,76 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* DD-7 — Sale Prep banner. Renders only when the owner has flipped
+          `home.selling_soon` via HomeDetails. Session-dismissible. The
+          always-visible "Selling your home?" card below stays put as the
+          soft nudge for everyone else. */}
+      {home?.selling_soon && !sellingSoonDismissed && (
+        <div
+          role="status"
+          aria-label="Sale prep reminder"
+          style={{
+            background: `linear-gradient(90deg, ${Colors.sage}15 0%, ${Colors.copper}15 100%)`,
+            border: `1px solid ${Colors.sage}`,
+            borderLeft: `4px solid ${Colors.sage}`,
+            borderRadius: 8,
+            padding: '16px 20px',
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 16,
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <p style={{ fontWeight: 600, marginBottom: 4 }}>
+              You told us you&apos;re thinking about selling — your Sale Prep kit is ready.
+            </p>
+            <p className="text-xs text-gray" style={{ marginBottom: 12, lineHeight: 1.5 }}>
+              Home Token, maintenance history, document vault, and the Sale Prep checklist are
+              all pulled together so you can list faster with proof of care.
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                className="btn btn-sage btn-sm"
+                onClick={() => {
+                  trackEvent('dashboard_selling_soon_banner_click', {});
+                  navigate('/sale-prep');
+                }}
+              >
+                Open Sale Prep &rarr;
+              </button>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  trackEvent('dashboard_selling_soon_banner_click', {});
+                  navigate('/home-token');
+                }}
+              >
+                View Home Token
+              </button>
+            </div>
+          </div>
+          <button
+            onClick={dismissSellingSoonBanner}
+            aria-label="Dismiss Sale Prep banner for this session"
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: 20,
+              cursor: 'pointer',
+              padding: 0,
+              color: 'var(--color-text-secondary)',
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* DD-9: first-visit orientation card (Pro tier, before first visit completes) */}
+      <FirstVisitOrientationCard />
+
       {/* Post-onboarding setup checklist */}
       <SetupChecklist
         home={home}
@@ -744,6 +844,26 @@ export default function Dashboard() {
 
       {/* Post-task add-on nudge (fires from quickCompleteTask handlers below) */}
       <AddOnNudge />
+
+      {/* DD-1: single-focus "Your next action" hero above the grid.
+          Uses the DD-10 scoring engine to surface overdue → weather → due-soon → setup → add-on. */}
+      {!isDemo && displayTasks.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <NextActionHero tasks={displayTasks} />
+        </div>
+      )}
+
+      {/* DD-2: Home Health + Home Token hero strip. Free tier sees the
+          locked token card nudging upgrade. */}
+      {!isDemo && home && (
+        <div style={{ marginBottom: 16 }}>
+          <DashboardHeroStrip
+            healthScore={healthScore}
+            tokenLocked={tier === 'free'}
+            tokenLockReason="Upgrade to share your Home Token with buyers and agents."
+          />
+        </div>
+      )}
 
       <div className="dashboard-layout">
         <div className="flex-col gap-lg">
@@ -811,35 +931,10 @@ export default function Dashboard() {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                   <p style={{ fontWeight: 600, fontSize: 16, margin: 0 }}>Home Health Score</p>
-                  {/* A3-2: info tooltip explaining the score. */}
-                  <button
-                    type="button"
-                    aria-label="What is the Home Health Score?"
-                    title={
-                      'Your Home Health Score (0–100) tracks how well-maintained your home is. '
-                      + 'We weight completed tasks, overdue items, and equipment age. '
-                      + 'Keep overdue items near zero and complete this month\'s tasks to stay 70+.'
-                    }
-                    onClick={() => navigate('/health-score')}
-                    style={{
-                      background: 'none',
-                      border: `1px solid ${Colors.medGray}40`,
-                      borderRadius: '50%',
-                      width: 18,
-                      height: 18,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: Colors.medGray,
-                      cursor: 'pointer',
-                      lineHeight: 1,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: 0,
-                    }}
-                  >
-                    i
-                  </button>
+                  {/* DD-3: Health Score explainer popover — replaces the
+                      older `title` tooltip with a keyboard-accessible
+                      hover/click popover plus drill-down CTA. */}
+                  <HealthScoreInfoPopover score={healthScore} />
                 </div>
                 <p className="text-sm" style={{ color: healthData.color === 'green' ? Colors.success : healthData.color === 'yellow' ? '#FF9800' : Colors.error, fontWeight: 600, marginBottom: 8 }}>{healthLabel}</p>
                 <p className="text-sm" style={{ color: Colors.charcoal }}>
@@ -926,39 +1021,22 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* A3-5: demo-mode banner so example tasks aren't mistaken for real ones. */}
+            {/* DD-6: demo mode (onboarding incomplete) renders a clear
+                EmptyState instead of seeded tasks. */}
             {isDemo && (
-              <div
-                style={{
-                  background: `${Colors.copper}12`,
-                  border: `1px dashed ${Colors.copper}80`,
-                  borderRadius: 10,
-                  padding: '14px 16px',
-                  marginBottom: 12,
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 12,
+              <EmptyState
+                title="Your maintenance plan is almost ready"
+                description="Finish setup so we can tailor tasks to your home's square footage, climate, and equipment."
+                primaryAction={{
+                  label: 'Finish setting up',
+                  onClick: () => navigate('/onboarding'),
                 }}
-              >
-                {/* ASSET-PLACEHOLDER: ILLUS-1 — dashboard empty-state illustration */}
-                <div style={{ fontSize: 28, flexShrink: 0 }} data-asset-key="ILLUS-1">&#128075;</div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, color: Colors.charcoal }}>
-                    These are sample tasks
-                  </p>
-                  <p style={{ fontSize: 13, color: Colors.charcoal, lineHeight: 1.5, marginBottom: 8 }}>
-                    Finish setup so we can generate a maintenance plan tailored to your home's square footage,
-                    climate, and equipment.
-                  </p>
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => navigate('/onboarding')}
-                    style={{ fontSize: 13 }}
-                  >
-                    Finish setting up &rarr;
-                  </button>
-                </div>
-              </div>
+                secondaryAction={{
+                  label: 'See how it works',
+                  onClick: () => navigate('/health-score'),
+                }}
+                style={{ marginBottom: 12 }}
+              />
             )}
 
             {tasksLoading ? (
@@ -1008,8 +1086,11 @@ export default function Dashboard() {
                   </p>
                 </div>
               )}
-              {tasksToShow.length === 0 && (
-                <div className="empty-state"><div className="icon" style={{ color: Colors.success, fontSize: 40, fontWeight: 700 }}>&#10003;</div><h3>All caught up!</h3><p>No tasks due this month.</p></div>
+              {tasksToShow.length === 0 && !isDemo && (
+                <EmptyState
+                  title="You're caught up"
+                  description="No tasks due this month. New ones will appear here as the season changes."
+                />
               )}
             </div>
             )}

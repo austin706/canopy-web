@@ -80,6 +80,8 @@ export default function HomeDetails() {
     ductwork_type: home?.ductwork_type || '',
     electrical_panel_amps: home?.electrical_panel_amps?.toString() || '',
     construction_type: home?.construction_type || '',
+    // DL-4 / DD-7 — owner-declared sell intent drives Dashboard banner
+    selling_soon: home?.selling_soon ?? false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -813,6 +815,34 @@ export default function HomeDetails() {
               </div>
             </div>
           </details>
+
+          {/* DL-4 / DD-7 — sell-intent flag drives Dashboard Sale Prep banner */}
+          <div
+            style={{
+              marginTop: 24,
+              border: `1px solid var(--light-gray)`,
+              borderRadius: 8,
+              padding: 16,
+              background: 'var(--color-cream)',
+            }}
+          >
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={!!form.selling_soon}
+                onChange={(e) => setForm({ ...form, selling_soon: e.target.checked })}
+                style={{ marginTop: 4 }}
+                aria-describedby="selling-soon-help"
+              />
+              <div>
+                <p style={{ fontWeight: 600, marginBottom: 4 }}>Thinking about selling in the next 12 months?</p>
+                <p id="selling-soon-help" className="text-xs text-gray" style={{ lineHeight: 1.5 }}>
+                  Turn this on and Canopy pins your Sale Prep kit to the Dashboard. Your Home Token + verified
+                  maintenance history help you list faster and at a stronger price. You can switch this off anytime.
+                </p>
+              </div>
+            </label>
+          </div>
 
           <div className="flex gap-sm mt-lg">
             {home && <button className="btn btn-ghost" onClick={() => setEditing(false)}>Cancel</button>}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Colors } from '@/constants/theme';
 
 interface DatePickerModalProps {
@@ -18,6 +18,8 @@ export default function DatePickerModal({
 }: DatePickerModalProps) {
   const [dateValue, setDateValue] = useState('');
   const [error, setError] = useState('');
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const handleConfirm = () => {
     if (!dateValue) {
@@ -32,6 +34,40 @@ export default function DatePickerModal({
     }
     onConfirm(dateValue);
   };
+
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll(
+          'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        ) as NodeListOf<HTMLElement>;
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    const firstInput = modalRef.current?.querySelector('input');
+    firstInput?.focus();
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, [onCancel]);
 
   return (
     <div
@@ -51,6 +87,7 @@ export default function DatePickerModal({
       onClick={onCancel}
     >
       <div
+        ref={modalRef}
         style={{
           background: '#fff',
           borderRadius: 16,

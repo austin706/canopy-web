@@ -657,6 +657,40 @@ export default function Profile() {
 
       <button className="btn btn-danger btn-full" onClick={handleLogout}>Sign Out</button>
 
+      {/* DD-4: Re-open Setup Checklist after dismiss/completion. */}
+      {user?.setup_checklist_state?.dismissed && (
+        <div className="card mt-lg">
+          <h3 style={{ fontSize: 16, marginBottom: 8 }}>Setup Checklist</h3>
+          <p className="text-sm text-gray mb-md">
+            Need to finish or revisit your home setup? Bring the checklist back to your Dashboard.
+          </p>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={async () => {
+              if (!user) return;
+              try {
+                const next = {
+                  ...user.setup_checklist_state!,
+                  dismissed: false,
+                  dismissed_at: null,
+                };
+                await updateProfile(user.id, { setup_checklist_state: next });
+                setUser({ ...user, setup_checklist_state: next });
+                // Clear the one-time success-toast guard so a 100% user who
+                // wants to re-review sees the pill again.
+                try { localStorage.removeItem(`canopy.setupChecklist.toastShown.${user.id}`); } catch { /* ignore */ }
+                setMessage('Setup checklist re-opened on your Dashboard.');
+              } catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : 'Please try again.';
+                setMessage(`Could not re-open checklist: ${msg}`);
+              }
+            }}
+          >
+            Re-open setup checklist
+          </button>
+        </div>
+      )}
+
       {/* C12: Data Export + Delete Account */}
       <div className="card mt-lg">
         <h3 style={{ fontSize: 16, marginBottom: 8 }}>Your Data</h3>

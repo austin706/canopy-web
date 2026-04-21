@@ -551,11 +551,11 @@ export default function AdminTechnicianOnboarding() {
           <table className="admin-table" style={{ width: '100%', fontSize: 13 }}>
             <thead>
               <tr>
-                <th>Order</th>
-                <th>Title</th>
-                <th>Category</th>
-                <th>Required</th>
-                <th>Est. Time</th>
+                <th scope="col">Order</th>
+                <th scope="col">Title</th>
+                <th scope="col">Category</th>
+                <th scope="col">Required</th>
+                <th scope="col">Est. Time</th>
               </tr>
             </thead>
             <tbody>

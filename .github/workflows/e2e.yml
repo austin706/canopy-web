@@ -1,16 +1,17 @@
 # ──────────────────────────────────────────────────────────────────────────
-# Canopy-Web CI
+# Canopy-Web — Playwright E2E smoke tests (DX-2)
 #
-# Minimal pre-merge gate: typecheck + unit tests on every push and PR.
-# Catches the type errors and broken tests that used to slip through
-# because everything was being verified by hand.
+# Five conversion-funnel specs run against a local dev server with stubbed
+# Supabase responses. Keeps the funnel from silently regressing on PRs.
 #
-# Lint: runs `npm run lint:design` (zero-dep pattern check for hardcoded
-# hex, inline fontSize literals, and icon-only buttons without aria-label)
-# against a baseline in scripts/lint-design-system.baseline.json. Fails
-# only on new regressions past the baseline.
+# Covered specs (see CANOPY_DESIGN_AUDIT.md §DX-2):
+#   1. landing → signup
+#   2. signup → onboarding
+#   3. onboarded user → dashboard
+#   4. dashboard → upgrade
+#   5. add-ons quote request
 # ──────────────────────────────────────────────────────────────────────────
-name: CI
+name: E2E Smoke
 
 on:
   push:
@@ -18,16 +19,15 @@ on:
   pull_request:
     branches: [main]
 
-# Cancel in-progress runs of the same workflow on the same ref
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Typecheck + Test
+  e2e:
+    name: Playwright smoke tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -42,19 +42,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Typecheck
-        run: npx tsc --noEmit
+      - name: Install Playwright browsers
+        run: npm run test:e2e:install
 
-      - name: Design-system lint (baseline-gated)
-        run: npm run lint:design
-
-      - name: Build
-        run: npm run build
+      - name: Run Playwright smoke tests
+        run: npm run test:e2e
         env:
-          # Build needs at least empty values for Vite env substitution to
-          # not fail; CI doesn't deploy, so dummy values are fine.
           VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-placeholder
 
-      - name: Test
-        run: npm test
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

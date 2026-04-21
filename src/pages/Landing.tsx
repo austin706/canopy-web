@@ -5,6 +5,9 @@ import { PRICING, ANNUAL_DISCOUNT_PERCENT } from '@/constants/pricing';
 import type { BillingInterval } from '@/constants/pricing';
 import { trackEvent } from '@/utils/analytics';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
+import ZipPreCheck from '@/components/ZipPreCheck';
+import TulsaTrustStrip from '@/components/TulsaTrustStrip';
+import TestimonialsSection from '@/components/TestimonialsSection';
 
 // FAQ content. Defined at module scope so the JSON-LD schema effect and the
 // rendered accordion both read from a single source of truth.
@@ -51,12 +54,98 @@ const FAQ_ITEMS: Array<{ q: string; a: string }> = [
   },
 ];
 
+// ─── DL-6 · Hero A/B experiment ─────────────────────────────────────────────
+// Two hero variants split 50/50 and persisted in localStorage so a given
+// visitor sees the same variant across sessions (essential for honest
+// landing→signup conversion measurement).
+//
+// Variant A — `outcome_promise`: new per-audit copy. One-sentence outcome
+//             promise + three-line differentiator + primary CTA
+//             "Start free — takes 2 minutes". This is the challenger.
+// Variant B — `certainty_loop`:  current production copy ("Stop guessing.
+//             Start knowing."). Kept as the control so we can measure lift
+//             cleanly. Primary CTA: "Get Started Free".
+//
+// All hero CTA clicks fire `landing_hero_cta_click` with the variant tag so
+// we can attribute downstream conversion in GA4. Assignment fires
+// `landing_hero_variant_assigned` exactly once per visitor.
+type HeroVariant = 'outcome_promise' | 'certainty_loop';
+const HERO_VARIANT_STORAGE_KEY = 'canopy.exp.hero_variant';
+
+interface HeroCopy {
+  variant: HeroVariant;
+  h1: string;
+  subhead: string;
+  primaryCta: string;
+  secondaryCta: string;
+}
+
+const HERO_COPY: Record<HeroVariant, HeroCopy> = {
+  outcome_promise: {
+    variant: 'outcome_promise',
+    h1: 'Never forget a maintenance task, lose a manual, or overpay a contractor again.',
+    subhead:
+      'Canopy is the AI home-care system built for Tulsa: it scans your equipment, builds a personalized calendar, and keeps a verified service history that transfers when you sell.',
+    primaryCta: 'Start free — takes 2 minutes',
+    secondaryCta: 'How it works',
+  },
+  certainty_loop: {
+    variant: 'certainty_loop',
+    h1: 'Stop guessing. Start knowing.',
+    subhead:
+      "Canopy is the AI-powered platform that tracks every piece of equipment in your home, tells you exactly what needs attention and when, and builds a verified maintenance record that protects your home's value.",
+    primaryCta: 'Get Started Free',
+    secondaryCta: 'See How It Works',
+  },
+};
+
+/** Pick or recall the hero variant for this visitor. SSR-safe: returns the
+ *  challenger by default if localStorage is unavailable. */
+function readHeroVariant(): HeroVariant {
+  if (typeof window === 'undefined') return 'outcome_promise';
+  try {
+    const stored = window.localStorage.getItem(HERO_VARIANT_STORAGE_KEY);
+    if (stored === 'outcome_promise' || stored === 'certainty_loop') return stored;
+    const assigned: HeroVariant = Math.random() < 0.5 ? 'outcome_promise' : 'certainty_loop';
+    window.localStorage.setItem(HERO_VARIANT_STORAGE_KEY, assigned);
+    // Fire assignment once. We can't call trackEvent here because this runs
+    // inside the render path; callers fire it from a useEffect (see below).
+    return assigned;
+  } catch {
+    return 'outcome_promise';
+  }
+}
+
 export default function Landing() {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly');
   const [comparisonOpen, setComparisonOpen] = useState(false);
+
+  // DL-6 — one-time variant assignment, stable per-visitor. The first render
+  // seeds the ref so CTAs + analytics both use the same value.
+  const [heroVariant] = useState<HeroVariant>(() => readHeroVariant());
+  const heroCopy = HERO_COPY[heroVariant];
+
+  // Fire assignment + view events exactly once. Assignment fires only when
+  // the localStorage key was freshly created by readHeroVariant (we can tell
+  // by comparing what's there now to what's there "before" — but since the
+  // write happened inside readHeroVariant, we instead rely on a second key
+  // that tracks whether we've already reported the assignment).
+  useEffect(() => {
+    try {
+      const reportedKey = 'canopy.exp.hero_variant_reported';
+      if (typeof window === 'undefined') return;
+      if (window.localStorage.getItem(reportedKey) !== heroVariant) {
+        trackEvent('landing_hero_variant_assigned', { variant: heroVariant });
+        window.localStorage.setItem(reportedKey, heroVariant);
+      }
+      trackEvent('landing_hero_view', { variant: heroVariant });
+    } catch {
+      // No-op: analytics must never break render.
+    }
+  }, [heroVariant]);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
@@ -95,10 +184,18 @@ export default function Landing() {
 
   /**
    * Fire a GA4 CTA click event then navigate. Centralizes instrumentation so
-   * we can rename or extend the event shape in one place.
+   * we can rename or extend the event shape in one place. The hero CTA
+   * additionally fires `landing_hero_cta_click` with the active variant so
+   * the DL-6 A/B experiment can measure lift without joining on session.
    */
   const ctaToSignup = (location: string) => {
     trackEvent('cta_click', { location, destination: '/signup', page: 'landing' });
+    if (location === 'hero' || location === 'mobile_menu') {
+      trackEvent('landing_hero_cta_click', {
+        cta_label: heroCopy.primaryCta,
+        variant: heroVariant,
+      });
+    }
     navigate('/signup');
   };
 
@@ -220,27 +317,38 @@ export default function Landing() {
       textAlign: 'center', fontFamily: fontStack,
     }}>
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
-        <div style={{
-          display: 'inline-block', background: Colors.sageMuted, border: `1px solid ${Colors.sageLight}`,
-          borderRadius: BorderRadius.full, padding: '6px 16px', marginBottom: 24,
-        }}>
-          <span style={{ fontSize: 13, fontWeight: FontWeight.semibold, color: Colors.sageDark }}>
-            Pro services now available in Tulsa, OK
-          </span>
-        </div>
+        {/* DL-2: ZIP pre-check pill — inline coverage lookup against
+            service_areas with three outcome states (covered / coming soon
+            / free-only). Persists to localStorage for onboarding reuse. */}
+        <ZipPreCheck isMobile={isMobile} fontStack={fontStack} onCtaSignup={ctaToSignup} />
 
-        <h1 style={{
-          fontSize: isMobile ? 34 : 54, fontWeight: FontWeight.bold,
-          color: Colors.charcoal, margin: '0 0 24px 0', lineHeight: 1.15,
-        }}>
-          Stop guessing. Start knowing.
+        {/* DL-6 — variant-driven headline. `outcome_promise` is the longer
+            audit-recommended copy; `certainty_loop` is the current production
+            headline kept as control. Both share the same markup so only
+            textual content differs between variants. */}
+        <h1
+          data-hero-variant={heroVariant}
+          style={{
+            // Outcome-promise copy is longer; drop one step at each breakpoint
+            // so the single-line CTA promise still fits two lines max on desktop.
+            fontSize:
+              heroVariant === 'outcome_promise'
+                ? (isMobile ? 28 : 44)
+                : (isMobile ? 34 : 54),
+            fontWeight: FontWeight.bold,
+            color: Colors.charcoal,
+            margin: '0 0 24px 0',
+            lineHeight: 1.15,
+          }}
+        >
+          {heroCopy.h1}
         </h1>
 
         <p style={{
           fontSize: isMobile ? 17 : 20, color: Colors.medGray,
           margin: '0 auto 40px', lineHeight: 1.6, maxWidth: 660,
         }}>
-          Canopy is the AI-powered platform that tracks every piece of equipment in your home, tells you exactly what needs attention and when, and builds a verified maintenance record that protects your home's value.
+          {heroCopy.subhead}
         </p>
 
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 32 }}>
@@ -252,9 +360,15 @@ export default function Landing() {
             }}
             onMouseEnter={(e) => { (e.target as HTMLElement).style.background = Colors.copperDark; (e.target as HTMLElement).style.transform = 'translateY(-2px)'; }}
             onMouseLeave={(e) => { (e.target as HTMLElement).style.background = Colors.copper; (e.target as HTMLElement).style.transform = 'translateY(0)'; }}>
-            Get Started Free
+            {heroCopy.primaryCta}
           </button>
-          <button onClick={() => scrollToSection('how-it-works')}
+          <button onClick={() => {
+              trackEvent('landing_hero_cta_click', {
+                cta_label: heroCopy.secondaryCta,
+                variant: heroVariant,
+              });
+              scrollToSection('how-it-works');
+            }}
             style={{
               padding: '16px 40px', fontSize: 17, fontWeight: FontWeight.semibold,
               background: 'transparent', color: Colors.copper, border: `2px solid ${Colors.copper}`,
@@ -262,7 +376,7 @@ export default function Landing() {
             }}
             onMouseEnter={(e) => { (e.target as HTMLElement).style.background = Colors.copperMuted; }}
             onMouseLeave={(e) => { (e.target as HTMLElement).style.background = 'transparent'; }}>
-            See How It Works
+            {heroCopy.secondaryCta}
           </button>
         </div>
 
@@ -270,23 +384,12 @@ export default function Landing() {
           Free forever — no credit card required
         </p>
 
-        {/* Trust badges inline */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          gap: isMobile ? 20 : 48, flexWrap: 'wrap',
-        }}>
-          {[
-            { icon: '🔒', text: 'Bank-level encryption' },
-            { icon: '🤖', text: 'Powered by AI' },
-            { icon: '📱', text: 'Web + iOS + Android' },
-            { icon: '⚡', text: 'Set up in 5 minutes' },
-          ].map((item) => (
-            <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 16 }}>{item.icon}</span>
-              <span style={{ fontSize: 13, fontWeight: FontWeight.medium, color: Colors.medGray }}>{item.text}</span>
-            </div>
-          ))}
-        </div>
+        {/* DL-5 — Localized trust strip. Replaces the generic "bank-level
+            encryption / powered by AI / web+iOS / 2 minutes" badge row with a
+            Tulsa-specific proof strip: live count of Tulsa homes, named
+            testimonial, neighborhood visual, BBB slot. Encryption language
+            has moved to the /security page (linked from within the strip). */}
+        <TulsaTrustStrip isMobile={isMobile} />
       </div>
     </section>
   );
@@ -303,8 +406,14 @@ export default function Landing() {
           fontSize: isMobile ? 26 : 38, fontWeight: FontWeight.bold,
           color: Colors.charcoal, textAlign: 'center', margin: '0 0 56px 0',
         }}>
-          Up and running in 5 minutes
+          Start in 2 minutes · full setup in about 10
         </h2>
+        <p style={{
+          fontSize: isMobile ? 14 : 16, color: Colors.medGray,
+          textAlign: 'center', margin: '-40px 0 40px 0', maxWidth: 620, marginLeft: 'auto', marginRight: 'auto',
+        }}>
+          Equipment and document upload can happen later — no pressure on day one.
+        </p>
 
         <div style={{
           display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 32 : 48,
@@ -331,6 +440,359 @@ export default function Landing() {
       </div>
     </section>
   );
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // ADD-ONS (DL-3) — recurring services between "How it works" and features
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const AddOnsSection = () => {
+    const cards: Array<{
+      slug: 'pest' | 'lawn' | 'pool' | 'septic' | 'cleaning';
+      category: 'pest' | 'lawn' | 'pool' | 'septic' | 'cleaning';
+      icon: string;
+      title: string;
+      desc: string;
+      startsAt: number; // monthly floor in USD
+    }> = [
+      { slug: 'pest',     category: 'pest',     icon: '🪳', title: 'Pest Shield',    desc: 'Quarterly treatments + free re-services. Tulsa Certified Pros handle the rotation so you never think about it.', startsAt: 39 },
+      { slug: 'lawn',     category: 'lawn',     icon: '🌿', title: 'Lawn Care',      desc: 'Mow, edge, and fertilize on a bi-weekly schedule built around your yard size and grass type.', startsAt: 59 },
+      { slug: 'pool',     category: 'pool',     icon: '🏊', title: 'Pool Service',   desc: 'Weekly chemistry, cleaning, and equipment checks. Log book stays in Canopy.', startsAt: 149 },
+      { slug: 'septic',   category: 'septic',   icon: '💧', title: 'Septic Care',    desc: 'Scheduled inspections, pumping reminders, and on-call response when something goes wrong.', startsAt: 19 },
+      { slug: 'cleaning', category: 'cleaning', icon: '🧹', title: 'House Cleaning', desc: 'Bi-weekly deep clean, scoped to your home size and priorities. Same crew, same day, every visit.', startsAt: 129 },
+    ];
+
+    const handleCardClick = (card: typeof cards[number]) => {
+      trackEvent('landing_addon_card_click', { category: card.category });
+      navigate(`/add-ons?focus=${card.slug}`);
+    };
+
+    return (
+      <section
+        id="add-ons"
+        style={{
+          background: Colors.warmWhite,
+          padding: isMobile ? '48px 0' : '80px 24px',
+          fontFamily: fontStack,
+        }}
+        aria-labelledby="add-ons-heading"
+      >
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 16px' : 0 }}>
+          <h2
+            id="add-ons-heading"
+            style={{
+              fontSize: isMobile ? 26 : 38,
+              fontWeight: FontWeight.bold,
+              color: Colors.charcoal,
+              textAlign: 'center',
+              margin: '0 0 12px 0',
+              lineHeight: 1.25,
+            }}
+          >
+            Hand off the home-care tasks you don&apos;t want to think about.
+          </h2>
+          <p
+            style={{
+              fontSize: isMobile ? 15 : 17,
+              color: Colors.medGray,
+              textAlign: 'center',
+              maxWidth: 620,
+              margin: '0 auto 40px',
+              lineHeight: 1.6,
+            }}
+          >
+            Layer Canopy-vetted recurring services onto your plan. One login, one
+            invoice, one record of what was done and when.
+          </p>
+        </div>
+
+        {/* Horizontal-scroll row on mobile, 5-column grid on desktop */}
+        <div
+          role="list"
+          aria-label="Recurring add-on services"
+          style={
+            isMobile
+              ? {
+                  display: 'flex',
+                  gap: 14,
+                  overflowX: 'auto',
+                  padding: '4px 16px 16px 16px',
+                  scrollSnapType: 'x mandatory',
+                  WebkitOverflowScrolling: 'touch',
+                }
+              : {
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(5, 1fr)',
+                  gap: 20,
+                  maxWidth: 1200,
+                  margin: '0 auto',
+                }
+          }
+        >
+          {cards.map((c) => (
+            <button
+              key={c.slug}
+              role="listitem"
+              onClick={() => handleCardClick(c)}
+              onMouseEnter={(e) => cardHover(e, true)}
+              onMouseLeave={(e) => cardHover(e, false)}
+              aria-label={`${c.title}: ${c.desc} Starts at $${c.startsAt} per month. Learn more.`}
+              style={{
+                flex: isMobile ? '0 0 78%' : undefined,
+                scrollSnapAlign: isMobile ? 'start' : undefined,
+                minWidth: isMobile ? 260 : undefined,
+                background: Colors.white,
+                border: `1px solid ${Colors.lightGray}`,
+                borderRadius: BorderRadius.lg,
+                padding: isMobile ? 20 : 22,
+                textAlign: 'left',
+                fontFamily: fontStack,
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <div style={{ fontSize: 32, marginBottom: 10 }} aria-hidden="true">
+                {c.icon}
+              </div>
+              <h3
+                style={{
+                  fontSize: 18,
+                  fontWeight: FontWeight.semibold,
+                  color: Colors.charcoal,
+                  margin: '0 0 8px 0',
+                }}
+              >
+                {c.title}
+              </h3>
+              <p
+                style={{
+                  fontSize: 14,
+                  color: Colors.medGray,
+                  lineHeight: 1.55,
+                  margin: '0 0 14px 0',
+                  flex: 1,
+                }}
+              >
+                {c.desc}
+              </p>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: FontWeight.semibold,
+                  color: Colors.charcoal,
+                  marginBottom: 4,
+                }}
+              >
+                Starts at ${c.startsAt}/mo
+              </div>
+              <div style={{ fontSize: 12, color: Colors.medGray, marginBottom: 14 }}>
+                Your exact price after property assessment.
+              </div>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 14,
+                  fontWeight: FontWeight.semibold,
+                  color: Colors.copper,
+                }}
+                aria-hidden="true"
+              >
+                Learn more →
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <p
+          style={{
+            fontSize: 13,
+            color: Colors.medGray,
+            textAlign: 'center',
+            maxWidth: 640,
+            margin: '32px auto 0',
+            padding: '0 16px',
+          }}
+        >
+          Add-on services are available to Home and Pro subscribers in active
+          Canopy service areas. Not in a service area yet?{' '}
+          <button
+            onClick={() => ctaToSignup('addons_waitlist')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: Colors.copper,
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              fontSize: 13,
+              fontFamily: fontStack,
+              padding: 0,
+            }}
+          >
+            Join the waitlist
+          </button>{' '}
+          and we&apos;ll notify you when we launch.
+        </p>
+      </section>
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // WHO IS IT FOR — persona cards targeting the main entry-points into Canopy
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const WhoIsItFor = () => {
+    const personas: Array<{
+      key: 'new_owner' | 'established' | 'selling_soon' | 'investor';
+      icon: string;
+      title: string;
+      desc: string;
+      cta: string;
+      destination: string;
+    }> = [
+      {
+        key: 'new_owner',
+        icon: '🔑',
+        title: 'Just bought a home?',
+        desc: 'Scan your equipment in minutes. Canopy builds your maintenance plan, stores warranties, and kicks off your Home Token from day one.',
+        cta: 'Start free',
+        destination: '/signup',
+      },
+      {
+        key: 'established',
+        icon: '🏡',
+        title: 'Been in it a few years?',
+        desc: 'Replace that junk drawer of receipts. Document what you\'ve done, catch what you\'ve missed, and build proof of care that protects resale value.',
+        cta: 'See how it works',
+        destination: '/signup',
+      },
+      {
+        key: 'selling_soon',
+        icon: '📋',
+        title: 'Selling soon?',
+        desc: 'Walk into listing day with a documented history and a Sale Prep checklist our Tulsa pros built. Preview what\'s inside before you sign up.',
+        cta: 'Preview Sale Prep',
+        destination: '/sale-prep-preview',
+      },
+    ];
+
+    return (
+      <section
+        id="who-is-it-for"
+        style={{
+          background: Colors.warmWhite,
+          padding: isMobile ? '56px 16px' : '80px 24px',
+          fontFamily: fontStack,
+        }}
+      >
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <h2
+            style={{
+              fontSize: isMobile ? 26 : 36,
+              fontWeight: FontWeight.bold,
+              color: Colors.charcoal,
+              textAlign: 'center',
+              margin: '0 0 12px 0',
+            }}
+          >
+            Where are you in the homeownership journey?
+          </h2>
+          <p
+            style={{
+              fontSize: isMobile ? 15 : 17,
+              color: Colors.medGray,
+              textAlign: 'center',
+              maxWidth: 620,
+              margin: '0 auto 40px',
+              lineHeight: 1.6,
+            }}
+          >
+            Canopy meets you where you are — from day-one setup to listing day.
+          </p>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+              gap: isMobile ? 16 : 24,
+            }}
+          >
+            {personas.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => {
+                  trackEvent('landing_persona_card_click', {
+                    persona: p.key,
+                    destination: p.destination,
+                  });
+                  navigate(p.destination);
+                }}
+                style={{
+                  background: Colors.white,
+                  border: `1px solid ${Colors.lightGray}`,
+                  borderRadius: BorderRadius.lg,
+                  padding: isMobile ? 24 : 28,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
+                  fontFamily: fontStack,
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget;
+                  el.style.transform = 'translateY(-3px)';
+                  el.style.boxShadow = '0 8px 20px rgba(0,0,0,0.08)';
+                  el.style.borderColor = Colors.copper;
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget;
+                  el.style.transform = 'none';
+                  el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+                  el.style.borderColor = Colors.lightGray;
+                }}
+              >
+                <div style={{ fontSize: 32, marginBottom: 14 }}>{p.icon}</div>
+                <h3
+                  style={{
+                    fontSize: 18,
+                    fontWeight: FontWeight.semibold,
+                    color: Colors.charcoal,
+                    margin: '0 0 8px 0',
+                  }}
+                >
+                  {p.title}
+                </h3>
+                <p
+                  style={{
+                    fontSize: 14,
+                    color: Colors.medGray,
+                    lineHeight: 1.6,
+                    margin: '0 0 16px 0',
+                    flex: 1,
+                  }}
+                >
+                  {p.desc}
+                </p>
+                <span
+                  style={{
+                    fontSize: 14,
+                    fontWeight: FontWeight.semibold,
+                    color: Colors.copper,
+                  }}
+                >
+                  {p.cta} &rarr;
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  };
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // FEATURES GRID
@@ -902,7 +1364,7 @@ export default function Landing() {
         <p style={{
           fontSize: isMobile ? 16 : 18, color: 'var(--color-silver)', lineHeight: 1.6, margin: '0 0 36px 0',
         }}>
-          Set up in 5 minutes. Free forever. Upgrade when you're ready.
+          Start in 2 minutes. Free forever. Upgrade when you're ready.
         </p>
         <button onClick={() => ctaToSignup('final_cta')}
           style={{
@@ -963,6 +1425,7 @@ export default function Landing() {
               links: [
                 { label: 'Terms of Service', href: '/terms' },
                 { label: 'Privacy Policy', href: '/privacy' },
+                { label: 'Security & Privacy', href: '/security' },
                 { label: 'Contractor Terms', href: '/contractor-terms' },
                 { label: 'AI Disclaimer', href: '/ai-disclaimer' },
                 { label: 'Cancellation', href: '/cancellation' },
@@ -1006,11 +1469,17 @@ export default function Landing() {
     <SectionErrorBoundary sectionName="Landing">
       <div style={{ fontFamily: fontStack }}>
         <NavHeader />
-        <HeroSection />
+        {/* HeroSection invoked as function (not `<HeroSection />`) so
+            stateful children like ZipPreCheck don't unmount when Landing
+            re-renders from mobileMenuOpen / resize / billingInterval. */}
+        {HeroSection()}
         <HowItWorks />
+        <AddOnsSection />
+        <WhoIsItFor />
         <FeaturesSection />
         <StatsSection />
         {PricingSection()}
+        <TestimonialsSection isMobile={isMobile} />
         <FaqSection />
         <FinalCta />
         <Footer />

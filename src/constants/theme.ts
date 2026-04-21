@@ -23,6 +23,7 @@ export const Colors = {
   sageLight: '#A8B89C',
   sageDark: '#6B7E5E',
   sageMuted: '#8B9E7E15',
+  sageStrong: '#5A6B4E',
   charcoal: '#2C2C2C',
   darkGray: '#4A4A4A',
   medGray: '#5F5F5F',   // darkened from #7A7A7A for AA body-text compliance
@@ -53,6 +54,7 @@ export const DarkColors: typeof Colors = {
   sageLight: '#BCC9B2',
   sageDark: '#8B9E7E',
   sageMuted: '#A8B89C15',
+  sageStrong: '#A8B89C',
   charcoal: '#E8E2D8',       // text flips to light
   darkGray: '#C0BAB0',
   medGray: '#9E9890',

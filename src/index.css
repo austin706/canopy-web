@@ -318,6 +318,13 @@ body {
   background: var(--white);
   box-shadow: 0 0 0 3px var(--copper-muted);
 }
+/* Windows High Contrast Mode: ensure visible outline when outline: none is suppressed */
+@media (forced-colors: active) {
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: 2px solid CanvasText;
+    outline-offset: 2px;
+  }
+}
 /* Ensure native <option> elements render opaque in dropdown popups (fixes transparent-with-shadow bug) */
 .form-input option, .form-select option, select.form-input option, select.form-select option {
   background-color: var(--white);

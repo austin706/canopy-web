@@ -179,11 +179,11 @@ export default function CreateTask() {
   const chipStyle = (selected: boolean): React.CSSProperties => ({
     padding: '8px 12px',
     borderRadius: '6px',
-    border: 'none',
+    border: '1px solid transparent',
     cursor: 'pointer',
     fontSize: '13px',
     fontWeight: '500',
-    backgroundColor: selected ? Colors.sage : Colors.inputBackground,
+    backgroundColor: selected ? Colors.sageStrong : Colors.inputBackground,
     color: selected ? Colors.white : Colors.charcoal,
     transition: 'all 0.2s',
   });

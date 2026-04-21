@@ -7,6 +7,7 @@ import { getTasks, reopenTask as reopenTaskApi, getCalendarToken, rotateCalendar
 import { getDisplayStatus } from '@/services/taskEngine';
 import { supabase } from '@/services/supabase';
 import type { MaintenanceTask, ProMonthlyVisit } from '@/types';
+import { EmptyState } from '@/components/ui';
 
 const MaintenanceLogs = lazy(() => import('@/pages/MaintenanceLogs'));
 
@@ -15,11 +16,8 @@ type CalendarTab = 'calendar' | 'log';
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-const DEMO_TASKS: MaintenanceTask[] = [
-  { id: 'd1', home_id: '1', title: 'Replace HVAC Air Filters', description: 'Check and replace monthly.', category: 'hvac' as const, priority: 'high' as const, status: 'due' as const, frequency: 'monthly' as const, due_date: new Date().toISOString(), is_weather_triggered: false, applicable_months: [1,2,3,4,5,6,7,8,9,10,11,12], estimated_minutes: 10, created_at: '' },
-  { id: 'd2', home_id: '1', title: 'Clean Gutters (Spring)', description: 'Remove debris and check drainage.', category: 'roof' as const, priority: 'medium' as const, status: 'upcoming' as const, frequency: 'biannual' as const, due_date: new Date(Date.now() + 7*86400000).toISOString(), is_weather_triggered: false, applicable_months: [4,5], estimated_minutes: 60, created_at: '' },
-  { id: 'd3', home_id: '1', title: 'Test Smoke & CO Detectors', description: 'Press test button on every detector.', category: 'safety' as const, priority: 'high' as const, status: 'upcoming' as const, frequency: 'monthly' as const, due_date: new Date(Date.now() + 3*86400000).toISOString(), is_weather_triggered: false, applicable_months: [1,2,3,4,5,6,7,8,9,10,11,12], estimated_minutes: 10, created_at: '' },
-];
+// DD-6 (Wave B): DEMO_TASKS removed. When onboarding is incomplete the
+// calendar renders an EmptyState CTA instead of mock rows.
 
 export default function Calendar() {
   const navigate = useNavigate();
@@ -29,7 +27,9 @@ export default function Calendar() {
   const [activeTab, setActiveTab] = useState<CalendarTab>(
     searchParams.get('tab') === 'log' ? 'log' : 'calendar'
   );
-  const tasks = isDemo ? DEMO_TASKS : storeTasks;
+  // DD-6: no more mock tasks — the EmptyState below covers the onboarding-
+  // incomplete case.
+  const tasks: MaintenanceTask[] = storeTasks;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
@@ -398,6 +398,18 @@ export default function Calendar() {
           </button>
         </div>
       </div>
+
+      {isDemo && (
+        <EmptyState
+          title="No tasks on the calendar yet"
+          description="Finish setup and we'll schedule your first round of maintenance based on your home and climate."
+          primaryAction={{
+            label: 'Finish setting up',
+            onClick: () => navigate('/onboarding'),
+          }}
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
       {/* Sub-tab navigation */}
       <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid var(--color-cream)`, marginBottom: 24 }}>

@@ -12,10 +12,17 @@ test.describe('Conversion funnel — signup to onboarding', () => {
     await stubSupabase(page, { authed: true });
     await page.goto('/signup');
 
-    const email = page.getByLabel(/email/i).first();
-    const password = page.getByLabel(/password/i).first();
+    // Signup form has full name + email + password + confirm password + terms checkbox.
+    const fullName = page.locator('input[placeholder*="Jane Doe"], input[placeholder*="name" i]').first();
+    const email = page.locator('input[type="email"]').first();
+    const passwords = page.locator('input[type="password"]');
+    const terms = page.locator('input[type="checkbox"]').first();
+
+    await fullName.fill('Smoke Test');
     await email.fill('smoketest@canopy.test');
-    await password.fill('TestPassword123!');
+    await passwords.nth(0).fill('TestPassword123!');
+    await passwords.nth(1).fill('TestPassword123!');
+    await terms.check();
 
     const submit = page.getByRole('button', { name: /sign up|create account|get started/i }).first();
     await submit.click();

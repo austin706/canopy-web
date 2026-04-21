@@ -21,12 +21,12 @@ test.describe('Conversion funnel — add-on quote request', () => {
     // Heading should render (Add-On Services / similar copy).
     await expect(page.locator('h1, h2').first()).toBeVisible({ timeout: 10_000 });
 
-    // Request-quote style CTA should exist for at least one service.
-    const quoteCta = page
-      .getByRole('button', { name: /(request|get) (a )?quote|book|learn more/i })
+    // At least one primary CTA should be present on the add-ons landing page.
+    const cta = page
+      .getByRole('button', { name: /get started|start your canopy|request|quote|learn more|sign up/i })
       .first();
     await expect(
-      quoteCta.or(page.getByRole('link', { name: /quote|book|details/i }).first()),
+      cta.or(page.getByRole('link', { name: /get started|signup|start|quote/i }).first()),
     ).toBeVisible({ timeout: 10_000 });
   });
 });

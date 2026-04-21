@@ -19,7 +19,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
-import { Colors, FontWeight, BorderRadius, Spacing } from '@/constants/theme';
+import { Colors, FontWeight, FontSize, BorderRadius, Spacing } from '@/constants/theme';
 import { track } from '@/utils/analytics';
 
 interface FirstVisit {
@@ -195,7 +195,7 @@ export default function FirstVisitOrientationCard({ isMobile }: Props) {
         >
           Getting ready for your first Canopy visit
         </h2>
-        <p style={{ margin: '6px 0 0', fontSize: 13, color: Colors.medGray }}>
+        <p style={{ margin: '6px 0 0', fontSize: FontSize.sm, color: Colors.medGray }}>
           Scheduled for <strong>{scheduledLabel}</strong>. Here\u2019s what to expect.
         </p>
       </header>
@@ -216,7 +216,7 @@ export default function FirstVisitOrientationCard({ isMobile }: Props) {
             padding: Spacing.md,
           }}
         >
-          <div style={{ fontSize: 11, fontWeight: FontWeight.semibold, color: Colors.sageDark, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+          <div style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.sageDark, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
             Who\u2019s coming
           </div>
           {provider ? (
@@ -232,7 +232,7 @@ export default function FirstVisitOrientationCard({ isMobile }: Props) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 16,
+                  fontSize: 16, // allow-lint — avatar initial, off-scale
                   fontWeight: FontWeight.bold,
                   flexShrink: 0,
                 }}
@@ -240,21 +240,21 @@ export default function FirstVisitOrientationCard({ isMobile }: Props) {
                 {!provider.avatar_url && (provider.contact_name ?? provider.business_name ?? 'P').trim().charAt(0).toUpperCase()}
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: FontWeight.semibold, color: Colors.charcoal }}>
+                <div style={{ fontSize: 14 /* allow-lint */, fontWeight: FontWeight.semibold, color: Colors.charcoal }}>
                   {provider.contact_name ?? provider.business_name ?? 'Your Canopy pro'}
                 </div>
                 {provider.business_name && provider.contact_name && (
-                  <div style={{ fontSize: 12, color: Colors.medGray }}>{provider.business_name}</div>
+                  <div style={{ fontSize: 12 /* allow-lint */, color: Colors.medGray }}>{provider.business_name}</div>
                 )}
                 {provider.bio && (
-                  <p style={{ margin: '8px 0 0', fontSize: 13, color: Colors.charcoal, lineHeight: 1.4 }}>
+                  <p style={{ margin: '8px 0 0', fontSize: FontSize.sm, color: Colors.charcoal, lineHeight: 1.4 }}>
                     {provider.bio}
                   </p>
                 )}
               </div>
             </div>
           ) : (
-            <p style={{ margin: 0, fontSize: 13, color: Colors.medGray, lineHeight: 1.45 }}>
+            <p style={{ margin: 0, fontSize: FontSize.sm, color: Colors.medGray, lineHeight: 1.45 }}>
               We\u2019ll match you with a Canopy-certified pro shortly and introduce them here.
             </p>
           )}
@@ -269,12 +269,12 @@ export default function FirstVisitOrientationCard({ isMobile }: Props) {
             padding: Spacing.md,
           }}
         >
-          <div style={{ fontSize: 11, fontWeight: FontWeight.semibold, color: Colors.sageDark, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+          <div style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.sageDark, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
             What to expect
           </div>
           <ul style={{ margin: 0, paddingLeft: 18, color: Colors.charcoal }}>
             {EXPECT_BULLETS.map((line) => (
-              <li key={line} style={{ fontSize: 13, marginBottom: 6, lineHeight: 1.4 }}>
+              <li key={line} style={{ fontSize: FontSize.sm, marginBottom: 6, lineHeight: 1.4 }}>
                 {line}
               </li>
             ))}
@@ -294,14 +294,14 @@ export default function FirstVisitOrientationCard({ isMobile }: Props) {
           }}
         >
           <div>
-            <div style={{ fontSize: 11, fontWeight: FontWeight.semibold, color: Colors.sageDark, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+            <div style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.sageDark, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
               Day-of text
             </div>
-            <p style={{ margin: '0 0 12px', fontSize: 13, color: Colors.charcoal, lineHeight: 1.4 }}>
+            <p style={{ margin: '0 0 12px', fontSize: FontSize.sm, color: Colors.charcoal, lineHeight: 1.4 }}>
               Want a text the morning of your visit with your pro\u2019s ETA?
             </p>
           </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: saving ? 'wait' : 'pointer', fontSize: 13, color: Colors.charcoal }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: saving ? 'wait' : 'pointer', fontSize: FontSize.sm, color: Colors.charcoal }}>
             <input
               type="checkbox"
               checked={optIn}

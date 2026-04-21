@@ -22,7 +22,7 @@ test.describe('Conversion funnel — landing to signup', () => {
     await cta.click();
 
     await expect(page).toHaveURL(/\/signup/);
-    // Signup form should be present (email + password inputs).
-    await expect(page.getByLabel(/email/i).first()).toBeVisible();
+    // Signup form should be present (email input present).
+    await expect(page.locator('input[type="email"]').first()).toBeVisible();
   });
 });

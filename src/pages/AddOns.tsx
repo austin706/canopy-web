@@ -40,8 +40,9 @@ const ICON_MAP: Record<string, string> = {
 };
 
 const FREQ_LABELS: Record<string, string> = {
-  monthly: 'Monthly', bimonthly: 'Every 2 months', quarterly: 'Quarterly',
-  biannual: 'Twice/year', annual: 'Annual', as_needed: 'As needed',
+  monthly: 'Monthly', biweekly: 'Biweekly', bimonthly: 'Every 2 months',
+  quarterly: 'Quarterly', biannual: 'Twice/year', annual: 'Annual',
+  as_needed: 'As needed',
 };
 
 const STATUS_STYLES: Record<string, { label: string; bg: string; color: string }> = {

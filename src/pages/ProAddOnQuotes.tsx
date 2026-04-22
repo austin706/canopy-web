@@ -34,12 +34,17 @@ const STATUS_STYLES: Record<string, { label: string; bg: string; color: string }
   paused: { label: 'Paused', bg: Colors.medGray + '20', color: Colors.medGray },
 };
 
+// Keep in sync with ALLOWED_BILLING_FREQUENCIES in submit-add-on-quote and
+// INTERVAL_MAP in create-add-on-checkout + the home_add_ons.billing_frequency
+// CHECK constraint (migrations 057/075).
 const FREQ_OPTIONS = [
   { value: 'monthly', label: 'Monthly' },
+  { value: 'biweekly', label: 'Biweekly' },
+  { value: 'bimonthly', label: 'Every 2 months' },
   { value: 'quarterly', label: 'Quarterly' },
   { value: 'biannual', label: 'Twice/year' },
   { value: 'annual', label: 'Annual' },
-  { value: 'one_time', label: 'One-time' },
+  { value: 'as_needed', label: 'As needed' },
 ];
 
 export default function ProAddOnQuotes() {

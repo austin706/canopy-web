@@ -210,22 +210,24 @@ export default function App() {
       }
 
       if (event === 'SIGNED_IN' && session?.user) {
-        // User just signed in — load full profile and home data
+        // User just signed in — load full profile and home data.
+        // Spread the full profile row so cross-platform fields
+        // (subscription_source, subscription_expires_at, avatar_url,
+        // setup_checklist_state, calendar_token, user_preferences, etc.)
+        // flow into the store and mirror what mobile loads.
         try {
           const authUser = session.user;
           const profile = await getProfile(authUser.id);
           const userData = {
+            ...(profile || {}),
             id: authUser.id,
-            email: authUser.email || '',
+            email: authUser.email || profile?.email || '',
             full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
             subscription_tier: profile?.subscription_tier || 'free',
-            subscription_status: profile?.subscription_status,
             onboarding_complete: profile?.onboarding_complete || false,
             email_confirmed: !!authUser.email_confirmed_at,
             created_at: authUser.created_at,
             role: profile?.role || 'user',
-            agent_id: profile?.agent_id,
-            phone: profile?.phone,
           };
           setUser(userData);
 
@@ -311,22 +313,21 @@ export default function App() {
         }
 
         // Initial session detected (e.g., magic link from URL hash)
-        // Load profile and home data like SIGNED_IN
+        // Load profile and home data like SIGNED_IN — full-profile spread so
+        // web and mobile store the same cross-platform fields.
         try {
           const authUser = session.user;
           const profile = await getProfile(authUser.id);
           const userData = {
+            ...(profile || {}),
             id: authUser.id,
-            email: authUser.email || '',
+            email: authUser.email || profile?.email || '',
             full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
             subscription_tier: profile?.subscription_tier || 'free',
-            subscription_status: profile?.subscription_status,
             onboarding_complete: profile?.onboarding_complete || false,
             email_confirmed: !!authUser.email_confirmed_at,
             created_at: authUser.created_at,
             role: profile?.role || 'user',
-            agent_id: profile?.agent_id,
-            phone: profile?.phone,
           };
           setUser(userData);
 

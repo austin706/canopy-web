@@ -692,6 +692,36 @@ export default function Subscription() {
         </div>
       </div>
 
+      {/* Subscription legal footer — mirrors the mobile paywall disclosures
+          for feature parity. Stripe-only on web so the Apple-specific wording
+          is replaced by the subscription billing terms. */}
+      <div style={{ padding: '16px 8px', marginTop: 16, textAlign: 'center' }}>
+        <p className="text-xs text-gray" style={{ lineHeight: 1.5, marginBottom: 8 }}>
+          Subscriptions automatically renew at the end of each billing period until
+          canceled. You can manage or cancel your subscription anytime from this page.
+          Payments are processed securely by Stripe.
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 12, fontSize: 12 }}>
+          <a
+            href="https://canopyhome.app/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: Colors.copper, fontWeight: 600, textDecoration: 'underline' }}
+          >
+            Terms of Use
+          </a>
+          <span style={{ color: Colors.silver }}>·</span>
+          <a
+            href="https://canopyhome.app/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: Colors.copper, fontWeight: 600, textDecoration: 'underline' }}
+          >
+            Privacy Policy
+          </a>
+        </div>
+      </div>
+
       {/* Pro Interest Waitlist - Show if not in service area */}
       {!proAvailable && (
         <div className="card" style={{ background: Colors.copperMuted }}>

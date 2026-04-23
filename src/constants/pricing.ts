@@ -49,6 +49,10 @@ export const ANNUAL_DISCOUNT_PERCENT = 10;
  *   Pro Stripe:  $149 × 12 × 0.90  = $1,609.20/yr
  *   Pro IAP:     $199.99 × 12 × 0.90 = $2,159.89/yr → Apple tier $2,199.99/yr
  */
+// Home-only IAP rule (locked 2026-04-22): RC / Apple IAP / Google Play
+// Billing only sell the Home tier (single + 2-pack). Pro and Pro+ are
+// Stripe-only — their `iap` prices are zero so the paywall hides the
+// App Store / Google Play CTA on those cards on mobile.
 export const PRICING: Record<Exclude<SubscriptionTier, 'free'>, TierPricing> = {
   home: {
     stripe: { monthly: 6.99, yearly: 75.49 },
@@ -60,11 +64,11 @@ export const PRICING: Record<Exclude<SubscriptionTier, 'free'>, TierPricing> = {
   },
   pro: {
     stripe: { monthly: 149, yearly: 1609 },
-    iap: { monthly: 199.99, yearly: 2199.99 },
+    iap: { monthly: 0, yearly: 0 }, // Stripe-only (Home-only IAP rule)
   },
   pro_2: {
     stripe: { monthly: 279, yearly: 3018.60 },
-    iap: { monthly: 379.99, yearly: 4103.89 },
+    iap: { monthly: 0, yearly: 0 }, // Stripe-only (Home-only IAP rule)
   },
   pro_plus: {
     stripe: { monthly: 0, yearly: 0 }, // Custom pricing — contact sales

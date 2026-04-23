@@ -168,11 +168,61 @@ const PAGE_META: Record<string, PageMeta> = {
       { name: 'Privacy Policy', path: '/privacy' },
     ],
   },
+  // P3 #91 (2026-04-23) — actual route is /cancellation (see App.tsx),
+  // previous entry under /cancellation-policy never matched. Kept legacy key
+  // as an alias below in case any outbound links still use the old URL.
+  '/cancellation': {
+    title: 'Cancellation & Refund Policy — Canopy Home',
+    description:
+      'How to cancel your Canopy subscription, what happens to your data, and our 7-day refund window on Stripe purchases.',
+    breadcrumbs: [
+      { name: 'Home', path: '/' },
+      { name: 'Cancellation Policy', path: '/cancellation' },
+    ],
+  },
   '/cancellation-policy': {
-    title: 'Cancellation Policy — Canopy Home',
+    title: 'Cancellation & Refund Policy — Canopy Home',
+    description:
+      'How to cancel your Canopy subscription, what happens to your data, and our 7-day refund window on Stripe purchases.',
     breadcrumbs: [
       { name: 'Home', path: '/' },
       { name: 'Cancellation Policy', path: '/cancellation-policy' },
+    ],
+  },
+  '/ai-disclaimer': {
+    title: 'AI Recommendations Disclaimer — Canopy Home',
+    description:
+      'How Canopy uses AI, the limits of AI-generated recommendations, and when to consult a licensed professional.',
+    breadcrumbs: [
+      { name: 'Home', path: '/' },
+      { name: 'AI Disclaimer', path: '/ai-disclaimer' },
+    ],
+  },
+  '/pci-compliance': {
+    title: 'PCI DSS Compliance — Canopy Home',
+    description:
+      'Canopy\'s payment architecture: all card data is handled by Stripe (PCI DSS Level 1). Canopy never stores, processes, or transmits cardholder data.',
+    breadcrumbs: [
+      { name: 'Home', path: '/' },
+      { name: 'PCI Compliance', path: '/pci-compliance' },
+    ],
+  },
+  '/contractor-terms': {
+    title: 'Pro Provider Agreement — Canopy Home',
+    description:
+      'Terms, payouts, 15% Canopy fee, scheduling, quality standards, and independent-contractor status for Canopy Pro Providers.',
+    breadcrumbs: [
+      { name: 'Home', path: '/' },
+      { name: 'Pro Provider Agreement', path: '/contractor-terms' },
+    ],
+  },
+  '/add-ons': {
+    title: 'Canopy Add-Ons — Routine Cleaning, Gutters, HVAC & More',
+    description:
+      'Stack on recurring services to the Canopy platform. Per-property quotes, contractor-matched, billed monthly alongside your Home or Pro subscription.',
+    breadcrumbs: [
+      { name: 'Home', path: '/' },
+      { name: 'Add-Ons', path: '/add-ons' },
     ],
   },
 };

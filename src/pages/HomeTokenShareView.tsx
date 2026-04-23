@@ -4,6 +4,7 @@ import { Colors } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
 import HomeTokenShare from '@/components/HomeTokenShare';
 import { getTransferByToken, type HomeTransfer as HomeTransferType } from '@/services/homeTransfer';
+import { supabase } from '@/services/supabaseClient';
 
 /**
  * Public view for a Home Token share link: /home-token/share/:transferToken
@@ -19,6 +20,10 @@ export default function HomeTokenShareView() {
   const [home, setHome] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  // P1-15 (2026-04-23): brokerage lives on the agents row, not profiles. Resolve it
+  // up-front when the viewer is an agent so the attestation form pre-fills with the
+  // agent's brokerage instead of the prior hardcoded `undefined`.
+  const [agentBrokerage, setAgentBrokerage] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const run = async () => {
@@ -36,6 +41,29 @@ export default function HomeTokenShareView() {
     };
     run();
   }, [transferToken]);
+
+  useEffect(() => {
+    // P1-15: only fetch brokerage for an authed agent with a linked agent_id.
+    const isAgent = user?.role === 'agent';
+    if (!isAgent || !user?.agent_id) {
+      setAgentBrokerage(undefined);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('agents')
+          .select('brokerage')
+          .eq('id', user.agent_id)
+          .maybeSingle();
+        if (!cancelled) setAgentBrokerage(data?.brokerage || undefined);
+      } catch {
+        if (!cancelled) setAgentBrokerage(undefined);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.role, user?.agent_id]);
 
   if (loading) {
     return (
@@ -64,8 +92,14 @@ export default function HomeTokenShareView() {
 
   const isAgent = user?.role === 'agent';
   const agentName = isAgent ? (user?.full_name || user?.email || undefined) : undefined;
-  // agent brokerage is stored on the agent row, not the profile — fetching it would require another round-trip.
-  const agentBrokerage: string | undefined = undefined;
+  // P2 #44 (2026-04-23): Public QR viewers (anonymous) see city/state/ZIP only, not street.
+  // Authenticated viewers (homeowner, linked agent, logged-in pro) still see full address.
+  const canSeeStreet = !!user?.id;
+  const cityState = [home.city, home.state, home.zip_code].filter(Boolean).join(', ');
+  const primaryLine = canSeeStreet
+    ? (home.address || 'Address pending')
+    : (cityState || 'Location pending');
+  const secondaryLine = canSeeStreet ? cityState : '';
 
   return (
     <div className="page" style={{ maxWidth: 600 }}>
@@ -89,10 +123,17 @@ export default function HomeTokenShareView() {
           }} role="img" aria-label="Home">🏡</div>
         )}
         <div style={{ flex: 1 }}>
-          <p style={{ fontWeight: 600, color: Colors.charcoal }}>{home.address || 'Address pending'}</p>
-          <p style={{ fontSize: 13, color: Colors.medGray }}>
-            {[home.city, home.state, home.zip_code].filter(Boolean).join(', ')}
-          </p>
+          <p style={{ fontWeight: 600, color: Colors.charcoal }}>{primaryLine}</p>
+          {secondaryLine && (
+            <p style={{ fontSize: 13, color: Colors.medGray }}>
+              {secondaryLine}
+            </p>
+          )}
+          {!canSeeStreet && (
+            <p style={{ fontSize: 11, color: Colors.medGray, fontStyle: 'italic', marginTop: 2 }}>
+              Full address shown to signed-in agents and homeowners
+            </p>
+          )}
           {home.record_completeness_score != null && (
             <p style={{ fontSize: 12, color: Colors.sageDark, marginTop: 4 }}>
               Record completeness: {home.record_completeness_score}%

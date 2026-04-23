@@ -61,6 +61,14 @@ export default function HomeTransfer() {
       setError("You can't transfer to yourself");
       return;
     }
+    // P1-17 (2026-04-23): block transfer until ownership is verified. Without this
+    // gate the audit/credibility model breaks down — anyone could claim ownership
+    // of any address and hand it off. The verification step is fast (USPS + last-
+    // 4 of address proof in Home Details) so a hard block is the right UX here.
+    if (!home.ownership_verified) {
+      setError('Verify your ownership in Home Details before transferring this Home Token.');
+      return;
+    }
     setSubmitting(true);
     setError('');
     try {
@@ -272,17 +280,17 @@ export default function HomeTransfer() {
               )}
             </div>
 
-            {/* Verification prompt */}
+            {/* P1-17: Verification is required to send a Home Token. Soft-tip became a hard gate. */}
             {!home.ownership_verified && (
-              <div style={{ padding: 12, background: 'rgba(245,158,11,0.08)', borderRadius: 8, marginBottom: 20, fontSize: 13, color: '#92400e', lineHeight: 1.6, border: '1px solid rgba(245,158,11,0.2)' }}>
-                <strong>Tip:</strong> Verify your ownership in Home Details to add a trust badge to your Home Token.
-                Verified tokens carry more credibility with buyers.
+              <div style={{ padding: 12, background: 'rgba(229,57,53,0.08)', borderRadius: 8, marginBottom: 20, fontSize: 13, color: '#7f1d1d', lineHeight: 1.6, border: '1px solid rgba(229,57,53,0.25)' }}>
+                <strong>Verification required.</strong> Confirm you own this address before you can send a Home
+                Token to a buyer. This protects buyers from receiving fraudulent transfers and only takes a minute.
                 <button
                   className="btn btn-ghost btn-sm"
                   onClick={() => navigate('/home-details')}
                   style={{ marginLeft: 8, color: Colors.copper, fontWeight: 600, fontSize: 12 }}
                 >
-                  Verify Now →
+                  Verify Ownership →
                 </button>
               </div>
             )}
@@ -325,8 +333,9 @@ export default function HomeTransfer() {
             <button
               className="btn btn-primary"
               onClick={handleInitiate}
-              disabled={!buyerEmail || submitting}
+              disabled={!buyerEmail || submitting || !home.ownership_verified}
               style={{ width: '100%', padding: '12px 24px' }}
+              title={!home.ownership_verified ? 'Verify ownership before sending' : undefined}
             >
               {submitting ? 'Initiating...' : 'Send Home Token to Buyer'}
             </button>

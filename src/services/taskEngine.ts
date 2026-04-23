@@ -35,6 +35,20 @@ import {
 } from 'date-fns';
 
 /**
+ * P2 #34 (2026-04-23): Normalize task titles for deduplication.
+ * Strips parentheticals, unifies unicode dashes, collapses non-alphanumerics.
+ * Ensures "Clean Gutters (Spring)" and "Clean Gutters – Spring" dedup as equal.
+ */
+export function normalizeDedupTitle(t: string): string {
+  return (t || '')
+    .toLowerCase()
+    .replace(/[([][^)\]]*[)\]]/g, '')
+    .replace(/[\u2010-\u2015\u2212]/g, '-')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
  * ROOF LIFESPAN EXPECTATIONS (years)
  * Used to determine when lifecycle alerts should trigger for roofs.
  */
@@ -220,14 +234,19 @@ function generateTasksForHomeImpl(
     equipment.map((eq) => eq.category)
   );
 
-  // Build a composite key set for deduplication: title|month|year
-  // This allows recurring tasks to be regenerated in different months/years
-  const existingTaskKeys = new Set<string>(
-    existingTasks.map((task) => {
-      const d = new Date(task.due_date);
-      return `${task.title}|${d.getMonth()+1}|${d.getFullYear()}`;
-    })
-  );
+  // P2 #34 (2026-04-23): dedup key now prefers template_id + month + year.
+  // Title variations ("Clean Gutters (Spring)" vs "Clean Gutters – Spring")
+  // used to dedup incorrectly. Mobile parity at Canopy-App/services/taskEngine.ts.
+  const existingTaskKeys = new Set<string>();
+  existingTasks.forEach((task) => {
+    const d = new Date(task.due_date);
+    const m = d.getMonth() + 1;
+    const y = d.getFullYear();
+    if (task.template_id) {
+      existingTaskKeys.add(`tmpl:${task.template_id}|${m}|${y}`);
+    }
+    existingTaskKeys.add(`title:${normalizeDedupTitle(task.title)}|${m}|${y}`);
+  });
 
   // Use DB templates as the source of truth (migration 061 seeds all built-in
   // templates as source='built_in' rows with stable TEXT ids). A hardcoded
@@ -466,7 +485,9 @@ function generateTasksForHomeImpl(
     while (date <= endDate) {
       const taskMonth = getMonth(date) + 1;
       const taskYear = getYear(date);
-      const dedupKey = `${title}|${taskMonth}|${taskYear}|${date.getDate()}`;
+      // P2 #34: normalized title used for the weekly dedup key so title tweaks
+      // ("Yard Waste" vs "Yard waste pickup") still dedup correctly.
+      const dedupKey = `title:${normalizeDedupTitle(title)}|${taskMonth}|${taskYear}|${date.getDate()}`;
 
       // Skip yard waste in winter months if seasonal
       const isWinter = taskMonth === 12 || taskMonth === 1 || taskMonth === 2;
@@ -562,9 +583,11 @@ function generateDynamicTask(
     // Check composite key to avoid duplication within same month/year
     const taskMonth = getMonth(nextDue) + 1;
     const taskYear = getYear(nextDue);
-    const dedupKey = `${template.title}|${taskMonth}|${taskYear}`;
+    // P2 #34: template_id + normalized-title double-key
+    const tmplKey = `tmpl:${template.id}|${taskMonth}|${taskYear}`;
+    const titleKey = `title:${normalizeDedupTitle(template.title)}|${taskMonth}|${taskYear}`;
 
-    if (!existingTaskKeys.has(dedupKey)) {
+    if (!existingTaskKeys.has(tmplKey) && !existingTaskKeys.has(titleKey)) {
       const task = createTaskFromTemplate(template, home, equipment, nextDue);
       newTasks.push(task);
     }
@@ -605,8 +628,10 @@ function generateSeasonalTasks(
       targetYear = currentYear + 1;
     }
 
-    const dedupKey = `${template.title}|${pickedMonth}|${targetYear}`;
-    if (!existingTaskKeys.has(dedupKey)) {
+    // P2 #34: template_id + normalized-title double-key
+    const tmplKey = `tmpl:${template.id}|${pickedMonth}|${targetYear}`;
+    const titleKey = `title:${normalizeDedupTitle(template.title)}|${pickedMonth}|${targetYear}`;
+    if (!existingTaskKeys.has(tmplKey) && !existingTaskKeys.has(titleKey)) {
       const dayHash = idHash % 28 + 1;
       const dueDate = new Date(targetYear, pickedMonth - 1, dayHash);
       const task = createTaskFromTemplate(template, home, equipment, dueDate);
@@ -623,13 +648,15 @@ function generateSeasonalTasks(
       continue;
     }
 
-    // Dedup key: title + month + year
-    const dedupKey = `${template.title}|${targetMonth}|${targetYear}`;
-    if (generatedMonths.has(dedupKey)) continue;
-    generatedMonths.add(dedupKey);
+    // P2 #34: template_id + normalized-title double-key
+    const tmplKey = `tmpl:${template.id}|${targetMonth}|${targetYear}`;
+    const titleKey = `title:${normalizeDedupTitle(template.title)}|${targetMonth}|${targetYear}`;
+    if (generatedMonths.has(tmplKey) || generatedMonths.has(titleKey)) continue;
+    generatedMonths.add(tmplKey);
+    generatedMonths.add(titleKey);
 
     // Skip if this month/year combo already has this task
-    if (existingTaskKeys.has(dedupKey)) {
+    if (existingTaskKeys.has(tmplKey) || existingTaskKeys.has(titleKey)) {
       continue;
     }
 
@@ -704,7 +731,8 @@ function generateConsumableTask(
   while (nextDue <= eighteenMonthsOut) {
     const taskMonth = getMonth(nextDue) + 1;
     const taskYear = getYear(nextDue);
-    const dedupKey = `${scopedTitle}|${taskMonth}|${taskYear}`;
+    // P2 #34: consumable-scoped title normalized for dedup
+    const dedupKey = `title:${normalizeDedupTitle(scopedTitle)}|${taskMonth}|${taskYear}`;
 
     if (!existingTaskKeys.has(dedupKey)) {
       const task = createTaskFromTemplate(template, home, equipment, nextDue);

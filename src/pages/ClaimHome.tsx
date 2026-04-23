@@ -38,7 +38,18 @@ export default function ClaimHome() {
     if (!qrCode || !user?.id) return;
     setClaiming(true);
     try {
-      await claimQRCode(qrCode.qr_token, user.id);
+      // P1 #20: claimQRCode now returns the freshly-created home id from
+      // the atomic claim_agent_qr_code RPC. The previous implementation
+      // only flipped a status flag and never materialized the home, so
+      // the buyer hit an empty dashboard. Re-hydrate the store so the
+      // dashboard picks up the new home immediately.
+      const { homeId } = await claimQRCode(qrCode.qr_token, user.id);
+      try {
+        const { data: newHome } = await supabase.from('homes').select('*').eq('id', homeId).maybeSingle();
+        if (newHome) useStore.getState().setHome(newHome);
+      } catch {
+        // Non-fatal — the dashboard will refetch on mount.
+      }
       setClaimed(true);
     } catch (e: any) {
       setError('Failed to claim home: ' + (e.message || 'Unknown error'));

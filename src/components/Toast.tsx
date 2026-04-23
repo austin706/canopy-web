@@ -25,6 +25,16 @@ let toastStack: ToastConfig[] = [];
 let listeners: ((config: ToastConfig | null) => void)[] = [];
 
 export function showToast(config: Omit<ToastConfig, 'onDismiss'>) {
+  // P3 #74 (2026-04-23) — suppress duplicate-submit stacking. If the most
+  // recent toast has identical message + action label, drop the new one.
+  // Prior behavior: 5 rapid clicks on a failing Save button stacked 5 copies
+  // of "Something went wrong" — each one re-animating and pushing out the
+  // previous. Now the visible toast simply persists until its own timer.
+  const last = toastStack[toastStack.length - 1];
+  if (last && last.message === config.message && last.action?.label === config.action?.label) {
+    return;
+  }
+
   const toastConfig: ToastConfig = {
     ...config,
     timeout: config.timeout ?? 5000,
@@ -106,7 +116,13 @@ export default function Toast() {
   if (!isVisible || !currentToast) return null;
 
   return (
+    // P2 #62 (2026-04-23): role="status" + aria-live="polite" so AT users
+    // hear toast messages without stealing focus. `aria-atomic="true"` makes
+    // the reader speak the whole message on each update instead of diffing.
     <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
       style={{
         position: 'fixed',
         bottom: 24,

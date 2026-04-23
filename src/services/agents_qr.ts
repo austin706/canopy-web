@@ -77,21 +77,37 @@ export const getQRCodeByToken = async (token: string): Promise<AgentHomeQRCode |
   return data;
 };
 
-export const claimQRCode = async (token: string, userId: string): Promise<AgentHomeQRCode> => {
-  const { data, error } = await supabase
-    .from('agent_home_qr_codes')
-    .update({
-      status: 'claimed',
-      claimed_by: userId,
-      claimed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('qr_token', token)
-    .eq('status', 'active')
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+/**
+ * Atomically claim an agent-issued QR code.
+ *
+ * P1 #20 (2026-04-23): The agent QR claim flow used to flip
+ * `status='claimed'` on the QR row but never materialized a `homes`
+ * record from `home_data`, leaving the buyer with an empty dashboard.
+ * It also bypassed the `home_transfers` audit trail used by the
+ * owner-to-owner Home Transfer flow, so consumers had to query two
+ * tables to reconstruct ownership history.
+ *
+ * The RPC `claim_agent_qr_code(p_qr_token, p_user_id)` now:
+ *   1. Validates the QR is active + not expired (locks the row)
+ *   2. Creates a `homes` record from the JSONB `home_data` payload
+ *      with `user_id = p_user_id`
+ *   3. Updates the QR row: status='claimed', claimed_by, home_id
+ * All steps succeed or all roll back together.
+ *
+ * Returns the newly created home's UUID so the client can route the
+ * user straight into it.
+ */
+export const claimQRCode = async (token: string, userId: string): Promise<{ homeId: string }> => {
+  const { data, error } = await supabase.rpc('claim_agent_qr_code', {
+    p_qr_token: token,
+    p_user_id: userId,
+  });
+  if (error) {
+    logger.error('claim_agent_qr_code RPC failed:', error);
+    throw new Error(error.message || 'Failed to claim home. Please try again.');
+  }
+  if (!data) throw new Error('Claim succeeded but no home was returned. Please refresh.');
+  return { homeId: data as string };
 };
 
 export const revokeQRCode = async (id: string): Promise<void> => {
@@ -233,7 +249,7 @@ export const reviewAgentApplication = async (
         action_label: 'Access Agent Portal',
       });
     } catch (emailErr) {
-      console.error('Failed to send approval email:', emailErr);
+      logger.error('Failed to send approval email:', emailErr);
     }
   } else {
     // Rejection
@@ -260,7 +276,7 @@ export const reviewAgentApplication = async (
         category: 'agent_application',
       });
     } catch (emailErr) {
-      console.error('Failed to send rejection email:', emailErr);
+      logger.error('Failed to send rejection email:', emailErr);
     }
   }
 };

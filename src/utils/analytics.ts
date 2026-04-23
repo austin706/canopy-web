@@ -32,7 +32,25 @@ export type DashboardCard =
   | 'health'
   | 'token';
 export type SignupMethod = 'email' | 'google' | 'apple';
-export type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6;
+// P1 #5 (2026-04-23): expanded to include `0` so the type matches actual
+// emissions on both platforms. Web is 0-indexed (welcome=0); mobile is
+// 1-indexed (welcome=1). The two funnels emit different step numbers for the
+// same logical step — `step_name` is the canonical join key in GA4, not `step`.
+//
+// Canonical step_name → step number mapping:
+//   step_name      web   mobile
+//   ─────────────────────────────
+//   welcome         0      1
+//   address         1      2
+//   systems         2      3
+//   plan            3      4
+//   equipment/scan  4      5      (web: equipment+inspection; mobile: scan)
+//   ready           5      —      (web only — ready-to-finish summary screen)
+//   done            6      —      (web only — final post-finish screen)
+//
+// Mobile has 5 onboarding screens, web has 7. Fix #5 (2026-04-23) closed the
+// 4→6 gap on mobile (scan was incorrectly numbered 6) by renumbering scan to 5.
+export type OnboardingStep = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 // ─── Event schema (types map, MUST match CANOPY_GA4_EVENTS.md) ───────────────
 export interface EventParams {
@@ -185,6 +203,7 @@ export interface EventParams {
 
   // First-visit orientation card (DD-9)
   dashboard_first_visit_orientation_view: { has_provider: boolean; status: string };
+  dashboard_first_visit_orientation_dismiss: { visit_id: string };
   dashboard_first_visit_sms_toggle: { opt_in: boolean };
   dashboard_first_visit_sms_toggle_error: { error: string };
 

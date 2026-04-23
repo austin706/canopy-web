@@ -14,6 +14,7 @@ import {
 } from '@/services/supabase';
 import { logAdminAction } from '@/services/auditLog';
 import { Colors } from '@/constants/theme';
+import logger from '@/utils/logger';
 
 const TYPE_LABELS: Record<string, string> = {
   equipment_category: 'Equipment Categories',
@@ -255,7 +256,7 @@ export default function AdminReferenceData() {
         setSelectedType(allTypes[0]);
       }
     } catch (err) {
-      console.error('Failed to load types:', err);
+      logger.error('Failed to load types:', err);
     } finally {
       setLoading(false);
     }
@@ -274,7 +275,7 @@ export default function AdminReferenceData() {
         setTemplates([]);
       }
     } catch (err) {
-      console.error('Failed to load data:', err);
+      logger.error('Failed to load data:', err);
     } finally {
       setLoading(false);
     }

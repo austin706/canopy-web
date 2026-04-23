@@ -11,3 +11,5 @@ export { Skeleton, SkeletonCard, SkeletonList } from './Skeleton';
 export { ConfirmProvider, useConfirm } from './ConfirmDialog';
 export type { ConfirmOptions } from './ConfirmDialog';
 export { DashboardSection } from './DashboardSection';
+export { Button } from './Button';
+export type { ButtonVariant, ButtonSize, ButtonProps } from './Button';

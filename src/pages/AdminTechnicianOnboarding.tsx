@@ -14,6 +14,7 @@ import type { OnboardingStep, TrainingMaterial, TechnicianOnboarding, Technician
 import { Colors } from '@/constants/theme';
 import { logAdminAction } from '@/services/auditLog';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 interface Technician {
   id: string;
@@ -97,7 +98,7 @@ export default function AdminTechnicianOnboarding() {
         }
       }
     } catch (e) {
-      console.error('Error loading onboarding data:', e);
+      logger.error('Error loading onboarding data:', e);
     } finally {
       setLoading(false);
     }
@@ -121,7 +122,7 @@ export default function AdminTechnicianOnboarding() {
       setProgress(progressData);
       setTechDocuments(docs);
     } catch (e) {
-      console.error('Error loading progress:', e);
+      logger.error('Error loading progress:', e);
     } finally {
       setProgressLoading(false);
     }

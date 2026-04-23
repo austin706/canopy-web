@@ -79,6 +79,22 @@ export async function acceptTransfer(transferId: string, newOwnerId: string): Pr
     throw new Error('This transfer is no longer active');
   }
 
+  // P1-16 (2026-04-23): server stores `expires_at` but accept never enforced it.
+  // A buyer could redeem a stale token weeks after the seller's intent window
+  // closed. Block accept once expired and mark the row so it doesn't keep
+  // surfacing on the buyer's incoming list.
+  if (transfer.expires_at && new Date(transfer.expires_at).getTime() < Date.now()) {
+    try {
+      await supabase
+        .from('home_transfers')
+        .update({ status: 'expired', updated_at: new Date().toISOString() })
+        .eq('id', transferId);
+    } catch (e) {
+      logger.warn('Failed to mark transfer expired:', e);
+    }
+    throw new Error('This transfer has expired. Ask the seller to send a new one.');
+  }
+
   // Use atomic database function — re-parents home, clears secure notes,
   // clears vault PIN, and marks transfer accepted in a single transaction.
   const { error: rpcErr } = await supabase.rpc('accept_home_transfer', {

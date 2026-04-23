@@ -315,7 +315,8 @@ export default function AdminLayout() {
           </nav>
         </div>
         <div className="admin-content-body">
-          <ErrorBoundary>
+          {/* P3 #87 (2026-04-23) — key by pathname so navigating resets boundary. */}
+          <ErrorBoundary key={location.pathname}>
             <Outlet />
           </ErrorBoundary>
         </div>

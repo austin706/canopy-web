@@ -1,10 +1,18 @@
+import { LEGAL_DATES, pciAnnualReviewDueDate } from '@/constants/legalDates';
+
 export default function PCICompliance() {
+  // P3 #73 (2026-04-23) — derive annual review date from last-updated ISO so the
+  // two can't drift. Prior copy hardcoded "January 31, 2027" which would go
+  // stale the moment the SAQ-A was re-attested.
+  const annualReviewDue = pciAnnualReviewDueDate();
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--color-text)', lineHeight: 1.7 }}>
       <a href="/" style={{ color: 'var(--color-sage)', textDecoration: 'none', fontSize: 14 }}>← Back</a>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>PCI DSS Compliance</h1>
-      <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginBottom: 32 }}>SAQ-A Self-Assessment Questionnaire — Last updated April 3, 2026</p>
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginBottom: 32 }}>
+        SAQ-A Self-Assessment Questionnaire — Last updated <time dateTime={LEGAL_DATES.pciCompliance.iso}>{LEGAL_DATES.pciCompliance.display}</time>
+      </p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>PCI DSS Compliance Overview</h2>
       <p>
@@ -89,7 +97,13 @@ export default function PCICompliance() {
         <li style={{ marginBottom: 8 }}><strong>Assessment period:</strong> January 1 — December 31</li>
         <li style={{ marginBottom: 8 }}><strong>Annual self-assessment due:</strong> January 31 of following year</li>
         <li style={{ marginBottom: 8 }}><strong>Responsible party:</strong> Austin Wojciechowski, Founder</li>
-        <li><strong>Next review due:</strong> January 31, 2027</li>
+        <li>
+          <strong>Next review due:</strong>{' '}
+          <time dateTime={annualReviewDue.iso}>{annualReviewDue.display}</time>{' '}
+          <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+            (12 months after last attestation)
+          </span>
+        </li>
       </ul>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Incident Response</h2>

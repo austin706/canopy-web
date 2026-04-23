@@ -25,6 +25,7 @@ import { createNextDynamicTask } from '@/services/taskEngine';
 import { createTask } from '@/services/supabase';
 import { proposeNextVisit } from '@/services/proEnrollment';
 import type { MaintenanceTask, TaskPriority } from '@/types';
+import logger from '@/utils/logger';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 
@@ -138,7 +139,7 @@ export default function ProInspection() {
         }
       }
     } catch (error) {
-      console.error('Error loading inspection data:', error);
+      logger.error('Error loading inspection data:', error);
       showToast({ message: 'Failed to load inspection data' });
       navigate('/pro-portal/job-queue');
     } finally {
@@ -166,7 +167,7 @@ export default function ProInspection() {
         )
       );
     } catch (error) {
-      console.error('Error updating item status:', error);
+      logger.error('Error updating item status:', error);
     } finally {
       setSaving(false);
     }
@@ -198,7 +199,7 @@ export default function ProInspection() {
       try {
         await updateItemStatus(itemId, undefined as any, notes);
       } catch (error) {
-        console.error('Error saving notes:', error);
+        logger.error('Error saving notes:', error);
       }
     }, 500);
   };
@@ -280,7 +281,7 @@ export default function ProInspection() {
         showToast({ message: `Task added to homeowner's calendar: ${item.label}` });
       }
     } catch (err) {
-      console.error('Failed to create task from finding:', err);
+      logger.error('Failed to create task from finding:', err);
       showToast({ message: 'Could not add task. Please try again.' });
     } finally {
       setCreatingTaskForItem(null);
@@ -314,7 +315,7 @@ export default function ProInspection() {
         )
       );
     } catch (error) {
-      console.error('Error uploading photo:', error);
+      logger.error('Error uploading photo:', error);
       showToast({ message: 'Failed to upload photo' });
     } finally {
       setUploadingPhotoFor(null);
@@ -341,7 +342,7 @@ export default function ProInspection() {
         )
       );
     } catch (error) {
-      console.error('Error completing inspection:', error);
+      logger.error('Error completing inspection:', error);
     } finally {
       setSaving(false);
     }
@@ -467,7 +468,7 @@ export default function ProInspection() {
       setShowCompleteModal(false);
       navigate('/pro-portal/job-queue', { state: { success: 'Visit completed successfully. Next visit has been auto-proposed.' } });
     } catch (error) {
-      console.error('Error completing visit:', error);
+      logger.error('Error completing visit:', error);
       showToast({ message: 'Failed to complete visit' });
     } finally {
       setSaving(false);
@@ -488,7 +489,7 @@ export default function ProInspection() {
         )
       );
     } catch (error) {
-      console.error('Error updating overall condition:', error);
+      logger.error('Error updating overall condition:', error);
     }
   };
 

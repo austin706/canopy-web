@@ -52,6 +52,28 @@ export default function AgentRedeem() {
     setRedeeming(true);
     setRedeemError('');
     try {
+      // P2 #50 (2026-04-23): Cross-agent redemption guard — ensure the gift code
+      // was issued by the same agent whose branded URL the user landed on. Stops
+      // a code issued by agent A from being redeemed on agent B's /a/<slug> page
+      // (would otherwise leak attribution + assign the wrong connected agent).
+      if (agent?.id) {
+        const { data: gc, error: gcErr } = await supabase
+          .from('gift_codes')
+          .select('id, agent_id, redeemed_by, expires_at')
+          .eq('code', giftCode.trim().toUpperCase())
+          .maybeSingle();
+        if (gcErr) throw gcErr;
+        if (!gc) {
+          setRedeemError('Invalid code.');
+          setRedeeming(false);
+          return;
+        }
+        if (gc.agent_id && gc.agent_id !== agent.id) {
+          setRedeemError('This code was issued by a different agent. Please use the link from the agent who gave you this code.');
+          setRedeeming(false);
+          return;
+        }
+      }
       await redeemGiftCode(giftCode.trim(), user.id);
       setRedeemed(true);
     } catch (e: any) {

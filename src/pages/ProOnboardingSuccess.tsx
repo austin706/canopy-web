@@ -8,6 +8,13 @@ import { Colors } from '@/constants/theme';
  * Landing page after a pro completes Stripe Express onboarding.
  * Pulls LIVE status from Stripe (via edge function, which also syncs the DB flag),
  * then shows success state or a "still missing info" fallback with a retry link.
+ *
+ * P1 #25 (2026-04-23): when onboarding clears, auto-redirect to the
+ * pro portal after a short countdown. The previous screen required
+ * the user to click a button — fine on desktop, but easy to miss on
+ * mobile, leaving providers stuck on a static "success" view. We keep
+ * explicit links visible during the countdown so the user can opt out
+ * (or jump straight to the job queue) if they want.
  */
 export default function ProOnboardingSuccess() {
   const navigate = useNavigate();
@@ -62,6 +69,20 @@ export default function ProOnboardingSuccess() {
     };
   }, [user?.id]);
 
+  // P1 #25: 5-second auto-redirect once Stripe confirms onboarding is
+  // complete. Held in the parent so we can keep all hooks above the
+  // first early-return — React hook ordering rules.
+  const [redirectSeconds, setRedirectSeconds] = useState(5);
+  useEffect(() => {
+    if (!status?.onboardingComplete) return;
+    const tick = setInterval(() => setRedirectSeconds((s) => Math.max(0, s - 1)), 1000);
+    const t = setTimeout(() => navigate('/pro-portal'), 5000);
+    return () => {
+      clearInterval(tick);
+      clearTimeout(t);
+    };
+  }, [status?.onboardingComplete, navigate]);
+
   const getStripeConnectDashboardUrl = () => {
     // Standard Stripe Connect dashboard URL for the account owner
     return 'https://dashboard.stripe.com/';
@@ -115,17 +136,25 @@ export default function ProOnboardingSuccess() {
     return (
       <div style={containerStyle}>
         <div style={cardStyle}>
-          <div style={{ fontSize: 56, marginBottom: 12 }}>✅</div>
+          <div style={{ fontSize: 56, marginBottom: 12 }} aria-hidden>
+            ✅
+          </div>
           <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
             You're all set
           </h2>
-          <p style={{ color: Colors.medGray, marginBottom: 24, lineHeight: 1.6 }}>
+          <p style={{ color: Colors.medGray, marginBottom: 16, lineHeight: 1.6 }}>
             Your Stripe account is connected and ready to accept payouts.
             You can now receive jobs through Canopy.
           </p>
+          <p
+            style={{ color: Colors.medGray, marginBottom: 20, fontSize: 13 }}
+            aria-live="polite"
+          >
+            Taking you to your Pro Portal in {redirectSeconds}s…
+          </p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn btn-primary" onClick={() => navigate('/pro-portal')}>
-              Go to Pro Portal
+              Go to Pro Portal now
             </button>
             <button className="btn btn-ghost" onClick={() => navigate('/pro-portal/job-queue')}>
               View Job Queue

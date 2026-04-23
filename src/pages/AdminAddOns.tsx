@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/services/supabase';
+import { logAdminAction } from '@/services/auditLog';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import { PageSkeleton } from '@/components/Skeleton';
@@ -153,6 +154,20 @@ export default function AdminAddOns() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to submit quote');
+
+      // P2 #58 (2026-04-23): audit-log admin quote submission so we can trace
+      // who quoted what price / assigned which provider.
+      const auditTarget = addOns.find(a => a.id === addOnId);
+      logAdminAction('addon.quote_submit', 'home_add_on', addOnId, {
+        category_id: auditTarget?.category_id,
+        category_label: auditTarget?.category?.display_name,
+        homeowner_email: auditTarget?.profile?.email,
+        home_address: auditTarget?.home?.address,
+        quoted_price: price,
+        billing_frequency: quoteFrequency || null,
+        assigned_provider_id: quoteProviderId || null,
+        provider_notes: quoteNotes || null,
+      }).catch(() => {});
 
       showToast({ message: `Quote submitted: $${price}` });
       setQuotingId(null);

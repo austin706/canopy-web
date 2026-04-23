@@ -218,7 +218,11 @@ body {
 .auth-layout { min-height: 100vh; display: flex; background: var(--cream); }
 .auth-hero {
   flex: 0 0 480px;
-  background: linear-gradient(135deg, #A66B3A 0%, #8B9E7E 100%);
+  /* P2 #64 (2026-04-23): gradient was hardcoded #A66B3A / #8B9E7E so it stayed
+     the same in dark mode (muddy against the dark chrome). Swapped to tokens
+     so it inverts automatically — light: copper-dark → sage, dark: copper
+     (lighter) → sage (lighter). */
+  background: linear-gradient(135deg, var(--copper-dark) 0%, var(--sage) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -293,10 +297,37 @@ body {
 .btn-danger:hover { opacity: 0.9; }
 .btn-ghost { background: transparent; color: var(--med-gray); }
 .btn-ghost:hover { background: var(--cream); color: var(--charcoal); }
-.btn-sm { padding: 6px 14px; font-size: 13px; }
+/* P3 #80 (2026-04-23): .btn-sm min-height 44px so touch targets meet WCAG 2.5.5 Large
+   Target (Level AAA) / Apple HIG 44pt minimum. Visual padding stays tight (6px top/
+   bottom) but min-height floors the interactive area — the button looks the same
+   at 13px font, keyboard + touch users just get a bigger hit zone. */
+.btn-sm { padding: 6px 14px; font-size: 13px; min-height: 44px; }
 .btn-lg { padding: 14px 28px; font-size: 16px; }
+.btn { min-height: 44px; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-full { width: 100%; }
+
+/* P3 #79 (2026-04-23): honor prefers-reduced-motion across the app.
+   Zeroes animation-duration + transition-duration on elements that declare them,
+   and ::before/::after decorative pseudos. Scoped to reduce-motion queries so the
+   normal experience is unchanged; essential loading spinners (.spinner rotation)
+   keep a minimal, non-vestibular rotation so the "something is happening" signal
+   survives. Individual components can opt back into richer motion by using
+   `@media (prefers-reduced-motion: no-preference)` blocks — Skeleton.tsx already
+   follows this pattern (see components/ui/Skeleton.tsx:26). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Spinners are a special case — zero rotation would freeze the only
+     indicator that an async operation is in flight. Keep a slow rotation. */
+  .spinner, [role="progressbar"] {
+    animation-duration: 2s !important;
+  }
+}
 
 /* Forms */
 .form-group { margin-bottom: 20px; }

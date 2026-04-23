@@ -7,6 +7,7 @@ import { TASK_TEMPLATES } from '@/constants/maintenance';
 import AdminPreviewBanner from '@/components/AdminPreviewBanner';
 import { showToast } from '@/components/Toast';
 import type { ProMonthlyVisit, Home, Equipment, ProProvider } from '@/types';
+import logger from '@/utils/logger';
 
 interface Visit extends ProMonthlyVisit {
   home?: Home;
@@ -82,7 +83,7 @@ export default function ProJobQueue() {
         nextVisitTime: enrichedVisits.length - completedCount > 0 ? `${enrichedVisits.length - completedCount} left` : null,
       });
     } catch (error) {
-      console.error('Error loading visits:', error);
+      logger.error('Error loading visits:', error);
     } finally {
       setLoading(false);
     }
@@ -170,7 +171,7 @@ export default function ProJobQueue() {
         nextVisitTime: remaining > 0 ? `${remaining} left` : null,
       });
     } catch (error) {
-      console.error('Error loading job queue:', error);
+      logger.error('Error loading job queue:', error);
     } finally {
       setLoading(false);
     }
@@ -193,7 +194,7 @@ export default function ProJobQueue() {
 
       navigate(`/pro-portal/inspection/${visitId}`);
     } catch (error) {
-      console.error('Error starting visit:', error);
+      logger.error('Error starting visit:', error);
       showToast({ message: 'Failed to start visit' });
     }
   };
@@ -207,7 +208,7 @@ export default function ProJobQueue() {
       // For now, we'll assume inspections are created server-side when status is updated
       // The ProInspection page will generate them on mount if they don't exist
     } catch (error) {
-      console.error('Error generating inspections:', error);
+      logger.error('Error generating inspections:', error);
     }
   };
 

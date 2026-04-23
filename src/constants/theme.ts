@@ -208,7 +208,13 @@ export const EmailBrand = {
     admin: 'austin@canopyhome.app',
   },
 
-  // Email color palette (references Colors above)
+  // Email color palette (references Colors above).
+  // P2 #65 (2026-04-23): Added `darkColors` alongside the existing light-mode
+  // values so dark-mode email clients (Apple Mail on macOS/iOS, Outlook dark)
+  // can pick up inverted colors via `@media (prefers-color-scheme: dark)`.
+  // Transactional edge functions that render Canopy-branded emails should
+  // emit both blocks via the `_shared/emailDarkMode.ts` helper so the email
+  // stays readable regardless of the recipient's client theme.
   colors: {
     headerBg: Colors.sage,
     headerText: Colors.white,
@@ -222,6 +228,20 @@ export const EmailBrand = {
     footerText: '#999999',
     footerLink: Colors.sage,
     border: Colors.lightGray,
+  },
+  darkColors: {
+    headerBg: DarkColors.sage,
+    headerText: DarkColors.charcoal,       // flips to light text on dark backgrounds via `charcoal` token
+    bodyBg: '#1A1816',                     // mirrors DarkColors.warmWhite
+    cardBg: '#252220',                     // mirrors DarkColors.cream
+    titleText: '#F0ECE5',                  // bright enough for AA on dark cream
+    bodyText: '#C0BAB0',                   // mirrors DarkColors.darkGray
+    buttonBg: DarkColors.copper,
+    buttonText: '#1A1816',                 // dark text on light copper for AA
+    footerBg: '#1A1816',
+    footerText: '#8A8680',                 // mirrors DarkColors.silver
+    footerLink: DarkColors.sage,
+    border: '#3A3530',                     // mirrors DarkColors.lightGray
   },
 
   // Typography

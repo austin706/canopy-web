@@ -229,7 +229,7 @@ export default function AgentApplication() {
           </h3>
 
           <div className="form-group">
-            <label style={{ fontWeight: 500 }}>Full Name *</label>
+            <label style={{ fontWeight: 500 }}>Full Name <span aria-hidden="true">*</span></label>
             <input
               className="form-input"
               type="text"
@@ -242,7 +242,7 @@ export default function AgentApplication() {
           </div>
 
           <div className="form-group">
-            <label style={{ fontWeight: 500 }}>Email *</label>
+            <label style={{ fontWeight: 500 }}>Email <span aria-hidden="true">*</span></label>
             <input
               className="form-input"
               type="email"
@@ -280,7 +280,7 @@ export default function AgentApplication() {
           </h3>
 
           <div className="form-group">
-            <label style={{ fontWeight: 500 }}>Brokerage *</label>
+            <label style={{ fontWeight: 500 }}>Brokerage <span aria-hidden="true">*</span></label>
             <input
               className="form-input"
               type="text"
@@ -293,7 +293,7 @@ export default function AgentApplication() {
           </div>
 
           <div className="form-group">
-            <label style={{ fontWeight: 500 }}>License Number *</label>
+            <label style={{ fontWeight: 500 }}>License Number <span aria-hidden="true">*</span></label>
             <input
               className="form-input"
               type="text"
@@ -307,7 +307,7 @@ export default function AgentApplication() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div className="form-group">
-              <label style={{ fontWeight: 500 }}>License State *</label>
+              <label style={{ fontWeight: 500 }}>License State <span aria-hidden="true">*</span></label>
               <select
                 className="form-input"
                 value={form.license_state}

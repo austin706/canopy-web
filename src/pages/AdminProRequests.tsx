@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PageSkeleton } from '@/components/Skeleton';
-import { getAllProRequests, updateProRequest, getAllProProviders, sendNotification, supabase } from '@/services/supabase';
+import { getAllProRequests, updateProRequest, getAllProProviders, sendNotification, supabase, assignProRequestProvider } from '@/services/supabase';
 import { logAdminAction } from '@/services/auditLog';
 import { StatusColors, Colors } from '@/constants/theme';
 import { showToast } from '@/components/Toast';
@@ -98,7 +98,35 @@ export default function AdminProRequests() {
       const request = requests.find(r => r.id === requestId);
       const category = request?.category || request?.service_type;
 
-      await updateProRequest(requestId, { assigned_provider: providerId, status: 'matched' });
+      // P2 #57 (2026-04-23): server-side capacity enforcement — an RPC re-checks
+      // availability + active-job count under a row lock and rejects over-capacity
+      // or unavailable providers. Client-side disabling of the <option> is still
+      // in place; this is defense in depth.
+      const result = await assignProRequestProvider(requestId, providerId);
+      if (!result.assigned) {
+        const human: Record<string, string> = {
+          not_admin: 'Only admins can assign providers.',
+          provider_not_found: 'Provider record not found.',
+          provider_unavailable: 'Provider is marked unavailable.',
+          at_capacity: 'Provider is at their daily job capacity. Pick another provider or raise their max_jobs_per_day.',
+        };
+        showToast({ message: human[result.reason] || `Assignment failed (${result.reason}).` });
+        // Refresh active job counts so stale UI snaps back to accurate state.
+        try {
+          const provs = await getAllProProviders();
+          const enriched = await Promise.all((provs as any[]).map(async (p: any) => {
+            const { count } = await supabase
+              .from('pro_requests')
+              .select('*', { count: 'exact', head: true })
+              .eq('provider_id', p.id)
+              .in('status', ['matched', 'scheduled']);
+            return { ...p, active_job_count: count || 0 };
+          }));
+          setProviders(enriched);
+        } catch {}
+        return;
+      }
+
       setRequests(prev => prev.map(r => r.id === requestId ? { ...r, assigned_provider: providerId, status: 'matched' } : r));
 
       logAdminAction('request.assign', 'pro_request', requestId, { provider_name: assignedProvider?.business_name || assignedProvider?.contact_name, category }).catch(() => {});

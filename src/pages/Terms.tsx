@@ -1,3 +1,5 @@
+import { LEGAL_DATES } from '@/constants/legalDates';
+
 export default function Terms() {
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--color-text)', lineHeight: 1.7 }}>
@@ -6,7 +8,10 @@ export default function Terms() {
       </div>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Terms of Service</h1>
-      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>Last updated: April 14, 2026</p>
+      {/* P3 #75 (2026-04-23) — single source of truth in constants/legalDates.ts */}
+      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>
+        Last updated: <time dateTime={LEGAL_DATES.terms.iso}>{LEGAL_DATES.terms.display}</time>
+      </p>
 
       <p>Welcome to Canopy ("we," "us," or "our"). These Terms of Service ("Terms") govern your use of the Canopy mobile application, web platform, and related services (collectively, the "Service"). By accessing or using the Service, you agree to be bound by these Terms.</p>
 

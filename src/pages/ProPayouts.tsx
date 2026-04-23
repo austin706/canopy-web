@@ -23,6 +23,7 @@ import { Colors } from '@/constants/theme';
 import { PageSkeleton } from '@/components/Skeleton';
 import { showToast } from '@/components/Toast';
 import logger from '@/utils/logger';
+import { useRequireRole } from '@/utils/useRequireRole';
 
 interface UnpaidVisit {
   id: string;
@@ -64,6 +65,10 @@ const statusPill = (s: ProPayoutRow['status']) => {
 
 export default function ProPayouts() {
   const navigate = useNavigate();
+  // P1 #24 (2026-04-23): defense-in-depth role gate. See ProPortal for
+  // rationale; payouts page must reject any non-pro/non-admin in case
+  // RoleRoute regresses or store rehydrates with a downgraded session.
+  useRequireRole(['pro_provider', 'admin']);
   const [providerId, setProviderId] = useState<string | null>(null);
   const [payouts, setPayouts] = useState<ProPayoutRow[]>([]);
   const [summary, setSummary] = useState({ paidCents: 0, processingCents: 0, failedCents: 0, count: 0 });
@@ -267,31 +272,42 @@ export default function ProPayouts() {
               <tr style={{ borderBottom: `1px solid ${Colors.lightGray}` }}>
                 <th style={thStyle}>Date</th>
                 <th style={thStyle}>Visit</th>
-                <th style={thStyle}>Amount</th>
+                <th style={thStyle} title="Customer charge">Gross</th>
+                <th style={thStyle} title="15% platform fee">Fee</th>
+                <th style={thStyle} title="Your net payout">Net</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Transfer</th>
               </tr>
             </thead>
             <tbody>
-              {payouts.map((p) => (
-                <tr key={p.id} style={{ borderBottom: `1px solid ${Colors.lightGray}` }}>
-                  <td style={tdStyle}>{fmtDate(p.paid_at || p.created_at)}</td>
-                  <td style={tdStyle}>
-                    {p.visit?.completed_at ? fmtDate(p.visit.completed_at) : p.visit_id.slice(0, 8)}
-                  </td>
-                  <td style={tdStyle}>{fmtUSD(p.amount_cents)}</td>
-                  <td style={tdStyle}>{statusPill(p.status)}</td>
-                  <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 11, color: Colors.medGray }}>
-                    {p.stripe_transfer_id || (p.stripe_error ? `⚠ ${p.stripe_error.slice(0, 40)}…` : '—')}
-                  </td>
-                </tr>
-              ))}
+              {payouts.map((p) => {
+                // P2 #48 (2026-04-23): surface 15% platform fee breakdown. Net = 85% of gross; fee = net × 15/85.
+                const net = p.amount_cents || 0;
+                const gross = net > 0 ? Math.round(net / 0.85) : 0;
+                const fee = Math.max(0, gross - net);
+                return (
+                  <tr key={p.id} style={{ borderBottom: `1px solid ${Colors.lightGray}` }}>
+                    <td style={tdStyle}>{fmtDate(p.paid_at || p.created_at)}</td>
+                    <td style={tdStyle}>
+                      {p.visit?.completed_at ? fmtDate(p.visit.completed_at) : p.visit_id.slice(0, 8)}
+                    </td>
+                    <td style={tdStyle}>{fmtUSD(gross)}</td>
+                    <td style={{ ...tdStyle, color: Colors.medGray }}>−{fmtUSD(fee)}</td>
+                    <td style={{ ...tdStyle, fontWeight: 600 }}>{fmtUSD(net)}</td>
+                    <td style={tdStyle}>{statusPill(p.status)}</td>
+                    <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 11, color: Colors.medGray }}>
+                      {p.stripe_transfer_id || (p.stripe_error ? `⚠ ${p.stripe_error.slice(0, 40)}…` : '—')}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
 
       <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 16 }}>
+        Canopy's 15% platform fee covers billing, scheduling, dispute resolution, and marketing.
         Payouts are sent via Stripe to your connected bank account. Funds typically arrive within 2-3
         business days of processing.
       </p>

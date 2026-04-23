@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { signIn, getProfile, getHome, getEquipment, getTasks, getAgent } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
+import { Button } from '@/components/ui';
 import type { User, SubscriptionTier } from '@/types';
 
 export default function Login() {
@@ -198,9 +199,11 @@ export default function Login() {
             <div style={{ textAlign: 'right', marginBottom: 20, marginTop: -8 }}>
               <Link to="/forgot-password" style={{ fontSize: 13, color: 'var(--color-copper)', textDecoration: 'none', fontWeight: 500 }}>Forgot password?</Link>
             </div>
-            <button className="btn btn-primary btn-lg btn-full" type="submit" disabled={loading}>
-              {loading ? <span className="spinner" /> : 'Sign In'}
-            </button>
+            {/* P2 #63 (2026-04-23): migrated to shared Button primitive as
+                proof-of-concept for the component roll-out. */}
+            <Button variant="primary" size="lg" fullWidth type="submit" loading={loading}>
+              Sign In
+            </Button>
           </form>
           <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: 'var(--color-text-secondary)' }}>
             Don't have an account? <Link to="/signup" style={{ color: 'var(--color-copper)', fontWeight: 600, textDecoration: 'none' }}>Sign Up</Link>

@@ -9,12 +9,16 @@ import {
 } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { showToast } from '@/components/Toast';
+import { useTabState } from '@/utils/useTabState';
+import logger from '@/utils/logger';
 
-type Tab = 'applications' | 'active';
+const BUILDER_TABS = ['applications', 'active'] as const;
+type Tab = typeof BUILDER_TABS[number];
 
 export default function AdminBuilders() {
   const { user } = useStore();
-  const [tab, setTab] = useState<Tab>('applications');
+  // P3 #77 (2026-04-23) — URL-sync tab so back-button + deep-link work.
+  const [tab, setTab] = useTabState<Tab>(BUILDER_TABS, 'applications');
   const [applications, setApplications] = useState<BuilderApplication[]>([]);
   const [builders, setBuilders] = useState<Builder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +36,7 @@ export default function AdminBuilders() {
       setApplications(apps);
       setBuilders(blds);
     } catch (err) {
-      console.error('Failed to load builder data:', err);
+      logger.error('Failed to load builder data:', err);
     } finally {
       setLoading(false);
     }

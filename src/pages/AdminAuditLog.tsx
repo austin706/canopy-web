@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { PageSkeleton } from '@/components/Skeleton';
+import logger from '@/utils/logger';
 
 interface AuditLog {
   id: string;
@@ -109,7 +110,7 @@ export default function AdminAuditLog() {
         setHasMore(false);
       }
     } catch (error) {
-      console.error('Failed to fetch audit logs:', error);
+      logger.error('Failed to fetch audit logs:', error);
     } finally {
       setLoading(false);
     }
@@ -148,6 +149,37 @@ export default function AdminAuditLog() {
 
   const filteredLogs = filterLogs();
   const uniqueActions = [...new Set(logs.map((l) => l.action))].sort();
+
+  // P2 #53 (2026-04-23): CSV export for compliance / large-tenant audits.
+  // Exports the currently filtered view so date/search/action filters are respected.
+  // Uses RFC 4180 escaping (quote fields containing quote/comma/newline; double-quote internal quotes).
+  function exportCsv() {
+    if (filteredLogs.length === 0) return;
+    const esc = (v: unknown): string => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const header = ['Timestamp', 'Admin Email', 'Admin ID', 'Action', 'Entity Type', 'Entity ID', 'Details JSON'];
+    const rows = filteredLogs.map(log => [
+      log.created_at,
+      log.admin_email || '',
+      log.admin_id || '',
+      log.action,
+      log.entity_type,
+      log.entity_id || '',
+      JSON.stringify(log.details || {}),
+    ]);
+    const csv = [header, ...rows].map(r => r.map(esc).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `canopy-audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="page-wide">
@@ -228,6 +260,23 @@ export default function AdminAuditLog() {
             ))}
           </select>
         )}
+
+        {/* P2 #53 (2026-04-23): CSV export button */}
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={exportCsv}
+          disabled={filteredLogs.length === 0}
+          aria-label={`Export ${filteredLogs.length} audit log entries to CSV`}
+          style={{
+            padding: '8px 12px',
+            fontSize: 13,
+            whiteSpace: 'nowrap',
+            opacity: filteredLogs.length === 0 ? 0.5 : 1,
+          }}
+        >
+          Export CSV
+        </button>
       </div>
 
       {/* Table */}

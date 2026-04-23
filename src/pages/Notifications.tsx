@@ -11,6 +11,7 @@ import {
   DEFAULT_NOTIFICATION_PREFS,
   DigestFrequency,
 } from '@/types';
+import logger from '@/utils/logger';
 
 const NOTIFICATION_ICON_MAP: Record<string, React.FC<{ size?: number; color?: string }>> = {
   // Preference keys (used in settings)
@@ -110,7 +111,7 @@ export default function Notifications() {
           setPrefs(prefsResult.value);
         }
       } catch (err) {
-        console.error('Failed to load notification data:', err);
+        logger.error('Failed to load notification data:', err);
       } finally {
         setLoading(false);
       }
@@ -319,14 +320,44 @@ export default function Notifications() {
                             />
                           </td>
                           <td style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 14 }}>
-                            <input
-                              type="checkbox"
-                              checked={categoryPrefs?.sms || false}
-                              onChange={(e) => !cat.locked && updateCategoryChannels(cat.key, 'sms', e.target.checked)}
-                              disabled={cat.locked || !prefs.phone}
-                              title={!prefs.phone ? 'Add a phone number below to enable SMS' : ''}
-                              style={{ width: 18, height: 18, cursor: (cat.locked || !prefs.phone) ? 'not-allowed' : 'pointer', opacity: prefs.phone ? 1 : 0.4 }}
-                            />
+                            {/* P2 #70 (2026-04-23) — replace the disabled-but-visible checkbox
+                                with an actionable "Add phone" link when no phone is set. The
+                                previous UX was confusing: users saw a dimmed checkbox with a
+                                hover-only tooltip and no obvious next step. */}
+                            {prefs.phone ? (
+                              <input
+                                type="checkbox"
+                                checked={categoryPrefs?.sms || false}
+                                onChange={(e) => !cat.locked && updateCategoryChannels(cat.key, 'sms', e.target.checked)}
+                                disabled={cat.locked}
+                                style={{ width: 18, height: 18, cursor: cat.locked ? 'not-allowed' : 'pointer' }}
+                                aria-label={`${CATEGORY_INFO[cat.key].label} SMS notifications`}
+                              />
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const el = document.getElementById('notifications-phone-input');
+                                  if (el) {
+                                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    (el as HTMLInputElement).focus();
+                                  }
+                                }}
+                                style={{
+                                  background: 'transparent',
+                                  border: 0,
+                                  color: 'var(--color-sage)',
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  textDecoration: 'underline',
+                                  padding: 0,
+                                }}
+                                aria-label={`Add a phone number to enable SMS for ${CATEGORY_INFO[cat.key].label}`}
+                              >
+                                Add phone
+                              </button>
+                            )}
                           </td>
                           <td style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 14 }}>
                             <input
@@ -351,8 +382,9 @@ export default function Notifications() {
               <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 16 }}>Add your phone number to receive SMS alerts for critical notifications</p>
 
               <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: 'var(--color-charcoal)' }}>Phone number</label>
+                <label htmlFor="notifications-phone-input" style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: 'var(--color-charcoal)' }}>Phone number</label>
                 <input
+                  id="notifications-phone-input"
                   type="tel"
                   placeholder="(555) 555-1234"
                   value={prefs.phone || ''}

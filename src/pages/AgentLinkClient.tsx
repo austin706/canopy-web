@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { supabase, sendNotification } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
+import { useTabState } from '@/utils/useTabState';
+import logger from '@/utils/logger';
+
+const LINK_CLIENT_TABS = ['search', 'pending', 'clients'] as const;
+type LinkClientTab = typeof LINK_CLIENT_TABS[number];
 
 /**
  * AgentLinkClient — Search existing users by email and request to link as their agent.
@@ -29,7 +34,8 @@ interface LinkedClient {
 
 export default function AgentLinkClient() {
   const { user } = useStore();
-  const [tab, setTab] = useState<'search' | 'pending' | 'clients'>('search');
+  // P3 #77 (2026-04-23) — URL-sync tab so back-button + deep-link work.
+  const [tab, setTab] = useTabState<LinkClientTab>(LINK_CLIENT_TABS, 'search');
   const [searchEmail, setSearchEmail] = useState('');
   const [searchResult, setSearchResult] = useState<any>(null);
   const [searching, setSearching] = useState(false);
@@ -63,7 +69,7 @@ export default function AgentLinkClient() {
         .eq('agent_id', user!.id)
         .order('full_name');
       setLinkedClients(clients || []);
-    } catch (e) { console.error(e); }
+    } catch (e) { logger.error(e); }
     finally { setLoadingRequests(false); }
   };
 

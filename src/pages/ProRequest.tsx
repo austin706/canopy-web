@@ -7,7 +7,11 @@ import MessageBanner from '@/components/MessageBanner';
 import { Colors, StatusColors } from '@/constants/theme';
 import { ImageViewer } from '@/components/ImageViewer';
 import { showToast } from '@/components/Toast';
+import { useTabState } from '@/utils/useTabState';
 import type { ProRequest as ProRequestType } from '@/types';
+
+const PRO_REQUEST_TABS = ['new', 'history'] as const;
+type ProRequestTab = typeof PRO_REQUEST_TABS[number];
 
 const SERVICE_TYPES = ['HVAC Maintenance', 'Filter Change', 'Gutter Cleaning', 'Plumbing Repair', 'Electrical Inspection', 'Roof Inspection', 'Pool Service', 'Deck Maintenance', 'Lawn Care', 'General Handyman', 'Custom/Other'];
 
@@ -27,7 +31,8 @@ export default function ProRequest() {
   const [form, setForm] = useState({ service_type: SERVICE_TYPES[0], description: '', preferred_date: '' });
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
-  const [tab, setTab] = useState<'new' | 'history'>('new');
+  // P3 #77 (2026-04-23) — URL-sync tab so back-button + deep-link work.
+  const [tab, setTab] = useTabState<ProRequestTab>(PRO_REQUEST_TABS, 'new');
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [uploading, setUploading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -256,7 +261,14 @@ export default function ProRequest() {
             <p style={{ fontWeight: 600, fontSize: 15 }}>{selectedRequest.provider.business_name}</p>
             <p style={{ color: Colors.medGray, fontSize: 13, marginTop: 2 }}>
               {selectedRequest.provider.contact_name}
-              {selectedRequest.provider.phone && ` · ${selectedRequest.provider.phone}`}
+              {selectedRequest.provider.phone && (
+                <>
+                  {' · '}
+                  <a href={`tel:${selectedRequest.provider.phone}`} style={{ color: Colors.copper }}>
+                    {selectedRequest.provider.phone}
+                  </a>
+                </>
+              )}
             </p>
             {selectedRequest.provider.rating && (
               <p style={{ color: Colors.warning, fontSize: 13, marginTop: 4 }}>★ {selectedRequest.provider.rating.toFixed(1)}</p>
@@ -411,7 +423,17 @@ export default function ProRequest() {
                 <div style={{ marginTop: 12, padding: 12, background: Colors.cream, borderRadius: 8 }}>
                   <p className="text-xs fw-600 text-copper mb-xs">Assigned Provider</p>
                   <p style={{ fontWeight: 500, fontSize: 13 }}>{r.provider.business_name}</p>
-                  <p className="text-xs text-gray">Contact: {r.provider.contact_name} · {r.provider.phone}</p>
+                  <p className="text-xs text-gray">
+                    Contact: {r.provider.contact_name}
+                    {r.provider.phone && (
+                      <>
+                        {' · '}
+                        <a href={`tel:${r.provider.phone}`} style={{ color: Colors.copper }}>
+                          {r.provider.phone}
+                        </a>
+                      </>
+                    )}
+                  </p>
                 </div>
               )}
 

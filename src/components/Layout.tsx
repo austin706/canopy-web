@@ -320,7 +320,10 @@ export default function Layout() {
             </button>
           </div>
         )}
-        <ErrorBoundary>
+        {/* P3 #87 (2026-04-23) — key by pathname so navigating away from a
+            crashed page resets the boundary, instead of forcing the user to
+            reload the whole app. */}
+        <ErrorBoundary key={location.pathname}>
           <Outlet />
         </ErrorBoundary>
         <RescheduleModal />

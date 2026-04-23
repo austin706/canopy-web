@@ -6,6 +6,7 @@ import { PageSkeleton } from '@/components/Skeleton';
 import { PLANS } from '@/services/subscriptionGate';
 import { logAdminAction } from '@/services/auditLog';
 import { showToast } from '@/components/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import type { SubscriptionTier } from '@/types';
 
 function generateCode(): string {
@@ -19,6 +20,7 @@ function generateCode(): string {
 
 export default function AdminGiftCodes() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [codes, setCodes] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,11 +60,34 @@ export default function AdminGiftCodes() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    const confirmed = confirm(`Delete ${selectedIds.size} selected code(s)?`);
+    // P2 #54 (2026-04-23): Replace bare confirm() with a preview — show the first N codes
+    // and a tier breakdown so admin can catch an accidental filter before nuking tickets.
+    const deletedIds = Array.from(selectedIds);
+    const selectedCodes = codes.filter(c => deletedIds.includes(c.id));
+    const tierCounts = selectedCodes.reduce<Record<string, number>>((acc, c) => {
+      acc[c.tier || 'unknown'] = (acc[c.tier || 'unknown'] || 0) + 1;
+      return acc;
+    }, {});
+    const previewCount = 10;
+    const previewCodes = selectedCodes.slice(0, previewCount).map(c => c.code).join(', ');
+    const moreLine = selectedCodes.length > previewCount ? `\n…and ${selectedCodes.length - previewCount} more.` : '';
+    const tierLine = Object.entries(tierCounts).map(([t, n]) => `${n} × ${t}`).join(', ');
+    const redeemedCount = selectedCodes.filter(c => c.redeemed_by).length;
+    const redeemedWarning = redeemedCount > 0 ? `\n\n⚠️ ${redeemedCount} of these have already been redeemed. Deleting will NOT revoke active subscriptions but will break attribution.` : '';
+    const message =
+      `You are about to delete ${selectedIds.size} gift code(s) (${tierLine}).\n\n` +
+      `Preview: ${previewCodes}${moreLine}${redeemedWarning}\n\n` +
+      `This cannot be undone.`;
+    const confirmed = await confirm({
+      title: 'Delete Gift Codes?',
+      message,
+      confirmLabel: `Delete ${selectedIds.size}`,
+      cancelLabel: 'Cancel',
+      isDanger: true,
+    });
     if (!confirmed) return;
     try {
-      const deletedIds = Array.from(selectedIds);
-      await logAdminAction('code.delete', 'gift_code', 'bulk', { count: deletedIds.length });
+      await logAdminAction('code.delete', 'gift_code', 'bulk', { count: deletedIds.length, tierCounts });
       setCodes(prev => prev.filter(c => !deletedIds.includes(c.id)));
       setSelectedIds(new Set());
     } catch (e: any) { showToast({ message: e.message }); }

@@ -2,8 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import { getMaintenanceLogs } from '@/services/supabase';
+import { supabase } from '@/services/supabaseClient';
 import { getPastVisits } from '@/services/proVisits';
-import { calculateCompletenessScore } from '@/services/homeTransfer';
+import {
+  calculateCompletenessScore,
+  getActiveTransfer,
+  generateHomeTokenShareUrl,
+} from '@/services/homeTransfer';
 import type { MaintenanceLog, ProMonthlyVisit, Equipment, Home } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
 
@@ -17,6 +22,15 @@ export default function HomeReport() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [completenessScore, setCompletenessScore] = useState<number | null>(null);
+  // P1-18 (2026-04-23): Home Report needs an edit-trail surface so the next owner
+  // can see which log entries were corrected after the fact and by whom. Without
+  // this, an attestation is just "the seller's word." Map of log_id → edit count.
+  const [logEditCounts, setLogEditCounts] = useState<Record<string, number>>({});
+  const [logLatestEditor, setLogLatestEditor] = useState<Record<string, { name: string; date: string }>>({});
+  // P0-11 (2026-04-22): QR code must link to the public Home Token share URL
+  // (transfer-token scoped, expiring, access-controlled) rather than the raw
+  // /home-report?id=<home.id> path that leaked the internal home ID.
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -24,14 +38,49 @@ export default function HomeReport() {
     const load = async () => {
       try {
         setLoading(true);
-        const [logsData, visitsData, score] = await Promise.all([
+        const [logsData, visitsData, score, activeTransfer] = await Promise.all([
           getMaintenanceLogs(home.id),
           getPastVisits(user.id, 100),
           calculateCompletenessScore(home.id).catch(() => null),
+          getActiveTransfer(home.id).catch(() => null),
         ]);
         setLogs(logsData);
         setVisits(visitsData.filter(v => v.status === 'completed'));
         setCompletenessScore(score);
+        setShareUrl(
+          activeTransfer?.transfer_token
+            ? generateHomeTokenShareUrl(activeTransfer.transfer_token)
+            : null
+        );
+
+        // P1-18: pull edit history for all logs in one query so we can render an
+        // "edited" indicator + latest editor on each row. Falls back silently if
+        // the table doesn't exist or RLS blocks (Home Report should still render).
+        try {
+          const logIds = logsData.map(l => l.id);
+          if (logIds.length > 0) {
+            const { data: edits } = await supabase
+              .from('maintenance_log_edits')
+              .select('log_id, edited_by, edited_at, profiles:profiles!maintenance_log_edits_edited_by_fkey(full_name,email)')
+              .in('log_id', logIds)
+              .order('edited_at', { ascending: false });
+            const counts: Record<string, number> = {};
+            const latest: Record<string, { name: string; date: string }> = {};
+            (edits || []).forEach((e: any) => {
+              counts[e.log_id] = (counts[e.log_id] || 0) + 1;
+              if (!latest[e.log_id]) {
+                const name = e.profiles?.full_name || e.profiles?.email || 'someone';
+                latest[e.log_id] = { name, date: e.edited_at };
+              }
+            });
+            setLogEditCounts(counts);
+            setLogLatestEditor(latest);
+          }
+        } catch (e) {
+          // Best-effort — surface only via console to avoid breaking the report.
+          // eslint-disable-next-line no-console
+          console.warn('Failed to load maintenance log edit history:', e);
+        }
       } catch (err: any) {
         setError(getErrorMessage(err) || 'Failed to load report data');
       } finally {
@@ -250,6 +299,7 @@ export default function HomeReport() {
                             <th style={{ padding: '8px 14px', fontWeight: 600, color: Colors.charcoal }}>Category</th>
                             <th style={{ padding: '8px 14px', fontWeight: 600, color: Colors.charcoal }}>Done By</th>
                             <th style={{ padding: '8px 14px', fontWeight: 600, color: Colors.charcoal }}>Source</th>
+                            <th style={{ padding: '8px 14px', fontWeight: 600, color: Colors.charcoal }}>Edits</th>
                             <th style={{ padding: '8px 14px', fontWeight: 600, color: Colors.charcoal, textAlign: 'right' }}>Cost</th>
                           </tr>
                         </thead>
@@ -268,6 +318,15 @@ export default function HomeReport() {
                               <td style={{ padding: '8px 14px' }}>{log.completed_by}</td>
                               <td style={{ padding: '8px 14px' }}>
                                 <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 8, background: 'var(--color-' + (src === 'pro_visit' ? 'sage' : src === 'agent' ? 'copper' : 'text-secondary') + '-muted, rgba(' + (src === 'pro_visit' ? '139,158,126' : src === 'agent' ? '196,132,78' : '107,114,128') + ',0.125))', color: srcColor }}>{srcLabel}</span>
+                              </td>
+                              <td style={{ padding: '8px 14px', fontSize: 12, color: Colors.medGray }}>
+                                {/* P1-18: edit trail surface — shows count + most recent editor */}
+                                {logEditCounts[log.id] ? (
+                                  <span title={logLatestEditor[log.id] ? `Last edited ${new Date(logLatestEditor[log.id].date).toLocaleDateString()} by ${logLatestEditor[log.id].name}` : undefined}>
+                                    {logEditCounts[log.id]} edit{logEditCounts[log.id] === 1 ? '' : 's'}
+                                    {logLatestEditor[log.id] ? ` · ${logLatestEditor[log.id].name}` : ''}
+                                  </span>
+                                ) : '—'}
                               </td>
                               <td style={{ padding: '8px 14px', textAlign: 'right' }}>{log.cost ? fmt(log.cost) : '—'}</td>
                             </tr>
@@ -332,17 +391,24 @@ export default function HomeReport() {
           textAlign: 'center', padding: '24px 0', borderTop: `1px solid ${Colors.lightGray}`,
           color: Colors.medGray, fontSize: 12,
         }}>
-          {home && (
+          {home && shareUrl && (
             <div style={{ marginBottom: 16 }}>
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`https://canopyhome.app/home-report?id=${home.id}`)}`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(shareUrl)}`}
                 alt="QR Code"
                 width={120}
                 height={120}
                 style={{ margin: '0 auto', display: 'block' }}
               />
               <p style={{ fontSize: 11, color: Colors.medGray, marginTop: 8 }}>
-                Scan to view this home's verified record
+                Scan to view this home's verified public record
+              </p>
+            </div>
+          )}
+          {home && !shareUrl && (
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 11, color: Colors.medGray }}>
+                Start a Home Transfer from the Home Token page to generate a shareable QR.
               </p>
             </div>
           )}

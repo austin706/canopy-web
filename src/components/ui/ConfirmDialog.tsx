@@ -1,5 +1,6 @@
 import { createContext, ReactNode, useCallback, useContext, useState } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
+import logger from '@/utils/logger';
 
 export interface ConfirmOptions {
   title: string;
@@ -17,7 +18,7 @@ interface PendingConfirm {
 }
 
 const ConfirmContext = createContext<ConfirmFn>(() => {
-  console.error('[ConfirmProvider] useConfirm called outside provider');
+  logger.error('[ConfirmProvider] useConfirm called outside provider');
   return Promise.resolve(false);
 });
 

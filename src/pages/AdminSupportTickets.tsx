@@ -5,6 +5,7 @@ import { logAdminAction } from '@/services/auditLog';
 import { Colors, StatusColors } from '@/constants/theme';
 import { PageSkeleton } from '@/components/Skeleton';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 interface SupportTicket {
   id: string;
@@ -83,7 +84,7 @@ export default function AdminSupportTickets() {
         if (error) throw error;
         setTickets(data || []);
       } catch (error) {
-        console.error('Failed to fetch support tickets:', error);
+        logger.error('Failed to fetch support tickets:', error);
       } finally {
         setLoading(false);
       }

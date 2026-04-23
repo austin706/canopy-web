@@ -76,12 +76,21 @@ export function getTaskLimit(tier: SubscriptionTier | undefined | null): number 
   return (!tier || tier === 'free') ? 3 : null;
 }
 
+// P1 #22 (2026-04-23): include the bimonthly variants `home_2` and
+// `pro_2`; previously they were treated as non-premium and got locked
+// out of add-ons / paid feature gates they had paid for.
 export function isPremium(tier: SubscriptionTier | undefined | null): boolean {
-  return tier === 'home' || tier === 'pro' || tier === 'pro_plus';
+  return (
+    tier === 'home' ||
+    tier === 'home_2' ||
+    tier === 'pro' ||
+    tier === 'pro_2' ||
+    tier === 'pro_plus'
+  );
 }
 
 export function isProOrHigher(tier: SubscriptionTier | undefined | null): boolean {
-  return tier === 'pro' || tier === 'pro_plus';
+  return tier === 'pro' || tier === 'pro_2' || tier === 'pro_plus';
 }
 
 /**

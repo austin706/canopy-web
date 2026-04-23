@@ -5,6 +5,7 @@ import { linkAgent } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { AgentAvatar } from '@/components/AgentAvatar';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 /**
  * AgentView — User-facing page to view their linked agent, search for an agent, or manage link requests.
@@ -36,7 +37,7 @@ export default function AgentView() {
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
       setPendingRequests(data || []);
-    } catch (e) { console.error(e); }
+    } catch (e) { logger.error(e); }
     finally { setLoadedRequests(true); }
   };
 
@@ -75,16 +76,77 @@ export default function AgentView() {
     }
   };
 
-  // Auto-confirm link (user-initiated)
+  // P1 #28 (2026-04-23): user-initiated link, consolidated with agent-initiated flow.
+  //
+  // Previous behavior: silently set `profiles.agent_id` and walked away — no
+  // audit row, no notification to the agent. The agent literally would not
+  // know they had a new client until the next time they opened the portal
+  // and looked at their list. Inverse direction (agent → user) creates an
+  // `agent_link_requests` row and notifies the user. Audit P1 #28 asked us
+  // to consolidate.
+  //
+  // New behavior: every link writes an `agent_link_requests` row for a
+  // single source of truth. User-initiated links land as status='approved'
+  // (the user IS the consenting party here), agent-initiated links land as
+  // status='pending' (existing AgentLinkClient flow, awaits user approval).
+  // We then notify the agent — in-app if we can resolve their profile from
+  // their email, and an email fallback either way.
   const handleLink = async (agentData: any) => {
     if (!user?.id) return;
     setLinking(true);
     try {
+      // 1. Write the audit row first. If this fails we abort — every link
+      //    must have an audit row, no exceptions.
+      const { error: reqErr } = await supabase.from('agent_link_requests').insert({
+        agent_id: agentData.id,
+        user_id: user.id,
+        user_email: user.email,
+        user_name: user.full_name || null,
+        status: 'approved',
+      });
+      if (reqErr) throw reqErr;
+
+      // 2. Set profiles.agent_id (existing behavior).
       await linkAgent(user.id, agentData.id);
       setAgent(agentData);
       if (user) setUser({ ...user, agent_id: agentData.id });
       setSearchResults([]);
       setSearchQuery('');
+
+      // 3. Notify the agent so they know about the new client. Best-effort —
+      //    don't throw if notification fails, the link is already done.
+      const userName = user.full_name || user.email || 'A homeowner';
+      let agentProfileId: string | null = null;
+      if (agentData?.email) {
+        const { data: agentProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', agentData.email)
+          .maybeSingle();
+        agentProfileId = agentProfile?.id || null;
+
+        if (agentProfileId) {
+          // In-app + email via the queue
+          sendNotification({
+            user_id: agentProfileId,
+            title: 'New Client Linked',
+            body: `${userName} linked their home to you. View them in your Agent Portal.`,
+            category: 'agent',
+            action_url: '/agent-portal',
+          }).catch(() => {});
+        } else {
+          // Email-only fallback for agents without a Canopy account
+          sendDirectEmailNotification({
+            recipient_email: agentData.email,
+            title: 'New Client Linked',
+            body: `${userName} linked their home to you. View them in your Agent Portal.`,
+            subject: 'A new client linked their home to you',
+            category: 'agent',
+            action_url: '/agent-portal',
+            action_label: 'View Agent Portal',
+          }).catch(() => {});
+        }
+      }
     } catch (e: any) {
       showToast({ message: 'Failed to link agent: ' + (e.message || 'Please try again.') });
     } finally {

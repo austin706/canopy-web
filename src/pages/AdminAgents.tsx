@@ -8,6 +8,11 @@ import { logAdminAction } from '@/services/auditLog';
 import { useStore } from '@/store/useStore';
 import { PageSkeleton } from '@/components/Skeleton';
 import { showToast } from '@/components/Toast';
+import { useTabState } from '@/utils/useTabState';
+import logger from '@/utils/logger';
+
+const ADMIN_AGENT_TABS = ['agents', 'applications'] as const;
+type AdminAgentTab = typeof ADMIN_AGENT_TABS[number];
 
 const STATUS_COLORS: Record<string, string> = {
   pending: Colors.warning,
@@ -25,7 +30,8 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function AdminAgents() {
   const { user: currentUser } = useStore();
-  const [tab, setTab] = useState<'agents' | 'applications'>('agents');
+  // P3 #77 (2026-04-23) — URL-sync tab so back-button + deep-link work.
+  const [tab, setTab] = useTabState<AdminAgentTab>(ADMIN_AGENT_TABS, 'agents');
 
   // ─── Agents Tab State ───
   const [agents, setAgents] = useState<any[]>([]);
@@ -72,7 +78,7 @@ export default function AdminAgents() {
       const data = await getAgentApplications(applicationFilter !== 'all' ? applicationFilter : undefined);
       setApplications(data);
     } catch (e) {
-      console.error('Failed to load applications:', e);
+      logger.error('Failed to load applications:', e);
       showToast({ message: 'Failed to load applications' });
     } finally {
       setApplicationsLoading(false);

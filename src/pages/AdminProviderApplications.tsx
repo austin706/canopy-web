@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { logAdminAction } from '@/services/auditLog';
 import { Colors } from '@/constants/theme';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 interface ProviderApplication {
   id: string;
@@ -49,7 +50,7 @@ export default function AdminProviderApplications() {
       if (error) throw error;
       setApplications(data || []);
     } catch (e: any) {
-      console.error('Error loading applications:', e);
+      logger.error('Error loading applications:', e);
       showToast({ message: 'Failed to load applications' });
     } finally {
       setLoading(false);
@@ -107,7 +108,7 @@ export default function AdminProviderApplications() {
           },
         });
       } catch (emailErr) {
-        console.error('Welcome email error:', emailErr);
+        logger.error('Welcome email error:', emailErr);
       }
 
       logAdminAction('provider_application.approve', 'provider_application', app.id, {
@@ -119,7 +120,7 @@ export default function AdminProviderApplications() {
         prev.map(a => a.id === app.id ? { ...a, status: 'approved' } : a)
       );
     } catch (e: any) {
-      console.error('Approval error:', e);
+      logger.error('Approval error:', e);
       showToast({ message: e.message || 'Failed to approve application' });
     } finally {
       setActionInProgress(null);
@@ -161,7 +162,7 @@ export default function AdminProviderApplications() {
         return updated;
       });
     } catch (e: any) {
-      console.error('Rejection error:', e);
+      logger.error('Rejection error:', e);
       showToast({ message: e.message || 'Failed to reject application' });
     } finally {
       setActionInProgress(null);
@@ -190,7 +191,7 @@ export default function AdminProviderApplications() {
         prev.map(a => a.id === app.id ? { ...a, status: 'withdrawn' } : a)
       );
     } catch (e: any) {
-      console.error('Withdrawal error:', e);
+      logger.error('Withdrawal error:', e);
       showToast({ message: e.message || 'Failed to withdraw application' });
     } finally {
       setActionInProgress(null);

@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import AdminPreviewBanner from '@/components/AdminPreviewBanner';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 interface AvailabilityDay {
   day: string;
@@ -108,7 +109,7 @@ export default function ProAvailability() {
         return;
       }
     } catch (err) {
-      console.error('Error loading availability:', err);
+      logger.error('Error loading availability:', err);
     } finally {
       setLoading(false);
     }

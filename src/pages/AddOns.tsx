@@ -71,7 +71,15 @@ export default function AddOns() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const tier = user?.subscription_tier || 'free';
-  const hasAccess = tier === 'home' || tier === 'pro' || tier === 'pro_plus';
+  // P1 #22 (2026-04-23): include the bimonthly variants (`home_2`, `pro_2`)
+  // which were added when the bimonthly tier shipped — multi-tier
+  // subscribers were locked out of add-ons they had paid for.
+  const hasAccess =
+    tier === 'home' ||
+    tier === 'home_2' ||
+    tier === 'pro' ||
+    tier === 'pro_2' ||
+    tier === 'pro_plus';
 
   useEffect(() => {
     if (home && user) {
@@ -224,17 +232,52 @@ export default function AddOns() {
   };
 
   // Check for checkout success/cancel in URL params
+  // P2 #46 (2026-04-23): Don't trust ?success=true blindly; poll loadData up to 5× (10s total)
+  // and verify the specific addon_id actually reached an active state before celebrating.
+  // Stripe webhooks can lag — showing "activated" while status is still `pending` misleads users.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('success') === 'true' && params.get('addon_id')) {
-      setSuccess('Add-on service activated! Your provider will be in touch to schedule the first service.');
-      // Clean up URL
-      window.history.replaceState({}, '', window.location.pathname);
-    }
     if (params.get('canceled') === 'true') {
       setError('Checkout was canceled. You can approve the quote anytime.');
       window.history.replaceState({}, '', window.location.pathname);
+      return;
     }
+    const successFlag = params.get('success') === 'true';
+    const addonId = params.get('addon_id');
+    if (!successFlag || !addonId) return;
+
+    window.history.replaceState({}, '', window.location.pathname);
+    let cancelled = false;
+    let attempts = 0;
+
+    const verify = async () => {
+      while (!cancelled && attempts < 5) {
+        attempts += 1;
+        await loadData();
+        // Re-read fresh state after loadData; access via closure would be stale
+        const { data: fresh } = await supabase
+          .from('home_add_ons')
+          .select('id, status')
+          .eq('id', addonId)
+          .maybeSingle();
+        if (cancelled) return;
+        if (fresh?.status === 'active' || fresh?.status === 'approved') {
+          setSuccess('Add-on service activated! Your provider will be in touch to schedule the first service.');
+          return;
+        }
+        if (fresh?.status === 'cancelled' || fresh?.status === 'failed') {
+          setError('We received the checkout callback but the add-on didn\'t activate. Please contact support.');
+          return;
+        }
+        // Still pending — wait 2s and retry
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      if (!cancelled) {
+        setSuccess('Checkout complete — activation is still finalizing. We\'ll email you once your provider is scheduled.');
+      }
+    };
+    verify();
+    return () => { cancelled = true; };
   }, []);
 
   if (!hasAccess) {

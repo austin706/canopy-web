@@ -4,10 +4,11 @@ import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/utils';
 import { getTasks, reopenTask as reopenTaskApi, getCalendarToken, rotateCalendarToken, buildICalSubscribeUrl } from '@/services/supabase';
-import { getDisplayStatus } from '@/services/taskEngine';
+import { getDisplayStatus, normalizeDedupTitle } from '@/services/taskEngine';
 import { supabase } from '@/services/supabase';
 import type { MaintenanceTask, ProMonthlyVisit } from '@/types';
 import { EmptyState } from '@/components/ui';
+import logger from '@/utils/logger';
 
 const MaintenanceLogs = lazy(() => import('@/pages/MaintenanceLogs'));
 
@@ -57,7 +58,7 @@ export default function Calendar() {
       if (!token) token = await rotateCalendarToken(user.id);
       setCalToken(token);
     } catch (e: any) {
-      console.error('Failed to set up calendar:', e);
+      logger.error('Failed to set up calendar:', e);
     } finally { setCalLoading(false); }
   };
 
@@ -68,7 +69,7 @@ export default function Calendar() {
       setCalCopied(true);
       setTimeout(() => setCalCopied(false), 2500);
     } catch {
-      console.error('Copy failed');
+      logger.error('Copy failed');
     }
   };
 
@@ -133,14 +134,15 @@ export default function Calendar() {
     return days;
   }, [year, month]);
 
-  // Enrich tasks with computed display status + dedup on (title|month|year).
+  // Enrich tasks with computed display status + dedup on (normalized title|month|year).
   // Historical rows can contain duplicates (fix parity with mobile for IMG_7409).
+  // P2 #36 (2026-04-23): normalizeDedupTitle handles parenthetical/dash variants.
   const enrichedTasks = useMemo(() => {
     const statusRank: Record<string, number> = { completed: 3, scheduled: 2, snoozed: 1, skipped: 0 };
     const byKey = new Map<string, (typeof tasks)[number]>();
     for (const t of tasks) {
       const d = new Date(t.due_date);
-      const key = `${t.title}|${d.getMonth() + 1}|${d.getFullYear()}`;
+      const key = `${normalizeDedupTitle(t.title)}|${d.getMonth() + 1}|${d.getFullYear()}`;
       const existing = byKey.get(key);
       if (!existing) { byKey.set(key, t); continue; }
       const tRank = statusRank[t.status as string] ?? 0;
@@ -254,7 +256,7 @@ export default function Calendar() {
         console.warn('Reopen API call failed:', err);
       }
     } catch (error) {
-      console.error('Error reopening task:', error);
+      logger.error('Error reopening task:', error);
     }
   };
 
@@ -285,7 +287,7 @@ export default function Calendar() {
       setSelectedTaskIds(new Set());
       setSelectMode(false);
     } catch (error) {
-      console.error('Error bulk completing tasks:', error);
+      logger.error('Error bulk completing tasks:', error);
     } finally {
       setBulkProcessing(false);
     }
@@ -691,7 +693,7 @@ export default function Calendar() {
                           try {
                             await supabase.from('pro_monthly_visits').update({ status: 'confirmed', homeowner_confirmed_at: new Date().toISOString() }).eq('id', visit.id);
                             setVisits(prev => prev.map(v => v.id === visit.id ? { ...v, status: 'confirmed' as const } : v));
-                          } catch (err) { console.error(err); }
+                          } catch (err) { logger.error(err); }
                         }}>Confirm</button>
                         <button className="btn btn-ghost btn-sm" onClick={() => navigate('/visits')}>Reschedule</button>
                       </div>

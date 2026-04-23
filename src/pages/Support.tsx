@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import { getErrorMessage } from '@/utils/errors';
+import logger from '@/utils/logger';
 
 type SupportCategory = 'general' | 'bug' | 'billing' | 'pro-issue' | 'account' | 'feature' | 'other';
 
@@ -180,7 +181,7 @@ export default function Support() {
           },
         });
       } catch (emailErr) {
-        console.error('Auto-reply email error:', emailErr);
+        logger.error('Auto-reply email error:', emailErr);
       }
 
       // Admin notification
@@ -212,7 +213,7 @@ export default function Support() {
           },
         });
       } catch (adminEmailErr) {
-        console.error('Admin notification email error:', adminEmailErr);
+        logger.error('Admin notification email error:', adminEmailErr);
       }
 
       setSubmitted(true);
@@ -316,7 +317,7 @@ export default function Support() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            Name <span style={{ color: Colors.error }}>*</span>
+            Name <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <input
             type="text"
@@ -330,7 +331,7 @@ export default function Support() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            Email <span style={{ color: Colors.error }}>*</span>
+            Email <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <input
             type="email"
@@ -344,7 +345,7 @@ export default function Support() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            Category <span style={{ color: Colors.error }}>*</span>
+            Category <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <select
             required
@@ -364,7 +365,7 @@ export default function Support() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            Subject <span style={{ color: Colors.error }}>*</span>
+            Subject <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <input
             type="text"
@@ -378,7 +379,7 @@ export default function Support() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            Message <span style={{ color: Colors.error }}>*</span>
+            Message <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <textarea
             required

@@ -16,7 +16,7 @@ export const createProRequest = async (request: Record<string, unknown>) => {
       body: { request_id: data.id },
     });
   } catch (matchErr) {
-    console.error('Auto-match provider error (non-blocking):', matchErr);
+    logger.error('Auto-match provider error (non-blocking):', matchErr);
   }
 
   return data;
@@ -38,6 +38,31 @@ export const updateProRequest = async (id: string, updates: Record<string, unkno
   const { data, error } = await supabase.from('pro_requests').update(updates).eq('id', id).select().single();
   if (error) throw error;
   return data;
+};
+
+/**
+ * P2 #57 (2026-04-23): Server-side capacity-enforced assignment. Calls the
+ * `assign_pro_request_with_capacity_check` RPC which atomically:
+ *   1. Verifies caller is an admin
+ *   2. Locks the provider row + counts active jobs
+ *   3. Rejects if provider is unavailable or at max_jobs_per_day
+ *   4. Updates pro_requests.assigned_provider + status in one transaction
+ *
+ * Replaces the prior client-only capacity check that a stale client or direct
+ * API call could bypass.
+ */
+export const assignProRequestProvider = async (
+  requestId: string,
+  providerId: string,
+): Promise<{ assigned: boolean; reason: string }> => {
+  const { data, error } = await supabase.rpc('assign_pro_request_with_capacity_check', {
+    p_request_id: requestId,
+    p_provider_id: providerId,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error('Assignment RPC returned no row');
+  return { assigned: !!row.assigned, reason: String(row.reason || 'unknown') };
 };
 
 export const getAllProProviders = async () => {

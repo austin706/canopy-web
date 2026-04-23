@@ -245,7 +245,18 @@ export default function AdminUsers() {
 
   const handleDeleteUser = async (userId: string, userName: string) => {
     if (!confirm(`Are you sure you want to delete ${userName || 'this user'}? This will permanently remove their account and all associated data.`)) return;
-    if (!confirm('This action cannot be undone. Type OK to confirm.')) return;
+    // P2 #55 (2026-04-23): Real type-gate — admin must literally type "DELETE" to confirm
+    // the permanent nuke. Previously the "Type OK" confirm was a lie (confirm() = Yes/Cancel).
+    // Upgraded the gate word from "OK" to "DELETE" for extra friction on the most
+    // destructive admin action. Case-insensitive compare so a sleepy admin typing
+    // "delete" doesn't get blocked while accidental clicks still bounce.
+    const typed = window.prompt(
+      `This action cannot be undone. Type DELETE (all caps) to permanently remove ${userName || 'this user'}.`,
+    );
+    if (!typed || typed.trim().toUpperCase() !== 'DELETE') {
+      showToast({ message: 'Deletion cancelled — confirmation text did not match.' });
+      return;
+    }
     try {
       const user = users.find(u => u.id === userId);
       await deleteUserAccount(userId);

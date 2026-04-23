@@ -1,3 +1,5 @@
+import { LEGAL_DATES } from '@/constants/legalDates';
+
 export default function Privacy() {
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--color-text)', lineHeight: 1.7 }}>
@@ -6,7 +8,10 @@ export default function Privacy() {
       </div>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Privacy Policy</h1>
-      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>Last updated: April 11, 2026</p>
+      {/* P3 #75 (2026-04-23) — single source of truth in constants/legalDates.ts */}
+      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>
+        Last updated: <time dateTime={LEGAL_DATES.privacy.iso}>{LEGAL_DATES.privacy.display}</time>
+      </p>
 
       <p>Canopy ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the Canopy mobile application, web platform, and related services (collectively, the "Service").</p>
 

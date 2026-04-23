@@ -6,6 +6,7 @@ import { Colors, Spacing } from '@/constants/theme';
 import { showToast } from '@/components/Toast';
 import { WarrantyForm } from '@/components/WarrantyForm';
 import type { Warranty } from '@/types';
+import logger from '@/utils/logger';
 
 export default function Warranties() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export default function Warranties() {
     getWarrantiesForHome(home.id)
       .then(setWarranties)
       .catch(err => {
-        console.error('Error loading warranties:', err);
+        logger.error('Error loading warranties:', err);
         showToast({ message: 'Error loading warranties' });
       })
       .finally(() => setLoading(false));
@@ -124,31 +125,51 @@ export default function Warranties() {
 
         {/* Filter Tabs */}
         {!showAddWarranty && !editingWarranty && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: Spacing.lg, borderBottom: `1px solid ${Colors.lightGray}`, paddingBottom: Spacing.md }}>
-            {[
-              { key: 'all', label: 'All' },
-              { key: 'active', label: 'Active' },
-              { key: 'expiring_soon', label: 'Expiring Soon' },
-              { key: 'expired', label: 'Expired' },
-            ].map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setFilterStatus(tab.key as any)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: `${Spacing.sm} ${Spacing.md}`,
-                  fontWeight: filterStatus === tab.key ? 700 : 500,
-                  color: filterStatus === tab.key ? Colors.sage : Colors.medGray,
-                  borderBottom: filterStatus === tab.key ? `3px solid ${Colors.sage}` : 'none',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          <>
+            <div
+              role="tablist"
+              aria-label="Warranty status filter"
+              style={{ display: 'flex', gap: 8, marginBottom: Spacing.sm, borderBottom: `1px solid ${Colors.lightGray}`, paddingBottom: Spacing.md }}
+            >
+              {[
+                { key: 'all', label: 'All' },
+                { key: 'active', label: 'Active' },
+                { key: 'expiring_soon', label: 'Expiring Soon' },
+                { key: 'expired', label: 'Expired' },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  role="tab"
+                  aria-selected={filterStatus === tab.key}
+                  onClick={() => setFilterStatus(tab.key as any)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: `${Spacing.sm} ${Spacing.md}`,
+                    fontWeight: filterStatus === tab.key ? 700 : 500,
+                    color: filterStatus === tab.key ? Colors.sage : Colors.medGray,
+                    borderBottom: filterStatus === tab.key ? `3px solid ${Colors.sage}` : 'none',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            {/* P2 #39 (2026-04-23): Secondary sort indicator so users understand row order. */}
+            <p
+              aria-live="polite"
+              style={{
+                fontSize: 12,
+                color: Colors.medGray,
+                marginBottom: Spacing.md,
+                marginTop: 0,
+              }}
+            >
+              Sorted by: days until expiry (soonest first) <span aria-hidden="true">↑</span>
+            </p>
+          </>
         )}
 
         {/* Warranties List */}

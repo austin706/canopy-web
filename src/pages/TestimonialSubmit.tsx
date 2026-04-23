@@ -130,13 +130,18 @@ export default function TestimonialSubmit() {
     setSubmitting(true);
     setError(null);
     try {
+      // P2 #69 (2026-04-23) — derive city/state from the user's home record
+      // instead of hardcoding Tulsa/OK. Falls back to null when the user
+      // hasn't completed setup, so we never mislabel testimonials.
+      const homeCity = typeof home?.city === 'string' && home.city.trim() ? home.city.trim() : null;
+      const homeState = typeof home?.state === 'string' && home.state.trim() ? home.state.trim() : null;
       const { error: insertError } = await supabase.from('testimonials').insert({
         user_id: user.id,
         home_id: home?.id ?? null,
         first_name: firstName.trim(),
         neighborhood: neighborhood.trim() || null,
-        city: 'Tulsa',
-        state: 'OK',
+        city: homeCity,
+        state: homeState,
         quote: quote.trim(),
         rating,
         category_chips: Array.from(chips),
@@ -212,7 +217,7 @@ export default function TestimonialSubmit() {
               lineHeight: 1.2,
             }}
           >
-            Help your Tulsa neighbors
+            Help your {typeof home?.city === 'string' && home.city.trim() ? home.city.trim() : 'local'} neighbors
           </h1>
           <p
             style={{

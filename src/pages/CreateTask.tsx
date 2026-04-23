@@ -26,7 +26,7 @@ const PRIORITY_COLORS: Record<TaskPriority, string> = {
 
 export default function CreateTask() {
   const navigate = useNavigate();
-  const { user, home, tasks: existingTasks, setTasks } = useStore();
+  const { user, home, tasks: existingTasks, setTasks, equipment } = useStore();
   const tier = user?.subscription_tier || 'free';
   const taskLimit = getTaskLimit(tier);
 
@@ -48,6 +48,8 @@ export default function CreateTask() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category>('general');
+  // P1-8: equipment_id ties custom tasks back to specific equipment so logs/recurrences/contractor bundling resolve to e.g. "Trane furnace" instead of orphaning at the home level.
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null);
   const [selectedPriority, setSelectedPriority] = useState<TaskPriority>('medium');
   const [selectedFrequency, setSelectedFrequency] = useState<TaskFrequency>('annual');
   const [dueDate, setDueDate] = useState('');
@@ -115,6 +117,8 @@ export default function CreateTask() {
         items_to_have_on_hand: itemsToHave.filter(s => s.trim()),
         estimated_minutes: estimatedMinutes ? parseInt(estimatedMinutes, 10) : undefined,
         estimated_cost: estimatedCost ? parseFloat(estimatedCost) : undefined,
+        // P1-8: link to equipment when user selected one
+        equipment_id: selectedEquipmentId || undefined,
       };
 
       const created = await createTask(newTask);
@@ -319,7 +323,16 @@ export default function CreateTask() {
                 <button
                   key={cat}
                   type="button"
-                  onClick={() => setSelectedCategory(cat)}
+                  onClick={() => {
+                    setSelectedCategory(cat);
+                    // P1-8: clear equipment selection if it no longer matches the new category
+                    if (selectedEquipmentId) {
+                      const stillValid = equipment.some(
+                        (e) => e.id === selectedEquipmentId && (e.category as string) === cat,
+                      );
+                      if (!stillValid) setSelectedEquipmentId(null);
+                    }
+                  }}
                   style={chipStyle(selectedCategory === cat)}
                 >
                   {cat}
@@ -327,6 +340,35 @@ export default function CreateTask() {
               ))}
             </div>
           </div>
+
+          {/* P1-8: Equipment — optional tie-back so this task lives on the right Trane furnace, not the home root */}
+          {equipment.filter((e) => (e.category as string) === selectedCategory).length > 0 && (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Linked Equipment (optional)</label>
+              <div style={chipContainerStyle}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedEquipmentId(null)}
+                  style={chipStyle(selectedEquipmentId === null)}
+                >
+                  None
+                </button>
+                {equipment
+                  .filter((e) => (e.category as string) === selectedCategory)
+                  .map((e) => (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => setSelectedEquipmentId(e.id)}
+                      style={chipStyle(selectedEquipmentId === e.id)}
+                      title={[e.make, e.model].filter(Boolean).join(' ') || e.name}
+                    >
+                      {e.name}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
 
           {/* Priority */}
           <div style={{ marginBottom: '16px' }}>

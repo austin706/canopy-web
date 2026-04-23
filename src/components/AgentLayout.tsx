@@ -86,7 +86,8 @@ export default function AgentLayout() {
         </div>
       </nav>
       <main className="main-content">
-        <ErrorBoundary>
+        {/* P3 #87 (2026-04-23) — key by pathname so navigating resets boundary. */}
+        <ErrorBoundary key={location.pathname}>
           <Outlet />
         </ErrorBoundary>
       </main>

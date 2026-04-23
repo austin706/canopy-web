@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import AdminPreviewBanner from '@/components/AdminPreviewBanner';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 interface ProviderProfile {
   id: string;
@@ -97,7 +98,7 @@ export default function ProProfile() {
         setYearsExperience(data.years_experience?.toString() || '');
       }
     } catch (err) {
-      console.error('Error loading profile:', err);
+      logger.error('Error loading profile:', err);
       showToast({ message: 'Failed to load provider profile' });
     } finally {
       setLoading(false);
@@ -174,17 +175,17 @@ export default function ProProfile() {
         <h2 style={{ fontSize: 16, marginBottom: 16 }}>Contact Information</h2>
 
         <div className="form-group">
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Full Name *</label>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Full Name <span aria-hidden="true">*</span></label>
           <input className="form-input" placeholder="Full Name" value={contactName} onChange={e => setContactName(e.target.value)} />
         </div>
 
         <div className="form-group">
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Email *</label>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Email <span aria-hidden="true">*</span></label>
           <input className="form-input" placeholder="email@example.com" type="email" value={email} onChange={e => setEmail(e.target.value)} />
         </div>
 
         <div className="form-group">
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Phone *</label>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Phone <span aria-hidden="true">*</span></label>
           <input className="form-input" placeholder="(555) 123-4567" type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
         </div>
       </div>

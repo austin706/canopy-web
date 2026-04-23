@@ -14,6 +14,7 @@ import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
 import { showToast } from '@/components/Toast';
 import { ROOF_LIFESPANS } from '@/services/taskEngine';
 import type { Equipment as EquipmentType, EquipmentCategory } from '@/types';
+import logger from '@/utils/logger';
 
 /** Compute lifespan percentage for an equipment item */
 function getLifespanPct(item: EquipmentType, home: any): number | null {
@@ -64,6 +65,14 @@ export default function Equipment() {
   const [showScanner, setShowScanner] = useState(false);
   const [filter, setFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  // P1-12 (2026-04-23): debounce search input so 100+ item registries don't
+  // re-filter (and re-render) on every keystroke. 200ms keeps it feeling instant
+  // while collapsing rapid typing into a single recompute.
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
+  useEffect(() => {
+    const handle = setTimeout(() => setDebouncedSearchTerm(searchTerm), 200);
+    return () => clearTimeout(handle);
+  }, [searchTerm]);
   const [form, setForm] = useState({ name: '', category: 'hvac' as EquipmentCategory, make: '', model: '', serial_number: '', install_date: '', expected_lifespan_years: '', location_in_home: '', notes: '' });
   const [scanExtras, setScanExtras] = useState<{ equipment_subtype?: string; refrigerant_type?: string; suggested_tasks?: any[] }>({});
   const [saving, setSaving] = useState(false);
@@ -155,21 +164,23 @@ export default function Equipment() {
         return [...prev, result];
       });
     } catch (e) {
-      console.error('Error updating checklist:', e);
+      logger.error('Error updating checklist:', e);
     }
   };
 
-  const filtered = (filter === 'all' ? equipment : equipment.filter(e => e.category === filter))
-    .filter(e => {
-      if (!searchTerm.trim()) return true;
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        e.name.toLowerCase().includes(searchLower) ||
-        (e.make && e.make.toLowerCase().includes(searchLower)) ||
-        (e.model && e.model.toLowerCase().includes(searchLower)) ||
-        e.category.toLowerCase().includes(searchLower)
-      );
-    });
+  // P1-12 (2026-04-23): memoize filtered list against debounced query and category
+  // to skip recomputing the full list while the user is mid-typing.
+  const filtered = useMemo(() => {
+    const base = filter === 'all' ? equipment : equipment.filter(e => e.category === filter);
+    const q = debouncedSearchTerm.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter(e =>
+      e.name.toLowerCase().includes(q) ||
+      (e.make && e.make.toLowerCase().includes(q)) ||
+      (e.model && e.model.toLowerCase().includes(q)) ||
+      e.category.toLowerCase().includes(q)
+    );
+  }, [equipment, filter, debouncedSearchTerm]);
   const catAbbr = (cat: string) => CATEGORIES.find(c => c.value === cat)?.abbr || 'EQ';
   const catIcon = (cat: string) => CATEGORIES.find(c => c.value === cat)?.icon;
   const catLabel = (cat: string) => CATEGORIES.find(c => c.value === cat)?.label || cat;

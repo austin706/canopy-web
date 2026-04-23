@@ -7,6 +7,7 @@ import { logAdminAction } from '@/services/auditLog';
 import { getMessageVariant, messageColors } from '@/utils/messageType';
 import { Colors } from '@/constants/theme';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 interface ServiceArea {
   id: string;
@@ -77,7 +78,7 @@ export default function AdminServiceAreas() {
       const services = await getServiceAreaServices(area.id, true);
       setCatalogServices(services);
     } catch (e) {
-      console.error('Error loading service catalog:', e);
+      logger.error('Error loading service catalog:', e);
     } finally {
       setCatalogLoading(false);
     }
@@ -147,7 +148,7 @@ export default function AdminServiceAreas() {
       if (requestsError) throw requestsError;
       setProRequests((requestsData || []) as ProRequest[]);
     } catch (err: any) {
-      console.error('Error fetching service areas:', err);
+      logger.error('Error fetching service areas:', err);
     } finally {
       setLoading(false);
     }
@@ -264,7 +265,7 @@ export default function AdminServiceAreas() {
       );
       invalidateServiceAreaCache();
     } catch (err: any) {
-      console.error('Error toggling area:', err);
+      logger.error('Error toggling area:', err);
     }
   };
 
@@ -285,7 +286,7 @@ export default function AdminServiceAreas() {
       setAreas(prev => prev.filter(a => a.id !== area.id));
       invalidateServiceAreaCache();
     } catch (err: any) {
-      console.error('Error deleting area:', err);
+      logger.error('Error deleting area:', err);
     }
   };
 

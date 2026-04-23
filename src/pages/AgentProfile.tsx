@@ -4,6 +4,8 @@ import { supabase, getAllAgents, updateAgent, uploadPhoto } from '@/services/sup
 import { Colors } from '@/constants/theme';
 import { AgentAvatar } from '@/components/AgentAvatar';
 import PhotoCropModal from '@/components/PhotoCropModal';
+import { useRequireRole } from '@/utils/useRequireRole';
+import logger from '@/utils/logger';
 
 interface Agent {
   id: string;
@@ -17,6 +19,9 @@ interface Agent {
 }
 
 export default function AgentProfile() {
+  // Defense-in-depth role gate (P0-9). See useRequireRole for rationale.
+  useRequireRole(['agent', 'admin']);
+
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,7 +63,7 @@ export default function AgentProfile() {
       setBrokerage(currentAgent.brokerage || '');
       setAccentColor(currentAgent.accent_color || Colors.copper);
     } catch (err: any) {
-      console.error('Error loading agent:', err);
+      logger.error('Error loading agent:', err);
       setMessage('Failed to load agent profile');
     } finally {
       setLoading(false);
@@ -303,13 +308,21 @@ export default function AgentProfile() {
       <div className="card">
         <h2 style={{ fontSize: 16, marginBottom: 16 }}>Basic Information</h2>
 
+        {/* P2 #66 (2026-04-23): required fields now use aria-required on the
+            input and hide the `*` glyph from screen readers so SR users hear
+            "Name, required" instead of "Name star". */}
         <div className="form-group">
-          <label>Name *</label>
+          <label htmlFor="agent-name">
+            Name <span aria-hidden="true">*</span>
+          </label>
           <input
+            id="agent-name"
             className="form-input"
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="Your Full Name"
+            required
+            aria-required="true"
           />
         </div>
 
@@ -325,12 +338,17 @@ export default function AgentProfile() {
         </div>
 
         <div className="form-group">
-          <label>Brokerage *</label>
+          <label htmlFor="agent-brokerage">
+            Brokerage <span aria-hidden="true">*</span>
+          </label>
           <input
+            id="agent-brokerage"
             className="form-input"
             value={brokerage}
             onChange={e => setBrokerage(e.target.value)}
             placeholder="Your Brokerage Name"
+            required
+            aria-required="true"
           />
         </div>
       </div>

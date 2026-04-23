@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { resetPassword } from '@/services/supabase';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
+import { Button } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { getErrorMessage } from '@/utils/errors';
 
@@ -81,16 +82,23 @@ export default function ForgotPassword() {
                   required
                 />
               </div>
-              <button className="btn btn-primary btn-lg btn-full" type="submit" disabled={loading}>
-                {loading ? <span className="spinner" /> : 'Send Reset Link'}
-              </button>
+              {/* P2 #63 (2026-04-23): shared Button primitive. */}
+              <Button variant="primary" size="lg" fullWidth type="submit" loading={loading}>
+                Send Reset Link
+              </Button>
             </form>
           ) : (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
               <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 20 }}>Check your email for further instructions.</p>
-              <button className="btn btn-primary btn-lg btn-full" onClick={() => setSuccess(false)} style={{ marginBottom: 12 }}>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                onClick={() => setSuccess(false)}
+                style={{ marginBottom: 12 }}
+              >
                 Send Another Email
-              </button>
+              </Button>
             </div>
           )}
 

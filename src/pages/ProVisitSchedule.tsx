@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 // Unified calendar event from either table
 interface CalendarVisit {
@@ -96,7 +97,7 @@ export default function ProVisitSchedule() {
         await loadClients(provider.zip_codes || []);
       }
     } catch (err) {
-      console.error('Error loading provider:', err);
+      logger.error('Error loading provider:', err);
     } finally {
       setLoading(false);
     }
@@ -138,7 +139,7 @@ export default function ProVisitSchedule() {
 
       setClients(clientList);
     } catch (err) {
-      console.error('Error loading clients:', err);
+      logger.error('Error loading clients:', err);
     }
   };
 
@@ -228,7 +229,7 @@ export default function ProVisitSchedule() {
       merged.sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''));
       setVisits(merged);
     } catch (err) {
-      console.error('Error loading visits:', err);
+      logger.error('Error loading visits:', err);
     } finally {
       setLoading(false);
     }
@@ -376,7 +377,7 @@ export default function ProVisitSchedule() {
       await loadVisits(providerId, providerZips);
       showToast({ message: 'Visit proposal sent. Awaiting homeowner confirmation.' });
     } catch (err: any) {
-      console.error('Error proposing visit:', err);
+      logger.error('Error proposing visit:', err);
       showToast({ message: 'Failed to propose visit: ' + (err.message || '') });
     }
   };
@@ -403,7 +404,7 @@ export default function ProVisitSchedule() {
 
       await loadVisits(providerId, providerZips);
     } catch (err) {
-      console.error('Error starting visit:', err);
+      logger.error('Error starting visit:', err);
       showToast({ message: 'Failed to start visit' });
     }
   };
@@ -445,7 +446,7 @@ export default function ProVisitSchedule() {
       await loadVisits(providerId, providerZips);
       showToast({ message: 'Visit completed successfully' });
     } catch (err) {
-      console.error('Error completing visit:', err);
+      logger.error('Error completing visit:', err);
       showToast({ message: 'Failed to complete visit' });
     }
   };

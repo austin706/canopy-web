@@ -7,6 +7,7 @@ import { supabase } from '@/services/supabase';
 import { PageSkeleton } from '@/components/Skeleton';
 import { logAdminAction } from '@/services/auditLog';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 const SERVICE_CATEGORIES = [
   'HVAC', 'Plumbing', 'Electrical', 'Roofing', 'Landscaping', 'Pest Control',
@@ -112,7 +113,7 @@ export default function AdminProProviders() {
 
       setMetrics(computedMetrics);
     } catch (e) {
-      console.error('Error loading metrics:', e);
+      logger.error('Error loading metrics:', e);
     } finally {
       setLoadingMetrics(false);
     }
@@ -387,7 +388,13 @@ export default function AdminProProviders() {
                       {p.contact_name}
                     </p>
                     <p style={{ margin: '4px 0 0 0', fontSize: 12, color: Colors.medGray }}>
-                      {p.email} &middot; {p.phone}
+                      <a href={`mailto:${p.email}`} style={{ color: 'inherit' }}>{p.email}</a>
+                      {p.phone && (
+                        <>
+                          {' · '}
+                          <a href={`tel:${p.phone}`} style={{ color: 'inherit' }}>{p.phone}</a>
+                        </>
+                      )}
                     </p>
                     {p.provider_type === 'canopy_technician' && p.employee_id && (
                       <p style={{ margin: '2px 0 0 0', fontSize: 11, color: Colors.medGray }}>

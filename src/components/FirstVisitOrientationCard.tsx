@@ -64,6 +64,10 @@ export default function FirstVisitOrientationCard({ isMobile }: Props) {
   const [optIn, setOptIn] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // P2 #35 (2026-04-23): dismiss persistence scoped to visit.id so dismissal
+  // only applies to the current first-visit row. Next first-visit row (or
+  // re-booked visit) will surface the card again.
+  const [dismissed, setDismissed] = useState<boolean>(false);
 
   const tier = user?.subscription_tier ?? 'free';
   const isPro = PRO_TIERS.has(tier);
@@ -96,6 +100,16 @@ export default function FirstVisitOrientationCard({ isMobile }: Props) {
       if (cancelled) return;
       setOptIn(Boolean(profileRow?.visit_sms_opt_in));
       setVisit((visitRow as FirstVisit) ?? null);
+
+      // P2 #35: check per-visit dismissal from localStorage
+      if (visitRow?.id) {
+        try {
+          const dismissKey = `canopy_first_visit_dismissed_${visitRow.id}`;
+          if (typeof window !== 'undefined' && window.localStorage?.getItem(dismissKey) === '1') {
+            setDismissed(true);
+          }
+        } catch {}
+      }
 
       if (visitRow?.pro_provider_id) {
         const { data: pp } = await supabase
@@ -137,7 +151,17 @@ export default function FirstVisitOrientationCard({ isMobile }: Props) {
     };
   }, [user?.id, isPro]);
 
-  if (!loaded || !isPro || !visit) return null;
+  if (!loaded || !isPro || !visit || dismissed) return null;
+
+  // P2 #35: user-triggered dismiss (persists until a new first-visit row).
+  const handleDismiss = () => {
+    if (!visit?.id) return;
+    setDismissed(true);
+    try {
+      window.localStorage?.setItem(`canopy_first_visit_dismissed_${visit.id}`, '1');
+    } catch {}
+    track('dashboard_first_visit_orientation_dismiss', { visit_id: visit.id });
+  };
 
   const scheduledDate = visit.confirmed_date ?? visit.proposed_date;
   const scheduledLabel = scheduledDate
@@ -183,21 +207,44 @@ export default function FirstVisitOrientationCard({ isMobile }: Props) {
         boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
       }}
     >
-      <header style={{ marginBottom: Spacing.md }}>
-        <h2
-          id="first-visit-orientation-heading"
+      <header style={{ marginBottom: Spacing.md, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: Spacing.md }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2
+            id="first-visit-orientation-heading"
+            style={{
+              margin: 0,
+              fontSize: isMobile ? 18 : 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.charcoal,
+            }}
+          >
+            Getting ready for your first Canopy visit
+          </h2>
+          <p style={{ margin: '6px 0 0', fontSize: FontSize.sm, color: Colors.medGray }}>
+            Scheduled for <strong>{scheduledLabel}</strong>. Here\u2019s what to expect.
+          </p>
+        </div>
+        {/* P2 #35: dismiss button — persists until a new first-visit row surfaces */}
+        <button
+          type="button"
+          onClick={handleDismiss}
+          aria-label="Dismiss first-visit orientation"
           style={{
-            margin: 0,
-            fontSize: isMobile ? 18 : 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.charcoal,
+            border: 'none',
+            background: 'transparent',
+            color: Colors.medGray,
+            fontSize: 20,
+            lineHeight: 1,
+            cursor: 'pointer',
+            padding: 8,
+            margin: -8,
+            borderRadius: BorderRadius.sm,
+            minWidth: 44,
+            minHeight: 44,
           }}
         >
-          Getting ready for your first Canopy visit
-        </h2>
-        <p style={{ margin: '6px 0 0', fontSize: FontSize.sm, color: Colors.medGray }}>
-          Scheduled for <strong>{scheduledLabel}</strong>. Here\u2019s what to expect.
-        </p>
+          ×
+        </button>
       </header>
 
       <div

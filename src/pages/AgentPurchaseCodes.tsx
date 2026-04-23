@@ -4,6 +4,11 @@ import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { showToast } from '@/components/Toast';
+import { useTabState } from '@/utils/useTabState';
+import logger from '@/utils/logger';
+
+const PURCHASE_CODE_TABS = ['gift', 'codes'] as const;
+type PurchaseCodeTab = typeof PURCHASE_CODE_TABS[number];
 
 /**
  * AgentPurchaseCodes — Agents gift subscriptions to clients via Stripe wholesale pricing.
@@ -38,7 +43,8 @@ export default function AgentPurchaseCodes() {
   const { user } = useStore();
   const [codes, setCodes] = useState<GiftCode[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'gift' | 'codes'>('gift');
+  // P3 #77 (2026-04-23) — URL-sync tab so back-button + deep-link work.
+  const [tab, setTab] = useTabState<PurchaseCodeTab>(PURCHASE_CODE_TABS, 'gift');
   const [filter, setFilter] = useState<'all' | 'available' | 'redeemed'>('all');
 
   // Role gate: agents and admins can access this page
@@ -71,7 +77,7 @@ export default function AgentPurchaseCodes() {
         .order('created_at', { ascending: false });
       if (error) throw error;
       setCodes(data || []);
-    } catch (e) { console.error(e); }
+    } catch (e) { logger.error(e); }
     finally { setLoading(false); }
   };
 
@@ -246,7 +252,7 @@ export default function AgentPurchaseCodes() {
               {delivery === 'direct' && (
                 <div>
                   <div className="form-group" style={{ marginBottom: 8 }}>
-                    <label style={{ fontSize: 13 }}>Client Email *</label>
+                    <label style={{ fontSize: 13 }}>Client Email <span aria-hidden="true">*</span></label>
                     <input className="form-input" type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="client@email.com" />
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>

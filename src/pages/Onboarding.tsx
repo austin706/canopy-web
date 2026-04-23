@@ -895,6 +895,8 @@ export default function Onboarding() {
             },
             body: JSON.stringify({
               plan: selectedPlan,
+              // P2 #45 (2026-04-23): pass explicit source so stripe metadata + webhook logs retain web context.
+              source: 'web',
               success_url: `${window.location.origin}/onboarding?step=${STEP_EQUIPMENT}&success=true&plan=${selectedPlan}`,
               cancel_url: `${window.location.origin}/onboarding?step=${STEP_PLAN}&canceled=true`,
             }),
@@ -930,6 +932,8 @@ export default function Onboarding() {
           body: JSON.stringify({
             plan: selectedPlan,
             ui_mode: 'embedded',
+            // P2 #45 (2026-04-23): pass explicit source so stripe metadata + webhook logs retain web context.
+            source: 'web',
             return_url: `${window.location.origin}/onboarding?step=${STEP_EQUIPMENT}&success=true&plan=${selectedPlan}&session_id={CHECKOUT_SESSION_ID}`,
           }),
         });

@@ -9,6 +9,7 @@ import { logAdminAction } from '@/services/auditLog';
 import { Colors } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 const CONSUMABLE_TYPES = [
   'filter', 'anode_rod', 'belt', 'battery', 'bulb', 'cartridge',
@@ -86,7 +87,7 @@ export default function AdminAffiliateProducts() {
       const data = await getAffiliateProducts();
       setProducts(data);
     } catch (err) {
-      console.error('Failed to load affiliate products:', err);
+      logger.error('Failed to load affiliate products:', err);
     } finally {
       setLoading(false);
     }
@@ -116,7 +117,7 @@ export default function AdminAffiliateProducts() {
       setEditing(null);
       await loadProducts();
     } catch (err) {
-      console.error('Failed to save affiliate product:', err);
+      logger.error('Failed to save affiliate product:', err);
       showToast({ message: 'Failed to save. Check console for details.' });
     } finally {
       setSaving(false);
@@ -132,7 +133,7 @@ export default function AdminAffiliateProducts() {
       });
       await loadProducts();
     } catch (err) {
-      console.error('Failed to delete:', err);
+      logger.error('Failed to delete:', err);
     }
   };
 

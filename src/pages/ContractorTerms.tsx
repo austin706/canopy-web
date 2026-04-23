@@ -1,10 +1,18 @@
+import { LEGAL_DATES } from '@/constants/legalDates';
+
+// P3 #75 (2026-04-23) — contractor-terms effective date read from the shared
+// legalDates constant so revisions propagate everywhere at once.
+const CONTRACTOR_TERMS_DATE = LEGAL_DATES.contractorTerms;
+
 export default function ContractorTerms() {
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--color-text)', lineHeight: 1.7 }}>
       <a href="/" style={{ color: 'var(--color-sage)', textDecoration: 'none', fontSize: 14 }}>← Back</a>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Pro Provider Terms of Service</h1>
-      <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginBottom: 32 }}>Effective April 3, 2026</p>
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginBottom: 32 }}>
+        Effective <time dateTime={CONTRACTOR_TERMS_DATE.iso}>{CONTRACTOR_TERMS_DATE.display}</time>
+      </p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>1. Purpose & Scope</h2>
       <p>
@@ -154,9 +162,12 @@ export default function ContractorTerms() {
       <ul style={{ paddingLeft: 24, marginTop: 8 }}>
         <li style={{ marginBottom: 8 }}>Good faith negotiation and communication attempt first (30 days)</li>
         <li style={{ marginBottom: 8 }}>Non-binding mediation as second step if negotiation fails</li>
-        <li style={{ marginBottom: 8 }}>Binding arbitration in Tulsa, Oklahoma if mediation fails to resolve the dispute</li>
-        <li style={{ marginBottom: 8 }}>Small claims court remains available for claims under $10,000</li>
+        <li style={{ marginBottom: 8 }}>Binding arbitration at Canopy's then-current corporate seat (currently Tulsa, Oklahoma; Providers in other service-area states may request a virtual/remote arbitration hearing in lieu of in-person appearance) if mediation fails to resolve the dispute</li>
+        <li style={{ marginBottom: 8 }}>Small claims court in Provider's state of residence remains available for claims under $10,000</li>
       </ul>
+      <p style={{ marginTop: 8, fontStyle: 'italic' as const, fontSize: 14, color: 'var(--color-text-secondary)' }}>
+        Note: Nothing in this section overrides mandatory state or local licensing, safety, insurance, or consumer-protection requirements that apply to Provider in their service area. Where state law voids a choice-of-venue clause, the nearest competent venue in Provider's service area applies.
+      </p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>14. Modifications to Terms</h2>
       <p>
@@ -173,7 +184,10 @@ export default function ContractorTerms() {
 
       <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 48, paddingTop: 24, color: 'var(--color-text-secondary)', fontSize: 14, textAlign: 'center' as const }}>
         © {new Date().getFullYear()} Canopy. All rights reserved.
-        <p style={{ marginTop: 8 }}>Last updated: April 3, 2026. Governing law: State of Oklahoma.</p>
+        {/* P3 #75 (2026-04-23) — single source of truth in constants/legalDates.ts */}
+        <p style={{ marginTop: 8 }}>
+          Last updated: <time dateTime={CONTRACTOR_TERMS_DATE.iso}>{CONTRACTOR_TERMS_DATE.display}</time>. Governing law: State of Oklahoma (Canopy's state of incorporation), except where mandatory state or local law in Provider's service area requires otherwise.
+        </p>
       </div>
     </div>
   );

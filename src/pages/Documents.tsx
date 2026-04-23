@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { uploadPhoto, getDocuments, createDocument, deleteDocument, getSecureNotes, createSecureNote, deleteSecureNote, hasVaultPin, setVaultPin, verifyVaultPin, removeVaultPin } from '@/services/supabase';
 import { canAccess } from '@/services/subscriptionGate';
@@ -6,6 +7,7 @@ import { Colors } from '@/constants/theme';
 import InspectionUploader from '@/components/InspectionUploader';
 import { showToast } from '@/components/Toast';
 import type { SecureNote } from '@/types';
+import logger from '@/utils/logger';
 
 interface Document {
   id: string;
@@ -35,6 +37,7 @@ const SECURE_NOTE_CATEGORIES: { label: string; value: SecureNote['category'] }[]
 ];
 
 export default function Documents() {
+  const navigate = useNavigate();
   const { user, home } = useStore();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [filter, setFilter] = useState<string>('all');
@@ -143,6 +146,9 @@ export default function Documents() {
       setIsPinUnlocked(true);
       setPinMode(null);
       setPinInput('');
+      // P1-13 (2026-04-23): give the user explicit confirmation that the unlock
+      // worked — the modal vanishing alone read as "did anything happen?"
+      showToast({ message: '🔓 Vault unlocked.' });
     } else {
       setPinError('Incorrect PIN. Try again.');
       setPinInput('');
@@ -171,7 +177,7 @@ export default function Documents() {
       setNewNoteCategory('other');
       setShowAddNote(false);
     } catch (err: any) {
-      console.error('Failed to save secure note:', err);
+      logger.error('Failed to save secure note:', err);
       showToast({ message: 'Failed to save note: ' + (err.message || 'Unknown error') });
     }
   };
@@ -180,11 +186,26 @@ export default function Documents() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // P2 #38 (2026-04-23): Client-side file-type allow-list.
+    // Keep in sync with backend MIME checks. Covers common home-docs formats.
+    const ALLOWED_EXT = ['pdf', 'png', 'jpg', 'jpeg', 'heic', 'heif', 'webp', 'gif', 'doc', 'docx'];
+    const ALLOWED_MIME_PREFIXES = ['image/', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const mime = file.type || '';
+    const extOk = ALLOWED_EXT.includes(ext);
+    const mimeOk = ALLOWED_MIME_PREFIXES.some(p => mime.startsWith(p) || mime === p);
+    if (!extOk && !mimeOk) {
+      showToast({ message: `Unsupported file type (.${ext || 'unknown'}). Allowed: PDF, images (JPG/PNG/HEIC/WEBP), Word docs.` });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     // Client-side file size validation (10MB limit)
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
     if (file.size > MAX_FILE_SIZE) {
       const fileSizeMB = Math.round(file.size / 1024 / 1024);
       showToast({ message: `File too large (${fileSizeMB}MB). Maximum file size is 10MB. Please choose a smaller file.` });
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
@@ -262,7 +283,7 @@ export default function Documents() {
             <p className="text-sm text-gray" style={{ marginBottom: 16, lineHeight: 1.6 }}>
               Store and organize all your home documents in one secure place. Upgrade to Home plan or higher to access this feature.
             </p>
-            <button className="btn btn-primary" onClick={() => window.location.href = '/subscription'}>
+            <button className="btn btn-primary" onClick={() => navigate('/subscription')}>
               Upgrade Now
             </button>
           </div>
@@ -288,9 +309,9 @@ export default function Documents() {
         <input
           ref={fileInputRef}
           type="file"
+          accept=".pdf,.png,.jpg,.jpeg,.heic,.heif,.webp,.gif,.doc,.docx,application/pdf,image/*,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           onChange={handleFileChange}
           style={{ display: 'none' }}
-          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
         />
       </div>
 
@@ -658,7 +679,7 @@ export default function Documents() {
                             await deleteDocument(doc.id);
                             setDocuments(prev => prev.filter(d => d.id !== doc.id));
                           } catch (err) {
-                            console.error('Failed to delete document:', err);
+                            logger.error('Failed to delete document:', err);
                             showToast({ message: 'Failed to delete document. Please try again.' });
                           }
                         }
@@ -888,7 +909,7 @@ export default function Documents() {
                                 setSecureNotes(prev => prev.filter(n => n.id !== note.id));
                                 if (expandedNoteId === note.id) setExpandedNoteId(null);
                               } catch (err) {
-                                console.error('Failed to delete note:', err);
+                                logger.error('Failed to delete note:', err);
                                 showToast({ message: 'Failed to delete note. Please try again.' });
                               }
                             }

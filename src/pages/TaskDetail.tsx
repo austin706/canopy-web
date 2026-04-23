@@ -8,6 +8,7 @@ import { getDisplayStatus } from '@/services/taskEngine';
 import { TASK_TEMPLATES } from '@/constants/maintenance';
 import { supabase } from '@/services/supabase';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
@@ -68,7 +69,7 @@ export default function TaskDetail() {
       showToast({ message: 'Task reopened and moved to upcoming.' });
       navigate(-1);
     } catch (error) {
-      console.error('Error reopening task:', error);
+      logger.error('Error reopening task:', error);
       showToast({ message: 'Failed to reopen task. Please try again.' });
     }
   };
@@ -83,7 +84,7 @@ export default function TaskDetail() {
       storeTasks(currentTasks.filter(t => t.id !== task.id));
       navigate(-1);
     } catch (error) {
-      console.error('Error deleting task:', error);
+      logger.error('Error deleting task:', error);
       showToast({ message: 'Failed to delete task. Please try again.' });
     }
   };
@@ -115,20 +116,48 @@ export default function TaskDetail() {
     try {
       setIsLoadingProRequest(true);
 
-      // Query for other tasks with the same category and matching statuses
-      const { data: otherTasks } = await supabase
+      // P1-6 (2026-04-23): bundle only tasks with COMPATIBLE frequency.
+      // Previously this query allowed e.g. monthly HVAC filter to be bundled
+      // with annual roof inspection — pros visit on different cadences and
+      // the schedule conflict either gets quoted wrong or split silently.
+      // We now group frequencies into compatibility buckets:
+      //   one_time | monthly | bi_monthly | quarterly | semi_annual | annual
+      // and only show tasks whose frequency falls in the same bucket as the
+      // parent task. Equipment-tied tasks should also share the same
+      // equipment_id when the parent has one, so a single visit can cover them.
+      const FREQ_BUCKETS: Record<string, string[]> = {
+        one_time: ['one_time'],
+        monthly: ['monthly', 'bi_monthly'],
+        bi_monthly: ['monthly', 'bi_monthly'],
+        quarterly: ['quarterly'],
+        semi_annual: ['semi_annual'],
+        annual: ['annual', 'bi_annual'],
+        bi_annual: ['annual', 'bi_annual'],
+      };
+      const compatibleFreqs = FREQ_BUCKETS[task.frequency || 'one_time'] ?? [task.frequency || 'one_time'];
+
+      let q = supabase
         .from('maintenance_tasks')
-        .select('id, title, due_date, priority, description')
+        .select('id, title, due_date, priority, description, frequency, equipment_id')
         .eq('category', task.category)
         .eq('home_id', home?.id)
         .neq('id', task.id)
-        .in('status', ['upcoming', 'due', 'overdue']);
+        .in('status', ['upcoming', 'due', 'overdue'])
+        .in('frequency', compatibleFreqs);
+
+      // If the parent task is tied to specific equipment, prefer same-equipment
+      // tasks so the bundle quote covers a single asset visit.
+      if (task.equipment_id) {
+        q = q.eq('equipment_id', task.equipment_id);
+      }
+
+      const { data: otherTasks } = await q;
 
       setBundleTasksList(otherTasks || []);
       setSelectedBundleTasks(new Set());
       setShowCategoryBundleModal(true);
     } catch (error) {
-      console.error('Error loading bundle tasks:', error);
+      logger.error('Error loading bundle tasks:', error);
       showToast({ message: 'Failed to load category tasks. Continuing with just this task.' });
       await createProRequest([task.id]);
     } finally {
@@ -182,11 +211,19 @@ export default function TaskDetail() {
 
       if (linkError) throw linkError;
 
-      showToast({ message: `Pro request created! We'll send you quotes for ${taskIds.length} task${taskIds.length !== 1 ? 's' : ''}.` });
+      // P1-9 (2026-04-23): give the user a path to actually find this request again — generic toast left them stranded.
+      showToast({
+        message: `Quote request sent for ${taskIds.length} task${taskIds.length !== 1 ? 's' : ''}. We'll match you with local pros.`,
+        action: {
+          label: 'View',
+          onClick: () => navigate('/pro-services'),
+        },
+        timeout: 8000,
+      });
       setShowCategoryBundleModal(false);
       setHasProRequest(true);
     } catch (error) {
-      console.error('Error creating pro request:', error);
+      logger.error('Error creating pro request:', error);
       showToast({ message: 'Failed to create pro request. Please try again.' });
     } finally {
       setIsLoadingProRequest(false);
@@ -682,6 +719,7 @@ export default function TaskDetail() {
                     </p>
                     <p style={{ fontSize: 12, color: Colors.medGray }}>
                       Due: {new Date(bundleTask.due_date).toLocaleDateString()}
+                      {(bundleTask as any).frequency ? ` · ${String((bundleTask as any).frequency).replace(/_/g, ' ')}` : ''}
                     </p>
                   </div>
                 </label>

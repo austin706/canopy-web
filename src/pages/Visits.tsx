@@ -8,6 +8,7 @@ import { getEquipmentTrends, type EquipmentTrend } from '@/services/equipmentTre
 import type { ProMonthlyVisit, VisitAllocation } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 export default function Visits() {
   const { user, home } = useStore();
@@ -154,7 +155,7 @@ export default function Visits() {
       const docs = await getVisitDocuments(visitId);
       setVisitDocuments(prev => new Map(prev).set(visitId, docs));
     } catch (err: any) {
-      console.error('Failed to load documents:', err);
+      logger.error('Failed to load documents:', err);
     } finally {
       setLoadingDocs(prev => {
         const next = new Set(prev);

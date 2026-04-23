@@ -7,6 +7,12 @@ import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import AdminPreviewBanner from '@/components/AdminPreviewBanner';
 import { PageSkeleton } from '@/components/Skeleton';
 import { showToast } from '@/components/Toast';
+import { useRequireRole } from '@/utils/useRequireRole';
+import { useTabState } from '@/utils/useTabState';
+import logger from '@/utils/logger';
+
+const AGENT_TABS = ['clients', 'new-client', 'codes', 'my-qr', 'marketing', 'dashboard', 'notifications'] as const;
+type AgentTab = typeof AGENT_TABS[number];
 
 function generateCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -27,10 +33,14 @@ interface ClientData {
 }
 
 export default function AgentPortal() {
+  // Defense-in-depth role gate (P0-9). See useRequireRole for rationale.
+  useRequireRole(['agent', 'admin']);
+
   const navigate = useNavigate();
   const { user } = useStore();
   const isAdmin = user?.role === 'admin';
-  const [tab, setTab] = useState<'clients' | 'new-client' | 'codes' | 'my-qr' | 'marketing' | 'dashboard' | 'notifications'>('clients');
+  // P3 #77 (2026-04-23) — URL-sync tab so back-button + deep-link work.
+  const [tab, setTab] = useTabState<AgentTab>(AGENT_TABS, 'clients');
   const [clients, setClients] = useState<ClientData[]>([]);
   const [codes, setCodes] = useState<any[]>([]);
   const [agentNotifications, setAgentNotifications] = useState<any[]>([]);
@@ -231,7 +241,7 @@ export default function AgentPortal() {
         setDashboardActivityFeed(feed);
       }
     } catch (err: any) {
-      console.error('Failed to load dashboard metrics:', err?.message);
+      logger.error('Failed to load dashboard metrics:', err?.message);
     }
   };
 
@@ -757,7 +767,7 @@ export default function AgentPortal() {
             <div className="card">
               <h2 style={{ fontSize: 18, marginBottom: 20 }}>Client Information</h2>
               <div className="form-group">
-                <label>Client Name *</label>
+                <label>Client Name <span aria-hidden="true">*</span></label>
                 <input className="form-input" value={clientForm.name} onChange={e => setClientForm({ ...clientForm, name: e.target.value })} placeholder="Jane Smith" />
               </div>
               <div className="form-group">
@@ -787,7 +797,7 @@ export default function AgentPortal() {
               <h2 style={{ fontSize: 18, marginBottom: 20 }}>Home Details for {clientForm.name}</h2>
 
               <div className="form-group">
-                <label>Address *</label>
+                <label>Address <span aria-hidden="true">*</span></label>
                 <input className="form-input" value={homeForm.address} onChange={e => setHomeForm({ ...homeForm, address: e.target.value })} placeholder="123 Main St" />
               </div>
 

@@ -17,6 +17,7 @@ export default function Invoices() {
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [processingPaymentId, setProcessingPaymentId] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -48,14 +49,25 @@ export default function Invoices() {
   const handlePayNow = async (invoiceId: string) => {
     if (!user) return;
     setProcessingPaymentId(invoiceId);
+    setError('');
+    setSuccessMessage('');
     try {
-      const result = await payInvoice(invoiceId);
-      // Edge function returns checkout URL or client secret
-      if (result && (result as { url?: string }).url) {
-        window.location.href = (result as { url: string }).url;
-      } else {
-        // Payment processed server-side, reload to reflect new status
+      // P1 #21 (2026-04-23): the edge function today always returns
+      // {url, sessionId, payoutMode}, but the previous handler silently
+      // fell through whenever `url` was missing — leaving the user with
+      // no feedback at all if the response shape changed (e.g., a
+      // future saved-card auto-charge path). Branch explicitly so any
+      // unexpected shape surfaces as an error rather than a no-op.
+      const result = (await payInvoice(invoiceId)) as
+        | { url?: string; sessionId?: string; success?: boolean; payoutMode?: string }
+        | null;
+      if (result?.url) {
+        window.location.href = result.url;
+      } else if (result?.success === true || (result?.sessionId && !result?.url)) {
         await loadInvoices();
+        setSuccessMessage('Payment recorded. This invoice has been marked as paid.');
+      } else {
+        setError('Payment status unclear. Please refresh and check the invoice status, or try again.');
       }
     } catch (err: any) {
       setError(getErrorMessage(err) || 'Payment failed. Please try again.');
@@ -121,6 +133,7 @@ export default function Invoices() {
       </div>
 
       {error && <div style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', fontSize: 14, marginBottom: 16 }}>{error}</div>}
+      {successMessage && <div style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--color-success-muted, #2E7D3220)', color: 'var(--color-success)', fontSize: 14, marginBottom: 16 }}>{successMessage}</div>}
 
       {/* Filter Tabs */}
       <div className="tabs mb-lg">

@@ -27,23 +27,93 @@ export default function ProLogin() {
       const authData = await signIn(email, password);
       const userId = authData.user.id;
 
-      const { data: profileData, error: profileError } = await supabase
+      // P1 #26 (2026-04-23): single source of truth for pro authority.
+      //
+      // The previous implementation checked `profiles.role === 'pro_provider'`
+      // OR a `pro_providers` lookup with an OR fallback. That let two
+      // failure modes through:
+      //   1. orphaned `pro_providers` row + `profiles.role` cleared by an
+      //      admin (account was meant to be revoked but pro row was missed)
+      //   2. `profiles.role = 'pro_provider'` set manually but no pro_providers
+      //      row (incomplete onboarding)
+      // Treat `pro_providers` as the authoritative source, and reconcile
+      // `profiles.role` to match if it has drifted. Also require an
+      // active provider row (no `suspended_at`) so admins can suspend pros
+      // by setting that timestamp.
+      let { data: proData, error: proError } = await supabase
+        .from('pro_providers')
+        .select('id, user_id, suspended_at')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      // P1 #27 (2026-04-23): auto-link orphaned provider row on first login.
+      //
+      // Admin approval (`AdminProviderApplications.handleApprove`) creates a
+      // `pro_providers` row with `user_id = NULL` BEFORE the technician has
+      // an auth account. The applicant then receives the `provider-welcome`
+      // email, signs up via standard Supabase auth, and tries to sign in
+      // here. Without this fallback the user_id-keyed lookup misses the
+      // orphan row and the user lands in a "not registered" dead-end —
+      // requiring an admin to manually paste the new auth user.id into the
+      // orphan row.
+      //
+      // Fallback: if no row matches by user_id, look for an unlinked row
+      // (user_id IS NULL) with the same email. Bind it. Audit log isn't
+      // available on the public path, but RLS ensures only the row owner
+      // (the freshly-authed user) can write.
+      if (!proError && !proData) {
+        const email = authData.user.email;
+        if (email) {
+          const { data: orphan } = await supabase
+            .from('pro_providers')
+            .select('id, user_id, suspended_at, email')
+            .eq('email', email)
+            .is('user_id', null)
+            .maybeSingle();
+
+          if (orphan) {
+            const { data: linked, error: linkErr } = await supabase
+              .from('pro_providers')
+              .update({ user_id: userId, updated_at: new Date().toISOString() })
+              .eq('id', orphan.id)
+              .is('user_id', null) // race guard: only link if still unlinked
+              .select('id, user_id, suspended_at')
+              .maybeSingle();
+
+            if (!linkErr && linked) {
+              proData = linked;
+            }
+          }
+        }
+      }
+
+      if (proError || !proData || proData.suspended_at) {
+        await supabase.auth.signOut();
+        showToast({
+          message: proData?.suspended_at
+            ? 'Access Denied: Your provider account has been suspended. Contact support@canopyhome.app.'
+            : 'Access Denied: This account is not registered as a service provider.',
+        });
+        return;
+      }
+
+      // Reconcile drifted profile role so subsequent role gates
+      // (`useRequireRole`, RoleRoute) see a consistent value.
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('role')
-        .eq('user_id', userId)
-        .single();
+        .eq('id', userId)
+        .maybeSingle();
 
-      if (profileError || !profileData || profileData.role !== 'pro_provider') {
-        const { data: proData, error: proError } = await supabase
-          .from('pro_providers')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
-
-        if (proError || !proData) {
-          await supabase.auth.signOut();
-          showToast({ message: 'Access Denied: This account is not registered as a service provider.' });
-          return;
+      if (!profileData || profileData.role !== 'pro_provider') {
+        try {
+          await supabase
+            .from('profiles')
+            .update({ role: 'pro_provider', updated_at: new Date().toISOString() })
+            .eq('id', userId);
+        } catch {
+          // Non-fatal: portal will still load via pro_providers; useRequireRole
+          // may bounce until the next session refresh, which is the safer default.
         }
       }
 

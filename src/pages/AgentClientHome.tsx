@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getClientHome, upsertClientHome, getProfile, updateProfile } from '@/services/supabase';
+import { supabase, getClientHome, upsertClientHome, updateProfile } from '@/services/supabase';
 import { attestHomeRecord, calculateCompletenessScore } from '@/services/homeTransfer';
 import { Colors } from '@/constants/theme';
 import MessageBanner from '@/components/MessageBanner';
+import { useRequireRole } from '@/utils/useRequireRole';
 
 export default function AgentClientHome() {
+  // Defense-in-depth role gate (P0-8). Router wraps this page in RoleRoute
+  // already; this catches cases where the store is stale or the route is
+  // hit without the wrapper (direct navigation during code splitting etc).
+  useRequireRole(['agent', 'admin']);
+
   const navigate = useNavigate();
   const { clientId } = useParams<{ clientId: string }>();
   const [client, setClient] = useState<any>(null);
@@ -30,10 +36,18 @@ export default function AgentClientHome() {
     if (!clientId) return;
     const load = async () => {
       try {
-        const [profileData, homeData] = await Promise.all([
-          getProfile(clientId),
-          getClientHome(clientId),
-        ]);
+        // P2 #51 (2026-04-23): Data minimization — select only the profile fields this
+        // page needs (name, email, subscription tier) instead of SELECT *, which
+        // previously exposed phone, notification_* prefs, stripe_customer_id, and
+        // every other profile column to the agent's browser. RLS permits a connected
+        // agent to read the profile, but UI principle-of-least-privilege still applies.
+        const { data: profileData, error: profileErr } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, subscription_tier')
+          .eq('id', clientId)
+          .single();
+        if (profileErr) throw profileErr;
+        const homeData = await getClientHome(clientId);
         setClient(profileData);
         if (homeData) {
           setHome(homeData);
@@ -107,7 +121,7 @@ export default function AgentClientHome() {
 
       <div className="card">
         <h2 style={{ fontSize: 18, marginBottom: 20 }}>{home ? 'Edit Home Details' : 'Set Up Client Home'}</h2>
-        <div className="form-group"><label>Address *</label><input className="form-input" value={form.address} onChange={e => setForm({...form, address: e.target.value})} /></div>
+        <div className="form-group"><label>Address <span aria-hidden="true">*</span></label><input className="form-input" value={form.address} onChange={e => setForm({...form, address: e.target.value})} /></div>
         <div className="grid-3">
           <div className="form-group"><label>City</label><input className="form-input" value={form.city} onChange={e => setForm({...form, city: e.target.value})} /></div>
           <div className="form-group"><label>State</label><input className="form-input" value={form.state} onChange={e => setForm({...form, state: e.target.value})} /></div>

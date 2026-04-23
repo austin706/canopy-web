@@ -1,18 +1,32 @@
 import { useState, useEffect } from 'react';
-import { getPendingVerifications, getAllVerifications, reviewOwnershipVerification } from '@/services/supabase';
+import { getPendingVerifications, getAllVerifications, reviewOwnershipVerification, supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import type { Home } from '@/types';
+import { useTabState } from '@/utils/useTabState';
+import logger from '@/utils/logger';
 
-type Tab = 'pending' | 'all';
+const VERIFICATION_TABS = ['pending', 'all'] as const;
+type Tab = typeof VERIFICATION_TABS[number];
+
+// P2 #56 (2026-04-23): Minimal owner-profile snapshot so admin can cross-reference
+// the uploaded documents against the account holder's name + email.
+type OwnerSnapshot = {
+  full_name: string | null;
+  email: string | null;
+  created_at?: string | null;
+};
 
 export default function AdminVerifications() {
-  const [tab, setTab] = useState<Tab>('pending');
+  // P3 #77 (2026-04-23) — URL-sync tab so back-button + deep-link work.
+  const [tab, setTab] = useTabState<Tab>(VERIFICATION_TABS, 'pending');
   const [homes, setHomes] = useState<Home[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [actionId, setActionId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  // P2 #56 (2026-04-23): map of userId -> owner profile for the diff panel.
+  const [owners, setOwners] = useState<Record<string, OwnerSnapshot>>({});
 
   useEffect(() => {
     loadData();
@@ -25,8 +39,25 @@ export default function AdminVerifications() {
         ? await getPendingVerifications()
         : await getAllVerifications();
       setHomes(data);
+      // P2 #56 (2026-04-23): batch-fetch owner profiles for the diff panel.
+      const userIds = Array.from(new Set((data || []).map(h => h.user_id).filter(Boolean)));
+      if (userIds.length > 0) {
+        const { data: profileRows } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, created_at')
+          .in('id', userIds);
+        const map: Record<string, OwnerSnapshot> = {};
+        for (const p of profileRows || []) {
+          map[p.id] = {
+            full_name: p.full_name || null,
+            email: p.email || null,
+            created_at: p.created_at || null,
+          };
+        }
+        setOwners(map);
+      }
     } catch (err: any) {
-      console.error('Failed to load verifications:', err);
+      logger.error('Failed to load verifications:', err);
       setMessage('Failed to load verifications');
     } finally {
       setLoading(false);
@@ -186,6 +217,128 @@ export default function AdminVerifications() {
                   <span className="text-gray">Notes: </span>{home.ownership_verification_notes}
                 </div>
               )}
+
+              {/* P2 #56 (2026-04-23): Verification snapshot — what the admin must
+                  cross-reference against the uploaded documents. Surfaces owner
+                  identity, claimed property details, and temporal flags (e.g.,
+                  home was created <7 days before verification request, or user
+                  account is brand new) so admins catch fraud vectors at a glance. */}
+              {(() => {
+                const owner = home.user_id ? owners[home.user_id] : undefined;
+                const verDate = home.ownership_verification_date
+                  ? new Date(home.ownership_verification_date)
+                  : null;
+                const homeCreated = home.created_at ? new Date(home.created_at as string) : null;
+                const ownerCreated = owner?.created_at ? new Date(owner.created_at) : null;
+                const daysBetween = (a: Date | null, b: Date | null) =>
+                  a && b ? Math.round((a.getTime() - b.getTime()) / (1000 * 60 * 60 * 24)) : null;
+                const homeAgeDays = daysBetween(verDate, homeCreated);
+                const accountAgeDays = daysBetween(verDate, ownerCreated);
+                const flags: string[] = [];
+                if (homeAgeDays !== null && homeAgeDays < 7) {
+                  flags.push(`Home record was created only ${homeAgeDays} day${homeAgeDays === 1 ? '' : 's'} before verification.`);
+                }
+                if (accountAgeDays !== null && accountAgeDays < 14) {
+                  flags.push(`User account is ${accountAgeDays} day${accountAgeDays === 1 ? '' : 's'} old.`);
+                }
+                if (!owner?.full_name) {
+                  flags.push('Homeowner has no full_name on profile — match name on documents to email domain.');
+                }
+                return (
+                  <div
+                    style={{
+                      padding: 12,
+                      background: 'rgba(139,158,126,0.06)',
+                      borderRadius: 8,
+                      border: `1px solid ${Colors.sageMuted}`,
+                      marginBottom: 12,
+                      fontSize: 13,
+                    }}
+                  >
+                    <p style={{ fontWeight: 600, fontSize: 12, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5, color: Colors.sageDark }}>
+                      Verify Against Documents
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                      <div>
+                        <span className="text-gray">Homeowner: </span>
+                        <span style={{ fontWeight: 500 }}>
+                          {owner?.full_name || <em style={{ color: Colors.warning }}>(no name on profile)</em>}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray">Email: </span>
+                        <span style={{ fontWeight: 500, fontFamily: 'monospace', fontSize: 12 }}>
+                          {owner?.email || '—'}
+                        </span>
+                      </div>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <span className="text-gray">Full address: </span>
+                        <span style={{ fontWeight: 500 }}>
+                          {home.address || '—'}{home.address ? ', ' : ''}
+                          {home.city}, {home.state} {home.zip_code}
+                        </span>
+                      </div>
+                      {(home as any).google_place_id && (
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <span className="text-gray">Google Place ID: </span>
+                          <span style={{ fontWeight: 500, fontFamily: 'monospace', fontSize: 11 }}>
+                            {(home as any).google_place_id}
+                          </span>
+                        </div>
+                      )}
+                      {home.year_built && (
+                        <div>
+                          <span className="text-gray">Year built: </span>
+                          <span style={{ fontWeight: 500 }}>{home.year_built}</span>
+                        </div>
+                      )}
+                      {home.square_footage && (
+                        <div>
+                          <span className="text-gray">Sq ft: </span>
+                          <span style={{ fontWeight: 500 }}>{home.square_footage.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {homeAgeDays !== null && (
+                        <div>
+                          <span className="text-gray">Home record age: </span>
+                          <span style={{ fontWeight: 500 }}>
+                            {homeAgeDays} day{homeAgeDays === 1 ? '' : 's'} at submit
+                          </span>
+                        </div>
+                      )}
+                      {accountAgeDays !== null && (
+                        <div>
+                          <span className="text-gray">Account age: </span>
+                          <span style={{ fontWeight: 500 }}>
+                            {accountAgeDays} day{accountAgeDays === 1 ? '' : 's'} at submit
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {flags.length > 0 && (
+                      <div
+                        style={{
+                          marginTop: 10,
+                          padding: 8,
+                          background: 'rgba(245,158,11,0.08)',
+                          borderLeft: `3px solid ${Colors.warning}`,
+                          borderRadius: 4,
+                          fontSize: 12,
+                        }}
+                      >
+                        <p style={{ fontWeight: 600, color: Colors.warning, marginBottom: 4 }}>
+                          ⚠ Review carefully
+                        </p>
+                        <ul style={{ margin: 0, paddingLeft: 18 }}>
+                          {flags.map((f, i) => (
+                            <li key={i} style={{ marginBottom: 2 }}>{f}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Document links */}
               {getDocUrls(home).length > 0 && (

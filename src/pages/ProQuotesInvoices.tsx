@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import { showToast } from '@/components/Toast';
+import logger from '@/utils/logger';
 
 interface LineItem {
   id: string;
@@ -131,7 +132,7 @@ export default function ProQuotesInvoices() {
         ]);
       }
     } catch (err) {
-      console.error('Error loading provider:', err);
+      logger.error('Error loading provider:', err);
     } finally {
       setLoading(false);
     }
@@ -166,7 +167,7 @@ export default function ProQuotesInvoices() {
         }));
       setClients(assignedClients);
     } catch (err) {
-      console.error('Error loading clients:', err);
+      logger.error('Error loading clients:', err);
     }
   };
 
@@ -196,7 +197,7 @@ export default function ProQuotesInvoices() {
         }));
       setClients(allClients);
     } catch (err) {
-      console.error('Error loading clients:', err);
+      logger.error('Error loading clients:', err);
     }
   };
 
@@ -214,7 +215,7 @@ export default function ProQuotesInvoices() {
       const { data } = await query;
       setQuotes(data || []);
     } catch (err) {
-      console.error('Error loading quotes:', err);
+      logger.error('Error loading quotes:', err);
     }
   };
 
@@ -232,7 +233,7 @@ export default function ProQuotesInvoices() {
       const { data } = await query;
       setInvoices(data || []);
     } catch (err) {
-      console.error('Error loading invoices:', err);
+      logger.error('Error loading invoices:', err);
     }
   };
 
@@ -248,7 +249,7 @@ export default function ProQuotesInvoices() {
         .order('name');
       setTemplates(data || []);
     } catch (err) {
-      console.error('Error loading templates:', err);
+      logger.error('Error loading templates:', err);
     }
   };
 
@@ -296,7 +297,7 @@ export default function ProQuotesInvoices() {
       setTemplateForm({ name: '', description: '', category: 'general', lineItems: [{ id: '1', description: '', quantity: 1, unitPrice: 0 }], taxRate: 0 });
       showToast({ message: editingTemplateId ? 'Template updated' : 'Template saved' });
     } catch (err) {
-      console.error('Error saving template:', err);
+      logger.error('Error saving template:', err);
       showToast({ message: 'Failed to save template' });
     }
   };
@@ -438,7 +439,7 @@ export default function ProQuotesInvoices() {
       if (providerId) await loadQuotes(providerId);
       showToast({ message: 'Quote created successfully' });
     } catch (err) {
-      console.error('Error creating quote:', err);
+      logger.error('Error creating quote:', err);
       showToast({ message: 'Failed to create quote' });
     }
   };
@@ -477,7 +478,7 @@ export default function ProQuotesInvoices() {
       if (providerId) await loadInvoices(providerId);
       showToast({ message: 'Invoice created successfully' });
     } catch (err) {
-      console.error('Error creating invoice:', err);
+      logger.error('Error creating invoice:', err);
       showToast({ message: 'Failed to create invoice' });
     }
   };
@@ -496,7 +497,7 @@ export default function ProQuotesInvoices() {
       await loadQuotes(providerId);
       showToast({ message: 'Quote sent to client' });
     } catch (err) {
-      console.error('Error sending quote:', err);
+      logger.error('Error sending quote:', err);
       showToast({ message: 'Failed to send quote' });
     }
   };
@@ -527,7 +528,7 @@ export default function ProQuotesInvoices() {
       await Promise.all([loadQuotes(providerId), loadInvoices(providerId)]);
       showToast({ message: 'Invoice created from quote' });
     } catch (err) {
-      console.error('Error converting quote:', err);
+      logger.error('Error converting quote:', err);
       showToast({ message: 'Failed to convert quote' });
     }
   };
@@ -561,7 +562,7 @@ export default function ProQuotesInvoices() {
       await loadInvoices(providerId);
       showToast({ message: 'Invoice sent to client' });
     } catch (err) {
-      console.error('Error sending invoice:', err);
+      logger.error('Error sending invoice:', err);
       showToast({ message: 'Failed to send invoice' });
     }
   };
@@ -749,7 +750,7 @@ export default function ProQuotesInvoices() {
           {/* Line Items */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <label style={{ fontSize: 13, fontWeight: 600 }}>Line Items *</label>
+              <label style={{ fontSize: 13, fontWeight: 600 }}>Line Items <span aria-hidden="true">*</span></label>
               <button className="btn btn-ghost btn-sm" onClick={handleAddLineItem}>
                 + Add Line Item
               </button>
@@ -890,7 +891,7 @@ export default function ProQuotesInvoices() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
             <div>
-              <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>Template Name *</label>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>Template Name <span aria-hidden="true">*</span></label>
               <input type="text" className="form-input" placeholder="e.g., Standard HVAC Service" value={templateForm.name} onChange={e => setTemplateForm({ ...templateForm, name: e.target.value })} />
             </div>
             <div>

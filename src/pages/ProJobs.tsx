@@ -6,6 +6,7 @@ import { Colors } from '@/constants/theme';
 import { showToast } from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import DatePickerModal from '@/components/DatePickerModal';
+import logger from '@/utils/logger';
 
 interface Job {
   id: string;
@@ -69,7 +70,7 @@ export default function ProJobs() {
         await loadJobs(provider.id, provider.service_categories || []);
       }
     } catch (err) {
-      console.error('Error loading provider:', err);
+      logger.error('Error loading provider:', err);
     } finally {
       setLoading(false);
     }
@@ -83,7 +84,7 @@ export default function ProJobs() {
         .order('created_at', { ascending: false });
       setJobs(data || []);
     } catch (err) {
-      console.error('Error loading all jobs:', err);
+      logger.error('Error loading all jobs:', err);
     } finally {
       setLoading(false);
     }
@@ -115,7 +116,7 @@ export default function ProJobs() {
 
       setJobs(uniqueJobs);
     } catch (err) {
-      console.error('Error loading jobs:', err);
+      logger.error('Error loading jobs:', err);
     }
   };
 
@@ -144,7 +145,7 @@ export default function ProJobs() {
         return;
       }
     } catch (err) {
-      console.error('Error checking capacity:', err);
+      logger.error('Error checking capacity:', err);
     }
 
     // Show modal confirmation instead of window.confirm

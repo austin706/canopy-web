@@ -5,6 +5,19 @@ import { supabase } from '@/services/supabase';
 import { useNavigate } from 'react-router-dom';
 import logger from '@/utils/logger';
 
+// P2 #68 (2026-04-23) — fail fast in production if VITE_SUPABASE_URL is missing
+// instead of silently falling back to the stale hardcoded project URL. See
+// `HomeAssistant.tsx` for the matching pattern.
+const SUPABASE_URL: string = (() => {
+  const envUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (envUrl && envUrl.length > 0) return envUrl;
+  if (import.meta.env.PROD) {
+    throw new Error('VITE_SUPABASE_URL is required in production. Refusing to fall back to a hardcoded project URL.');
+  }
+  console.warn('[DashboardChat] VITE_SUPABASE_URL missing in dev — assistant calls will fail loudly until it is set in .env.local');
+  return '';
+})();
+
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -115,7 +128,7 @@ export default function DashboardChat() {
       if (!session?.access_token) throw new Error('Not authenticated');
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || 'https://uxxrmyxoyesipprwlxrn.supabase.co'}/functions/v1/home-assistant`,
+        `${SUPABASE_URL}/functions/v1/home-assistant`,
         {
           method: 'POST',
           headers: {

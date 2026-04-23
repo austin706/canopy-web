@@ -325,24 +325,51 @@ export default function Dashboard() {
     geocodeHome();
   }, [home?.id]);
 
-  // Fetch weather when home has coordinates and user has weather access
+  // P1-7 (2026-04-23): Weather fetch error boundary + clearer state machine.
+  // Previously, if home had no coords (geocoding failed earlier) the user
+  // saw nothing at all — no skeleton, no error, just a missing widget.
+  // If the network request failed they saw "Unable to load weather data"
+  // with no way to distinguish from "you're offline" or "rate limited."
+  //
+  // Now we surface three distinct states:
+  //   - 'no_location': home isn't geocoded yet → user sees a hint they can
+  //     fix (re-geocode the address).
+  //   - 'fetch_failed': the API call threw → user sees a retry-friendly
+  //     message with the underlying error class (network vs server).
+  //   - 'no_access': the tier gate blocks weather → handled outside this
+  //     useEffect by the existing canAccess() check on render.
   useEffect(() => {
-    if (home && home.latitude && home.longitude && canAccess(tier, 'weather_alerts')) {
-      const loadWeather = async () => {
-        try {
-          setWeatherLoading(true);
-          setWeatherError(null);
-          const weatherData = await fetchWeather(home.latitude!, home.longitude!);
-          setWeather(weatherData);
-        } catch (error) {
-          console.error('Failed to fetch weather:', error);
-          setWeatherError('Unable to load weather data');
-        } finally {
-          setWeatherLoading(false);
-        }
-      };
-      loadWeather();
+    if (!home) return;
+    if (!canAccess(tier, 'weather_alerts')) return;
+
+    if (!home.latitude || !home.longitude) {
+      // Home exists but isn't geocoded yet. The geocodeHome effect above
+      // will retry on next mount; surface a friendly hint instead of
+      // silently rendering nothing.
+      setWeatherError('Add or refine your address to see local weather alerts.');
+      setWeatherLoading(false);
+      return;
     }
+
+    const loadWeather = async () => {
+      try {
+        setWeatherLoading(true);
+        setWeatherError(null);
+        const weatherData = await fetchWeather(home.latitude!, home.longitude!);
+        setWeather(weatherData);
+      } catch (error) {
+        logger.error('Failed to fetch weather:', error);
+        // Distinguish offline / TypeError (network) from server-side errors so
+        // the user sees an actionable message.
+        const isNetwork = (error instanceof TypeError) || /fetch|network|offline/i.test(String(error));
+        setWeatherError(isNetwork
+          ? 'Weather is unavailable — check your connection and refresh.'
+          : 'Weather service temporarily unavailable. We\'ll retry shortly.');
+      } finally {
+        setWeatherLoading(false);
+      }
+    };
+    loadWeather();
   }, [home, tier, setWeather]);
 
   // Load and check history warning dismissal
@@ -1054,10 +1081,45 @@ export default function Dashboard() {
                 </div>
               )}
               {tasksToShow.length === 0 && !isDemo && (
-                <EmptyState
-                  title="You're caught up"
-                  description="No tasks due this month. New ones will appear here as the season changes."
-                />
+                home && tasks.length === 0 ? (
+                  // P1-10 (2026-04-23): parity with mobile dashboard — when home is set
+                  // up but the auto-generation didn't seed anything, give the user a
+                  // direct "build my plan" path instead of a passive "you're caught up"
+                  // state that leaves them stranded.
+                  <EmptyState
+                    title="Build my maintenance plan"
+                    description="We'll create a personalized schedule from your home profile and equipment."
+                    primaryAction={{
+                      label: 'Build my plan',
+                      onClick: async () => {
+                        if (!home) return;
+                        try {
+                          const generated = generateTasksForHome(
+                            home,
+                            equipment,
+                            [],
+                            consumables || [],
+                            user?.user_preferences,
+                            customTemplates,
+                          );
+                          if (generated.length > 0) {
+                            const saved = await createTasks(generated);
+                            setTasks(saved);
+                            showToast({ message: `Generated ${saved.length} task${saved.length === 1 ? '' : 's'}.` });
+                          }
+                        } catch (err) {
+                          console.warn('Failed to generate plan:', err);
+                          showToast({ message: 'Could not generate plan. Please try again.' });
+                        }
+                      },
+                    }}
+                  />
+                ) : (
+                  <EmptyState
+                    title="You're caught up"
+                    description="No tasks due this month. New ones will appear here as the season changes."
+                  />
+                )
               )}
             </div>
             )}

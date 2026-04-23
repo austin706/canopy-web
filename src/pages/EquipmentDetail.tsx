@@ -7,6 +7,7 @@ import { ROOF_LIFESPANS } from '@/services/taskEngine';
 import { showToast } from '@/components/Toast';
 import { WarrantyForm } from '@/components/WarrantyForm';
 import type { Equipment as EquipmentType, EquipmentCategory, Warranty } from '@/types';
+import logger from '@/utils/logger';
 
 const CATEGORIES: { value: EquipmentCategory; label: string }[] = [
   { value: 'hvac', label: 'HVAC' },
@@ -64,7 +65,7 @@ export default function EquipmentDetail() {
       setLoadingWarranties(true);
       getWarrantiesForEquipment(id)
         .then(setWarranties)
-        .catch(err => console.error('Error loading warranties:', err))
+        .catch(err => logger.error('Error loading warranties:', err))
         .finally(() => setLoadingWarranties(false));
     }
   }, [id]);

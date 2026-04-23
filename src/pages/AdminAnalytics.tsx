@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { PageSkeleton } from '@/components/Skeleton';
+import logger from '@/utils/logger';
 
 interface AnalyticsData {
   // User Growth
@@ -319,7 +320,7 @@ export default function AdminAnalytics() {
         },
       });
     } catch (err) {
-      console.error('Analytics error:', err);
+      logger.error('Analytics error:', err);
     } finally {
       setLoading(false);
     }

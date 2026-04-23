@@ -33,6 +33,7 @@ import {
   SAFETY_ACKNOWLEDGMENT_TEXT,
 } from '@/constants/contractorAgreement';
 import SignaturePad from '@/components/SignaturePad';
+import logger from '@/utils/logger';
 
 type OnboardingPhase = 'paperwork' | 'training' | 'field' | 'complete';
 
@@ -109,7 +110,7 @@ export default function TechnicianOnboardingPage() {
       setMaterials(mats);
       setProgress(prog);
     } catch (e) {
-      console.error('Error loading onboarding data:', e);
+      logger.error('Error loading onboarding data:', e);
     } finally {
       setLoading(false);
     }

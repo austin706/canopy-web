@@ -1,3 +1,5 @@
+import { LEGAL_DATES } from '@/constants/legalDates';
+
 export default function CancellationPolicy() {
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--color-text)', lineHeight: 1.7 }}>
@@ -6,7 +8,10 @@ export default function CancellationPolicy() {
       </div>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Cancellation & Refund Policy</h1>
-      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>Last updated: April 14, 2026</p>
+      {/* P3 #75 (2026-04-23) — single source of truth in constants/legalDates.ts */}
+      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>
+        Last updated: <time dateTime={LEGAL_DATES.cancellation.iso}>{LEGAL_DATES.cancellation.display}</time>
+      </p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Overview</h2>
       <p>Canopy offers flexible subscription management. You can cancel at any time, and we aim to make the process straightforward and fair. This policy explains how to cancel your subscription, what happens to your data and access, and our refund terms.</p>

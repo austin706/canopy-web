@@ -1,3 +1,5 @@
+import { LEGAL_DATES } from '@/constants/legalDates';
+
 export default function AIDisclaimer() {
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--color-text)', lineHeight: 1.7 }}>
@@ -6,7 +8,10 @@ export default function AIDisclaimer() {
       </div>
 
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>AI Recommendations Disclaimer</h1>
-      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>Last updated: April 3, 2026</p>
+      {/* P3 #75 (2026-04-23) — single source of truth in constants/legalDates.ts */}
+      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 32 }}>
+        Last updated: <time dateTime={LEGAL_DATES.aiDisclaimer.iso}>{LEGAL_DATES.aiDisclaimer.display}</time>
+      </p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Overview</h2>
       <p>Canopy uses artificial intelligence to provide personalized home maintenance recommendations, equipment scanning, task scheduling suggestions, inspection summaries, and a conversational home assistant. This page explains the role of AI in our platform and important limitations.</p>

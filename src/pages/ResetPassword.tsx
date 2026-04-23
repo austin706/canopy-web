@@ -121,43 +121,59 @@ export default function ResetPassword() {
           {!success && sessionValid && (
             <form onSubmit={handleResetPassword}>
               <div className="form-group">
-                <label>New Password</label>
+                <label htmlFor="reset-new-password">New Password</label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <input
+                    id="reset-new-password"
                     className="form-input"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="Enter new password"
                     required
+                    aria-required="true"
+                    aria-describedby="reset-password-hint"
+                    minLength={8}
+                    autoComplete="new-password"
                     style={{ paddingRight: 40 }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                     style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: Colors.medGray, padding: '4px 8px' }}
                     title={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? 'Hide' : 'Show'}
                   </button>
                 </div>
+                {/* P3 #72 (2026-04-23) — show the requirement BEFORE the user types a
+                    too-short password, so they don't learn it as a rejection toast. */}
+                <p id="reset-password-hint" style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6 }}>
+                  Must be at least 8 characters.
+                </p>
               </div>
 
               <div className="form-group">
-                <label>Confirm Password</label>
+                <label htmlFor="reset-confirm-password">Confirm Password</label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <input
+                    id="reset-confirm-password"
                     className="form-input"
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     placeholder="Confirm new password"
                     required
+                    aria-required="true"
+                    minLength={8}
+                    autoComplete="new-password"
                     style={{ paddingRight: 40 }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                     style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: Colors.medGray, padding: '4px 8px' }}
                     title={showConfirmPassword ? 'Hide password' : 'Show password'}
                   >

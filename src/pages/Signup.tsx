@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { signUp } from '@/services/supabase';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
+import { Button } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { getErrorMessage } from '@/utils/errors';
 import { trackEvent } from '@/utils/analytics';
@@ -190,9 +191,17 @@ export default function Signup() {
               </label>
               {termsError && <p style={{ color: 'var(--color-error)', fontSize: 13, marginTop: 4 }}>{termsError}</p>}
             </div>
-            <button className="btn btn-primary btn-lg btn-full" type="submit" disabled={loading || !acceptedTerms}>
-              {loading ? <span className="spinner" /> : 'Create Account'}
-            </button>
+            {/* P2 #63 (2026-04-23): migrated to shared Button primitive. */}
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              type="submit"
+              loading={loading}
+              disabled={!acceptedTerms}
+            >
+              Create Account
+            </Button>
           </form>
           <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: 'var(--color-text-secondary)' }}>
             Already have an account? <Link to="/login" style={{ color: 'var(--color-copper)', fontWeight: 600, textDecoration: 'none' }}>Sign In</Link>

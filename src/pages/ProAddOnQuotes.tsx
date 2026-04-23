@@ -4,6 +4,11 @@ import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import { PageSkeleton } from '@/components/Skeleton';
 import { showToast } from '@/components/Toast';
+import { useTabState } from '@/utils/useTabState';
+import logger from '@/utils/logger';
+
+const ADDON_QUOTE_TABS = ['pending', 'quoted', 'active'] as const;
+type AddOnQuoteTab = typeof ADDON_QUOTE_TABS[number];
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -51,7 +56,8 @@ export default function ProAddOnQuotes() {
   const { user } = useStore();
   const [addOns, setAddOns] = useState<AssignedAddOn[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'pending' | 'quoted' | 'active'>('pending');
+  // P3 #77 (2026-04-23) — URL-sync tab so back-button + deep-link work.
+  const [tab, setTab] = useTabState<AddOnQuoteTab>(ADDON_QUOTE_TABS, 'pending');
 
   // Quote form
   const [quotingId, setQuotingId] = useState<string | null>(null);
@@ -97,7 +103,7 @@ export default function ProAddOnQuotes() {
       if (error) throw error;
       setAddOns(data || []);
     } catch (err) {
-      console.error('Failed to load add-ons:', err);
+      logger.error('Failed to load add-ons:', err);
     } finally {
       setLoading(false);
     }
@@ -112,6 +118,34 @@ export default function ProAddOnQuotes() {
 
     setSubmitting(true);
     try {
+      // P2 #49 (2026-04-23): Client-side guard — verify the current pro is an ACTIVE provider
+      // for this add-on's category before calling the edge function. Belt-and-suspenders with
+      // the server-side auth check in submit-add-on-quote. Prevents a stale browser from
+      // submitting a quote after the pro was deactivated or moved categories.
+      const target = addOns.find(a => a.id === addOnId);
+      if (!target) {
+        showToast({ message: 'Add-on no longer in your queue.' });
+        await loadData();
+        return;
+      }
+      if (!user?.id) {
+        showToast({ message: 'Not authenticated' });
+        return;
+      }
+      const { data: providerRow, error: providerErr } = await supabase
+        .from('add_on_providers')
+        .select('provider_id, category_id, active')
+        .eq('provider_id', user.id)
+        .eq('category_id', target.category_id)
+        .eq('active', true)
+        .maybeSingle();
+      if (providerErr) throw providerErr;
+      if (!providerRow) {
+        showToast({ message: 'You are not an active provider for this category.' });
+        await loadData();
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error('Not authenticated');
 
@@ -250,7 +284,7 @@ export default function ProAddOnQuotes() {
                     display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
                   }}>
                     <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Price *</label>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Price <span aria-hidden="true">*</span></label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         <span style={{ fontWeight: 600 }}>$</span>
                         <input

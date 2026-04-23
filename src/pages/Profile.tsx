@@ -11,6 +11,7 @@ import type { ThemeMode } from '@/constants/theme';
 import type { SubscriptionTier, UserPreferences, MaintenanceDepth } from '@/types';
 import { DEFAULT_USER_PREFERENCES } from '@/types';
 import ReferralCard from '@/components/ReferralCard';
+import logger from '@/utils/logger';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -62,7 +63,7 @@ export default function Profile() {
       const isSubscribed = await isWebPushSubscribed();
       setWebPushEnabled(isSubscribed);
     };
-    checkWebPushStatus().catch(err => console.error('Failed to check web push status:', err));
+    checkWebPushStatus().catch(err => logger.error('Failed to check web push status:', err));
   }, []);
 
   const tier = user?.subscription_tier || 'free';

@@ -17,6 +17,7 @@ import {
 } from '@/services/admin';
 import { logAdminAction } from '@/services/auditLog';
 import { getErrorMessage } from '@/utils/errors';
+import logger from '@/utils/logger';
 
 export default function AdminEmails() {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
@@ -153,7 +154,7 @@ export default function AdminEmails() {
       setTemplates(data);
     } catch (err) {
       setError(`Failed to load templates: ${getErrorMessage(err)}`);
-      console.error('Error loading templates:', err);
+      logger.error('Error loading templates:', err);
     } finally {
       setLoading(false);
     }

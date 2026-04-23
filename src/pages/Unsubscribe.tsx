@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
+import logger from '@/utils/logger';
 
 type Status = 'idle' | 'submitting' | 'done' | 'error';
 
@@ -42,7 +43,7 @@ export default function Unsubscribe() {
     } catch (err) {
       setStatus('error');
       setMessage(`We couldn't process your request. Email support@canopyhome.app and we'll take care of it manually.`);
-      console.error('Unsubscribe failed:', err);
+      logger.error('Unsubscribe failed:', err);
     }
   }
 

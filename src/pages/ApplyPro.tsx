@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
 import { getErrorMessage } from '@/utils/errors';
+import logger from '@/utils/logger';
 
 type ServiceCategory = 'hvac' | 'plumbing' | 'electrical' | 'roofing' | 'landscaping' | 'pest' | 'appliance' | 'handyman' | 'painting' | 'flooring' | 'windows' | 'gutters' | 'foundation' | 'pool' | 'garage' | 'locksmith';
 
@@ -115,7 +116,7 @@ export default function ApplyPro() {
           },
         });
       } catch (emailErr) {
-        console.error('Applicant confirmation email error:', emailErr);
+        logger.error('Applicant confirmation email error:', emailErr);
       }
 
       // Send admin notification email via the dedicated Resend-backed edge function.
@@ -141,7 +142,7 @@ export default function ApplyPro() {
           },
         });
       } catch (adminEmailErr) {
-        console.error('Admin notification email error:', adminEmailErr);
+        logger.error('Admin notification email error:', adminEmailErr);
       }
 
       setSubmitted(true);
@@ -260,11 +261,12 @@ export default function ApplyPro() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            Business Name <span style={{ color: Colors.error }}>*</span>
+            Business Name <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <input
             type="text"
             required
+            aria-required="true"
             value={formData.businessName}
             onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
             style={{
@@ -283,11 +285,12 @@ export default function ApplyPro() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            Contact Name <span style={{ color: Colors.error }}>*</span>
+            Contact Name <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <input
             type="text"
             required
+            aria-required="true"
             value={formData.contactName}
             onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
             style={{
@@ -306,11 +309,12 @@ export default function ApplyPro() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            Email <span style={{ color: Colors.error }}>*</span>
+            Email <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <input
             type="email"
             required
+            aria-required="true"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             style={{
@@ -329,11 +333,12 @@ export default function ApplyPro() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            Phone <span style={{ color: Colors.error }}>*</span>
+            Phone <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <input
             type="tel"
             required
+            aria-required="true"
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             style={{
@@ -378,11 +383,12 @@ export default function ApplyPro() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            License Number <span style={{ color: Colors.error }}>*</span>
+            License Number <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <input
             type="text"
             required
+            aria-required="true"
             value={formData.licenseNumber}
             onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
             style={{
@@ -401,10 +407,11 @@ export default function ApplyPro() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            License State <span style={{ color: Colors.error }}>*</span>
+            License State <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <select
             required
+            aria-required="true"
             value={formData.licenseState}
             onChange={(e) => setFormData({ ...formData, licenseState: e.target.value as 'Oklahoma' | 'Florida' })}
             style={{
@@ -427,11 +434,12 @@ export default function ApplyPro() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            Insurance Carrier <span style={{ color: Colors.error }}>*</span>
+            Insurance Carrier <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <input
             type="text"
             required
+            aria-required="true"
             value={formData.insuranceCarrier}
             onChange={(e) => setFormData({ ...formData, insuranceCarrier: e.target.value })}
             style={{
@@ -450,11 +458,12 @@ export default function ApplyPro() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            Insurance Policy Number <span style={{ color: Colors.error }}>*</span>
+            Insurance Policy Number <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <input
             type="text"
             required
+            aria-required="true"
             value={formData.insurancePolicyNumber}
             onChange={(e) => setFormData({ ...formData, insurancePolicyNumber: e.target.value })}
             style={{
@@ -473,11 +482,12 @@ export default function ApplyPro() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            Insurance Expiration Date <span style={{ color: Colors.error }}>*</span>
+            Insurance Expiration Date <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <input
             type="date"
             required
+            aria-required="true"
             value={formData.insuranceExpiresAt}
             onChange={(e) => setFormData({ ...formData, insuranceExpiresAt: e.target.value })}
             style={{
@@ -497,7 +507,7 @@ export default function ApplyPro() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 12, fontSize: 14 }}>
-            Service Categories <span style={{ color: Colors.error }}>*</span>
+            Service Categories <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {(Object.entries(SERVICE_CATEGORIES) as [ServiceCategory, string][]).map(([key, label]) => (
@@ -526,11 +536,12 @@ export default function ApplyPro() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-            Service Area ZIP Codes <span style={{ color: Colors.error }}>*</span>
+            Service Area ZIP Codes <span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </label>
           <input
             type="text"
             required
+            aria-required="true"
             value={formData.serviceAreaZips}
             onChange={(e) => setFormData({ ...formData, serviceAreaZips: e.target.value })}
             style={{
@@ -597,7 +608,7 @@ export default function ApplyPro() {
             <a href="/contractor-terms" style={{ color: Colors.copper, textDecoration: 'none' }}>
               Contractor Terms of Service
             </a>
-            {' '}<span style={{ color: Colors.error }}>*</span>
+            {' '}<span style={{ color: Colors.error }} aria-hidden="true">*</span>
           </span>
         </label>
 

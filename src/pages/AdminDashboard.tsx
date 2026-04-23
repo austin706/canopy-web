@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
 import { Colors } from '@/constants/theme';
 import { PageSkeleton } from '@/components/Skeleton';
+import logger from '@/utils/logger';
 
 interface Stats {
   totalUsers: number; totalAgents: number; activeGiftCodes: number; redeemedGiftCodes: number;
@@ -51,7 +52,7 @@ export default function AdminDashboard() {
           .limit(5);
         setRecentActivity(auditData || []);
       } catch { /* admin_audit_log may not exist yet */ }
-    } catch (err) { console.error(err); }
+    } catch (err) { logger.error(err); }
     finally { setLoading(false); }
   };
 

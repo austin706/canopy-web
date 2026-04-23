@@ -8,6 +8,7 @@ import { PageSkeleton } from '@/components/Skeleton';
 import { showToast } from '@/components/Toast';
 import logger from '@/utils/logger';
 import ProOnboardingExplainer from '@/components/ProOnboardingExplainer';
+import { useRequireRole } from '@/utils/useRequireRole';
 
 interface ProProvider {
   id: string;
@@ -58,6 +59,11 @@ interface JobStats {
 export default function ProPortal() {
   const navigate = useNavigate();
   const { user } = useStore();
+  // P1 #24 (2026-04-23): defense-in-depth role gate. Router-level
+  // RoleRoute is the primary check; this hook re-redirects if the
+  // store gets rehydrated with a stale/downgraded session or the
+  // page is reached via a stray navigate() that bypassed the router.
+  useRequireRole(['pro_provider', 'admin']);
   const isAdmin = user?.role === 'admin';
 
   // Provider mode

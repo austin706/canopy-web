@@ -12,6 +12,7 @@ import type { Home } from '@/types';
 import HomeQRCode from '@/components/HomeQRCode';
 import { findExistingProperty } from '@/services/addressVerification';
 import { createHomeJoinRequest, listDeletedHomesForOwner, restoreHome, type DeletedHomeSummary } from '@/services/home';
+import logger from '@/utils/logger';
 
 export default function HomeDetails() {
   const navigate = useNavigate();
@@ -339,7 +340,7 @@ export default function HomeDetails() {
             try { await createTasks(newTasks); } catch { /* best effort */ }
           }
         } catch (err) {
-          console.error('[HomeDetails] task regeneration error:', err);
+          logger.error('[HomeDetails] task regeneration error:', err);
         }
       }
 
@@ -368,7 +369,7 @@ export default function HomeDetails() {
       await upsertHome(updated);
       setHome(updated);
     } catch (err) {
-      console.error('Photo upload failed:', err);
+      logger.error('Photo upload failed:', err);
       showToast({ message: 'Failed to upload photo. Please try again.' });
     } finally {
       setUploadingPhoto(false);
@@ -385,7 +386,7 @@ export default function HomeDetails() {
       setStructureFormLabel('');
       setShowAddStructure(false);
     } catch (err) {
-      console.error('Failed to add structure:', err);
+      logger.error('Failed to add structure:', err);
       showToast({ message: 'Failed to add structure. Please try again.' });
     } finally {
       setAddingStructure(false);
@@ -398,7 +399,7 @@ export default function HomeDetails() {
       await deleteStructure(structureId);
       setStructures(structures.filter(s => s.id !== structureId));
     } catch (err) {
-      console.error('Failed to delete structure:', err);
+      logger.error('Failed to delete structure:', err);
       showToast({ message: 'Failed to delete structure. Please try again.' });
     }
   };

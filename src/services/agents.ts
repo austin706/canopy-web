@@ -49,7 +49,17 @@ export const redeemGiftCode = async (code: string, userId: string) => {
   const newExpiry = new Date();
   newExpiry.setMonth(newExpiry.getMonth() + (gc.duration_months || 12));
   await supabase.from('gift_codes').update({ redeemed_by: userId, redeemed_at: new Date().toISOString() }).eq('id', gc.id);
-  const profileUpdate: Record<string, unknown> = { subscription_tier: gc.tier, subscription_expires_at: newExpiry.toISOString(), agent_id: gc.agent_id };
+  // P0-12 (2026-04-22): always write subscription_source='gift' + status='active'
+  // so revenue attribution, RC listener guard, and renewal flows all agree on
+  // provenance. Without this, a gift redemption on a user previously on
+  // stripe/RC could be silently overwritten by a stale stripe listener.
+  const profileUpdate: Record<string, unknown> = {
+    subscription_tier: gc.tier,
+    subscription_status: 'active',
+    subscription_source: 'gift',
+    subscription_expires_at: newExpiry.toISOString(),
+    agent_id: gc.agent_id,
+  };
   if (gc.client_name) profileUpdate.full_name = gc.client_name;
   await supabase.from('profiles').update(profileUpdate).eq('id', userId);
 

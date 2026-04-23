@@ -286,6 +286,8 @@ export default function Subscription() {
           },
           body: JSON.stringify({
             plan: plan,
+            // P2 #45 (2026-04-23): pass explicit source so stripe metadata + webhook logs retain web context.
+            source: 'web',
             success_url: `${window.location.origin}/subscription?success=true&plan=${plan}`,
             cancel_url: `${window.location.origin}/subscription?canceled=true`,
           }),
@@ -325,6 +327,8 @@ export default function Subscription() {
         body: JSON.stringify({
           plan: plan,
           ui_mode: 'embedded',
+          // P2 #45 (2026-04-23): pass explicit source so stripe metadata + webhook logs retain web context.
+          source: 'web',
           return_url: `${window.location.origin}/subscription?success=true&plan=${plan}&session_id={CHECKOUT_SESSION_ID}`,
         }),
       });
@@ -353,11 +357,20 @@ export default function Subscription() {
   };
 
   const [proAvailable, setProAvailable] = useState(true);
+  // P2 #47 (2026-04-23): surface service-area load failure so user knows Pro gating is a fallback.
+  const [serviceAreaError, setServiceAreaError] = useState(false);
 
   useEffect(() => {
-    loadServiceAreas().then(() => {
-      setProAvailable(isProAvailableInArea(home?.state, home?.zip_code));
-    });
+    loadServiceAreas()
+      .then(() => {
+        setProAvailable(isProAvailableInArea(home?.state, home?.zip_code));
+        setServiceAreaError(false);
+      })
+      .catch(() => {
+        // P2 #47: default to locked, but tell the user why.
+        setProAvailable(false);
+        setServiceAreaError(true);
+      });
   }, [home?.state, home?.zip_code]);
 
   const handleRedeem = async () => {
@@ -721,6 +734,24 @@ export default function Subscription() {
           </a>
         </div>
       </div>
+
+      {/* P2 #47 (2026-04-23): service-area load failure banner */}
+      {serviceAreaError && (
+        <div
+          className="card"
+          style={{
+            background: `${Colors.warning}14`,
+            borderLeft: `4px solid ${Colors.warning}`,
+            marginBottom: 16,
+          }}
+          role="alert"
+          aria-live="polite"
+        >
+          <p style={{ fontSize: 14, color: Colors.charcoal, lineHeight: 1.5, margin: 0 }}>
+            We couldn't confirm Pro availability in your area right now. Pro plans are hidden as a precaution — try again in a moment or contact support if this persists.
+          </p>
+        </div>
+      )}
 
       {/* Pro Interest Waitlist - Show if not in service area */}
       {!proAvailable && (

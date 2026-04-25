@@ -116,15 +116,17 @@ export default function TaskDetail() {
     try {
       setIsLoadingProRequest(true);
 
-      // P1-6 (2026-04-23): bundle only tasks with COMPATIBLE frequency.
-      // Previously this query allowed e.g. monthly HVAC filter to be bundled
-      // with annual roof inspection — pros visit on different cadences and
-      // the schedule conflict either gets quoted wrong or split silently.
-      // We now group frequencies into compatibility buckets:
-      //   one_time | monthly | bi_monthly | quarterly | semi_annual | annual
-      // and only show tasks whose frequency falls in the same bucket as the
-      // parent task. Equipment-tied tasks should also share the same
-      // equipment_id when the parent has one, so a single visit can cover them.
+      // 2026-04-24: smarter bundle scoping. Specialist categories (HVAC, plumbing, electrical, etc.)
+      // need a licensed/certified technician, so we ONLY bundle within the same category. Everything
+      // else falls into a handyman bucket — one provider can handle a garage door, weatherstripping,
+      // gutter clean, and a deck stain on one visit, so we cross-bundle those freely.
+      // Frequency compatibility (P1-6) still applies on top: don't suggest annual + monthly together.
+      const SPECIALIST_CATEGORIES = new Set([
+        'hvac', 'water_heater', 'plumbing', 'electrical', 'appliance',
+        'pool', 'pest_control', 'solar', 'generator', 'well', 'septic', 'fireplace',
+      ]);
+      const isSpecialist = SPECIALIST_CATEGORIES.has(task.category);
+
       const FREQ_BUCKETS: Record<string, string[]> = {
         one_time: ['one_time'],
         monthly: ['monthly', 'bi_monthly'],
@@ -138,12 +140,19 @@ export default function TaskDetail() {
 
       let q = supabase
         .from('maintenance_tasks')
-        .select('id, title, due_date, priority, description, frequency, equipment_id')
-        .eq('category', task.category)
+        .select('id, title, due_date, priority, description, category, frequency, equipment_id')
         .eq('home_id', home?.id)
         .neq('id', task.id)
         .in('status', ['upcoming', 'due', 'overdue'])
         .in('frequency', compatibleFreqs);
+
+      if (isSpecialist) {
+        // Specialist: same category only.
+        q = q.eq('category', task.category);
+      } else {
+        // Handyman: any non-specialist category (cross-bundle freely).
+        q = q.not('category', 'in', `(${Array.from(SPECIALIST_CATEGORIES).join(',')})`);
+      }
 
       // If the parent task is tied to specific equipment, prefer same-equipment
       // tasks so the bundle quote covers a single asset visit.
@@ -158,7 +167,7 @@ export default function TaskDetail() {
       setShowCategoryBundleModal(true);
     } catch (error) {
       logger.error('Error loading bundle tasks:', error);
-      showToast({ message: 'Failed to load category tasks. Continuing with just this task.' });
+      showToast({ message: 'Failed to load related tasks. Continuing with just this task.' });
       await createProRequest([task.id]);
     } finally {
       setIsLoadingProRequest(false);
@@ -199,9 +208,11 @@ export default function TaskDetail() {
 
       if (proRequestError) throw proRequestError;
 
-      // Link all selected tasks to the pro request
+      // Link all selected tasks to the pro request.
+      // Column is `request_id` (not `pro_request_id`) — the latter caused every Request-a-Pro
+      // submit to fail with "column does not exist" until 2026-04-24.
       const proRequestTasksData = taskIds.map(taskId => ({
-        pro_request_id: proRequestData.id,
+        request_id: proRequestData.id,
         task_id: taskId
       }));
 
@@ -501,7 +512,9 @@ export default function TaskDetail() {
                   <p style={{ fontSize: 14, fontWeight: 600, color: Colors.copper }}>Pro Request Pending</p>
                 </div>
               ) : (
-                ['upcoming', 'due'].includes(task.status) && (
+                // 2026-04-24 — overdue tasks are exactly the ones a homeowner is most likely to want to outsource;
+                // gating to upcoming/due meant the button vanished right when it became most useful.
+                ['upcoming', 'due', 'overdue'].includes(task.status) && (
                   <button
                     className="btn"
                     onClick={handleRequestProClick}
@@ -681,10 +694,10 @@ export default function TaskDetail() {
             boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
           }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: Colors.charcoal }}>
-              Bundle {task.category} Tasks?
+              Add more tasks to this request?
             </h2>
             <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 20 }}>
-              You have {bundleTasksList.length} other {task.category} task{bundleTasksList.length !== 1 ? 's' : ''} that need attention. Would you like to include them in this request?
+              You have {bundleTasksList.length} other open task{bundleTasksList.length !== 1 ? 's' : ''} a pro could handle on the same visit. Select any you'd like included.
             </p>
 
             <div style={{ marginBottom: 20, maxHeight: 300, overflowY: 'auto' }}>
@@ -793,7 +806,7 @@ export default function TaskDetail() {
               Request a Pro
             </h2>
             <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 20 }}>
-              No other {task.category} tasks found. Proceeding with just this task.
+              No other open tasks a pro could handle on the same visit. Proceeding with just this task.
             </p>
             <button
               className="btn"

@@ -117,11 +117,16 @@ export const calculateHealthScore = (tasks: MaintenanceTask[]): HealthScoreResul
   );
   const score = Math.max(0, Math.min(100, blended));
 
+  // Aligned with HealthGauge thresholds (2026-04-27) so the gauge's center
+  // label and the breakdown screen's status pill never contradict each other.
+  // Previously the gauge said "Good" at 76 while this function said
+  // "Needs attention" — same number, opposite framing. Mobile parity.
   let label: string;
   let color: 'green' | 'yellow' | 'red';
-  if (score >= 85) { label = 'Great shape'; color = 'green'; }
-  else if (score >= 60) { label = 'Needs attention'; color = 'yellow'; }
-  else { label = 'Action required'; color = 'red'; }
+  if (score >= 90) { label = 'Excellent'; color = 'green'; }
+  else if (score >= 70) { label = 'Good'; color = 'green'; }
+  else if (score >= 40) { label = 'Fair'; color = 'yellow'; }
+  else { label = 'Needs Work'; color = 'red'; }
 
   return {
     score,

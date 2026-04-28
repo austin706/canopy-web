@@ -134,7 +134,11 @@ const AdminAddOns = lazyRetry(() => import('@/pages/AdminAddOns'));
 const TechnicianOnboarding = lazyRetry(() => import('@/pages/TechnicianOnboarding'));
 const ProOnboardingSuccess = lazyRetry(() => import('@/pages/ProOnboardingSuccess'));
 const ProOnboardingRefresh = lazyRetry(() => import('@/pages/ProOnboardingRefresh'));
-const SignupSuccess = lazyRetry(() => import('@/pages/SignupSuccess'));
+// SignupSuccess removed 2026-04-27 — replaced by VerifyEmail gate.
+// The Free-vs-Home upsell ran before any home context existed; we now
+// route signup → verify-email → onboarding/welcome and let the
+// onboarding plan step do conversion with full home context.
+const VerifyEmail = lazyRetry(() => import('@/pages/VerifyEmail'));
 const NotFound = lazyRetry(() => import('@/pages/NotFound'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -410,7 +414,9 @@ export default function App() {
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/signup-success" element={<SignupSuccess />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          {/* Legacy /signup-success path redirects to /verify-email so deep links don't 404. */}
+          <Route path="/signup-success" element={<Navigate to="/verify-email" replace />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/pro-login" element={<ProLogin />} />

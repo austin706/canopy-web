@@ -153,23 +153,51 @@ export const createTask = async (task: Partial<MaintenanceTask>) => {
 };
 
 /**
- * Bulk-insert generated tasks. Uses upsert with `ignoreDuplicates: true`
- * so concurrent generator passes (e.g. web tab + mobile app) can't
- * produce duplicate rows for the same (home, template, equipment,
- * due_date) tuple — the partial UNIQUE INDEX defined in migration 060
- * silently drops conflicts.
+ * Bulk-insert generated tasks.
+ *
+ * 2026-04-27 fix (Gatlin web/mobile divergence): the previous implementation
+ * used `.upsert(..., { onConflict: 'home_id,template_id,equipment_id,due_date' })`,
+ * but the matching unique index `uniq_generated_seasonal_task` is PARTIAL
+ * (`WHERE template_id IS NOT NULL AND is_custom IS NOT TRUE`). PostgREST
+ * cannot infer a partial index from a column list, so every call threw
+ *   42P10: there is no unique or exclusion constraint matching the ON CONFLICT specification
+ * The catch-block in Dashboard.tsx then silently fell back to local-only
+ * state — which is why Gatlin's web showed phantom tasks the DB never knew
+ * about, while mobile (which also failed the persist) hydrated empty.
+ *
+ * The correct pattern is a plain bulk insert. The partial unique index still
+ * acts as a safety backstop: if a concurrent caller re-inserts the same
+ * (home, template, equipment, due_date), Postgres throws 23505 and we
+ * retry per-row, skipping duplicates.
  */
 export const createTasks = async (tasks: Partial<MaintenanceTask>[]) => {
   if (!tasks.length) return [];
   const { data, error } = await supabase
     .from('maintenance_tasks')
-    .upsert(tasks, {
-      onConflict: 'home_id,template_id,equipment_id,due_date',
-      ignoreDuplicates: true,
-    })
+    .insert(tasks)
     .select();
-  if (error) throw error;
-  return data || [];
+  if (!error) return data || [];
+
+  // Bulk insert hit a uniqueness violation — fall back to per-row inserts
+  // so a single duplicate doesn't poison the whole batch.
+  if (error.code === '23505') {
+    const inserted: MaintenanceTask[] = [];
+    for (const task of tasks) {
+      const { data: row, error: rowErr } = await supabase
+        .from('maintenance_tasks')
+        .insert(task)
+        .select()
+        .single();
+      if (!rowErr && row) {
+        inserted.push(row as MaintenanceTask);
+      } else if (rowErr && rowErr.code !== '23505') {
+        // Hard error on a single row — propagate so the caller can surface it.
+        throw rowErr;
+      }
+    }
+    return inserted;
+  }
+  throw error;
 };
 
 export const deleteTask = async (taskId: string) => {

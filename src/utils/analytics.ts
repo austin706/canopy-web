@@ -82,6 +82,12 @@ export interface EventParams {
   signup_success_view: Record<string, never>;
   signup_success_upgrade_click: { plan?: Plan };
   signup_success_continue_free: Record<string, never>;
+  // 2026-04-27: VerifyEmail gate replaced SignupSuccess. Track when the
+  // user finally confirms their email + when they tap "Resend email" to
+  // measure verification drop-off and resend friction. Mobile parity.
+  email_verification_view: Record<string, never>;
+  email_verified: Record<string, never>;
+  email_verification_resent: Record<string, never>;
   referral_signup_landed: { code: string };
   referral_signup_completed: { code: string };
 

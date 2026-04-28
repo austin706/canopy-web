@@ -222,11 +222,21 @@ export default function Onboarding() {
   const [showCleaningTasks, setShowCleaningTasks] = useState(true);
 
   // Step 3: Plan Selection
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionTier>('free');
+  // 2026-04-27: defaulted to 'home' instead of 'free' (mobile parity).
+  // Free was the default + the CTA changes label to match the selection,
+  // so the default experience was "Continue with Free" — undermining
+  // conversion. Home is available everywhere in the US.
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionTier>('home');
   const [agentCode, setAgentCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
   const [planMessage, setPlanMessage] = useState('');
   const [planMessageType, setPlanMessageType] = useState<'success' | 'error'>('success');
+  // 2026-04-27: tier consolidation (mobile parity). Six tiers on one
+  // paywall was paywall fatigue — Free/Home/Pro shown by default,
+  // 2-Packs behind "Have multiple homes?", Pro+ behind "Need a fully
+  // managed plan?" lead-capture.
+  const [showMultiHome, setShowMultiHome] = useState(false);
+  const [showProPlus, setShowProPlus] = useState(false);
 
   // C11: Inline error banner (replaces alert() calls throughout onboarding)
   const [inlineError, setInlineError] = useState<string | null>(null);
@@ -1925,8 +1935,13 @@ export default function Onboarding() {
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
-            {PLANS.map(plan => {
+          {/* 2026-04-27: tier consolidation (mobile parity). Six tiers on
+              one paywall was paywall fatigue — Free/Home/Pro shown by
+              default, 2-Packs behind "Have multiple homes?", Pro+ behind
+              "Need a fully managed plan?" lead-capture. Web mirrors the
+              mobile UX from Canopy-App/app/onboarding/plan.tsx. */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+            {PLANS.filter(plan => plan.value === 'free' || plan.value === 'home' || plan.value === 'pro').map(plan => {
               const isSelected = selectedPlan === plan.value;
               const isInquiry = (plan as any).inquireForPricing === true;
               const isProTier = plan.value === 'pro' || plan.value === 'pro_plus';
@@ -2011,6 +2026,131 @@ export default function Onboarding() {
               );
             })}
           </div>
+
+          {/* 7-day money-back guarantee row — Austin's call: no free trial */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: `${Colors.sage}10`,
+            borderRadius: 8,
+            padding: '10px 14px',
+            marginBottom: 16,
+            fontSize: 13,
+            color: Colors.charcoal,
+          }}>
+            🛡️ <span><strong>7-day money-back guarantee.</strong> Cancel any time from Settings.</span>
+          </div>
+
+          {/* Multi-home expandable — 2-Pack tiers */}
+          <button
+            type="button"
+            onClick={() => setShowMultiHome((prev) => !prev)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              width: '100%',
+              padding: '12px 16px',
+              background: 'var(--color-card-bg)',
+              border: `1px solid ${Colors.lightGray}`,
+              borderRadius: 8,
+              marginBottom: 8,
+              fontSize: 14,
+              fontWeight: 600,
+              color: Colors.charcoal,
+              cursor: 'pointer',
+              textAlign: 'left' as const,
+            }}
+            aria-expanded={showMultiHome}
+          >
+            <span style={{ flex: 1 }}>🏘 Have multiple homes?</span>
+            <span style={{ color: Colors.medGray }}>{showMultiHome ? '▴' : '▾'}</span>
+          </button>
+          {showMultiHome && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16, marginLeft: 16 }}>
+              {PLANS.filter(p => p.value === 'home_2' || p.value === 'pro_2').map(plan => {
+                const isSelected = selectedPlan === plan.value;
+                return (
+                  <div
+                    key={plan.value}
+                    onClick={() => setSelectedPlan(plan.value as SubscriptionTier)}
+                    role="radio"
+                    aria-checked={isSelected}
+                    tabIndex={0}
+                    style={{
+                      cursor: 'pointer',
+                      background: 'var(--color-card-bg)',
+                      borderRadius: 12,
+                      padding: 16,
+                      border: `2px solid ${isSelected ? Colors.copper : Colors.lightGray}`,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span style={{ fontSize: 16, fontWeight: 600, color: isSelected ? Colors.copper : Colors.charcoal }}>{plan.name}</span>
+                      <span style={{ fontSize: 18, fontWeight: 700, color: isSelected ? Colors.copper : Colors.charcoal }}>${plan.price}/mo</span>
+                    </div>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0 0 0' }}>
+                      {plan.features.map((f) => (
+                        <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13 }}>
+                          <CheckIcon size={12} color={isSelected ? Colors.copper : Colors.sage} />
+                          <span style={{ color: Colors.charcoal }}>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Pro+ expandable — concierge tier with sales handoff */}
+          <button
+            type="button"
+            onClick={() => setShowProPlus((prev) => !prev)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              width: '100%',
+              padding: '12px 16px',
+              background: 'var(--color-card-bg)',
+              border: `1px solid ${Colors.lightGray}`,
+              borderRadius: 8,
+              marginBottom: 8,
+              fontSize: 14,
+              fontWeight: 600,
+              color: Colors.charcoal,
+              cursor: 'pointer',
+              textAlign: 'left' as const,
+            }}
+            aria-expanded={showProPlus}
+          >
+            <span style={{ flex: 1 }}>✨ Need a fully managed plan?</span>
+            <span style={{ color: Colors.medGray }}>{showProPlus ? '▴' : '▾'}</span>
+          </button>
+          {showProPlus && (
+            <div
+              onClick={() => setSelectedPlan('pro_plus' as SubscriptionTier)}
+              role="radio"
+              aria-checked={selectedPlan === 'pro_plus'}
+              tabIndex={0}
+              style={{
+                cursor: 'pointer',
+                background: `${Colors.copper}0A`,
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 16,
+                marginLeft: 16,
+                border: `2px solid ${selectedPlan === 'pro_plus' ? Colors.copper : `${Colors.copper}33`}`,
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 700, color: Colors.copperDark, marginBottom: 4 }}>Home Pro+</div>
+              <p style={{ fontSize: 13, color: Colors.charcoal, lineHeight: 1.5, margin: '0 0 8px' }}>
+                Full home concierge — we handle everything. All add-on services included,
+                priority scheduling, dedicated pro provider, seasonal deep-cleans (pressure
+                wash, carpet, chimney). Pricing is custom based on your home.
+              </p>
+              <p style={{ fontSize: 12, color: Colors.medGray, fontStyle: 'italic', margin: 0 }}>
+                Select to request a Pro+ consultation. We'll reach out within 1 business day —
+                you can keep setting up your home in the meantime.
+              </p>
+            </div>
+          )}
 
           {/* Agent / Gift Code */}
           <div style={{ background: 'var(--color-background)', borderRadius: 12, padding: 20, marginBottom: 24 }}>

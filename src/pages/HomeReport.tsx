@@ -218,11 +218,14 @@ export default function HomeReport() {
             Maintenance Summary
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            {/* Maintenance Summary stat grid: sage for counts, copper for currency.
+                Was 4 different colors (sage / copper / info-blue / charcoal-black) —
+                blue isn't in the brand and black was harsh on cream. Mobile parity. */}
             {[
               { label: 'Total Log Entries', value: logs.length.toString(), color: Colors.sage },
               { label: 'Total Invested', value: fmt(totalMaintCost), color: Colors.copper },
-              { label: 'Pro Visits', value: visits.length.toString(), color: Colors.info },
-              { label: 'Equipment Tracked', value: equipmentList.length.toString(), color: Colors.charcoal },
+              { label: 'Pro Visits', value: visits.length.toString(), color: Colors.sage },
+              { label: 'Equipment Tracked', value: equipmentList.length.toString(), color: Colors.sage },
             ].map(stat => (
               <div key={stat.label} className="card" style={{ padding: 16, textAlign: 'center', borderTop: `3px solid ${stat.color}` }}>
                 <p style={{ fontSize: 24, fontWeight: 700, color: stat.color }}>{stat.value}</p>

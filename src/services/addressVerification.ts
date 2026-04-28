@@ -38,10 +38,15 @@ export async function verifyAddress(
 ): Promise<VerifiedAddress> {
   let uspsResult: { normalizedAddress: string; city: string; state: string; zipCode: string; isValid: boolean } | null = null;
 
-  // Layer 1: USPS standardization (via edge function to keep API key server-side)
+  // Layer 1: USPS standardization (via edge function to keep API key server-side).
+  // 2026-04-27: send canonical { streetAddress, zipCode } shape. The edge
+  // function previously only accepted these field names but both clients
+  // were sending { address, zip_code }, so verify silently 400'd for every
+  // user. Edge function now accepts either shape too — this is the
+  // forward-compatible path.
   try {
     const { data, error } = await supabase.functions.invoke('verify-address', {
-      body: { address, city, state, zip_code: zipCode },
+      body: { streetAddress: address, city, state, zipCode },
     });
     if (!error && data?.normalized_address) {
       uspsResult = {

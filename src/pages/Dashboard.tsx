@@ -244,8 +244,20 @@ export default function Dashboard() {
               const saved = await createTasks(generated);
               setTasks(saved);
             } catch (saveErr) {
-              console.warn('Failed to persist generated tasks:', saveErr);
-              setTasks(generated); // still show locally
+              // Persist failed — DO NOT show local-only state. Showing
+              // unpersisted tasks creates web/mobile divergence (the bug
+              // that hit Gatlin's profile in Apr 2026): web stores them in
+              // zustand localStorage as phantoms while mobile stays empty,
+              // so the same home renders a different health score on each
+              // platform. Refetch from DB instead so both platforms agree
+              // on whatever actually persisted, and surface the failure.
+              console.error('Failed to persist generated tasks:', saveErr);
+              try {
+                const refetched = await getTasks(home.id);
+                setTasks(refetched);
+              } catch {
+                setTasks([]);
+              }
             }
           }
         }

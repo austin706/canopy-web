@@ -95,8 +95,11 @@ export default function Signup() {
       await signUp(email, password, fullName);
       // GA4: primary conversion event — new account created
       trackEvent('sign_up', { method: 'email' });
-      // Don't block — redirect to login with a success message
-      navigate('/signup-success');
+      // 2026-04-27: route to verify-email gate instead of the old SignupSuccess
+      // upsell screen. The single conversion moment now lives at /onboarding's
+      // plan step, where the user has already shared their address and systems
+      // — making the comparison concrete instead of abstract.
+      navigate('/verify-email');
     } catch (err: any) {
       setError(getErrorMessage(err) || 'Signup failed');
     } finally {

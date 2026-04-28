@@ -27,8 +27,9 @@ test.describe('Conversion funnel — signup to onboarding', () => {
     const submit = page.getByRole('button', { name: /sign up|create account|get started/i }).first();
     await submit.click();
 
-    // After signup we should be routed somewhere past signup — onboarding
-    // or signup-success. Either is acceptable for the smoke boundary.
-    await expect(page).toHaveURL(/\/(onboarding|signup-success|dashboard|$)/, { timeout: 15_000 });
+    // After signup we should be routed somewhere past signup — onboarding,
+    // verify-email (post-2026-04-27 email-verification gate), signup-success,
+    // or dashboard. Any of these crosses the smoke boundary.
+    await expect(page).toHaveURL(/\/(onboarding|verify-email|signup-success|dashboard|$)/, { timeout: 15_000 });
   });
 });

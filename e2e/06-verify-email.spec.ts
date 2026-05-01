@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import type { Route } from '@playwright/test';
+import type { Page, Route } from '@playwright/test';
 import { stubSupabase, TEST_USER } from './fixtures/mocks';
 
 /**
@@ -19,8 +19,33 @@ import { stubSupabase, TEST_USER } from './fixtures/mocks';
  * had no automated coverage.
  */
 
+// Pre-populate the Supabase auth-token entry in localStorage before the page
+// boots. Sibling specs reach this state by going through the signup flow
+// (which writes localStorage as a side effect). This spec lands on
+// /verify-email directly, so we need to seed the session ourselves —
+// otherwise supabase.auth.getUser() reads no session from storage and
+// short-circuits before the network mock ever runs.
+const SUPABASE_PROJECT_REF = 'uxxrmyxoyesipprwlxrn';
+async function seedSupabaseSession(page: Page, user: typeof TEST_USER) {
+  const session = {
+    access_token: 'test-access-token',
+    refresh_token: 'test-refresh-token',
+    expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    token_type: 'bearer',
+    user,
+  };
+  await page.addInitScript(
+    ({ key, value }) => {
+      window.localStorage.setItem(key, value);
+    },
+    { key: `sb-${SUPABASE_PROJECT_REF}-auth-token`, value: JSON.stringify(session) },
+  );
+}
+
 test.describe('Conversion funnel — verify-email gate', () => {
   test('unverified user sees the gate, can resend, stays on page', async ({ page }) => {
+    await seedSupabaseSession(page, TEST_USER);
     await stubSupabase(page, { authed: true });
 
     // Track resend attempts so we can assert the button hit Supabase.
@@ -63,14 +88,7 @@ test.describe('Conversion funnel — verify-email gate', () => {
       email_confirmed_at: new Date().toISOString(),
     };
 
-    await page.route(/\/auth\/v1\/user/, (r: Route) =>
-      r.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(confirmedUser),
-      }),
-    );
-
+    await seedSupabaseSession(page, confirmedUser as typeof TEST_USER);
     await stubSupabase(page, { authed: true, user: confirmedUser as typeof TEST_USER });
     await page.goto('/verify-email');
 

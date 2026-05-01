@@ -29,6 +29,13 @@ export default function VerifyEmail() {
   const [resendError, setResendError] = useState('');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Mount-fire view event so we can measure verification drop-off and
+  // resend friction in GA4. Separate from the polling effect to avoid
+  // re-firing on every interval tick.
+  useEffect(() => {
+    try { trackEvent('email_verification_view'); } catch {}
+  }, []);
+
   // Load current user's email and start polling for verification.
   useEffect(() => {
     let cancelled = false;

@@ -102,6 +102,14 @@ export default function Signup() {
       navigate('/verify-email');
     } catch (err: any) {
       setError(getErrorMessage(err) || 'Signup failed');
+      // 2026-04-29 (Phase 1B): surface signup_error for funnel triage,
+      // parity with mobile signup.tsx. Stable, low-cardinality codes are
+      // preferred — fall back to a truncated message if neither code nor
+      // name are present.
+      try {
+        const code = (err?.code || err?.name || (typeof err?.message === 'string' ? err.message.slice(0, 80) : 'unknown')) as string;
+        trackEvent('signup_error', { error_code: code });
+      } catch {}
     } finally {
       setLoading(false);
     }

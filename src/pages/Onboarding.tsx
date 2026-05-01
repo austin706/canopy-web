@@ -15,6 +15,7 @@ import { Colors } from '@/constants/theme';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import { trackEvent } from '@/utils/analytics';
+import { CONTACT } from '@/constants/strings';
 import EquipmentScanner from '@/components/EquipmentScanner';
 import InspectionUploader from '@/components/InspectionUploader';
 import type { EquipmentCategory, Equipment as EquipmentType, SubscriptionTier } from '@/types';
@@ -150,10 +151,41 @@ export default function Onboarding() {
     }
   }, []);
 
+  // GA4: fire onboarding_start once on mount for funnel parity with mobile
+  // (mobile fires it on welcome.tsx). 2026-04-29 (Phase 1B).
+  const startedRef = useRef(false);
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    try {
+      trackEvent('onboarding_start', {
+        entry_point: isAddPropertyMode ? 'add_property' : 'signup',
+      });
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // GA4: emit an onboarding_step_complete event whenever the step advances.
   // Fires on mount with the starting step so we capture "step 0 viewed."
+  // 2026-04-29 (Phase 1B): include step_name — this is the canonical join
+  // key in GA4 for cross-platform funnel analysis (mobile is 1-indexed,
+  // web is 0-indexed, so the numeric `step` alone is ambiguous across
+  // platforms). Mirror at Canopy-App/app/onboarding/*.tsx.
   useEffect(() => {
-    trackEvent('onboarding_step_complete', { step, add_property_mode: isAddPropertyMode });
+    const stepNameByIndex: Record<number, string> = {
+      [STEP_WELCOME]: 'welcome',
+      [STEP_ADDRESS]: 'address',
+      [STEP_SYSTEMS]: 'systems',
+      [STEP_PLAN]: 'plan',
+      [STEP_EQUIPMENT]: 'equipment',
+      [STEP_READY]: 'ready',
+      [STEP_DONE]: 'done',
+    };
+    trackEvent('onboarding_step_complete', {
+      step,
+      step_name: stepNameByIndex[step] ?? 'unknown',
+      add_property_mode: isAddPropertyMode,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
@@ -845,6 +877,16 @@ export default function Onboarding() {
         // Welcome email is non-blocking — don't fail onboarding
       }
 
+      // GA4: onboarding_complete fires once at funnel exit, parity with
+      // mobile finish.tsx. 2026-04-29 (Phase 1B). total_time_ms is not
+      // measured on web yet — pass 0 so the schema is satisfied.
+      try {
+        trackEvent('onboarding_complete', {
+          total_time_ms: 0,
+          plan: tier,
+        });
+      } catch {}
+
       setStep(6);
     } finally {
       setSaving(false);
@@ -1278,7 +1320,7 @@ export default function Onboarding() {
                     className="btn btn-primary"
                     style={{ width: '100%' }}
                     onClick={() => {
-                      window.location.href = 'mailto:support@canopyhome.app?subject=Custom%20Multi-Property%20Plan&body=' +
+                      window.location.href = `mailto:${CONTACT.supportEmail}?subject=Custom%20Multi-Property%20Plan&body=` +
                         encodeURIComponent(`Hi, I'm interested in managing multiple properties with Canopy. I currently have ${userHomeCount} home(s) and would like to add more. Can you help me set up a custom plan?`);
                     }}
                   >
@@ -1363,7 +1405,7 @@ export default function Onboarding() {
                     className="btn btn-ghost"
                     style={{ width: '100%', color: Colors.medGray }}
                     onClick={() => {
-                      window.location.href = 'mailto:support@canopyhome.app?subject=Property%20Claim%20Dispute&body=' +
+                      window.location.href = `mailto:${CONTACT.supportEmail}?subject=Property%20Claim%20Dispute&body=` +
                         encodeURIComponent(`I'm trying to claim ${addressForm.address}, ${addressForm.city}, ${addressForm.state} ${addressForm.zip_code} but it shows as already claimed.`);
                     }}
                     disabled={saving}

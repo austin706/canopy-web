@@ -13,7 +13,7 @@ export const createProRequest = async (request: Record<string, unknown>) => {
   // Auto-match to a provider (fire-and-forget — doesn't block request creation)
   try {
     await supabase.functions.invoke('match-provider', {
-      body: { request_id: data.id },
+      body: { serviceRequestId: data.id },
     });
   } catch (matchErr) {
     logger.error('Auto-match provider error (non-blocking):', matchErr);

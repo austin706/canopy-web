@@ -25,7 +25,12 @@ import { stubSupabase, TEST_USER } from './fixtures/mocks';
 // /verify-email directly, so we need to seed the session ourselves —
 // otherwise supabase.auth.getUser() reads no session from storage and
 // short-circuits before the network mock ever runs.
-const SUPABASE_PROJECT_REF = 'uxxrmyxoyesipprwlxrn';
+//
+// The storage key is sb-{projectRef}-auth-token, where projectRef is the
+// subdomain of VITE_SUPABASE_URL. CI injects ci-placeholder.supabase.co;
+// local dev reads the real ref from .env. Derive at test-time so both work.
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://uxxrmyxoyesipprwlxrn.supabase.co';
+const SUPABASE_PROJECT_REF = new URL(SUPABASE_URL).hostname.split('.')[0];
 async function seedSupabaseSession(page: Page, user: typeof TEST_USER) {
   const session = {
     access_token: 'test-access-token',

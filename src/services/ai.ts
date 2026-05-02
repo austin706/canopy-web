@@ -72,6 +72,13 @@ export interface ScanResult {
   alerts?: string[];           // Actionable alerts like "Uses R22 refrigerant (phased out since 2020)"
   // AI-suggested maintenance tasks for this equipment (v3 — saved as custom templates)
   suggested_tasks?: SuggestedTask[];
+  // 2026-04-29: cache enrichment fields (v4) — populated when result came
+  // from equipment_scan_cache instead of a fresh Claude call. UI uses these
+  // to render a "Recognized from prior scans" badge.
+  consumables?: unknown;
+  tech_metadata?: unknown;
+  cached?: boolean;
+  cache_hit_count?: number;
 }
 
 /**
@@ -286,6 +293,11 @@ export const lookupByModelNumber = async (modelNumber: string, serialNumber?: st
           .eq('id', cached.id)
           .then(() => {});
 
+        // 2026-04-29: include consumables + tech_metadata so cache hits return
+        // the same richness as fresh AI scans (migration
+        // `equipment_scan_cache_consumables_tech_metadata` adds the columns).
+        // Also surface `cached: true` + hit_count so the UI can show a
+        // "Recognized from N prior scans" hint (knowledge-DB foundation).
         return {
           make: cached.make || '',
           model: cached.model_display || modelNumber,
@@ -301,7 +313,11 @@ export const lookupByModelNumber = async (modelNumber: string, serialNumber?: st
           alerts: cached.alerts || [],
           additional_info: cached.additional_info || {},
           confidence: cached.confidence,
-        };
+          consumables: cached.consumables ?? undefined,
+          tech_metadata: cached.tech_metadata ?? undefined,
+          cached: true,
+          cache_hit_count: (cached.hit_count || 0) + 1,
+        } as ScanResult;
       }
     } catch {
       // Cache miss — proceed to AI lookup

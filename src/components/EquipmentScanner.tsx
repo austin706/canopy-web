@@ -963,6 +963,12 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
           >
             <p style={{ fontSize: 12, color: Colors.medGray, marginBottom: 4 }}>
               Confidence: {Math.round(scanData.confidence * 100)}%
+              {/* 2026-04-29: cache-hit signal — instant recognition, no AI burn. */}
+              {scanData.cached && (
+                <span style={{ marginLeft: 8, color: Colors.sageDark, fontWeight: 600 }}>
+                  · ✓ Recognized
+                </span>
+              )}
             </p>
             <p style={{ fontSize: 14, color: Colors.charcoal, fontWeight: 500 }}>
               {scanData.equipment_subtype || 'Equipment'} detected
@@ -970,6 +976,11 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
             {scanData.estimated_lifespan_years && (
               <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 4 }}>
                 Typical lifespan: ~{scanData.estimated_lifespan_years} years
+              </p>
+            )}
+            {scanData.cached && (scanData.cache_hit_count ?? 1) > 1 && (
+              <p style={{ fontSize: 11, color: Colors.sageDark, marginTop: 6, fontStyle: 'italic' }}>
+                {(scanData.cache_hit_count ?? 1) - 1} other Canopy {((scanData.cache_hit_count ?? 1) - 1) === 1 ? 'home has' : 'homes have'} this model — auto-filled from our database.
               </p>
             )}
           </div>

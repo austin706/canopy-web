@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useStore } from '@/store/useStore';
 import { scanEquipmentLabel, lookupByModelNumber, AiUsageLimitError, type ScanResult } from '@/services/ai';
-import { Colors } from '@/constants/theme';
+import { Colors, FontSize } from '@/constants/theme';
 import type { EquipmentCategory } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
 import { useProgress } from '@/components/ProgressBar';
@@ -979,7 +979,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
               </p>
             )}
             {scanData.cached && (scanData.cache_hit_count ?? 1) > 1 && (
-              <p style={{ fontSize: 11, color: Colors.sageDark, marginTop: 6, fontStyle: 'italic' }}>
+              <p style={{ fontSize: FontSize.xs, color: Colors.sageDark, marginTop: 6, fontStyle: 'italic' }}>
                 {(scanData.cache_hit_count ?? 1) - 1} other Canopy {((scanData.cache_hit_count ?? 1) - 1) === 1 ? 'home has' : 'homes have'} this model — auto-filled from our database.
               </p>
             )}

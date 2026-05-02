@@ -1,6 +1,7 @@
 import { CSSProperties, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
+import { FontSize } from '@/constants/theme';
 import { HealthGauge } from './HealthGauge';
 import { track } from '@/utils/analytics';
 
@@ -179,10 +180,10 @@ export function DashboardHeroStrip({
               prior generic copy when breakdown data isn't supplied. */}
           {driverHint ? (
             <>
-              <div style={{ fontSize: 13, color: driverHint.tone, fontWeight: 600 }}>
+              <div style={{ fontSize: FontSize.sm, color: driverHint.tone, fontWeight: 600 }}>
                 {driverHint.label}
               </div>
-              <div style={{ fontSize: 12, color: colors.medGray, marginTop: 2 }}>
+              <div style={{ fontSize: FontSize.xs, color: colors.medGray, marginTop: 2 }}>
                 {driverHint.hint}
               </div>
             </>

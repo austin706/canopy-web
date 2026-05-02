@@ -11,7 +11,7 @@ import { requestConsultation } from '@/services/proPlus';
 import { findProviderForZip } from '@/services/proEnrollment';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
 import { lookupByModelNumber } from '@/services/ai';
-import { Colors } from '@/constants/theme';
+import { Colors, FontSize } from '@/constants/theme';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import { trackEvent } from '@/utils/analytics';
@@ -1243,7 +1243,7 @@ export default function Onboarding() {
             <button
               type="button"
               className="btn btn-ghost"
-              style={{ fontSize: 13, padding: '8px 12px' }}
+              style={{ fontSize: FontSize.sm, padding: '8px 12px' }}
               onClick={() => setShowAddressMoreDetails(v => !v)}
               aria-expanded={showAddressMoreDetails}
             >
@@ -1982,10 +1982,10 @@ export default function Onboarding() {
             }}
             aria-label="Quick start — skip systems for now and go straight to your dashboard"
           >
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-copper)', marginBottom: 2 }}>
+            <div style={{ fontSize: FontSize.sm, fontWeight: 600, color: 'var(--color-copper)', marginBottom: 2 }}>
               Quick start →
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+            <div style={{ fontSize: FontSize.xs, color: 'var(--text-secondary)' }}>
               Skip for now and head to your dashboard. You can fill these in anytime from your home profile to sharpen your recommendations.
             </div>
           </div>

@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Colors } from '@/constants/theme';
+import { Colors, FontSize } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
 
 const DISMISS_KEY_PREFIX = 'canopy.improveRec.dismissed.';
@@ -68,17 +68,17 @@ export default function ImproveRecommendationsBanner() {
           backgroundColor: `${Colors.copper}1F`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
-          fontSize: 20,
+          fontSize: FontSize.xl,
         }}
         aria-hidden
       >
         ✨
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: Colors.charcoal, marginBottom: 4 }}>
+        <div style={{ fontSize: FontSize.md, fontWeight: 700, color: Colors.charcoal, marginBottom: 4 }}>
           Sharpen your recommendations
         </div>
-        <div style={{ fontSize: 13, color: Colors.medGray, lineHeight: 1.5, marginBottom: 8 }}>
+        <div style={{ fontSize: FontSize.sm, color: Colors.medGray, lineHeight: 1.5, marginBottom: 8 }}>
           You took the quick start. Tell us about your home's systems and equipment so we can tailor the maintenance plan to what you actually have — takes about 2 minutes.
         </div>
         <button
@@ -88,7 +88,7 @@ export default function ImproveRecommendationsBanner() {
             background: 'transparent',
             border: 'none',
             padding: '4px 0',
-            fontSize: 13,
+            fontSize: FontSize.sm,
             fontWeight: 600,
             color: Colors.copper,
             cursor: 'pointer',
@@ -103,7 +103,7 @@ export default function ImproveRecommendationsBanner() {
         style={{
           background: 'transparent',
           border: 'none',
-          fontSize: 18,
+          fontSize: FontSize.lg,
           color: Colors.medGray,
           cursor: 'pointer',
           padding: 4,

@@ -26,6 +26,7 @@ import SetupChecklist from '@/components/SetupChecklist';
 import FirstVisitOrientationCard from '@/components/FirstVisitOrientationCard';
 import AddOnNudge, { nudgeAddOnFromTaskCategory } from '@/components/AddOnNudge';
 import RecallAlertBanner from '@/components/RecallAlertBanner';
+import ImproveRecommendationsBanner from '@/components/ImproveRecommendationsBanner';
 import { getDocuments, getHomeMembers, supabase } from '@/services/supabase';
 import type { MaintenanceTask, HomeJoinRequest } from '@/types';
 import { trackEvent } from '@/utils/analytics';
@@ -471,10 +472,19 @@ export default function Dashboard() {
   }, [tasks, weekStart.getTime(), weekEnd.getTime()]);
 
   // Reuse the health score computed above for task ordering — avoids recomputing.
-  // Only `score` is still needed: DashboardHeroStrip renders the glance; the old
-  // HealthGauge card (which consumed label/completedCount/totalCount/overdueCount)
-  // was removed 2026-04-21 during the Wave E jank pass.
-  const { score: healthScore } = healthDataForSort;
+  // 2026-04-29: extract the breakdown components in addition to the score so
+  // the DashboardHeroStrip can surface a behavior-driving driver hint (lowest
+  // contributor + actionable copy). Replaces the prior "tap to see more"
+  // generic CTA with a real prompt like "3 overdue tasks pulling your score
+  // down — clear one to claw back ~3 points."
+  const {
+    score: healthScore,
+    rolling90,
+    currentMonth,
+    overdueCount: healthOverdueCount,
+    completedCount: healthCompletedCount,
+    totalCount: healthTotalCount,
+  } = healthDataForSort;
 
   // Dismiss the active home-health alert banner (Item 13).
   const dismissHomeHealthAlert = async () => {
@@ -682,6 +692,11 @@ export default function Dashboard() {
 
       {/* CPSC Recall Alerts */}
       <RecallAlertBanner />
+
+      {/* 2026-04-29 (#4 full): post-Quick-Start nudge. Self-gated — only
+          renders for users whose home looks like they took the Quick Start
+          path (no foundation, no lawn, no equipment, no system flags). */}
+      <ImproveRecommendationsBanner />
 
       {/* Pending Home Member Invites */}
       <PendingInvites />
@@ -899,6 +914,13 @@ export default function Dashboard() {
         <div style={{ marginBottom: 16 }}>
           <DashboardHeroStrip
             healthScore={healthScore}
+            healthBreakdown={{
+              rolling90,
+              currentMonth,
+              overdueCount: healthOverdueCount,
+              completedCount: healthCompletedCount,
+              totalCount: healthTotalCount,
+            }}
             tokenLocked={tier === 'free'}
             tokenLockReason="Upgrade to share your Home Token with buyers and agents."
           />

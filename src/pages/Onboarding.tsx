@@ -217,6 +217,12 @@ export default function Onboarding() {
     year_built: '', square_footage: '',
     stories: '1', bedrooms: '3', bathrooms: '2', garage_spaces: '0',
   });
+  // 2026-04-29: onboarding compression — collapse stories/beds/baths/garage
+  // under a "More about your home" disclosure. Defaults to closed so users
+  // see ~5 essentials (address autocomplete, year, sqft) before "Next".
+  // The hidden fields keep their default values (1/3/2/0) until the user
+  // expands and overrides — same task-engine inputs, no activation block.
+  const [showAddressMoreDetails, setShowAddressMoreDetails] = useState(false);
 
   // Step 2: Home Systems
   const [systemsForm, setSystemsForm] = useState({
@@ -1230,28 +1236,45 @@ export default function Onboarding() {
             </div>
           </div>
 
-          <div className="grid-4">
-            <div className="form-group">
-              <label>Stories</label>
-              <input className="form-input" type="number" value={addressForm.stories}
-                onChange={e => setAddressForm({ ...addressForm, stories: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label>Beds</label>
-              <input className="form-input" type="number" value={addressForm.bedrooms}
-                onChange={e => setAddressForm({ ...addressForm, bedrooms: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label>Baths</label>
-              <input className="form-input" type="number" value={addressForm.bathrooms}
-                onChange={e => setAddressForm({ ...addressForm, bathrooms: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label>Garage</label>
-              <input className="form-input" type="number" value={addressForm.garage_spaces}
-                onChange={e => setAddressForm({ ...addressForm, garage_spaces: e.target.value })} />
-            </div>
+          {/* 2026-04-29: onboarding compression — stories/beds/baths/garage
+              are collapsed under a disclosure. Defaults keep their values
+              (1/3/2/0) so the form still submits without the user expanding. */}
+          <div style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ fontSize: 13, padding: '8px 12px' }}
+              onClick={() => setShowAddressMoreDetails(v => !v)}
+              aria-expanded={showAddressMoreDetails}
+            >
+              {showAddressMoreDetails ? '− Hide optional details' : '+ Optional: stories, beds, baths, garage'}
+            </button>
           </div>
+
+          {showAddressMoreDetails && (
+            <div className="grid-4">
+              <div className="form-group">
+                <label>Stories</label>
+                <input className="form-input" type="number" value={addressForm.stories}
+                  onChange={e => setAddressForm({ ...addressForm, stories: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Beds</label>
+                <input className="form-input" type="number" value={addressForm.bedrooms}
+                  onChange={e => setAddressForm({ ...addressForm, bedrooms: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Baths</label>
+                <input className="form-input" type="number" value={addressForm.bathrooms}
+                  onChange={e => setAddressForm({ ...addressForm, bathrooms: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Garage</label>
+                <input className="form-input" type="number" value={addressForm.garage_spaces}
+                  onChange={e => setAddressForm({ ...addressForm, garage_spaces: e.target.value })} />
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-sm mt-lg">
             <button className="btn btn-ghost" onClick={() => isAddPropertyMode ? navigate('/', { replace: true }) : setStep(0)}>
@@ -1923,6 +1946,48 @@ export default function Onboarding() {
             <button className="btn btn-primary" onClick={handleSystemsSubmit} disabled={saving}>
               {saving ? 'Saving...' : 'Next'}
             </button>
+          </div>
+
+          {/* 2026-04-29 (#4 full): explicit Quick Start path. Submits with
+              whatever the user has selected (could be empty); every has_*
+              flag defaults to false, so the user gets the universal task
+              list immediately. Dashboard nudge prompts them to fill systems
+              later. Closes the 90-second activation target. */}
+          <div
+            style={{
+              marginTop: 24,
+              padding: 16,
+              border: '1px dashed var(--color-copper)',
+              borderRadius: 8,
+              cursor: 'pointer',
+              textAlign: 'center',
+            }}
+            onClick={() => {
+              setSkipAllSystemsDetails(true);
+              setSkipFireplaceDetails(true);
+              setSkipFilterDetails(true);
+              setSkipPoolDetails(true);
+              handleSystemsSubmit();
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                setSkipAllSystemsDetails(true);
+                setSkipFireplaceDetails(true);
+                setSkipFilterDetails(true);
+                setSkipPoolDetails(true);
+                handleSystemsSubmit();
+              }
+            }}
+            aria-label="Quick start — skip systems for now and go straight to your dashboard"
+          >
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-copper)', marginBottom: 2 }}>
+              Quick start →
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+              Skip for now and head to your dashboard. You can fill these in anytime from your home profile to sharpen your recommendations.
+            </div>
           </div>
         </div>
       )}

@@ -49,6 +49,10 @@ export default function ProInspection() {
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [finalNotes, setFinalNotes] = useState('');
   const [generateAISummary, setGenerateAISummary] = useState(true);
+  // 2026-05-02 (INSPECTION_STRATEGY): one-click promote — roll this visit's
+  // findings into a home_inspections row stamped onto the Home Token. Pro
+  // can opt in per-visit; defaults on.
+  const [promoteToHomeToken, setPromoteToHomeToken] = useState(true);
   const [homeownerSignature, setHomeownerSignature] = useState<string | null>(null);
   const [homeownerName, setHomeownerName] = useState('');
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -463,6 +467,25 @@ export default function ProInspection() {
         }
       } catch (nextErr) {
         console.warn('Auto-propose next visit failed (non-blocking):', nextErr);
+      }
+
+      // 2026-05-02 (INSPECTION_STRATEGY): one-click Home Token auto-stamp.
+      // Calls promote_visit_to_home_inspection RPC which rolls the visit's
+      // findings into a home_inspections row, HMAC-stamps it, and triggers
+      // the homeowner notification + buyer-facing PDF generation. Failure
+      // is non-blocking — the visit itself is already saved.
+      if (promoteToHomeToken && visitId) {
+        try {
+          const { error: promoteErr } = await supabase.rpc('promote_visit_to_home_inspection', {
+            p_visit_id: visitId,
+            p_overall_grade: 'good',
+          });
+          if (promoteErr) {
+            console.warn('promote_visit_to_home_inspection failed (non-blocking):', promoteErr);
+          }
+        } catch (promoteErr) {
+          console.warn('promote_visit_to_home_inspection threw (non-blocking):', promoteErr);
+        }
       }
 
       setShowCompleteModal(false);
@@ -1155,7 +1178,7 @@ export default function ProInspection() {
                 alignItems: 'center',
                 gap: Spacing.sm,
                 cursor: 'pointer',
-                marginBottom: Spacing.lg,
+                marginBottom: Spacing.sm,
               }}
             >
               <input
@@ -1165,6 +1188,37 @@ export default function ProInspection() {
                 style={{ cursor: 'pointer' }}
               />
               <span style={{ fontSize: FontSize.sm, color: Colors.charcoal }}>Generate AI Summary for Homeowner</span>
+            </label>
+
+            {/* 2026-05-02 (INSPECTION_STRATEGY): one-click Home Token stamp.
+                Rolls this visit's findings into a HMAC-stamped maintenance
+                inspection record on the homeowner's Home Token. */}
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: Spacing.sm,
+                cursor: 'pointer',
+                marginBottom: Spacing.lg,
+                padding: `${Spacing.sm}px ${Spacing.md}px`,
+                background: `${Colors.copper}10`,
+                borderRadius: BorderRadius.sm,
+                border: `1px solid ${Colors.copper}30`,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={promoteToHomeToken}
+                onChange={(e) => setPromoteToHomeToken(e.target.checked)}
+                style={{ cursor: 'pointer', marginTop: 2 }}
+              />
+              <span style={{ fontSize: FontSize.sm, color: Colors.charcoal, lineHeight: 1.4 }}>
+                <strong>🛡️ Stamp this visit onto the Home Token</strong>
+                <br />
+                <span style={{ fontSize: FontSize.xs, color: Colors.medGray }}>
+                  Adds a tamper-evident maintenance inspection record using your visit findings — visible to the homeowner and any buyer the Home Token is shared with.
+                </span>
+              </span>
             </label>
 
             <div style={{ display: 'flex', gap: Spacing.md }}>

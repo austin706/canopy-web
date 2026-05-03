@@ -6,7 +6,6 @@ import { PLANS, loadServiceAreas, isProAvailableInArea } from '@/services/subscr
 import MessageBanner from '@/components/MessageBanner';
 import { getMessageVariant, messageColors } from '@/utils/messageType';
 import { enrollProSubscriber, findProviderForZip } from '@/services/proEnrollment';
-import { requestConsultation } from '@/services/proPlus';
 import { Colors } from '@/constants/theme';
 import type { SubscriptionTier } from '@/types';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
@@ -125,13 +124,11 @@ export default function Subscription() {
 
   const [enrolling, setEnrolling] = useState(false);
   const [enrollmentResult, setEnrollmentResult] = useState<{ provider: { business_name: string } | null; visitCreated: boolean } | null>(null);
-  const [requestingProPlus, setRequestingProPlus] = useState(false);
-  const [proPlusMessage, setProPlusMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState<{ text: string; plan: string } | null>(null);
   const [notifyMeSubmitted, setNotifyMeSubmitted] = useState<Record<string, boolean>>({});
   const [notifyMeLoading, setNotifyMeLoading] = useState<string | null>(null);
 
-  const handleNotifyMe = async (tierInterest: 'pro' | 'pro_plus') => {
+  const handleNotifyMe = async (tierInterest: 'pro') => {
     if (!user) return;
     setNotifyMeLoading(tierInterest);
     try {
@@ -157,36 +154,6 @@ export default function Subscription() {
     }
   };
 
-  // Handle Pro+ consultation request
-  const handleProPlusRequest = async () => {
-    if (!user || !home) {
-      setProPlusMessage('Please complete your home profile before requesting Pro+.');
-      setTimeout(() => setProPlusMessage(''), 5000);
-      return;
-    }
-    setRequestingProPlus(true);
-    try {
-      // Find a provider for their zip
-      const provider = home.zip_code ? await findProviderForZip(home.zip_code) : null;
-      if (!provider) {
-        setProPlusMessage('No Pro+ providers are available in your area yet. Join the waitlist to be notified!');
-        setTimeout(() => setProPlusMessage(''), 5000);
-        return;
-      }
-      await requestConsultation(home.id, provider.id);
-      setProPlusMessage('Consultation requested! Your Canopy pro will reach out to schedule an in-home assessment. Check your notifications for updates.');
-      setTimeout(() => setProPlusMessage(''), 10000);
-    } catch (e: any) {
-      if (e.message?.includes('duplicate') || e.code === '23505') {
-        setProPlusMessage('You already have a Pro+ consultation request. Check your Pro+ page for status updates.');
-      } else {
-        setProPlusMessage(e.message || 'Failed to request consultation');
-      }
-      setTimeout(() => setProPlusMessage(''), 5000);
-    } finally {
-      setRequestingProPlus(false);
-    }
-  };
 
   // Handle Stripe redirect success/cancel
   useEffect(() => {
@@ -215,7 +182,7 @@ export default function Subscription() {
           if (data) {
             setUser({ ...user, ...data });
             // Auto-enroll if upgrading to a Pro tier
-            if ((plan === 'pro' || plan === 'pro_plus') && tier !== 'pro' && tier !== 'pro_plus') {
+            if (plan === 'pro' && tier !== 'pro') {
               handleProEnrollment(user.id);
             }
           }
@@ -383,7 +350,7 @@ export default function Subscription() {
       setMessage(`Upgraded to ${PLANS.find(p => p.value === r.tier)?.name}!`);
       setGiftCode('');
       // Auto-enroll if upgrading to Pro via gift code
-      if ((r.tier === 'pro' || r.tier === 'pro_plus') && tier !== 'pro' && tier !== 'pro_plus') {
+      if (r.tier === 'pro' && tier !== 'pro') {
         handleProEnrollment(user.id);
       }
     } catch (e: any) { setMessage(e.message); }
@@ -508,7 +475,7 @@ export default function Subscription() {
       {/* Pro Enrollment Result */}
       {enrollmentResult && !enrolling && (
         <div className="card mb-lg" style={{ background: Colors.sageMuted, padding: '20px 24px' }}>
-          <p style={{ fontWeight: 700, fontSize: 18, color: Colors.sage, margin: '0 0 8px' }}>Welcome to Canopy {tier === 'pro_plus' ? 'Pro+' : 'Pro'}!</p>
+          <p style={{ fontWeight: 700, fontSize: 18, color: Colors.sage, margin: '0 0 8px' }}>Welcome to Canopy Pro!</p>
           {enrollmentResult.provider ? (
             <>
               <p style={{ fontSize: 14, color: Colors.charcoal, margin: '0 0 4px' }}>
@@ -601,7 +568,7 @@ export default function Subscription() {
               ))}
             </ul>
             {tier !== plan.value && plan.value !== 'free' && (
-              !proAvailable && (plan.value === 'pro' || plan.value === 'pro_plus') ? (
+              !proAvailable && plan.value === 'pro' ? (
                 <div style={{
                   marginTop: 12,
                   padding: '10px 16px',
@@ -626,7 +593,7 @@ export default function Subscription() {
                       </p>
                       <button
                         className="btn btn-secondary btn-sm mt-sm"
-                        onClick={() => handleNotifyMe(plan.value as 'pro' | 'pro_plus')}
+                        onClick={() => handleNotifyMe(plan.value as 'pro')}
                         disabled={notifyMeLoading === plan.value}
                         style={{ fontSize: 12 }}
                       >
@@ -636,28 +603,12 @@ export default function Subscription() {
                   )}
                 </div>
               ) : isInquiry ? (
-                <>
-                  <button
-                    className="btn btn-secondary btn-full mt-md"
-                    onClick={handleProPlusRequest}
-                    disabled={requestingProPlus}
-                  >
-                    {requestingProPlus ? 'Requesting...' : 'Request Consultation'}
-                  </button>
-                  {proPlusMessage && (
-                    <div style={{
-                      marginTop: 10,
-                      padding: '10px 14px',
-                      borderRadius: 8,
-                      fontSize: 13,
-                      lineHeight: 1.4,
-                      background: messageColors(getMessageVariant(proPlusMessage)).bg,
-                      color: messageColors(getMessageVariant(proPlusMessage)).fg,
-                    }}>
-                      {proPlusMessage}
-                    </div>
-                  )}
-                </>
+                <button
+                  className="btn btn-secondary btn-full mt-md"
+                  onClick={() => navigate('/add-ons')}
+                >
+                  Explore Pro+ Services
+                </button>
               ) : (
                 <button
                   className="btn btn-primary btn-full mt-md"
@@ -689,7 +640,7 @@ export default function Subscription() {
       {/* Service Area Map */}
       <div className="card mb-lg">
         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Pro Service Areas</h3>
-        <p className="text-sm text-gray mb-md">Home Pro and Pro+ are available in these areas. Check if your zip code is covered.</p>
+        <p className="text-sm text-gray mb-md">Home Pro is available in these areas. Check if your zip code is covered.</p>
         <ServiceAreaMap userZip={home?.zip_code} compact />
       </div>
 

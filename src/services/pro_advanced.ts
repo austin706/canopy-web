@@ -14,7 +14,6 @@ export interface ServiceAreaService {
   is_active: boolean;
   base_price_cents: number | null;
   estimated_minutes: number | null;
-  requires_pro_plus: boolean;
   notes: string | null;
   sort_order: number;
   created_at: string;

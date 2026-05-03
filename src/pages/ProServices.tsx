@@ -194,8 +194,7 @@ export default function ProServices() {
   const [success, setSuccess] = useState('');
 
   const tier = user?.subscription_tier || 'free';
-  const isPro = tier === 'pro' || tier === 'pro_plus';
-  const isProPlus = tier === 'pro_plus';
+  const isPro = tier === 'pro';
 
   useEffect(() => {
     if (home && user) {
@@ -470,12 +469,10 @@ export default function ProServices() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <p style={{ fontWeight: 700, fontSize: 16, color: Colors.charcoal, margin: '0 0 4px' }}>
-              {isProPlus ? 'Pro+ Concierge' : isPro ? 'Pro Plan' : tier === 'home' ? 'Home Plan' : 'Free Plan'}
+              {isPro ? 'Pro Plan' : tier === 'home' ? 'Home Plan' : 'Free Plan'}
             </p>
             <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>
-              {isProPlus
-                ? 'Full concierge service — all maintenance handled for you.'
-                : isPro
+              {isPro
                 ? 'Includes 6 bimonthly maintenance visits per year from your assigned Canopy pro.'
                 : 'Request any service below on-demand. Upgrade to Pro for scheduled maintenance visits.'}
             </p>
@@ -492,12 +489,10 @@ export default function ProServices() {
       {isPro && (
         <div style={{ marginBottom: 32 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, color: Colors.charcoal, marginBottom: 8 }}>
-            {isProPlus ? 'Your Next Concierge Visit' : 'Your Next Bimonthly Visit'}
+            Your Next Bimonthly Visit
           </h2>
           <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 16 }}>
-            {isProPlus
-              ? 'Your Pro+ plan includes complete home care. Your Canopy team handles scheduling, maintenance, and coordination.'
-              : 'Your Pro plan includes a maintenance visit every other month covering routine inspections, filter changes, and minor tasks. These visits are included in your plan at no extra cost.'}
+            Your Pro plan includes a maintenance visit every other month covering routine inspections, filter changes, and minor tasks. These visits are included in your plan at no extra cost.
           </p>
 
           {nextVisit ? (

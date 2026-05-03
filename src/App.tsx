@@ -95,7 +95,6 @@ const ProProfile = lazyRetry(() => import('@/pages/ProProfile'));
 const CreateTask = lazyRetry(() => import('@/pages/CreateTask'));
 const ProServices = lazyRetry(() => import('@/pages/ProServices'));
 const Visits = lazyRetry(() => import('@/pages/Visits'));
-const ProPlusManage = lazyRetry(() => import('@/pages/ProPlusManage'));
 const Quotes = lazyRetry(() => import('@/pages/Quotes'));
 const Invoices = lazyRetry(() => import('@/pages/Invoices'));
 const ProVisitSchedule = lazyRetry(() => import('@/pages/ProVisitSchedule'));
@@ -103,6 +102,9 @@ const ProQuotesInvoices = lazyRetry(() => import('@/pages/ProQuotesInvoices'));
 const ProJobQueue = lazyRetry(() => import('@/pages/ProJobQueue'));
 const ProAddOnQuotes = lazyRetry(() => import('@/pages/ProAddOnQuotes'));
 const ProInspection = lazyRetry(() => import('@/pages/ProInspection'));
+// 2026-05-02: Inspector-facing page for the Annual Certified Home Inspection
+// add-on (distinct from ProInspection, which handles bimonthly visit checklists).
+const CertifiedInspection = lazyRetry(() => import('@/pages/CertifiedInspection'));
 const HomeAssistant = lazyRetry(() => import('@/pages/HomeAssistant'));
 const SalePrep = lazyRetry(() => import('@/pages/SalePrep'));
 const SalePrepPreview = lazyRetry(() => import('@/pages/SalePrepPreview'));
@@ -465,6 +467,8 @@ export default function App() {
             <Route path="/pro-portal/quotes-invoices" element={<ProQuotesInvoices />} />
             <Route path="/pro-portal/job-queue" element={<ProJobQueue />} />
             <Route path="/pro-portal/inspection/:visitId" element={<ProInspection />} />
+            {/* 2026-05-02: Annual Certified Home Inspection add-on flow. */}
+            <Route path="/pro-portal/certified-inspection/:homeId" element={<CertifiedInspection />} />
             <Route path="/pro-portal/add-on-quotes" element={<ProAddOnQuotes />} />
             <Route path="/pro-portal/payouts" element={<ProPayouts />} />
             <Route path="/pro-portal/onboarding" element={<TechnicianOnboarding />} />
@@ -524,7 +528,6 @@ export default function App() {
             <Route path="/pro-request" element={<ProRequest />} />
             <Route path="/pro-services" element={<ProServices />} />
             <Route path="/visits" element={<Visits />} />
-            <Route path="/pro-plus" element={<ProPlusManage />} />
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/agent" element={<AgentView />} />

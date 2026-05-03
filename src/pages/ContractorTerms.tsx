@@ -87,7 +87,7 @@ export default function ContractorTerms() {
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>7. Bimonthly Visit Program</h2>
       <p>
-        Pro and Pro+ subscribers receive periodic maintenance visits. Bimonthly visits are allocated automatically based on service area and provider availability.
+        Pro subscribers receive periodic maintenance visits. Bimonthly visits are allocated automatically based on service area and provider availability. Add-on services purchased through the Pro+ services umbrella (Annual Certified Home Inspection, pest, lawn, pool, septic, cleaning, etc.) are scheduled separately.
       </p>
       <ul style={{ paddingLeft: 24, marginTop: 8 }}>
         <li style={{ marginBottom: 8 }}>Provider must complete the standardized inspection checklist provided by Canopy</li>

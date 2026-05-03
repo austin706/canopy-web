@@ -32,7 +32,7 @@ export default function AdminEmails() {
   >('admin');
 
   // --- Broadcast composer state ---
-  const [bcTiers, setBcTiers] = useState<Array<'free' | 'home' | 'pro' | 'pro_plus'>>([]);
+  const [bcTiers, setBcTiers] = useState<Array<'free' | 'home' | 'pro'>>([]);
   const [bcRoles, setBcRoles] = useState<Array<'user' | 'agent' | 'admin' | 'pro_provider'>>([]);
   const [bcStates, setBcStates] = useState<string>(''); // comma-separated 2-letter codes
   const [bcHasAgent, setBcHasAgent] = useState<'any' | 'yes' | 'no'>('any');
@@ -123,7 +123,7 @@ export default function AdminEmails() {
     }
   };
 
-  const toggleTier = (t: 'free' | 'home' | 'pro' | 'pro_plus') =>
+  const toggleTier = (t: 'free' | 'home' | 'pro') =>
     setBcTiers((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   const toggleRole = (r: 'user' | 'agent' | 'admin' | 'pro_provider') =>
     setBcRoles((prev) => (prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]));
@@ -432,7 +432,7 @@ export default function AdminEmails() {
                   <div>
                     <label style={bcLabelStyle}>Subscription tier</label>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {(['free', 'home', 'pro', 'pro_plus'] as const).map((t) => (
+                      {(['free', 'home', 'pro'] as const).map((t) => (
                         <button
                           key={t}
                           type="button"

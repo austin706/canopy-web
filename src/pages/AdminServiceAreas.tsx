@@ -949,14 +949,8 @@ export default function AdminServiceAreas() {
                         />
                         Active
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-                        <input
-                          type="checkbox"
-                          checked={editingService.requires_pro_plus || false}
-                          onChange={e => setEditingService({ ...editingService, requires_pro_plus: e.target.checked })}
-                        />
-                        Requires Pro+
-                      </label>
+                      {/* 2026-04-29: "Requires Pro+" gate removed — Pro+ tier killed.
+                          Per-service gating now lives in add_on_categories. */}
                       <div style={{ flex: 1 }} />
                       <button className="btn btn-ghost btn-sm" onClick={() => setEditingService(null)}>Cancel</button>
                       <button
@@ -976,7 +970,6 @@ export default function AdminServiceAreas() {
                       service_key: '', service_label: '', category: 'General',
                       is_active: true, base_price_cents: 0, estimated_minutes: 30,
                       sort_order: (catalogServices.length + 1) * 10,
-                      requires_pro_plus: false,
                     })}
                   >
                     + Add Service

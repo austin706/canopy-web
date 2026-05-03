@@ -7,7 +7,6 @@ import { verifyAddress, findExistingProperty } from '@/services/addressVerificat
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
 import { PLANS, isProAvailableInArea, loadServiceAreas, getEquipmentLimit, getHomeLimit, isPremium } from '@/services/subscriptionGate';
-import { requestConsultation } from '@/services/proPlus';
 import { findProviderForZip } from '@/services/proEnrollment';
 import { EQUIPMENT_LIFESPAN_DEFAULTS } from '@/constants/maintenance';
 import { lookupByModelNumber } from '@/services/ai';
@@ -271,10 +270,8 @@ export default function Onboarding() {
   const [planMessageType, setPlanMessageType] = useState<'success' | 'error'>('success');
   // 2026-04-27: tier consolidation (mobile parity). Six tiers on one
   // paywall was paywall fatigue — Free/Home/Pro shown by default,
-  // 2-Packs behind "Have multiple homes?", Pro+ behind "Need a fully
-  // managed plan?" lead-capture.
+  // 2-Packs behind "Have multiple homes?", Pro+ removed (now add-ons).
   const [showMultiHome, setShowMultiHome] = useState(false);
-  const [showProPlus, setShowProPlus] = useState(false);
 
   // C11: Inline error banner (replaces alert() calls throughout onboarding)
   const [inlineError, setInlineError] = useState<string | null>(null);
@@ -305,11 +302,10 @@ export default function Onboarding() {
     }
   }, [step]);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [requestingProPlus, setRequestingProPlus] = useState(false);
   const [notifyMeSubmitted, setNotifyMeSubmitted] = useState<Record<string, boolean>>({});
   const [notifyMeLoading, setNotifyMeLoading] = useState<string | null>(null);
 
-  const handleNotifyMe = async (tierInterest: 'pro' | 'pro_plus') => {
+  const handleNotifyMe = async (tierInterest: 'pro') => {
     if (!user) return;
     setNotifyMeLoading(tierInterest);
     try {
@@ -354,64 +350,6 @@ export default function Onboarding() {
     setCheckoutLoading(false);
   }, []);
 
-  // Handle Pro+ consultation request
-  const handleProPlusRequest = async () => {
-    if (!user) {
-      setPlanMessage('Please sign in before requesting Pro+.');
-      setPlanMessageType('error');
-      setTimeout(() => setPlanMessage(''), 5000);
-      return;
-    }
-    setRequestingProPlus(true);
-    try {
-      const home = useStore.getState().home;
-      if (!home?.id) {
-        setPlanMessage('Please complete your home profile before requesting Pro+.');
-        setPlanMessageType('error');
-        setTimeout(() => setPlanMessage(''), 5000);
-        return;
-      }
-      const provider = await findProviderForZip(home.zip_code || '');
-      if (!provider) {
-        // No provider matched — still submit the request to admins via notification
-        // and let them know we'll follow up
-        const { sendNotification } = await import('@/services/supabase');
-        const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin');
-        if (admins) {
-          for (const admin of admins) {
-            sendNotification({
-              user_id: admin.id,
-              title: 'New Pro+ Consultation Interest',
-              body: `${user.full_name || user.email} at ${home.address || 'their home'}, ${home.city || ''} ${home.state || ''} ${home.zip_code || ''} is interested in Pro+ but no provider is matched to their area yet.`,
-              category: 'pro_plus',
-              action_url: '/admin/users',
-            }).catch((err) => {
-              logger.warn('Failed to send Pro+ notification:', err?.message);
-            });
-          }
-        }
-        setPlanMessage('Consultation request submitted! Our team will reach out to discuss Pro+ options for your area.');
-        setPlanMessageType('success');
-        setTimeout(() => setPlanMessage(''), 8000);
-        return;
-      }
-      await requestConsultation(home.id, provider.id);
-      setPlanMessage('Consultation requested! Your Canopy pro will reach out to schedule an in-home assessment.');
-      setPlanMessageType('success');
-      setTimeout(() => setPlanMessage(''), 8000);
-    } catch (e: any) {
-      if (e.message?.includes('duplicate') || e.code === '23505') {
-        setPlanMessage('You already have a Pro+ consultation request. You\'ll be contacted soon!');
-        setPlanMessageType('success');
-      } else {
-        setPlanMessage(e.message || 'Failed to request consultation');
-        setPlanMessageType('error');
-      }
-      setTimeout(() => setPlanMessage(''), 5000);
-    } finally {
-      setRequestingProPlus(false);
-    }
-  };
 
   // Step 4: Equipment
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
@@ -842,14 +780,12 @@ export default function Onboarding() {
 
       // Send welcome notification (for all tiers)
       const tier = user.subscription_tier || selectedPlan || 'free';
-      const tierLabel = tier === 'pro_plus' ? 'Pro+' : tier === 'pro' ? 'Pro' : tier === 'home' ? 'Home' : 'Free';
+      const tierLabel = tier === 'pro' ? 'Pro' : tier === 'home' ? 'Home' : 'Free';
       const welcomeBody = tier === 'free'
         ? 'Your home profile is set up! Canopy will help you stay on top of maintenance with personalized task reminders, equipment tracking, and seasonal checklists. Explore your dashboard to see what\'s coming up.'
         : tier === 'home'
         ? 'Your Home plan is active! You now have AI-powered maintenance tasks, unlimited equipment tracking, personalized checklists, and weather alerts. Check your dashboard to see your first tasks.'
-        : tier === 'pro'
-        ? 'Your Pro plan is active! You now have bimonthly professional visits, AI-powered tasks, and full equipment tracking. We\'ll reach out soon to schedule your first visit.'
-        : 'Your Pro+ concierge plan is active! Your dedicated technician will be in touch shortly.';
+        : 'Your Pro plan is active! You now have bimonthly professional visits, AI-powered tasks, and full equipment tracking. We\'ll reach out soon to schedule your first visit.';
       sendNotification({
         user_id: user.id,
         title: `Welcome to Canopy${tierLabel !== 'Free' ? ' ' + tierLabel : ''}!`,
@@ -1024,7 +960,7 @@ export default function Onboarding() {
         if (!showCheckoutModal) setCheckoutLoading(false);
       }
     }
-    // Pro+ or unknown plan — proceed (Pro+ is inquiry-based)
+    // Unknown or inquiry plan — proceed
     setStep(4);
   };
 
@@ -2000,7 +1936,7 @@ export default function Onboarding() {
             Start free or unlock the full Canopy experience. You can change your plan anytime.
           </p>
 
-          {/* A2-5: Pre-flight service-area explainer. Pro / Pro+ are launched in Tulsa
+          {/* A2-5: Pre-flight service-area explainer. Pro is launched in Tulsa
                first; this is front-and-center so homeowners outside the area understand
                they can still use Free + Home and join the waitlist for Pro visits. */}
           <div
@@ -2018,15 +1954,15 @@ export default function Onboarding() {
             {proAvailable ? (
               <>
                 <strong>Good news — in-person Pro visits are available in your area.</strong>{' '}
-                Free and Home plans are available everywhere. Pro and Pro+ include a Certified Pro maintenance
+                Free and Home plans are available everywhere. Pro includes a Certified Pro maintenance
                 visit every 2 months, which we currently run in and around Tulsa, OK.
               </>
             ) : (
               <>
                 <strong>Pro visits aren't live in your area yet.</strong>{' '}
-                You can still use the Free or Home plan — every digital feature works anywhere. Pro and Pro+
-                include in-person Certified Pro visits, currently launching in Tulsa, OK. Tap <em>Notify Me</em>{' '}
-                on those plans below to join the waitlist — we'll email you when we're live near you.
+                You can still use the Free or Home plan — every digital feature works anywhere. Pro
+                includes in-person Certified Pro visits, currently launching in Tulsa, OK. Tap <em>Notify Me</em>{' '}
+                on that plan below to join the waitlist — we'll email you when we're live near you.
               </>
             )}
           </div>
@@ -2044,14 +1980,13 @@ export default function Onboarding() {
 
           {/* 2026-04-27: tier consolidation (mobile parity). Six tiers on
               one paywall was paywall fatigue — Free/Home/Pro shown by
-              default, 2-Packs behind "Have multiple homes?", Pro+ behind
-              "Need a fully managed plan?" lead-capture. Web mirrors the
-              mobile UX from Canopy-App/app/onboarding/plan.tsx. */}
+              default, 2-Packs behind "Have multiple homes?", Pro+ removed
+              (now add-ons). Web mirrors the mobile UX from Canopy-App/app/onboarding/plan.tsx. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
             {PLANS.filter(plan => plan.value === 'free' || plan.value === 'home' || plan.value === 'pro').map(plan => {
               const isSelected = selectedPlan === plan.value;
               const isInquiry = (plan as any).inquireForPricing === true;
-              const isProTier = plan.value === 'pro' || plan.value === 'pro_plus';
+              const isProTier = plan.value === 'pro';
               const isLocked = isProTier && !proAvailable;
 
               return (
@@ -2086,7 +2021,7 @@ export default function Onboarding() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={{ color: Colors.medGray }}>Not available in your area yet</span>
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleNotifyMe(plan.value as 'pro' | 'pro_plus'); }}
+                            onClick={(e) => { e.stopPropagation(); handleNotifyMe(plan.value as 'pro'); }}
                             disabled={notifyMeLoading === plan.value}
                             style={{
                               background: 'none', border: `1px solid ${Colors.copper}`, borderRadius: 6,
@@ -2207,58 +2142,6 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* Pro+ expandable — concierge tier with sales handoff */}
-          <button
-            type="button"
-            onClick={() => setShowProPlus((prev) => !prev)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              width: '100%',
-              padding: '12px 16px',
-              background: 'var(--color-card-bg)',
-              border: `1px solid ${Colors.lightGray}`,
-              borderRadius: 8,
-              marginBottom: 8,
-              fontSize: 14,
-              fontWeight: 600,
-              color: Colors.charcoal,
-              cursor: 'pointer',
-              textAlign: 'left' as const,
-            }}
-            aria-expanded={showProPlus}
-          >
-            <span style={{ flex: 1 }}>✨ Need a fully managed plan?</span>
-            <span style={{ color: Colors.medGray }}>{showProPlus ? '▴' : '▾'}</span>
-          </button>
-          {showProPlus && (
-            <div
-              onClick={() => setSelectedPlan('pro_plus' as SubscriptionTier)}
-              role="radio"
-              aria-checked={selectedPlan === 'pro_plus'}
-              tabIndex={0}
-              style={{
-                cursor: 'pointer',
-                background: `${Colors.copper}0A`,
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 16,
-                marginLeft: 16,
-                border: `2px solid ${selectedPlan === 'pro_plus' ? Colors.copper : `${Colors.copper}33`}`,
-              }}
-            >
-              <div style={{ fontSize: 16, fontWeight: 700, color: Colors.copperDark, marginBottom: 4 }}>Home Pro+</div>
-              <p style={{ fontSize: 13, color: Colors.charcoal, lineHeight: 1.5, margin: '0 0 8px' }}>
-                Full home concierge — we handle everything. All add-on services included,
-                priority scheduling, dedicated pro provider, seasonal deep-cleans (pressure
-                wash, carpet, chimney). Pricing is custom based on your home.
-              </p>
-              <p style={{ fontSize: 12, color: Colors.medGray, fontStyle: 'italic', margin: 0 }}>
-                Select to request a Pro+ consultation. We'll reach out within 1 business day —
-                you can keep setting up your home in the meantime.
-              </p>
-            </div>
-          )}
-
           {/* Agent / Gift Code */}
           <div style={{ background: 'var(--color-background)', borderRadius: 12, padding: 20, marginBottom: 24 }}>
             <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Have an agent or gift code?</h3>
@@ -2278,22 +2161,11 @@ export default function Onboarding() {
 
           <div className="flex gap-sm">
             <button className="btn btn-ghost" onClick={() => setStep(2)}>Back</button>
-            {selectedPlan === 'pro_plus' ? (
-              <button
-                className="btn btn-secondary"
-                onClick={handleProPlusRequest}
-                disabled={requestingProPlus}
-                style={{ flex: 1 }}
-              >
-                {requestingProPlus ? 'Requesting...' : 'Request Pro+ Consultation'}
-              </button>
-            ) : (
-              <button className="btn btn-primary" onClick={handlePlanCheckout} disabled={checkoutLoading}>
+            <button className="btn btn-primary" onClick={handlePlanCheckout} disabled={checkoutLoading}>
                 {checkoutLoading ? 'Loading checkout...'
                   : selectedPlan === 'free' ? 'Continue with Free'
                   : `Continue with ${PLANS.find(p => p.value === selectedPlan)?.name}`}
               </button>
-            )}
           </div>
           <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 12 }}>
             You can always change your plan later from Settings.

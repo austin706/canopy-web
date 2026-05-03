@@ -27,6 +27,7 @@ import FirstVisitOrientationCard from '@/components/FirstVisitOrientationCard';
 import AddOnNudge, { nudgeAddOnFromTaskCategory } from '@/components/AddOnNudge';
 import RecallAlertBanner from '@/components/RecallAlertBanner';
 import ImproveRecommendationsBanner from '@/components/ImproveRecommendationsBanner';
+import InspectionNudgeBanner from '@/components/InspectionNudgeBanner';
 import { getDocuments, getHomeMembers, supabase } from '@/services/supabase';
 import type { MaintenanceTask, HomeJoinRequest } from '@/types';
 import { trackEvent } from '@/utils/analytics';
@@ -697,6 +698,11 @@ export default function Dashboard() {
           renders for users whose home looks like they took the Quick Start
           path (no foundation, no lawn, no equipment, no system flags). */}
       <ImproveRecommendationsBanner />
+
+      {/* 2026-05-02 (INSPECTION_STRATEGY): Maintenance Inspection nudge for
+          Home/Home_2 homes in Pro-enabled ZIPs that have never had an
+          inspection or last one is 12+ months old. Self-gated. */}
+      <InspectionNudgeBanner />
 
       {/* Pending Home Member Invites */}
       <PendingInvites />

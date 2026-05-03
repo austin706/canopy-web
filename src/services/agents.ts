@@ -84,7 +84,7 @@ export const redeemGiftCode = async (code: string, userId: string) => {
 
   // Notify the user of their new subscription
   try {
-    const tierLabel = gc.tier === 'home' ? 'Canopy Home' : gc.tier === 'pro' ? 'Canopy Pro' : gc.tier === 'pro_plus' ? 'Canopy Pro+' : gc.tier;
+    const tierLabel = gc.tier === 'home' ? 'Canopy Home' : gc.tier === 'pro' ? 'Canopy Pro' : gc.tier;
     await sendNotification({
       user_id: userId,
       title: 'Welcome to Canopy!',

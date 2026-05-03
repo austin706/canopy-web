@@ -382,15 +382,14 @@ export default function AgentPortal() {
     return Math.round(totalDays / redeemed.length);
   })();
   const expiringSoon = activeCodes.filter(c => c.expires_at && getDaysUntilExpiry(c.expires_at) <= 30 && getDaysUntilExpiry(c.expires_at) >= 0);
+  // 2026-04-29: 'pro_plus' tier removed.
   const tierBreakdown = {
     home: codes.filter(c => c.tier === 'home').length,
     pro: codes.filter(c => c.tier === 'pro').length,
-    pro_plus: codes.filter(c => c.tier === 'pro_plus').length,
   };
   const tierRedeemed = {
     home: codes.filter(c => c.tier === 'home' && c.redeemed_by).length,
     pro: codes.filter(c => c.tier === 'pro' && c.redeemed_by).length,
-    pro_plus: codes.filter(c => c.tier === 'pro_plus' && c.redeemed_by).length,
   };
 
   // ─── New Client Setup ───
@@ -778,8 +777,9 @@ export default function AgentPortal() {
                 <label>Subscription Tier</label>
                 <select className="form-select" value={clientForm.tier} onChange={e => setClientForm({ ...clientForm, tier: e.target.value })}>
                   <option value="home">Home</option>
+                  <option value="home_2">Home 2-Pack</option>
                   <option value="pro">Pro</option>
-                  <option value="pro_plus">Pro+</option>
+                  <option value="pro_2">Pro 2-Pack</option>
                 </select>
               </div>
               <button className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => {
@@ -1213,18 +1213,19 @@ export default function AgentPortal() {
           {/* Tier Breakdown */}
           <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Tier Breakdown</h2>
           <div className="card mb-lg" style={{ padding: 20 }}>
-            {Object.entries(tierBreakdown).map(([tier, total]) => {
+            {Object.entries(tierBreakdown).map(([tier, total], idx, arr) => {
               const redeemed = tierRedeemed[tier as keyof typeof tierRedeemed] || 0;
               const pct = total > 0 ? Math.round((redeemed / total) * 100) : 0;
-              const tierLabel = tier === 'pro_plus' ? 'Pro+' : tier.charAt(0).toUpperCase() + tier.slice(1);
+              const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
+              const isLast = idx === arr.length - 1;
               return (
-                <div key={tier} style={{ marginBottom: tier !== 'pro_plus' ? 16 : 0 }}>
+                <div key={tier} style={{ marginBottom: isLast ? 0 : 16 }}>
                   <div className="flex items-center justify-between mb-xs">
                     <span className="fw-600 text-sm">{tierLabel}</span>
                     <span className="text-sm text-gray">{redeemed} / {total} redeemed ({pct}%)</span>
                   </div>
                   <div style={{ height: 8, borderRadius: 4, background: Colors.lightGray, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${pct}%`, borderRadius: 4, background: tier === 'home' ? Colors.copper : tier === 'pro' ? Colors.sage : Colors.charcoal, transition: 'width 0.3s' }} />
+                    <div style={{ height: '100%', width: `${pct}%`, borderRadius: 4, background: tier === 'home' ? Colors.copper : Colors.sage, transition: 'width 0.3s' }} />
                   </div>
                 </div>
               );
@@ -1237,13 +1238,13 @@ export default function AgentPortal() {
             {clients.length === 0 ? (
               <p className="text-sm text-gray">No clients yet.</p>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-                {['free', 'home', 'pro', 'pro_plus'].map(tier => {
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                {['free', 'home', 'pro'].map(tier => {
                   const count = clients.filter(c => (c.subscription_tier || 'free') === tier).length;
-                  const tierLabel = tier === 'pro_plus' ? 'Pro+' : tier === 'free' ? 'Free' : tier.charAt(0).toUpperCase() + tier.slice(1);
+                  const tierLabel = tier === 'free' ? 'Free' : tier.charAt(0).toUpperCase() + tier.slice(1);
                   return (
                     <div key={tier} style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 24, fontWeight: 700, color: tier === 'free' ? Colors.medGray : tier === 'home' ? Colors.copper : tier === 'pro' ? Colors.sage : Colors.charcoal }}>{count}</div>
+                      <div style={{ fontSize: 24, fontWeight: 700, color: tier === 'free' ? Colors.medGray : tier === 'home' ? Colors.copper : Colors.sage }}>{count}</div>
                       <div className="text-xs text-gray">{tierLabel}</div>
                     </div>
                   );

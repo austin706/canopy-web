@@ -10,7 +10,7 @@
 //   (c) "Day-of SMS"    — toggle writing `profiles.visit_sms_opt_in`
 //
 // Visibility gates:
-//   • user.subscription_tier in ('pro','pro_plus','pro_2pack')
+//   • user.subscription_tier in ('pro','pro_2')   (2026-04-29: pro_plus killed)
 //   • there is a `pro_monthly_visits` row for this homeowner where
 //     `is_first_visit = true` AND `completed_at IS NULL`
 // Auto-dismisses the moment the first visit is completed.
@@ -39,7 +39,7 @@ interface ProProviderInfo {
   avatar_url: string | null;
 }
 
-const PRO_TIERS = new Set(['pro', 'pro_plus', 'pro_2pack']);
+const PRO_TIERS = new Set(['pro', 'pro_2']);
 
 const EXPECT_BULLETS: string[] = [
   'Walkthrough of HVAC, plumbing, water heater, and safety sensors (~45 min).',

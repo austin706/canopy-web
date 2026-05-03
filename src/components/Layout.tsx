@@ -61,7 +61,7 @@ export default function Layout() {
     window.location.href = '/login';
   };
 
-  const isPro = tier === 'pro' || tier === 'pro_plus';
+  const isPro = tier === 'pro';
   const navItems: { to: string; icon: React.FC<{ size?: number; color?: string }>; label: string }[] = [
     { to: '/dashboard', icon: NavDashboard, label: 'Dashboard' },
     { to: '/calendar', icon: NavCalendar, label: 'Calendar' },

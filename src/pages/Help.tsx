@@ -103,7 +103,7 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         id: 'subscription-plans',
         question: 'What\'s included in each plan?',
-        answer: 'Free: Basic calendar with generic checklists and up to 5 equipment slots. Home ($6.99/mo on web, $9.99/mo on iOS/Android): All AI-powered maintenance tasks, unlimited equipment, personalized checklists, weather-smart scheduling, cost forecasts, Home Token, and the AI Home Assistant. Home is DIY — you handle maintenance yourself with Canopy\'s guidance. Pro ($149/mo on web, $199/mo on iOS/Android): Everything in Home plus bimonthly professional home inspections with a Certified Pro. Pro+ (custom pricing): Full concierge service with a dedicated pro, routine maintenance of all systems, and priority scheduling — contact us for a quote.',
+        answer: 'Free: Basic calendar with generic checklists and up to 5 equipment slots. Home ($6.99/mo on web, $9.99/mo on iOS/Android): All AI-powered maintenance tasks, unlimited equipment, personalized checklists, weather-smart scheduling, cost forecasts, Home Token, and the AI Home Assistant. Home is DIY — you handle maintenance yourself with Canopy\'s guidance. Pro ($149/mo on web, $199/mo on iOS/Android): Everything in Home plus bimonthly professional home inspections with a Certified Pro. Pro+ services (sold per-add-on): The curated bundle on top of any subscription — Annual Maintenance Inspection ($149/yr base, scaled by sqft), pest, lawn, pool, septic, cleaning, deep services and more. Open Add-Ons in your dashboard. Note: a Canopy Maintenance Inspection documents the maintenance state of the home; it is not a substitute for a buyer\'s-side licensed home inspection before close.',
         keywords: ['plans', 'pricing', 'tiers', 'free', 'home', 'pro', 'subscription'],
       },
       {
@@ -127,13 +127,13 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         id: 'pro-service',
         question: 'What is the Pro service?',
-        answer: 'Pro and Pro+ subscribers get regularly scheduled home inspections from a Certified Pro — a vetted, background-checked, insured technician trained in the Canopy system. During a visit, your pro walks through a comprehensive checklist covering HVAC, plumbing, electrical, roof, exterior, and more. After the visit, you receive an AI-generated summary with findings, photos, and prioritized recommendations.',
+        answer: 'Pro subscribers get regularly scheduled home inspections from a Certified Pro — a vetted, background-checked, insured technician trained in the Canopy system. During a visit, your pro walks through a comprehensive checklist covering HVAC, plumbing, electrical, roof, exterior, and more. After the visit, you receive an AI-generated summary with findings, photos, and prioritized recommendations. Need an Annual Maintenance Inspection (Home tier or pre-sale prep)? Add it from the Add-Ons page. The maintenance inspection is a Canopy-vetted Pro walkthrough that gets stamped onto your Home Token; for a buyer\'s-side licensed inspection before closing on a sale, hire a separate licensed home inspector.',
         keywords: ['pro', 'service', 'inspection', 'visit', 'technician', 'certified'],
       },
       {
         id: 'pro-scheduling',
         question: 'How does pro visit scheduling work?',
-        answer: 'Once you\'re on a Pro or Pro+ plan and a provider is assigned to your area, visits are scheduled on a bimonthly (Pro) or monthly (Pro+) cadence. You\'ll see upcoming appointments on your Calendar and Pro Services page. You can view your assigned provider\'s profile, availability, and past visit summaries.',
+        answer: 'Once you\'re on a Pro plan and a provider is assigned to your area, visits are scheduled on a bimonthly cadence (Pro 2-Pack: bimonthly per home). You\'ll see upcoming appointments on your Calendar and Pro Services page. You can view your assigned provider\'s profile, availability, and past visit summaries. Looking for the certified annual inspection or one of the curated add-ons under Pro+ services? Open the Add-Ons page.',
         keywords: ['scheduling', 'appointment', 'bimonthly', 'monthly', 'provider'],
       },
       {

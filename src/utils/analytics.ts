@@ -13,8 +13,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // ─── Shared enum types (kept in sync with mobile) ────────────────────────────
-export type Plan = 'free' | 'home' | 'pro' | 'pro_plus';
-export type AddonCategory = 'pest' | 'lawn' | 'pool' | 'septic' | 'cleaning';
+// 2026-04-29: 'pro_plus' removed (tier killed). Pro+ services events now
+// emit Plan='pro' with category-specific add_on payload instead.
+export type Plan = 'free' | 'home' | 'home_2' | 'pro' | 'pro_2';
+export type AddonCategory = 'pest' | 'lawn' | 'pool' | 'septic' | 'cleaning' | 'inspection';
 export type UpgradeSurface =
   | 'landing'
   | 'subscription'

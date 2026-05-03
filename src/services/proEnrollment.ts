@@ -251,9 +251,8 @@ export async function enrollProSubscriber(userId: string): Promise<{
     }
 
     // 6. Notify the homeowner about their enrollment (full welcome with onboarding steps)
-    // Detect actual tier from profile for correct welcome message
-    const { data: userProfile } = await supabase.from('profiles').select('subscription_tier').eq('id', userId).single();
-    const tierName = userProfile?.subscription_tier === 'pro_plus' ? 'Pro+' : 'Pro';
+    // 2026-04-29: pro_plus tier killed — only Pro tier remains for enrollment.
+    const tierName = 'Pro';
     sendNotification({
       user_id: userId,
       title: `Welcome to Canopy ${tierName}!`,

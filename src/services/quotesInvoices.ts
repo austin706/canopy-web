@@ -11,7 +11,9 @@ export async function createQuote(
   title: string,
   description: string,
   lineItems: LineItem[],
-  serviceType: 'add_on' | 'one_off' | 'pro_plus_extra' = 'one_off',
+  // 2026-04-29: 'pro_plus_extra' removed (Pro+ tier killed). Use 'add_on' for
+  // anything sold under the new Pro+ services umbrella.
+  serviceType: 'add_on' | 'one_off' = 'one_off',
   taxRate = 0
 ): Promise<Quote> {
   const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);

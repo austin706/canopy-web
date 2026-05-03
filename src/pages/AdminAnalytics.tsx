@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
-import { Colors } from '@/constants/theme';
+import { Colors, FontSize } from '@/constants/theme';
 import { PageSkeleton } from '@/components/Skeleton';
 import logger from '@/utils/logger';
 
@@ -21,6 +21,19 @@ interface AnalyticsData {
   // Churn
   churned30d: number;
   retentionRate: number;
+
+  // 2026-05-02: operational tiles (STRATEGIC_TOP #7 deferred halves)
+  signupsToday: number;
+  failedNotifications24h: number;
+  totalNotifications24h: number;
+  edgeFnErrorRate24h: number; // 0..1 ratio
+  openSupportTickets: number;
+  recentSupportTickets: SupportTicketSummary[];
+
+  // 2026-05-02: STRATEGIC_TOP #9 deferred half — when the JS-side LIMIT
+  // cap is hit, surface a banner so admins know cohort/template stats are
+  // sampled rather than total. Set to null when both samples are full.
+  dataWindowWarning: string | null;
 
   // Activation
   usersWithHome: number;
@@ -50,6 +63,16 @@ interface AnalyticsData {
   };
 }
 
+// 2026-05-02: minimal shape for the top-issues feed.
+interface SupportTicketSummary {
+  id: string;
+  subject: string;
+  category: string | null;
+  priority: string | null;
+  status: string;
+  created_at: string;
+}
+
 interface TemplateStat {
   id: string;
   title: string;
@@ -65,7 +88,9 @@ interface TemplateStat {
   lastCompletedAt: string | null;
 }
 
-const TIER_PRICES = { free: 0, home: 7.99, pro: 149.99, pro_plus: 249.99 };
+// 2026-05-02: keep in sync with Canopy-Web/src/constants/pricing.ts.
+// home is $6.99/mo, home_2 is $11.99/mo, pro is $149/mo, pro_2 is $279/mo.
+const TIER_PRICES = { free: 0, home: 6.99, home_2: 11.99, pro: 149, pro_2: 279 };
 
 export default function AdminAnalytics() {
   const navigate = useNavigate();
@@ -97,12 +122,60 @@ export default function AdminAnalytics() {
       setLoading(true);
       const dateFilter = getDateFilter();
 
-      const [profilesRes, tasksRes, giftCodesRes, proReqRes, templatesRes] = await Promise.all([
-        supabase.from('profiles').select('id,created_at,subscription_tier'),
-        supabase.from('maintenance_tasks').select('id,user_id,created_at,status,template_id,due_date,completed_date'),
-        supabase.from('gift_codes').select('id,tier,redeemed_by,redeemed_at,created_at,expires_at'),
-        supabase.from('pro_requests').select('id,status,created_at,matched_at'),
+      // 2026-05-02: operational tiles bundled into the same Promise.all so we
+      // pay a single round-trip cost. notifications use HEAD/count to avoid
+      // pulling the full table; support_tickets pulls only the 5 most recent
+      // unresolved rows for the top-issues feed.
+      const opsNow = new Date();
+      const todayStartIso = new Date(opsNow.getFullYear(), opsNow.getMonth(), opsNow.getDate()).toISOString();
+      const last24hIso = new Date(opsNow.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
+      // 2026-05-02 (STRATEGIC_TOP #9 deferred half): hard LIMIT caps on the
+      // full-table pulls so a runaway dataset can't lock the admin browser
+      // tab. Pre-launch we'll never hit these caps; they exist so we don't
+      // silently grind at 100K+ users. The proper fix is an
+      // admin_analytics_summary() RPC that aggregates server-side — tracked
+      // as future work, not blocking pre-launch since the RPC requires
+      // testing against realistic data.
+      //
+      // Caps chosen for "comfortable on a mid-tier laptop":
+      //   profiles 50k, tasks 200k, gift_codes 25k, pro_requests 25k.
+      // If `data.totalUsers > LIMIT_PROFILES` the UI will surface a banner.
+      const LIMIT_PROFILES = 50_000;
+      const LIMIT_TASKS = 200_000;
+      const LIMIT_GIFTS = 25_000;
+      const LIMIT_PRO_REQUESTS = 25_000;
+
+      const [
+        profilesRes, tasksRes, giftCodesRes, proReqRes, templatesRes,
+        signupsTodayRes, totalNotif24hRes, failedNotif24hRes,
+        openTicketsRes, recentTicketsRes,
+        totalProfilesCountRes, totalTasksCountRes,
+      ] = await Promise.all([
+        // 2026-05-02: include subscription_status + subscription_expires_at + updated_at so we
+        // can compute a real churn signal instead of the 0 placeholder.
+        supabase.from('profiles').select('id,created_at,updated_at,subscription_tier,subscription_status,subscription_expires_at').limit(LIMIT_PROFILES),
+        supabase.from('maintenance_tasks').select('id,user_id,created_at,status,template_id,due_date,completed_date').limit(LIMIT_TASKS),
+        supabase.from('gift_codes').select('id,tier,redeemed_by,redeemed_at,created_at,expires_at').limit(LIMIT_GIFTS),
+        supabase.from('pro_requests').select('id,status,created_at,matched_at').limit(LIMIT_PRO_REQUESTS),
         supabase.from('task_templates').select('id,title,category,source,task_level,active'),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', todayStartIso),
+        supabase.from('notifications').select('id', { count: 'exact', head: true }).gte('created_at', last24hIso),
+        supabase.from('notifications').select('id', { count: 'exact', head: true })
+          .gte('created_at', last24hIso)
+          .or('email_permanently_failed.eq.true,email_last_error.not.is.null'),
+        supabase.from('support_tickets').select('id', { count: 'exact', head: true })
+          .neq('status', 'resolved'),
+        supabase.from('support_tickets')
+          .select('id, subject, category, priority, status, created_at')
+          .neq('status', 'resolved')
+          .order('created_at', { ascending: false })
+          .limit(5),
+        // 2026-05-02: true totals (count: 'exact', head: true) so we can
+        // detect when the LIMIT caps above are hiding rows from the JS-side
+        // analysis. Surfaces a banner if totalUsers > LIMIT_PROFILES.
+        supabase.from('profiles').select('id', { count: 'exact', head: true }),
+        supabase.from('maintenance_tasks').select('id', { count: 'exact', head: true }),
       ]);
 
       const profiles = profilesRes.data || [];
@@ -134,16 +207,23 @@ export default function AdminAnalytics() {
         monthlySignups.push({ month, count });
       });
 
-      const totalUsers = profiles.length;
+      // 2026-05-02: prefer the head/count totals over profiles.length so
+      // the KPI is honest even when the LIMIT cap is hiding rows from the
+      // JS-side cohort/template analysis. monthlySignups + newUsers30d are
+      // computed from the (capped) sample — they're approximations that
+      // only diverge from truth when rows past the cap exist.
+      const totalUsers = totalProfilesCountRes.count ?? profiles.length;
       const newUsers30d = profiles.filter(p => new Date(p.created_at || 0) > new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)).length;
       const returningUsers = totalUsers - newUsers30d;
+      const profilesSampleHitCap = profiles.length >= LIMIT_PROFILES;
+      const tasksSampleHitCap = tasks.length >= LIMIT_TASKS;
 
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       const activeUserIds = new Set(tasks.filter(t => new Date(t.created_at || 0) > thirtyDaysAgo).map(t => t.user_id));
       const activeUsers30d = activeUserIds.size;
 
       // Revenue Metrics
-      const tierCounts: { [key in keyof typeof TIER_PRICES]: number } = { free: 0, home: 0, pro: 0, pro_plus: 0 };
+      const tierCounts: { [key in keyof typeof TIER_PRICES]: number } = { free: 0, home: 0, home_2: 0, pro: 0, pro_2: 0 };
       profiles.forEach(p => {
         const tier = (p.subscription_tier || 'free') as keyof typeof TIER_PRICES;
         if (tier in tierCounts) tierCounts[tier]++;
@@ -161,8 +241,30 @@ export default function AdminAnalytics() {
 
       const projectedArr = mrrEstimate * 12;
 
-      // Churn Analysis
-      const churned30d = 0;
+      // ─── Churn Analysis ─────────────────────────────────────────────
+      // 2026-05-02: real signal. A user counts as churned in the last 30
+      // days when their stripe-reported subscription_status moved to
+      // 'canceled' (or 'canceling') AND profiles.updated_at landed in the
+      // 30d window. We also count expiry-based churn: tier=free with a
+      // subscription_expires_at falling inside the window — catches the
+      // free-after-expiry case where stripe-webhook updated tier without
+      // explicitly setting status.
+      const churnWindowStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const churned30d = profiles.filter(p => {
+        const status = (p as { subscription_status?: string }).subscription_status;
+        const updatedAt = (p as { updated_at?: string }).updated_at;
+        const expiresAt = (p as { subscription_expires_at?: string }).subscription_expires_at;
+        const tier = (p as { subscription_tier?: string }).subscription_tier;
+
+        if (status && (status === 'canceled' || status === 'canceling') && updatedAt && new Date(updatedAt) >= churnWindowStart) {
+          return true;
+        }
+        if (tier === 'free' && expiresAt) {
+          const exp = new Date(expiresAt);
+          if (exp >= churnWindowStart && exp <= now) return true;
+        }
+        return false;
+      }).length;
 
       const monthAgoDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       const usersMonthAgo = profiles.filter(p => new Date(p.created_at || 0) <= monthAgoDate).length;
@@ -288,6 +390,21 @@ export default function AdminAnalytics() {
         : 0;
       const overdueCount = templateStats.reduce((s, t) => s + t.overdue, 0);
 
+      // 2026-05-02: operational metrics
+      const signupsToday = signupsTodayRes.count ?? 0;
+      const totalNotifications24h = totalNotif24hRes.count ?? 0;
+      const failedNotifications24h = failedNotif24hRes.count ?? 0;
+      const edgeFnErrorRate24h = totalNotifications24h > 0
+        ? failedNotifications24h / totalNotifications24h
+        : 0;
+      const openSupportTickets = openTicketsRes.count ?? 0;
+      const recentSupportTickets = (recentTicketsRes.data ?? []) as SupportTicketSummary[];
+
+      const totalTasksDb = totalTasksCountRes.count ?? tasks.length;
+      const dataWindowWarning = profilesSampleHitCap || tasksSampleHitCap
+        ? `Showing analytics for the first ${LIMIT_PROFILES.toLocaleString()} profiles and ${LIMIT_TASKS.toLocaleString()} tasks (DB has ${(totalUsers ?? 0).toLocaleString()} profiles, ${totalTasksDb.toLocaleString()} tasks). Cohort and template stats below are sampled — KPIs above are full counts.`
+        : null;
+
       setData({
         monthlySignups,
         totalUsers,
@@ -318,6 +435,13 @@ export default function AdminAnalytics() {
           avgCompletionRate,
           overdueCount,
         },
+        signupsToday,
+        failedNotifications24h,
+        totalNotifications24h,
+        edgeFnErrorRate24h,
+        openSupportTickets,
+        recentSupportTickets,
+        dataWindowWarning,
       });
     } catch (err) {
       logger.error('Analytics error:', err);
@@ -373,11 +497,26 @@ export default function AdminAnalytics() {
         </div>
       </div>
 
+      {/* 2026-05-02: data-window banner shown when LIMIT caps engaged */}
+      {data.dataWindowWarning && (
+        <div role="alert" style={{
+          padding: 12, marginBottom: 16, borderRadius: 6,
+          background: `${Colors.warning}15`, border: `1px solid ${Colors.warning}`,
+          fontSize: FontSize.sm, color: Colors.charcoal,
+        }}>
+          <strong style={{ color: Colors.warning }}>Sampled view —</strong> {data.dataWindowWarning}
+        </div>
+      )}
+
       {/* Top KPI Grid */}
       <div className="admin-kpi-grid" style={{ marginBottom: 24 }}>
         <div className="admin-kpi-card">
           <p className="admin-kpi-label">Total Users</p>
           <p className="admin-kpi-value" style={{ color: Colors.copper }}>{data.totalUsers}</p>
+        </div>
+        <div className="admin-kpi-card">
+          <p className="admin-kpi-label">Signups today</p>
+          <p className="admin-kpi-value" style={{ color: Colors.sage }}>{data.signupsToday}</p>
         </div>
         <div className="admin-kpi-card">
           <p className="admin-kpi-label">New Users (30d)</p>
@@ -398,6 +537,89 @@ export default function AdminAnalytics() {
           <p className="admin-kpi-value" style={{ color: Colors.success }}>
             ${data.projectedArr.toFixed(0)}
           </p>
+        </div>
+      </div>
+
+      {/* 2026-05-02: Operational Pulse — error rate + open tickets + top issues.
+          STRATEGIC_TOP #7 deferred halves. Visible in same view as the KPI grid
+          so admins land on "is the business healthy right now?" first. */}
+      <div className="admin-section" style={{
+        marginBottom: 24, padding: 20, background: 'white',
+        border: '1px solid var(--border-color)', borderRadius: 8,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 16 }}>
+          <h3 style={{ fontSize: FontSize.md, fontWeight: 600, margin: 0 }}>Operational Pulse</h3>
+          <span style={{ fontSize: FontSize.xs, color: Colors.medGray }}>Last 24 hours</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 16 }}>
+          <div>
+            <p className="admin-kpi-label">Notifications sent</p>
+            <p className="admin-kpi-value" style={{ color: Colors.charcoal }}>{data.totalNotifications24h}</p>
+          </div>
+          <div>
+            <p className="admin-kpi-label">Failed deliveries</p>
+            <p className="admin-kpi-value" style={{
+              color: data.failedNotifications24h > 0 ? Colors.error : Colors.medGray,
+            }}>{data.failedNotifications24h}</p>
+          </div>
+          <div>
+            <p className="admin-kpi-label">Edge fn error rate</p>
+            <p className="admin-kpi-value" style={{
+              color: data.edgeFnErrorRate24h > 0.05 ? Colors.error : data.edgeFnErrorRate24h > 0.01 ? Colors.warning : Colors.success,
+            }}>{(data.edgeFnErrorRate24h * 100).toFixed(1)}%</p>
+          </div>
+          <div>
+            <p className="admin-kpi-label">Open support tickets</p>
+            <p className="admin-kpi-value" style={{
+              color: data.openSupportTickets > 5 ? Colors.warning : Colors.charcoal,
+            }}>{data.openSupportTickets}</p>
+          </div>
+        </div>
+
+        {/* Top issues feed */}
+        <div style={{ marginTop: 8 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: Colors.medGray, margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Top issues
+          </p>
+          {data.recentSupportTickets.length === 0 ? (
+            <p style={{ fontSize: FontSize.sm, color: Colors.medGray, fontStyle: 'italic', margin: 0 }}>
+              No open support tickets — quiet on the support front.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {data.recentSupportTickets.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => navigate(`/admin/support`)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
+                    background: Colors.cream, border: 'none', borderRadius: 6, cursor: 'pointer',
+                    textAlign: 'left', width: '100%',
+                  }}
+                  title="Open in Admin → Support"
+                >
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 3,
+                    color: '#fff',
+                    background: t.priority === 'urgent' || t.priority === 'high' ? Colors.error
+                      : t.priority === 'medium' ? Colors.warning
+                      : Colors.medGray,
+                  }}>
+                    {(t.priority || 'normal').toUpperCase()}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: FontSize.sm, fontWeight: 600, color: Colors.charcoal, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {t.subject}
+                    </p>
+                    <p style={{ fontSize: FontSize.xs, color: Colors.medGray, margin: '2px 0 0' }}>
+                      {t.category ? `${t.category} · ` : ''}{new Date(t.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <span style={{ fontSize: FontSize.xs, color: Colors.medGray }}>→</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -424,7 +646,7 @@ export default function AdminAnalytics() {
           }}
           onClick={() => toggleSection('user-growth')}
         >
-          <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>User Growth</h3>
+          <h3 style={{ fontSize: FontSize.md, fontWeight: 600, margin: 0 }}>User Growth</h3>
           <span style={{ color: Colors.medGray }}>
             {expandedSections.has('user-growth') ? '▼' : '▶'}
           </span>
@@ -451,7 +673,7 @@ export default function AdminAnalytics() {
                         }}
                       />
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 500, marginLeft: 12, minWidth: 40, textAlign: 'right' }}>
+                    <div style={{ fontSize: FontSize.sm, fontWeight: 500, marginLeft: 12, minWidth: 40, textAlign: 'right' }}>
                       {m.count}
                     </div>
                   </div>
@@ -485,7 +707,7 @@ export default function AdminAnalytics() {
           }}
           onClick={() => toggleSection('revenue')}
         >
-          <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Revenue</h3>
+          <h3 style={{ fontSize: FontSize.md, fontWeight: 600, margin: 0 }}>Revenue</h3>
           <span style={{ color: Colors.medGray }}>
             {expandedSections.has('revenue') ? '▼' : '▶'}
           </span>
@@ -495,7 +717,7 @@ export default function AdminAnalytics() {
           <div style={{ padding: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
               <div style={{ padding: 12, background: Colors.sageMuted, borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>
                   MRR
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.sage, margin: 0 }}>
@@ -503,7 +725,7 @@ export default function AdminAnalytics() {
                 </p>
               </div>
               <div style={{ padding: 12, background: Colors.sageMuted, borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>
                   ARR
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.sage, margin: 0 }}>
@@ -533,7 +755,7 @@ export default function AdminAnalytics() {
                         }}
                       />
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 500, marginLeft: 12, minWidth: 60, textAlign: 'right' }}>
+                    <div style={{ fontSize: FontSize.sm, fontWeight: 500, marginLeft: 12, minWidth: 60, textAlign: 'right' }}>
                       {t.count} ({Math.round(percentage)}%)
                     </div>
                   </div>
@@ -567,7 +789,7 @@ export default function AdminAnalytics() {
           }}
           onClick={() => toggleSection('churn')}
         >
-          <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Churn</h3>
+          <h3 style={{ fontSize: FontSize.md, fontWeight: 600, margin: 0 }}>Churn</h3>
           <span style={{ color: Colors.medGray }}>
             {expandedSections.has('churn') ? '▼' : '▶'}
           </span>
@@ -577,7 +799,7 @@ export default function AdminAnalytics() {
           <div style={{ padding: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ padding: 12, background: Colors.error + '15', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.error, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.error, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Churned (30d)
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.error, margin: 0 }}>
@@ -585,7 +807,7 @@ export default function AdminAnalytics() {
                 </p>
               </div>
               <div style={{ padding: 12, background: Colors.success + '15', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.success, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.success, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Retention Rate
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.success, margin: 0 }}>
@@ -620,7 +842,7 @@ export default function AdminAnalytics() {
           }}
           onClick={() => toggleSection('activation')}
         >
-          <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Activation</h3>
+          <h3 style={{ fontSize: FontSize.md, fontWeight: 600, margin: 0 }}>Activation</h3>
           <span style={{ color: Colors.medGray }}>
             {expandedSections.has('activation') ? '▼' : '▶'}
           </span>
@@ -630,7 +852,7 @@ export default function AdminAnalytics() {
           <div style={{ padding: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
               <div style={{ padding: 12, background: Colors.copperMuted, borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.copper, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.copper, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Created Home
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.copper, margin: 0 }}>
@@ -638,7 +860,7 @@ export default function AdminAnalytics() {
                 </p>
               </div>
               <div style={{ padding: 12, background: Colors.copperMuted, borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.copper, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.copper, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Added Equipment
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.copper, margin: 0 }}>
@@ -646,7 +868,7 @@ export default function AdminAnalytics() {
                 </p>
               </div>
               <div style={{ padding: 12, background: Colors.sageMuted, borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Completed Task
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.sage, margin: 0 }}>
@@ -654,7 +876,7 @@ export default function AdminAnalytics() {
                 </p>
               </div>
               <div style={{ padding: 12, background: Colors.sageMuted, borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Avg Tasks/User
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.sage, margin: 0 }}>
@@ -689,7 +911,7 @@ export default function AdminAnalytics() {
           }}
           onClick={() => toggleSection('gift-codes')}
         >
-          <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Gift Codes</h3>
+          <h3 style={{ fontSize: FontSize.md, fontWeight: 600, margin: 0 }}>Gift Codes</h3>
           <span style={{ color: Colors.medGray }}>
             {expandedSections.has('gift-codes') ? '▼' : '▶'}
           </span>
@@ -699,7 +921,7 @@ export default function AdminAnalytics() {
           <div style={{ padding: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 16 }}>
               <div style={{ padding: 12, background: Colors.success + '15', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.success, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.success, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Conversion Rate
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.success, margin: 0 }}>
@@ -707,7 +929,7 @@ export default function AdminAnalytics() {
                 </p>
               </div>
               <div style={{ padding: 12, background: Colors.info + '15', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.info, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.info, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Avg Days to Redeem
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.info, margin: 0 }}>
@@ -715,7 +937,7 @@ export default function AdminAnalytics() {
                 </p>
               </div>
               <div style={{ padding: 12, background: Colors.warning + '15', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.warning, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.warning, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Expiring in 7d
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.warning, margin: 0 }}>
@@ -723,7 +945,7 @@ export default function AdminAnalytics() {
                 </p>
               </div>
               <div style={{ padding: 12, background: Colors.copper + '15', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.copper, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.copper, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Total Codes
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.copper, margin: 0 }}>
@@ -754,7 +976,7 @@ export default function AdminAnalytics() {
                         }}
                       />
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 500, marginLeft: 12, minWidth: 60, textAlign: 'right' }}>
+                    <div style={{ fontSize: FontSize.sm, fontWeight: 500, marginLeft: 12, minWidth: 60, textAlign: 'right' }}>
                       {t.count} ({Math.round(percentage)}%)
                     </div>
                   </div>
@@ -788,7 +1010,7 @@ export default function AdminAnalytics() {
           }}
           onClick={() => toggleSection('pro-service')}
         >
-          <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Pro Services</h3>
+          <h3 style={{ fontSize: FontSize.md, fontWeight: 600, margin: 0 }}>Pro Services</h3>
           <span style={{ color: Colors.medGray }}>
             {expandedSections.has('pro-service') ? '▼' : '▶'}
           </span>
@@ -798,7 +1020,7 @@ export default function AdminAnalytics() {
           <div style={{ padding: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
               <div style={{ padding: 12, background: Colors.copper + '15', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.copper, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.copper, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Total Requests
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.copper, margin: 0 }}>
@@ -806,7 +1028,7 @@ export default function AdminAnalytics() {
                 </p>
               </div>
               <div style={{ padding: 12, background: Colors.info + '15', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.info, fontWeight: 600, margin: '0 0 4px 0' }}>
+                <p style={{ fontSize: FontSize.xs, color: Colors.info, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Avg Time to Assignment
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.info, margin: 0 }}>
@@ -836,7 +1058,7 @@ export default function AdminAnalytics() {
                         }}
                       />
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 500, marginLeft: 12, minWidth: 60, textAlign: 'right' }}>
+                    <div style={{ fontSize: FontSize.sm, fontWeight: 500, marginLeft: 12, minWidth: 60, textAlign: 'right' }}>
                       {s.count} ({Math.round(percentage)}%)
                     </div>
                   </div>
@@ -862,29 +1084,29 @@ export default function AdminAnalytics() {
           style={{ padding: '16px 20px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: expandedSections.has('template-performance') ? '1px solid var(--border-color)' : 'none' }}
         >
           <h2 style={{ margin: 0, fontSize: 16 }}>Task Template Performance</h2>
-          <span style={{ fontSize: 18, color: Colors.medGray }}>{expandedSections.has('template-performance') ? '−' : '+'}</span>
+          <span style={{ fontSize: FontSize.lg, color: Colors.medGray }}>{expandedSections.has('template-performance') ? '−' : '+'}</span>
         </div>
         {expandedSections.has('template-performance') && (
           <div style={{ padding: 16 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
               <div style={{ padding: 12, background: Colors.sage + '15', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>Templates</p>
+                <p style={{ fontSize: FontSize.xs, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>Templates</p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.sage, margin: 0 }}>{data.templateTotals.totalTemplates}</p>
               </div>
               <div style={{ padding: 12, background: Colors.info + '15', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.info, fontWeight: 600, margin: '0 0 4px 0' }}>Generated</p>
+                <p style={{ fontSize: FontSize.xs, color: Colors.info, fontWeight: 600, margin: '0 0 4px 0' }}>Generated</p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.info, margin: 0 }}>{data.templateTotals.totalGenerated.toLocaleString()}</p>
               </div>
               <div style={{ padding: 12, background: Colors.success + '15', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.success, fontWeight: 600, margin: '0 0 4px 0' }}>Completed</p>
+                <p style={{ fontSize: FontSize.xs, color: Colors.success, fontWeight: 600, margin: '0 0 4px 0' }}>Completed</p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.success, margin: 0 }}>{data.templateTotals.totalCompleted.toLocaleString()}</p>
               </div>
               <div style={{ padding: 12, background: Colors.copper + '15', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.copper, fontWeight: 600, margin: '0 0 4px 0' }}>Avg Completion</p>
+                <p style={{ fontSize: FontSize.xs, color: Colors.copper, fontWeight: 600, margin: '0 0 4px 0' }}>Avg Completion</p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.copper, margin: 0 }}>{data.templateTotals.avgCompletionRate}%</p>
               </div>
               <div style={{ padding: 12, background: Colors.error + '15', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: Colors.error, fontWeight: 600, margin: '0 0 4px 0' }}>Overdue</p>
+                <p style={{ fontSize: FontSize.xs, color: Colors.error, fontWeight: 600, margin: '0 0 4px 0' }}>Overdue</p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.error, margin: 0 }}>{data.templateTotals.overdueCount}</p>
               </div>
             </div>
@@ -936,7 +1158,7 @@ export default function AdminAnalytics() {
               </table>
             </div>
 
-            <p style={{ fontSize: 11, color: Colors.medGray, marginTop: 12, lineHeight: 1.4 }}>
+            <p style={{ fontSize: FontSize.xs, color: Colors.medGray, marginTop: 12, lineHeight: 1.4 }}>
               <strong>Avg Δ Days</strong> = average days between due date and completion (negative = done early, positive = done late).
               <br />
               <strong>Rate</strong> = completed ÷ (generated − skipped). Non-skipped denominator avoids penalizing templates users opt out of.

@@ -50,9 +50,12 @@ export const ANNUAL_DISCOUNT_PERCENT = 10;
  *   Pro IAP:     $199.99 × 12 × 0.90 = $2,159.89/yr → Apple tier $2,199.99/yr
  */
 // Home-only IAP rule (locked 2026-04-22): RC / Apple IAP / Google Play
-// Billing only sell the Home tier (single + 2-pack). Pro and Pro+ are
-// Stripe-only — their `iap` prices are zero so the paywall hides the
-// App Store / Google Play CTA on those cards on mobile.
+// Billing only sell the Home tier (single + 2-pack). Pro is Stripe-only.
+//
+// 2026-04-29: pro_plus tier killed. The "Pro+ services" name is now the
+// umbrella brand for the curated add-on bundle, sold per-add-on (not as
+// a tier). See add_on_categories — Annual Certified Home Inspection
+// ($149/yr base + $0.05/sqft) lives there.
 export const PRICING: Record<Exclude<SubscriptionTier, 'free'>, TierPricing> = {
   home: {
     stripe: { monthly: 6.99, yearly: 75.49 },
@@ -69,10 +72,6 @@ export const PRICING: Record<Exclude<SubscriptionTier, 'free'>, TierPricing> = {
   pro_2: {
     stripe: { monthly: 279, yearly: 3018.60 },
     iap: { monthly: 0, yearly: 0 }, // Stripe-only (Home-only IAP rule)
-  },
-  pro_plus: {
-    stripe: { monthly: 0, yearly: 0 }, // Custom pricing — contact sales
-    iap: { monthly: 0, yearly: 0 },
   },
 };
 
@@ -183,27 +182,9 @@ export const PLANS: Array<PlanInfo & { value?: SubscriptionTier; price?: number 
     price: 279,
     period: '/month',
   },
-  {
-    id: 'pro_plus',
-    name: 'Home Pro+',
-    shortName: 'Pro+',
-    maxHomes: 1,
-    requiresProArea: true,
-    inquireForPricing: true,
-    features: [
-      'Everything in Home Pro',
-      'All add-on services included (HVAC, pest, cleaning & more)',
-      'Full home concierge — we handle everything',
-      'Priority scheduling & dedicated pro provider',
-      'Seasonal deep services (pressure wash, carpet, chimney)',
-      'Custom service plan based on your home',
-    ],
-    pricing: PRICING.pro_plus,
-    // Legacy properties for web app backwards compatibility
-    value: 'pro_plus' as SubscriptionTier,
-    price: null,
-    period: '',
-  },
+  // 2026-04-29: Home Pro+ tier removed. Its features (add-on bundle,
+  // certified inspection, deep services) are now sold à la carte under
+  // the "Pro+ services" umbrella through add_on_categories.
 ];
 
 /**
@@ -221,7 +202,7 @@ export function formatPrice(amount: number): string {
  * For yearly, divides the annual price by 12.
  */
 export function getEffectiveMonthly(
-  tier: Exclude<SubscriptionTier, 'free' | 'pro_plus'>,
+  tier: Exclude<SubscriptionTier, 'free'>,
   source: 'stripe' | 'iap',
   interval: BillingInterval
 ): number {
@@ -234,7 +215,7 @@ export function getEffectiveMonthly(
  * Get the savings percentage when choosing Stripe over IAP.
  */
 export function getStripeSavings(
-  tier: Exclude<SubscriptionTier, 'free' | 'pro_plus'>,
+  tier: Exclude<SubscriptionTier, 'free'>,
   interval: BillingInterval = 'monthly'
 ): number {
   const p = PRICING[tier];

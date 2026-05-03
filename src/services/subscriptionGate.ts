@@ -25,7 +25,8 @@ export const TIER_FEATURES: Record<SubscriptionTier, Feature[]> = {
   home_2: ['basic_calendar','unlimited_equipment','personalized_scheduling','smart_recurrence','weather_alerts','weather_action_items','document_vault','secure_notes','maintenance_history_export','seasonal_recommendations','ai_task_generation','custom_tasks','ai_photo_scan','ai_chat','ai_text_lookup'],
   pro: ['basic_calendar','unlimited_equipment','personalized_scheduling','smart_recurrence','weather_alerts','weather_action_items','document_vault','secure_notes','maintenance_history_export','seasonal_recommendations','ai_task_generation','custom_tasks','pro_service_requests','pro_visit_scheduling','pro_service_scheduler','filter_change_service','gutter_cleaning_service','ai_photo_scan','ai_chat','ai_text_lookup'],
   pro_2: ['basic_calendar','unlimited_equipment','personalized_scheduling','smart_recurrence','weather_alerts','weather_action_items','document_vault','secure_notes','maintenance_history_export','seasonal_recommendations','ai_task_generation','custom_tasks','pro_service_requests','pro_visit_scheduling','pro_service_scheduler','filter_change_service','gutter_cleaning_service','ai_photo_scan','ai_chat','ai_text_lookup'],
-  pro_plus: ['basic_calendar','unlimited_equipment','personalized_scheduling','smart_recurrence','weather_alerts','weather_action_items','document_vault','secure_notes','maintenance_history_export','seasonal_recommendations','ai_task_generation','custom_tasks','pro_service_requests','pro_visit_scheduling','pro_service_scheduler','filter_change_service','gutter_cleaning_service','extended_pro_visits','pool_service','deck_service','lawn_service','pest_control','priority_support','full_property_concierge','ai_photo_scan','ai_chat','ai_text_lookup'],
+  // 2026-04-29: pro_plus tier removed. Concierge/extended visits / pool /
+  // deck / lawn / pest are sold à la carte through add_on_categories.
 };
 
 // AI feature monthly usage limits per tier (null = unlimited)
@@ -56,11 +57,6 @@ export const AI_LIMITS: Record<SubscriptionTier, Record<AiFeature, number | null
     ai_chat: null,
     ai_text_lookup: null,
   },
-  pro_plus: {
-    ai_photo_scan: null,
-    ai_chat: null,
-    ai_text_lookup: null,
-  },
 };
 
 export function canAccess(tier: SubscriptionTier | undefined | null, feature: Feature): boolean {
@@ -84,13 +80,12 @@ export function isPremium(tier: SubscriptionTier | undefined | null): boolean {
     tier === 'home' ||
     tier === 'home_2' ||
     tier === 'pro' ||
-    tier === 'pro_2' ||
-    tier === 'pro_plus'
+    tier === 'pro_2'
   );
 }
 
 export function isProOrHigher(tier: SubscriptionTier | undefined | null): boolean {
-  return tier === 'pro' || tier === 'pro_2' || tier === 'pro_plus';
+  return tier === 'pro' || tier === 'pro_2';
 }
 
 /**
@@ -116,7 +111,6 @@ export function getHomeLimit(tier: SubscriptionTier | undefined | null): number 
     case 'home_2': return 2;
     case 'pro': return 1;
     case 'pro_2': return 2;
-    case 'pro_plus': return 1; // custom, handled separately
     default: return 1;
   }
 }
@@ -244,7 +238,7 @@ export async function checkProAvailability(
 }
 
 export function getNextTier(tier: SubscriptionTier | undefined | null): SubscriptionTier | null {
-  const order: SubscriptionTier[] = ['free', 'home', 'home_2', 'pro', 'pro_2', 'pro_plus'];
+  const order: SubscriptionTier[] = ['free', 'home', 'home_2', 'pro', 'pro_2'];
   const idx = order.indexOf(tier || 'free');
   return idx < order.length - 1 ? order[idx + 1] : null;
 }

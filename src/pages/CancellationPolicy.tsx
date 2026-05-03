@@ -22,7 +22,7 @@ export default function CancellationPolicy() {
         <li style={{ marginBottom: 8 }}><strong>Free</strong> — Access to core home management features, equipment tracking, and task organization.</li>
         <li style={{ marginBottom: 8 }}><strong>Home</strong> — $6.99/month or $75.49/year. Includes AI-powered maintenance recommendations, task scheduling, equipment scanning, and inspection summaries.</li>
         <li style={{ marginBottom: 8 }}><strong>Pro</strong> — $149/month or $1,609/year. Includes all Home features plus priority pro provider matching, advanced analytics, and unlimited inspections.</li>
-        <li style={{ marginBottom: 8 }}><strong>Pro+</strong> — Custom pricing concierge tier. Includes all Pro features plus dedicated support and custom workflows.</li>
+        <li style={{ marginBottom: 8 }}><strong>Pro+ services</strong> — Curated add-on bundle (Annual Certified Home Inspection, pest, lawn, pool, septic, cleaning, deep services). Sold per-add-on through the Add-Ons page on top of any subscription.</li>
       </ul>
       <p>Subscriptions can be purchased via Stripe (web and mobile), Apple App Store, or Google Play Store. Billing and cancellation methods depend on your purchase platform.</p>
 
@@ -50,8 +50,8 @@ export default function CancellationPolicy() {
       <p><strong>Google Play Store:</strong> Refunds for Google Play purchases are handled by Google according to their policies. Contact Google Play Support directly to request a refund.</p>
       <p><strong>Gift Codes:</strong> Gift codes are non-refundable once redeemed. Unredeemed gift codes may be refunded to the original purchasing account holder.</p>
 
-      <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Pro+ Tier</h2>
-      <p>Pro+ subscriptions are custom service agreements with individualized terms. Cancellation and refund terms are specified in your service agreement. If you wish to cancel a Pro+ subscription or have questions about your terms, contact support@canopyhome.app and reference your service agreement.</p>
+      <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Pro+ Services (Add-Ons)</h2>
+      <p>The Pro+ services umbrella covers à la carte add-ons (Annual Certified Home Inspection, pest, lawn, pool, septic, cleaning, deep services, etc.) sold per-add-on on top of any subscription. Each add-on bills on its own cadence (monthly, quarterly, annual). You can pause or cancel an individual add-on at any time from the Add-Ons page; cancellation takes effect at the end of the current billing cycle for that add-on.</p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Pro Provider Cancellation</h2>
       <p>If you are a Pro Provider using Canopy to connect with homeowners, you may deactivate your account at any time. Outstanding payments for completed work will still be processed according to your agreement. Active jobs must be completed or properly handed off to another provider before you deactivate. Reactivation of a deactivated Pro Provider account is subject to review and approval by the Canopy team.</p>

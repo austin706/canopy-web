@@ -8,7 +8,7 @@ import { verifyAgentOwnership } from './agents';
 // --- Admin Broadcast (segmented email/SMS/push) ---
 
 export interface BroadcastSegment {
-  tiers?: Array<'free' | 'home' | 'pro' | 'pro_plus'>;
+  tiers?: Array<'free' | 'home' | 'home_2' | 'pro' | 'pro_2'>;
   roles?: Array<'user' | 'agent' | 'admin' | 'pro_provider'>;
   states?: string[];                // 2-letter codes
   hasAgent?: boolean | null;        // true = linked to an agent; false = no agent; null/undefined = any

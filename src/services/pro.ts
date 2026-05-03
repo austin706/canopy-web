@@ -96,7 +96,10 @@ export const insertProInterest = async (interest: {
   state?: string | null;
   city?: string | null;
   full_name?: string | null;
-  tier_interest?: 'pro' | 'pro_plus';
+  // 2026-04-29: 'pro_plus' interest gone with the tier; if a user wants the
+  // add-on bundle, capture that via concierge_inquiries.interested_categories
+  // instead of stuffing tier interest with a non-existent tier.
+  tier_interest?: 'pro';
 }) => {
   const { data, error } = await supabase
     .from('pro_interest')

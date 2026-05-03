@@ -330,6 +330,16 @@ export async function calculateCompletenessScore(homeId: string): Promise<number
   // Agent attestation bonus (10 pts)
   if (home?.agent_attested_at) score += 10;
 
+  // 2026-04-29: Certified inspection within the last 12 months (10 pts)
+  // Rewards homes that have an HMAC-signed inspection record from a Canopy
+  // certified inspector — surfaces directly on the buyer-facing Home Token.
+  if (home?.last_certified_inspection_at) {
+    const inspectedAt = new Date(home.last_certified_inspection_at);
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    if (inspectedAt > oneYearAgo) score += 10;
+  }
+
   const finalScore = Math.min(score, maxScore);
 
   // Store it
@@ -359,7 +369,7 @@ export async function getTransferByToken(
   if (!transfer) return null;
   const { data: home, error: hErr } = await supabase
     .from('homes')
-    .select('id,address,city,state,zip_code,photo_url,year_built,square_footage,record_completeness_score,agent_attested_at,ownership_verified')
+    .select('id,address,city,state,zip_code,photo_url,year_built,square_footage,record_completeness_score,agent_attested_at,ownership_verified,last_certified_inspection_at,last_certified_inspection_id,certified_inspection_count,user_id')
     .eq('id', transfer.home_id)
     .maybeSingle();
   if (hErr) { logger.warn('Failed to load home for transfer:', hErr); return null; }

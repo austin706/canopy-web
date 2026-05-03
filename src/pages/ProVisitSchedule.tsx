@@ -108,7 +108,7 @@ export default function ProVisitSchedule() {
       const { data: proClients } = await supabase
         .from('profiles')
         .select('id, full_name, email, subscription_tier')
-        .in('subscription_tier', ['pro', 'pro_plus']);
+        .in('subscription_tier', ['pro']);
 
       const clientList: AssignedClient[] = [];
       for (const c of (proClients || [])) {

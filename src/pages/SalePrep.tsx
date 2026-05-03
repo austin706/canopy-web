@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { Colors } from '@/constants/theme';
+import { Colors, FontSize } from '@/constants/theme';
 import { PageSkeleton } from '@/components/Skeleton';
 import { SALE_PREP_CATEGORIES, SALE_PREP_ITEMS, type SalePrepCategory } from '@/constants/salePrep';
 import {
@@ -14,6 +14,76 @@ import {
   type HomeSalePrep,
 } from '@/services/salePrep';
 import { getErrorMessage } from '@/utils/errors';
+import { supabase } from '@/services/supabase';
+
+// 2026-05-02 (INSPECTION_STRATEGY): Inspection wedge for Sale Prep.
+// Pulls the home's last_certified_inspection_at; if missing or stale
+// (>12 months), surfaces a CTA pointing at /add-ons. The buyer-facing
+// Home Token is the credibility wedge here — agents and buyers value
+// "this home has a documented maintenance state" before close.
+function InspectionWedge({ homeId }: { homeId?: string }) {
+  const navigate = useNavigate();
+  const [lastInspectedAt, setLastInspectedAt] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!homeId) { setLoaded(true); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('homes')
+        .select('last_certified_inspection_at')
+        .eq('id', homeId)
+        .maybeSingle();
+      if (!cancelled) {
+        setLastInspectedAt(data?.last_certified_inspection_at ?? null);
+        setLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [homeId]);
+
+  if (!loaded) return null;
+
+  // Skip if there's a fresh inspection (within last 12 months)
+  if (lastInspectedAt) {
+    const daysSince = (Date.now() - new Date(lastInspectedAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSince < 365) return null;
+  }
+
+  return (
+    <div style={{
+      padding: 18,
+      marginBottom: 20,
+      borderRadius: 12,
+      background: `linear-gradient(135deg, ${Colors.cream} 0%, ${Colors.copper}15 100%)`,
+      border: `1px solid ${Colors.copper}40`,
+      display: 'flex',
+      gap: 14,
+      alignItems: 'center',
+    }}>
+      <div aria-hidden="true" style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>🛡️</div>
+      <div style={{ flex: 1 }}>
+        <p style={{ fontSize: FontSize.xs, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: Colors.copper, margin: 0 }}>
+          Boost your list price
+        </p>
+        <p style={{ fontSize: FontSize.md, fontWeight: 600, color: Colors.charcoal, margin: '2px 0 6px' }}>
+          {lastInspectedAt ? 'Refresh your Maintenance Inspection before listing' : 'Add a Canopy Maintenance Inspection to your Home Token'}
+        </p>
+        <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: 0, lineHeight: 1.4 }}>
+          A Canopy-vetted Pro walks every system, stamps a tamper-evident record onto your Home Token, and produces a buyer-facing PDF certificate. Buyers and agents value documented maintenance — it&apos;s a credibility lift right when it matters. From $149/yr.
+        </p>
+      </div>
+      <button
+        className="btn btn-primary btn-sm"
+        onClick={() => navigate('/add-ons')}
+        style={{ flexShrink: 0, background: Colors.copper, border: 'none' }}
+      >
+        Add inspection →
+      </button>
+    </div>
+  );
+}
 
 export default function SalePrep() {
   const navigate = useNavigate();
@@ -123,7 +193,7 @@ export default function SalePrep() {
         <div className="page-header"><h1>Sale Prep</h1></div>
         <div className="empty-state">
           <div className="icon" style={{ fontSize: 48, fontWeight: 700, color: Colors.copper }} role="img" aria-label="Home">🏡</div>
-          <h3 style={{ fontSize: 22, color: Colors.charcoal }}>Set Up Your Home First</h3>
+          <h3 style={{ fontSize: FontSize.xl, color: Colors.charcoal }}>Set Up Your Home First</h3>
           <p style={{ lineHeight: 1.6 }}>Please complete your home setup before using Sale Prep. We need your home details to create a personalized checklist.</p>
           <button className="btn btn-primary" onClick={() => navigate('/dashboard')} style={{ marginTop: 16 }}>
             Go to Dashboard
@@ -140,25 +210,25 @@ export default function SalePrep() {
         <div className="page-header"><h1>Preparing to Sell?</h1></div>
         <div className="empty-state" style={{ marginBottom: 24 }}>
           <div className="icon" style={{ fontSize: 48, fontWeight: 700, color: Colors.copper }} role="img" aria-label="Home">🏡</div>
-          <h3 style={{ fontSize: 22, color: Colors.charcoal }}>No Active Sale Prep</h3>
+          <h3 style={{ fontSize: FontSize.xl, color: Colors.charcoal }}>No Active Sale Prep</h3>
           <p style={{ lineHeight: 1.6 }}>When you're ready to sell, activate sale prep to get a 26-item checklist that guides you through preparing your home for market.</p>
         </div>
         <div className="card" style={{ padding: 32, textAlign: 'center' }}>
-          <h2 style={{ fontSize: 18, marginBottom: 24, color: Colors.charcoal }}>Get Started</h2>
+          <h2 style={{ fontSize: FontSize.lg, marginBottom: 24, color: Colors.charcoal }}>Get Started</h2>
 
           {user?.agent_id && (
             <div style={{
               padding: 12, background: Colors.sageMuted, borderRadius: 8, marginBottom: 20,
               borderLeft: `4px solid ${Colors.sage}`, textAlign: 'left',
             }}>
-              <p style={{ fontSize: 13, color: Colors.charcoal, margin: 0 }}>
+              <p style={{ fontSize: FontSize.sm, color: Colors.charcoal, margin: 0 }}>
                 <strong>Your agent will be notified</strong> when you activate sale prep, so they can start preparing too.
               </p>
             </div>
           )}
 
           <div className="form-group" style={{ marginBottom: 20, textAlign: 'left' }}>
-            <label style={{ fontSize: 13 }}>Target listing date (optional)</label>
+            <label style={{ fontSize: FontSize.sm }}>Target listing date (optional)</label>
             <input
               className="form-input"
               type="date"
@@ -188,7 +258,7 @@ export default function SalePrep() {
         <div>
           <h1>Home Sale Prep</h1>
           {prep.target_list_date && (
-            <p style={{ fontSize: 13, color: Colors.medGray, marginTop: 4 }}>
+            <p style={{ fontSize: FontSize.sm, color: Colors.medGray, marginTop: 4 }}>
               Target listing: {new Date(prep.target_list_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
             </p>
           )}
@@ -208,6 +278,12 @@ export default function SalePrep() {
           {activationMessage}
         </div>
       )}
+
+      {/* 2026-05-02 (INSPECTION_STRATEGY): Inspection wedge — surface the
+          Annual Maintenance Inspection add-on at exactly the moment a
+          homeowner is preparing to list. Skip if there's already a fresh
+          inspection on file (within last 12 months). */}
+      <InspectionWedge homeId={home?.id} />
 
       {/* Progress bar */}
       <div className="card" style={{ marginBottom: 20, padding: 16 }}>
@@ -272,14 +348,14 @@ export default function SalePrep() {
                 padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
                 background: isActive ? Colors.sage : Colors.cream,
                 color: isActive ? 'white' : Colors.charcoal,
-                fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
+                fontSize: FontSize.sm, fontWeight: 600, whiteSpace: 'nowrap',
                 transition: 'background 0.2s',
               }}
             >
               <span>{cat.icon}</span>
               <span>{cat.label}</span>
               <span style={{
-                fontSize: 11, padding: '2px 6px', borderRadius: 10,
+                fontSize: FontSize.xs, padding: '2px 6px', borderRadius: 10,
                 background: isActive ? 'rgba(255,255,255,0.2)' : Colors.lightGray,
                 color: isActive ? 'white' : Colors.medGray,
               }}>
@@ -319,7 +395,7 @@ export default function SalePrep() {
                   }}>
                     {item.label}
                   </p>
-                  <p style={{ fontSize: 13, color: Colors.medGray, lineHeight: 1.5, marginBottom: item.estimatedCost ? 6 : 0 }}>
+                  <p style={{ fontSize: FontSize.sm, color: Colors.medGray, lineHeight: 1.5, marginBottom: item.estimatedCost ? 6 : 0 }}>
                     {item.description}
                   </p>
                   {item.estimatedCost && (
@@ -344,7 +420,7 @@ export default function SalePrep() {
             onClick={() => navigate('/home-report')}
             style={{ cursor: 'pointer', padding: 16, textAlign: 'center' }}
           >
-            <div style={{ fontSize: 28, marginBottom: 8 }}>&#128196;</div>
+            <div style={{ fontSize: FontSize.xxl, marginBottom: 8 }}>&#128196;</div>
             <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, marginBottom: 4 }}>Home Report PDF</p>
             <p style={{ fontSize: 12, color: Colors.medGray }}>Generate a full home report for buyers and agents</p>
           </div>
@@ -353,7 +429,7 @@ export default function SalePrep() {
             onClick={() => navigate('/transfer')}
             style={{ cursor: 'pointer', padding: 16, textAlign: 'center' }}
           >
-            <div style={{ fontSize: 28, marginBottom: 8 }}>&#127968;</div>
+            <div style={{ fontSize: FontSize.xxl, marginBottom: 8 }}>&#127968;</div>
             <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, marginBottom: 4 }}>Home Token</p>
             <p style={{ fontSize: 12, color: Colors.medGray }}>Transfer your home's maintenance history to the new owner</p>
           </div>
@@ -364,7 +440,7 @@ export default function SalePrep() {
       {progressPct === 100 && (
         <div className="card" style={{ marginTop: 24, padding: 24, textAlign: 'center', background: Colors.sageMuted, border: `1px solid ${Colors.sage}` }}>
           <div style={{ fontSize: 36, marginBottom: 8 }}>&#127881;</div>
-          <h3 style={{ fontSize: 18, color: Colors.charcoal, marginBottom: 8 }}>All Done!</h3>
+          <h3 style={{ fontSize: FontSize.lg, color: Colors.charcoal, marginBottom: 8 }}>All Done!</h3>
           <p style={{ fontSize: 14, color: Colors.medGray, marginBottom: 16 }}>
             Your home is ready for the market. Great work!
           </p>

@@ -1,316 +1,121 @@
-import { supabase, sendNotification, sendDirectEmailNotification } from '@/services/supabase';
-import type { ProPlusSubscription } from '@/types';
+// ═══════════════════════════════════════════════════════════════
+// Concierge Inquiries (formerly Pro+) — web mirror
+// ═══════════════════════════════════════════════════════════════
+// 2026-04-29: Pro+ tier killed. The "Pro+ services" name is now the
+// umbrella brand for the curated add-on bundle. This service captures
+// homeowner interest in the bundle (or specific add-ons like the
+// Annual Certified Home Inspection) and admins/pros follow up out of
+// band — there's no in-app subscription lifecycle anymore.
+//
+// Backed by the renamed `concierge_inquiries` table (was
+// `pro_plus_inquiries`). RLS: owner reads own, anyone authed inserts,
+// admins full access.
+// ═══════════════════════════════════════════════════════════════
 
-// ─── Homeowner Functions ───
+import { supabase, sendNotification } from '@/services/supabase';
+import type { ConciergeInquiry, ConciergeInquiryStatus } from '@/types';
 
-export async function requestConsultation(homeId: string, providerId: string): Promise<ProPlusSubscription> {
+export interface SubmitInquiryParams {
+  homeId?: string | null;
+  email: string;
+  /** Optional city/state hint for non-authed-or-no-home cases. */
+  city?: string;
+  state?: string;
+  /** add_on_categories.id slugs the user is interested in (e.g., ['inspection']). */
+  interestedCategories?: string[];
+  notes?: string;
+}
+
+/** Capture an inquiry. Used by the "Ask about Pro+ services" CTA. */
+export async function submitConciergeInquiry(p: SubmitInquiryParams): Promise<ConciergeInquiry> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-
   const { data, error } = await supabase
-    .from('pro_plus_subscriptions')
+    .from('concierge_inquiries')
     .insert({
-      homeowner_id: user.id,
-      home_id: homeId,
-      pro_provider_id: providerId,
-      consultation_requested_at: new Date().toISOString(),
-      status: 'consultation_requested',
+      user_id: user?.id ?? null,
+      home_id: p.homeId ?? null,
+      email: p.email,
+      city: p.city ?? null,
+      state: p.state ?? null,
+      interested_categories: p.interestedCategories ?? [],
+      notes: p.notes ?? null,
+      status: 'new',
     })
     .select()
     .single();
   if (error) throw error;
 
-  // Get homeowner and provider info for notifications
-  const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user.id).single();
-  const { data: home } = await supabase.from('homes').select('address, city').eq('id', homeId).single();
-  const { data: provider } = await supabase.from('pro_providers').select('user_id, business_name, contact_name').eq('id', providerId).single();
-  const homeLabel = home ? `${home.address}, ${home.city}` : 'their home';
-  const userName = profile?.full_name || 'A homeowner';
-
-  // Notify the provider about the consultation request
-  if (provider?.user_id) {
-    sendNotification({
-      user_id: provider.user_id,
-      title: 'New Pro+ Consultation Request',
-      body: `${userName} at ${homeLabel} has requested a Pro+ consultation. Please review and schedule an in-home assessment.`,
-      category: 'pro_plus',
-      action_url: '/pro-portal',
-    }).catch(() => {});
-  }
-
-  // Notify admins
-  const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin');
-  if (admins) {
-    for (const admin of admins) {
-      sendNotification({
-        user_id: admin.id,
-        title: 'New Pro+ Consultation Request',
-        body: `${userName} has requested a Pro+ consultation for ${homeLabel}. Provider: ${provider?.business_name || 'Unassigned'}.`,
-        category: 'pro_plus',
-        action_url: '/admin/users',
-      }).catch(() => {});
+  // Fire-and-forget admin pings — keep notification flow simple.
+  try {
+    const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin');
+    if (admins) {
+      const summary = (p.interestedCategories ?? []).join(', ') || 'general bundle';
+      for (const admin of admins) {
+        sendNotification({
+          user_id: admin.id,
+          title: 'New Pro+ services inquiry',
+          body: `${p.email} expressed interest in ${summary}. Reach out via the admin inquiries view.`,
+          category: 'pro_services',
+          action_url: '/admin/users',
+        }).catch(() => { /* non-blocking */ });
+      }
     }
-  }
+  } catch { /* non-blocking */ }
 
-  // Confirm to the homeowner
-  sendNotification({
-    user_id: user.id,
-    title: 'Pro+ Consultation Requested',
-    body: `Your Pro+ consultation request has been submitted! ${provider?.business_name || 'Your Canopy pro'} will reach out to schedule an in-home assessment where they'll evaluate your property and build a custom maintenance plan.`,
-    category: 'pro_plus',
-    action_url: '/pro-plus',
-  }).catch(() => {});
-
-  return data;
+  return data as ConciergeInquiry;
 }
 
-export async function getProPlusStatus(homeownerId: string): Promise<ProPlusSubscription | null> {
+/** Most recent open inquiry for the current user's home (if any). */
+export async function getActiveInquiry(homeId: string): Promise<ConciergeInquiry | null> {
   const { data, error } = await supabase
-    .from('pro_plus_subscriptions')
-    .select('*, provider:pro_providers(*)')
-    .eq('homeowner_id', homeownerId)
-    .single();
+    .from('concierge_inquiries')
+    .select('*')
+    .eq('home_id', homeId)
+    .in('status', ['new', 'contacted', 'quoted'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (error && error.code !== 'PGRST116') throw error;
-  return data;
+  return (data ?? null) as ConciergeInquiry | null;
 }
 
-export async function approveQuote(subscriptionId: string): Promise<void> {
-  const { data: sub, error: fetchError } = await supabase
-    .from('pro_plus_subscriptions')
-    .select('*')
-    .eq('id', subscriptionId)
-    .single();
-  if (fetchError || !sub) throw fetchError || new Error('Subscription not found');
-
-  // Call Edge Function to create Stripe subscription with custom amount
-  const { error: fnError } = await supabase.functions.invoke('create-pro-plus-subscription', {
-    body: {
-      subscription_id: subscriptionId,
-      monthly_rate: sub.quoted_monthly_rate,
-      homeowner_id: sub.homeowner_id,
-    },
-  });
-  if (fnError) throw fnError;
-
-  // Update local status
-  const { error } = await supabase
-    .from('pro_plus_subscriptions')
-    .update({
-      status: 'active',
-      homeowner_approved_at: new Date().toISOString(),
-      current_monthly_rate: sub.quoted_monthly_rate,
-      started_at: new Date().toISOString(),
-    })
-    .eq('id', subscriptionId);
-  if (error) throw error;
-
-  // Notify the provider that quote was approved
-  if (sub.pro_provider_id) {
-    const { data: provider } = await supabase.from('pro_providers').select('user_id, business_name').eq('id', sub.pro_provider_id).single();
-    const { data: homeowner } = await supabase.from('profiles').select('full_name').eq('id', sub.homeowner_id).single();
-    if (provider?.user_id) {
-      sendNotification({
-        user_id: provider.user_id,
-        title: 'Pro+ Quote Approved',
-        body: `${homeowner?.full_name || 'Your client'} has approved the Pro+ quote at $${sub.quoted_monthly_rate}/mo. Their subscription is now active.`,
-        category: 'pro_plus',
-        action_url: '/pro-portal',
-      }).catch(() => {});
-    }
-  }
-
-  // Notify the homeowner — welcome to Pro+
-  sendNotification({
-    user_id: sub.homeowner_id,
-    title: 'Welcome to Canopy Pro+!',
-    body: `Your Pro+ subscription is now active at $${sub.quoted_monthly_rate}/mo. Your Canopy pro will handle all routine maintenance — filter changes, seasonal inspections, gutter cleaning, and more. Larger projects will be quoted separately. Visit Pro Services to see your upcoming schedule.`,
-    category: 'pro_plus',
-    action_url: '/pro-services',
-  }).catch(() => {});
-
-  // Update tier on profile
-  await supabase.from('profiles').update({ subscription_tier: 'pro_plus' }).eq('id', sub.homeowner_id);
-}
-
-export async function cancelProPlus(subscriptionId: string): Promise<void> {
-  const { data: sub } = await supabase
-    .from('pro_plus_subscriptions')
-    .select('homeowner_id, pro_provider_id')
-    .eq('id', subscriptionId)
-    .single();
-
-  const { error } = await supabase
-    .from('pro_plus_subscriptions')
-    .update({
-      status: 'cancelled',
-      cancelled_at: new Date().toISOString(),
-    })
-    .eq('id', subscriptionId);
-  if (error) throw error;
-
-  if (sub) {
-    // Notify homeowner
-    sendNotification({
-      user_id: sub.homeowner_id,
-      title: 'Pro+ Subscription Cancelled',
-      body: 'Your Pro+ subscription has been cancelled. You can still access your home data and maintenance history. If you change your mind, you can re-enroll anytime from Settings.',
-      category: 'pro_plus',
-      action_url: '/subscription',
-    }).catch(() => {});
-
-    // Notify provider
-    if (sub.pro_provider_id) {
-      const { data: provider } = await supabase.from('pro_providers').select('user_id').eq('id', sub.pro_provider_id).single();
-      const { data: homeowner } = await supabase.from('profiles').select('full_name').eq('id', sub.homeowner_id).single();
-      if (provider?.user_id) {
-        sendNotification({
-          user_id: provider.user_id,
-          title: 'Pro+ Client Cancelled',
-          body: `${homeowner?.full_name || 'A client'} has cancelled their Pro+ subscription.`,
-          category: 'pro_plus',
-          action_url: '/pro-portal',
-        }).catch(() => {});
-      }
-    }
-  }
-}
-
-export async function pauseProPlus(subscriptionId: string): Promise<void> {
-  const { data: sub } = await supabase
-    .from('pro_plus_subscriptions')
-    .select('homeowner_id, pro_provider_id')
-    .eq('id', subscriptionId)
-    .single();
-
-  const { error } = await supabase
-    .from('pro_plus_subscriptions')
-    .update({ status: 'paused' })
-    .eq('id', subscriptionId);
-  if (error) throw error;
-
-  if (sub) {
-    sendNotification({
-      user_id: sub.homeowner_id,
-      title: 'Pro+ Subscription Paused',
-      body: 'Your Pro+ subscription is paused. No visits will be scheduled and billing is on hold. You can resume anytime from your Pro+ management page.',
-      category: 'pro_plus',
-      action_url: '/pro-plus',
-    }).catch(() => {});
-
-    if (sub.pro_provider_id) {
-      const { data: provider } = await supabase.from('pro_providers').select('user_id').eq('id', sub.pro_provider_id).single();
-      const { data: homeowner } = await supabase.from('profiles').select('full_name').eq('id', sub.homeowner_id).single();
-      if (provider?.user_id) {
-        sendNotification({
-          user_id: provider.user_id,
-          title: 'Pro+ Client Paused',
-          body: `${homeowner?.full_name || 'A client'} has paused their Pro+ subscription. No visits should be scheduled until they resume.`,
-          category: 'pro_plus',
-          action_url: '/pro-portal',
-        }).catch(() => {});
-      }
-    }
-  }
-}
-
-// ─── Pro Provider Functions ───
-
-export async function getProPlusCustomers(providerId: string): Promise<ProPlusSubscription[]> {
+/** Convenience: list all inquiries for the current user. */
+export async function listMyInquiries(): Promise<ConciergeInquiry[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
   const { data, error } = await supabase
-    .from('pro_plus_subscriptions')
+    .from('concierge_inquiries')
     .select('*')
-    .eq('pro_provider_id', providerId)
-    .in('status', ['consultation_requested', 'consultation_scheduled', 'consultation_completed', 'quote_pending', 'quote_approved', 'active'])
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data || [];
+  return (data ?? []) as ConciergeInquiry[];
 }
 
-export async function scheduleConsultation(subscriptionId: string, date: string): Promise<void> {
-  const { data: sub } = await supabase
-    .from('pro_plus_subscriptions')
-    .select('homeowner_id, pro_provider_id')
-    .eq('id', subscriptionId)
-    .single();
-
+/** Admin: update an inquiry's status as it moves through the pipeline. */
+export async function updateInquiryStatus(
+  inquiryId: string,
+  status: ConciergeInquiryStatus,
+  patch?: Partial<Pick<ConciergeInquiry, 'notes'>>,
+): Promise<void> {
   const { error } = await supabase
-    .from('pro_plus_subscriptions')
+    .from('concierge_inquiries')
     .update({
-      status: 'consultation_scheduled',
-      consultation_scheduled_date: date,
+      status,
+      contacted_at: status === 'contacted' ? new Date().toISOString() : undefined,
+      ...(patch ?? {}),
     })
-    .eq('id', subscriptionId);
+    .eq('id', inquiryId);
   if (error) throw error;
-
-  if (sub) {
-    const { data: provider } = await supabase.from('pro_providers').select('business_name, contact_name').eq('id', sub.pro_provider_id).single();
-    const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-    sendNotification({
-      user_id: sub.homeowner_id,
-      title: 'Pro+ Consultation Scheduled',
-      body: `Your Pro+ consultation with ${provider?.business_name || provider?.contact_name || 'your Canopy pro'} is scheduled for ${formattedDate}. They'll walk through your home to assess all systems and build your custom maintenance plan.`,
-      category: 'pro_plus',
-      action_url: '/pro-plus',
-    }).catch(() => {});
-  }
 }
 
-export async function completeConsultation(subscriptionId: string, notes: string): Promise<void> {
-  const { data: sub } = await supabase
-    .from('pro_plus_subscriptions')
-    .select('homeowner_id, pro_provider_id')
-    .eq('id', subscriptionId)
-    .single();
-
-  const { error } = await supabase
-    .from('pro_plus_subscriptions')
-    .update({
-      status: 'consultation_completed',
-      consultation_completed_at: new Date().toISOString(),
-      consultation_notes: notes,
-    })
-    .eq('id', subscriptionId);
+/** Admin: list all open inquiries. */
+export async function listAllOpenInquiries(): Promise<ConciergeInquiry[]> {
+  const { data, error } = await supabase
+    .from('concierge_inquiries')
+    .select('*')
+    .in('status', ['new', 'contacted', 'quoted'])
+    .order('created_at', { ascending: false });
   if (error) throw error;
-
-  if (sub) {
-    sendNotification({
-      user_id: sub.homeowner_id,
-      title: 'Pro+ Consultation Complete',
-      body: 'Your in-home consultation is complete! Your Canopy pro is now preparing a custom quote for your Pro+ maintenance plan. You\'ll be notified as soon as it\'s ready for review.',
-      category: 'pro_plus',
-      action_url: '/pro-plus',
-    }).catch(() => {});
-  }
-}
-
-export async function submitQuote(subscriptionId: string, monthlyRate: number, validUntil: string, coverageNotes: string): Promise<void> {
-  const { data: sub } = await supabase
-    .from('pro_plus_subscriptions')
-    .select('homeowner_id, pro_provider_id')
-    .eq('id', subscriptionId)
-    .single();
-
-  const { error } = await supabase
-    .from('pro_plus_subscriptions')
-    .update({
-      status: 'quote_pending',
-      quoted_monthly_rate: monthlyRate,
-      quoted_at: new Date().toISOString(),
-      quote_valid_until: validUntil,
-      coverage_notes: coverageNotes,
-    })
-    .eq('id', subscriptionId);
-  if (error) throw error;
-
-  if (sub) {
-    const { data: provider } = await supabase.from('pro_providers').select('business_name, contact_name').eq('id', sub.pro_provider_id).single();
-    const validDate = new Date(validUntil + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-    sendNotification({
-      user_id: sub.homeowner_id,
-      title: 'Your Pro+ Quote Is Ready',
-      body: `${provider?.business_name || 'Your Canopy pro'} has prepared your Pro+ quote: $${monthlyRate}/mo for comprehensive home maintenance. This covers: ${coverageNotes.slice(0, 150)}${coverageNotes.length > 150 ? '...' : ''}. Quote valid until ${validDate}. Review and approve to get started.`,
-      category: 'pro_plus',
-      action_url: '/pro-plus',
-    }).catch(() => {});
-  }
+  return (data ?? []) as ConciergeInquiry[];
 }

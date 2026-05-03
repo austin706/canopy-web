@@ -285,7 +285,6 @@ export default function AdminNotifications() {
                 <option value="free">Free</option>
                 <option value="home">Home</option>
                 <option value="pro">Pro</option>
-                <option value="pro_plus">Pro+</option>
               </select>
             </div>
           )}

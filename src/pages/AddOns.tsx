@@ -37,6 +37,8 @@ const ICON_MAP: Record<string, string> = {
   bug: '🐛', leaf: '🌿', water: '💧', settings: '⚙️', sparkles: '✨',
   thermometer: '🌡️', flame: '🔥', droplets: '💦', grid: '🔲', zap: '⚡',
   wind: '💨', truck: '🚛', droplet: '💧', beaker: '🧪',
+  // 2026-04-29: inspection add-on icons (Annual Certified Home Inspection).
+  'shield-checkmark-outline': '🛡️', shield: '🛡️',
 };
 
 const FREQ_LABELS: Record<string, string> = {
@@ -44,6 +46,24 @@ const FREQ_LABELS: Record<string, string> = {
   quarterly: 'Quarterly', biannual: 'Twice/year', annual: 'Annual',
   as_needed: 'As needed',
 };
+
+// 2026-04-29: Pricing-suffix per frequency. Most add-ons are monthly-billed
+// recurring services. The Annual Certified Home Inspection (id='inspection')
+// is annual-billed recurring — its estimated_price is the annual amount, not
+// a monthly equivalent. Without this map we'd render "$149/mo" for what is
+// actually $149/yr.
+const PRICE_SUFFIX: Record<string, string> = {
+  monthly: '/mo',
+  biweekly: '/mo', // biweekly billing surfaces as a monthly-equivalent for UI
+  bimonthly: '/mo',
+  quarterly: '/qtr',
+  biannual: '/6mo',
+  annual: '/yr',
+  as_needed: '',
+};
+function priceSuffix(freq: string): string {
+  return PRICE_SUFFIX[freq] ?? '/mo';
+}
 
 const STATUS_STYLES: Record<string, { label: string; bg: string; color: string }> = {
   requested: { label: 'Requested', bg: Colors.warning + '20', color: Colors.warning },
@@ -78,8 +98,7 @@ export default function AddOns() {
     tier === 'home' ||
     tier === 'home_2' ||
     tier === 'pro' ||
-    tier === 'pro_2' ||
-    tier === 'pro_plus';
+    tier === 'pro_2';
 
   useEffect(() => {
     if (home && user) {
@@ -291,7 +310,7 @@ export default function AddOns() {
         }}>+</div>
         <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: Colors.charcoal }}>Add-On Services</h3>
         <p style={{ fontSize: 14, color: Colors.medGray, lineHeight: 1.6, maxWidth: 400, margin: '0 auto 20px' }}>
-          HVAC maintenance, pest control, lawn care, pool service, cleaning, and more — all managed through Canopy. Available on Home, Pro, and Pro+ plans.
+          HVAC maintenance, pest control, lawn care, pool service, cleaning, and more — all managed through Canopy. Available on Home and Pro plans.
         </p>
         <button className="btn btn-primary" onClick={() => navigate('/subscription')}>Upgrade to Access</button>
       </div>
@@ -497,7 +516,7 @@ export default function AddOns() {
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
               {est.is_recurring ? (
                 <span style={{ fontSize: 14, fontWeight: 700, color: est.color || Colors.sage }}>
-                  ~${est.estimated_price}/mo
+                  ~${est.estimated_price}{priceSuffix(est.frequency)}
                 </span>
               ) : (
                 <span style={{ fontSize: 14, fontWeight: 700, color: est.color || Colors.sage }}>
@@ -522,7 +541,7 @@ export default function AddOns() {
           >
             {est.is_recurring && (
               <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 12px', lineHeight: 1.5 }}>
-                Estimated at <strong>${est.estimated_price}/mo</strong> based on your home's size and features.
+                Estimated at <strong>${est.estimated_price}{priceSuffix(est.frequency)}</strong> based on your home's size and features.
                 A specialist will visit your property and confirm the exact price before you're charged.
               </p>
             )}

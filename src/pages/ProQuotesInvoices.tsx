@@ -152,7 +152,7 @@ export default function ProQuotesInvoices() {
         .from('profiles')
         .select('id, full_name, subscription_tier')
         .in('id', userIds)
-        .in('subscription_tier', ['pro', 'pro_plus']);
+        .in('subscription_tier', ['pro']);
 
       if (!profiles) return;
       const profileMap = new Map(profiles.map(p => [p.id, p]));

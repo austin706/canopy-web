@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/services/supabase';
-import { Colors } from '@/constants/theme';
+import { Colors, FontSize } from '@/constants/theme';
 import { showToast } from '@/components/Toast';
 import { useTabState } from '@/utils/useTabState';
 import logger from '@/utils/logger';
@@ -63,6 +63,36 @@ export default function AgentPurchaseCodes() {
   const [clientName, setClientName] = useState('');
   const [purchasing, setPurchasing] = useState(false);
 
+  // 2026-05-02 (STRATEGIC_TOP #6): batch quantity for closing-gift purchases.
+  // Quantity > 1 forces delivery='code' since direct activation needs a unique
+  // email per gift; the batch flow generates N codes for the agent to mail out.
+  const [quantity, setQuantity] = useState(1);
+
+  // 2026-05-02: agent identity for the co-branded gift card preview.
+  // Brokerage lives on agents.brokerage (not profiles), so we resolve it
+  // up-front and cache.
+  const [agentName, setAgentName] = useState<string>('');
+  const [agentBrokerage, setAgentBrokerage] = useState<string>('');
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const fullName = (user as { full_name?: string }).full_name || '';
+        if (!cancelled) setAgentName(fullName);
+        const agentId = (user as { agent_id?: string }).agent_id;
+        if (!agentId) return;
+        const { data } = await supabase
+          .from('agents')
+          .select('brokerage')
+          .eq('id', agentId)
+          .maybeSingle();
+        if (!cancelled && data?.brokerage) setAgentBrokerage(data.brokerage);
+      } catch {/* non-blocking */}
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
   useEffect(() => {
     if (!user?.id) return;
     loadCodes();
@@ -82,14 +112,21 @@ export default function AgentPurchaseCodes() {
   };
 
   const effectiveMonths = customMonths ? parseInt(customMonths) || 0 : months;
+  const effectiveQuantity = Math.max(1, Math.min(50, quantity || 1));
   const rate = WHOLESALE_RATES[tier];
-  const totalPrice = effectiveMonths * rate.monthly;
-  const retailPrice = effectiveMonths * rate.retail;
+  const perCodePrice = effectiveMonths * rate.monthly;
+  const totalPrice = perCodePrice * effectiveQuantity;
+  const retailPrice = effectiveMonths * rate.retail * effectiveQuantity;
   const savings = retailPrice - totalPrice;
+  const isBatch = effectiveQuantity > 1;
 
   const handlePurchase = async () => {
     if (effectiveMonths < 1) return;
     if (delivery === 'direct' && !clientEmail.trim()) return;
+    if (isBatch && delivery === 'direct') {
+      showToast({ message: 'Batch orders generate codes — switch delivery to Gift Code.' });
+      return;
+    }
     setPurchasing(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-agent-checkout', {
@@ -100,6 +137,12 @@ export default function AgentPurchaseCodes() {
           delivery,
           client_email: delivery === 'direct' ? clientEmail.trim().toLowerCase() : null,
           client_name: clientName.trim() || null,
+          // 2026-05-02: closing-gift batch + co-brand metadata so the
+          // checkout edge fn can stamp every generated code with the
+          // agent's name + brokerage for the recipient email/preview.
+          quantity: effectiveQuantity,
+          agent_name: agentName || undefined,
+          agent_brokerage: agentBrokerage || undefined,
           amount_cents: Math.round(totalPrice * 100),
         },
       });
@@ -161,7 +204,7 @@ export default function AgentPurchaseCodes() {
           <div>
             {/* Step 1: Tier */}
             <div className="card mb-md">
-              <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: Colors.charcoal }}>1. Choose Plan</h3>
+              <h3 style={{ fontSize: FontSize.md, fontWeight: 600, marginBottom: 12, color: Colors.charcoal }}>1. Choose Plan</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 {(['home', 'pro'] as const).map(t => {
                   const r = WHOLESALE_RATES[t];
@@ -177,7 +220,7 @@ export default function AgentPurchaseCodes() {
                       }}
                     >
                       <div style={{ fontSize: 16, fontWeight: 700, color: r.color, marginBottom: 4 }}>{r.label}</div>
-                      <div style={{ fontSize: 13, color: Colors.medGray }}>
+                      <div style={{ fontSize: FontSize.sm, color: Colors.medGray }}>
                         <span style={{ fontWeight: 600, color: Colors.charcoal }}>${r.monthly}/mo</span>
                         <span style={{ textDecoration: 'line-through', marginLeft: 6 }}>${r.retail}/mo</span>
                       </div>
@@ -189,7 +232,7 @@ export default function AgentPurchaseCodes() {
 
             {/* Step 2: Duration */}
             <div className="card mb-md">
-              <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: Colors.charcoal }}>2. Duration</h3>
+              <h3 style={{ fontSize: FontSize.md, fontWeight: 600, marginBottom: 12, color: Colors.charcoal }}>2. Duration</h3>
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                 {DURATION_PRESETS.map(d => (
                   <button
@@ -207,7 +250,7 @@ export default function AgentPurchaseCodes() {
                 ))}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, color: Colors.medGray }}>or custom:</span>
+                <span style={{ fontSize: FontSize.sm, color: Colors.medGray }}>or custom:</span>
                 <input
                   className="form-input"
                   type="number"
@@ -218,13 +261,13 @@ export default function AgentPurchaseCodes() {
                   placeholder="# months"
                   style={{ width: 100 }}
                 />
-                <span style={{ fontSize: 13, color: Colors.medGray }}>months</span>
+                <span style={{ fontSize: FontSize.sm, color: Colors.medGray }}>months</span>
               </div>
             </div>
 
             {/* Step 3: Delivery */}
             <div className="card mb-md">
-              <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: Colors.charcoal }}>3. Delivery</h3>
+              <h3 style={{ fontSize: FontSize.md, fontWeight: 600, marginBottom: 12, color: Colors.charcoal }}>3. Delivery</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: delivery === 'direct' ? 12 : 0 }}>
                 <button
                   onClick={() => setDelivery('code')}
@@ -252,11 +295,11 @@ export default function AgentPurchaseCodes() {
               {delivery === 'direct' && (
                 <div>
                   <div className="form-group" style={{ marginBottom: 8 }}>
-                    <label style={{ fontSize: 13 }}>Client Email <span aria-hidden="true">*</span></label>
+                    <label style={{ fontSize: FontSize.sm }}>Client Email <span aria-hidden="true">*</span></label>
                     <input className="form-input" type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="client@email.com" />
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: 13 }}>Client Name (optional)</label>
+                    <label style={{ fontSize: FontSize.sm }}>Client Name (optional)</label>
                     <input className="form-input" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Jane Smith" />
                   </div>
                 </div>
@@ -264,7 +307,7 @@ export default function AgentPurchaseCodes() {
               {delivery === 'code' && (
                 <div style={{ marginTop: 10 }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: 13 }}>Client Name (optional — shown when they redeem)</label>
+                    <label style={{ fontSize: FontSize.sm }}>Client Name (optional — shown when they redeem)</label>
                     <input className="form-input" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Jane Smith" />
                   </div>
                 </div>
@@ -272,33 +315,118 @@ export default function AgentPurchaseCodes() {
             </div>
           </div>
 
-          {/* Right: Price summary */}
-          <div className="card" style={{ position: 'sticky', top: 24 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, color: Colors.charcoal }}>Order Summary</h3>
+          {/* Right: Price summary + co-branded preview */}
+          <div style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* 2026-05-02: Batch quantity selector — closing-gift use case */}
+          <div className="card">
+            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: Colors.charcoal }}>
+              Quantity
+            </h3>
+            <p style={{ fontSize: FontSize.xs, color: Colors.medGray, margin: '0 0 10px' }}>
+              Bulk-buy codes for closings, referrals, or campaigns. Each code is unique.
+            </p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {[1, 5, 10, 25].map(q => (
+                <button
+                  key={q}
+                  onClick={() => setQuantity(q)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 6, fontSize: FontSize.sm, fontWeight: 600, cursor: 'pointer',
+                    border: `1.5px solid ${quantity === q ? rate.color : Colors.lightGray}`,
+                    background: quantity === q ? rate.color + '10' : 'white',
+                    color: quantity === q ? rate.color : Colors.medGray,
+                  }}
+                >
+                  {q}
+                </button>
+              ))}
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={[1, 5, 10, 25].includes(quantity) ? '' : quantity}
+                onChange={e => setQuantity(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
+                placeholder="Custom"
+                className="form-input"
+                style={{ width: 80, padding: '4px 8px', fontSize: FontSize.sm }}
+              />
+            </div>
+            {isBatch && delivery === 'direct' && (
+              <p style={{ fontSize: FontSize.xs, color: Colors.warning, marginTop: 8 }}>
+                Batch orders deliver as gift codes — pick "Gift Code" delivery above.
+              </p>
+            )}
+          </div>
+
+          {/* 2026-05-02: Co-branded gift preview — what the recipient sees */}
+          <div className="card" style={{
+            background: `linear-gradient(135deg, ${Colors.cream} 0%, ${rate.color}10 100%)`,
+            border: `1px solid ${Colors.lightGray}`,
+          }}>
+            <p style={{
+              fontSize: FontSize.xs, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase',
+              color: rate.color, margin: '0 0 8px',
+            }}>
+              Recipient preview
+            </p>
+            <div style={{
+              padding: 16, background: 'white', borderRadius: 8, border: `1px solid ${Colors.lightGray}`,
+            }}>
+              <p style={{ fontSize: FontSize.xs, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase', color: Colors.copper, margin: 0 }}>
+                A closing gift from
+              </p>
+              <p style={{ fontSize: 16, fontWeight: 700, color: Colors.charcoal, margin: '2px 0 0' }}>
+                {agentName || 'Your Realtor'}
+              </p>
+              {agentBrokerage && (
+                <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 10px' }}>
+                  {agentBrokerage}
+                </p>
+              )}
+              <div style={{
+                marginTop: 10, padding: '12px 14px', borderRadius: 6,
+                background: Colors.cream, border: `1px dashed ${rate.color}`,
+              }}>
+                <p style={{ fontSize: FontSize.sm, fontWeight: 600, color: Colors.charcoal, margin: 0 }}>
+                  {clientName || 'Friend'}, welcome home — here's a year of Canopy on me.
+                </p>
+                <p style={{ fontSize: FontSize.xs, color: Colors.medGray, margin: '6px 0 0' }}>
+                  Canopy {rate.label} · {effectiveMonths} month{effectiveMonths !== 1 ? 's' : ''} · redeem at canopyhome.app
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 style={{ fontSize: FontSize.md, fontWeight: 600, marginBottom: 16, color: Colors.charcoal }}>Order Summary</h3>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 13, color: Colors.medGray }}>{rate.label} Plan</span>
-              <span style={{ fontSize: 13 }}>${rate.monthly}/mo</span>
+              <span style={{ fontSize: FontSize.sm, color: Colors.medGray }}>{rate.label} Plan</span>
+              <span style={{ fontSize: FontSize.sm }}>${rate.monthly}/mo</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 13, color: Colors.medGray }}>Duration</span>
-              <span style={{ fontSize: 13 }}>{effectiveMonths} month{effectiveMonths !== 1 ? 's' : ''}</span>
+              <span style={{ fontSize: FontSize.sm, color: Colors.medGray }}>Duration</span>
+              <span style={{ fontSize: FontSize.sm }}>{effectiveMonths} month{effectiveMonths !== 1 ? 's' : ''}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 13, color: Colors.medGray }}>Delivery</span>
-              <span style={{ fontSize: 13 }}>{delivery === 'code' ? 'Gift Code' : 'Direct Activation'}</span>
+              <span style={{ fontSize: FontSize.sm, color: Colors.medGray }}>Quantity</span>
+              <span style={{ fontSize: FontSize.sm }}>{effectiveQuantity}{isBatch ? ' codes' : ''}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: FontSize.sm, color: Colors.medGray }}>Delivery</span>
+              <span style={{ fontSize: FontSize.sm }}>{delivery === 'code' ? 'Gift Code' : 'Direct Activation'}</span>
             </div>
             <div style={{ borderTop: `1px solid ${Colors.lightGray}`, margin: '12px 0', paddingTop: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 13, color: Colors.medGray, textDecoration: 'line-through' }}>Retail</span>
-                <span style={{ fontSize: 13, color: Colors.medGray, textDecoration: 'line-through' }}>${retailPrice.toFixed(2)}</span>
+                <span style={{ fontSize: FontSize.sm, color: Colors.medGray, textDecoration: 'line-through' }}>Retail</span>
+                <span style={{ fontSize: FontSize.sm, color: Colors.medGray, textDecoration: 'line-through' }}>${retailPrice.toFixed(2)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 13, color: Colors.success, fontWeight: 600 }}>Agent Savings</span>
-                <span style={{ fontSize: 13, color: Colors.success, fontWeight: 600 }}>-${savings.toFixed(2)}</span>
+                <span style={{ fontSize: FontSize.sm, color: Colors.success, fontWeight: 600 }}>Agent Savings</span>
+                <span style={{ fontSize: FontSize.sm, color: Colors.success, fontWeight: 600 }}>-${savings.toFixed(2)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                <span style={{ fontSize: 18, fontWeight: 700, color: Colors.charcoal }}>Total</span>
-                <span style={{ fontSize: 18, fontWeight: 700, color: rate.color }}>${totalPrice.toFixed(2)}</span>
+                <span style={{ fontSize: FontSize.lg, fontWeight: 700, color: Colors.charcoal }}>Total</span>
+                <span style={{ fontSize: FontSize.lg, fontWeight: 700, color: rate.color }}>${totalPrice.toFixed(2)}</span>
               </div>
             </div>
             <button
@@ -309,9 +437,10 @@ export default function AgentPurchaseCodes() {
             >
               {purchasing ? 'Opening Checkout...' : `Pay $${totalPrice.toFixed(2)}`}
             </button>
-            <p style={{ fontSize: 11, color: Colors.medGray, marginTop: 8, textAlign: 'center' }}>
+            <p style={{ fontSize: FontSize.xs, color: Colors.medGray, marginTop: 8, textAlign: 'center' }}>
               Secure checkout via Stripe
             </p>
+          </div>
           </div>
         </div>
       )}
@@ -364,10 +493,10 @@ export default function AgentPurchaseCodes() {
                 <tbody>
                   {displayCodes.map(c => (
                     <tr key={c.id}>
-                      <td><code style={{ fontSize: 13, fontWeight: 600, color: Colors.copper }}>{c.code}</code></td>
+                      <td><code style={{ fontSize: FontSize.sm, fontWeight: 600, color: Colors.copper }}>{c.code}</code></td>
                       <td>
                         <span style={{
-                          fontSize: 11, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
+                          fontSize: FontSize.xs, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
                           background: c.tier === 'pro' ? Colors.sageMuted : Colors.copperMuted,
                           color: c.tier === 'pro' ? Colors.sage : Colors.copper,
                           textTransform: 'uppercase',
@@ -379,7 +508,7 @@ export default function AgentPurchaseCodes() {
                       <td>{c.client_name || c.client_email || '—'}</td>
                       <td>
                         <span style={{
-                          fontSize: 11, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
+                          fontSize: FontSize.xs, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
                           background: c.redeemed_by ? Colors.success + '20' : Colors.warning + '20',
                           color: c.redeemed_by ? Colors.success : Colors.warning,
                         }}>

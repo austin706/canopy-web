@@ -1,10 +1,65 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Colors } from '@/constants/theme';
+import { Colors, FontSize } from '@/constants/theme';
 import { useStore } from '@/store/useStore';
 import HomeTokenShare from '@/components/HomeTokenShare';
 import { getTransferByToken, type HomeTransfer as HomeTransferType } from '@/services/homeTransfer';
 import { supabase } from '@/services/supabaseClient';
+
+// 2026-05-02: Buyer-facing callout for the certified inspection. Pulls
+// the PDF certificate URL lazily so we don't widen the home select
+// across every Home Token view.
+function CertifiedInspectionCallout({
+  homeId, inspectedAt, inspectionCount, inspectionId,
+}: { homeId: string; inspectedAt: string; inspectionCount?: number; inspectionId?: string }) {
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!inspectionId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('home_inspections')
+        .select('pdf_certificate_url')
+        .eq('id', inspectionId)
+        .maybeSingle();
+      if (!cancelled && data?.pdf_certificate_url) setPdfUrl(data.pdf_certificate_url);
+    })();
+    return () => { cancelled = true; };
+  }, [inspectionId, homeId]);
+
+  return (
+    <div className="card" style={{
+      padding: 14,
+      marginBottom: 16,
+      display: 'flex',
+      gap: 12,
+      alignItems: 'center',
+      background: `${Colors.copper}10`,
+      borderLeft: `4px solid ${Colors.copper}`,
+    }}>
+      <div aria-hidden="true" style={{ fontSize: FontSize.xxl, lineHeight: 1, flexShrink: 0 }}>🛡️</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: FontSize.sm, fontWeight: 700, color: Colors.charcoal, margin: 0 }}>
+          Canopy Maintenance Inspection on file
+        </p>
+        <p style={{ fontSize: 12, color: Colors.medGray, margin: '2px 0 0' }}> // allow-lint
+          Last inspected {new Date(inspectedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+          {inspectionCount && inspectionCount > 1 ? ` · ${inspectionCount} inspections total` : ''}
+        </p>
+        {pdfUrl && (
+          <a
+            href={pdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 12, color: Colors.copper, fontWeight: 600, marginTop: 4, display: 'inline-block' }} // allow-lint
+          >
+            View certificate (PDF) →
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Public view for a Home Token share link: /home-token/share/:transferToken
@@ -101,12 +156,81 @@ export default function HomeTokenShareView() {
     : (cityState || 'Location pending');
   const secondaryLine = canSeeStreet ? cityState : '';
 
+  // 2026-05-02 (STRATEGIC_TOP #10): "wow" pass for the public share view.
+  // The audience here is a buyer or agent encountering Canopy for the
+  // first time. We need them to feel: (a) this house has been cared for,
+  // (b) the record is verified by Canopy (not self-reported), (c) they
+  // could have this for their own home in two taps.
+  const trustBadges: Array<{ label: string; tone: string }> = [];
+  if (home.last_certified_inspection_at) trustBadges.push({ label: 'Canopy Maintenance Inspection', tone: Colors.copper });
+  if (home.agent_attested_at) trustBadges.push({ label: 'Agent attested', tone: Colors.sage });
+  if (home.ownership_verified) trustBadges.push({ label: 'Ownership verified', tone: Colors.sage });
+
+  const completeness = home.record_completeness_score ?? 0;
+  const completenessTone = completeness >= 80 ? Colors.success : completeness >= 60 ? Colors.sage : completeness >= 40 ? Colors.warning : Colors.medGray;
+
   return (
-    <div className="page" style={{ maxWidth: 600 }}>
-      {/* Home summary banner */}
+    <div className="page" style={{ maxWidth: 640 }}>
+      {/* 2026-05-02 hero — "this home has been cared for" narrative */}
+      <div style={{
+        background: `linear-gradient(135deg, ${Colors.cream} 0%, ${Colors.copper}12 100%)`,
+        borderRadius: 16,
+        padding: 24,
+        marginBottom: 20,
+        border: `1px solid ${Colors.lightGray}`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <span aria-hidden="true" style={{ fontSize: FontSize.lg }}>🏡</span>
+          <span style={{ fontSize: FontSize.xs, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: Colors.copper }}>
+            Canopy Home Token
+          </span>
+        </div>
+        <h1 style={{ fontSize: 26, fontWeight: 700, color: Colors.charcoal, margin: '0 0 6px', lineHeight: 1.2 }}> // allow-lint
+          {primaryLine}
+        </h1>
+        {secondaryLine && (
+          <p style={{ fontSize: 14, color: Colors.medGray, margin: '0 0 16px' }}>{secondaryLine}</p> // allow-lint
+        )}
+        {/* Completeness bar */}
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: Colors.charcoal }}>Record completeness</span> // allow-lint
+            <span style={{ fontSize: FontSize.sm, fontWeight: 700, color: completenessTone }}>{completeness}%</span>
+          </div>
+          <div style={{
+            height: 8, borderRadius: 4, background: Colors.lightGray, overflow: 'hidden',
+          }}>
+            <div style={{
+              height: '100%', width: `${completeness}%`, borderRadius: 4,
+              background: completenessTone, transition: 'width 0.4s ease',
+            }} />
+          </div>
+        </div>
+        {/* Trust badges */}
+        {trustBadges.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
+            {trustBadges.map(b => (
+              <span key={b.label} style={{
+                fontSize: FontSize.xs, fontWeight: 600,
+                padding: '4px 10px', borderRadius: 999,
+                background: `${b.tone}18`, color: b.tone,
+              }}>
+                ✓ {b.label}
+              </span>
+            ))}
+          </div>
+        )}
+        {!canSeeStreet && (
+          <p style={{ fontSize: FontSize.xs, color: Colors.medGray, fontStyle: 'italic', marginTop: 12 }}>
+            Full address visible only to signed-in agents and the homeowner.
+          </p>
+        )}
+      </div>
+
+      {/* Home photo card (kept) */}
       <div className="card" style={{
         padding: 16,
-        marginBottom: 24,
+        marginBottom: 16,
         display: 'flex',
         gap: 12,
         alignItems: 'center',
@@ -119,30 +243,25 @@ export default function HomeTokenShareView() {
             width: 64, height: 64, borderRadius: 8,
             background: Colors.cream,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 28,
+            fontSize: FontSize.xxl,
           }} role="img" aria-label="Home">🏡</div>
         )}
         <div style={{ flex: 1 }}>
-          <p style={{ fontWeight: 600, color: Colors.charcoal }}>{primaryLine}</p>
-          {secondaryLine && (
-            <p style={{ fontSize: 13, color: Colors.medGray }}>
-              {secondaryLine}
-            </p>
-          )}
-          {!canSeeStreet && (
-            <p style={{ fontSize: 11, color: Colors.medGray, fontStyle: 'italic', marginTop: 2 }}>
-              Full address shown to signed-in agents and homeowners
-            </p>
-          )}
-          {home.record_completeness_score != null && (
-            <p style={{ fontSize: 12, color: Colors.sageDark, marginTop: 4 }}>
-              Record completeness: {home.record_completeness_score}%
-              {home.agent_attested_at ? ' · Agent attested' : ''}
-              {home.ownership_verified ? ' · Ownership verified' : ''}
-            </p>
-          )}
+          <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: 0 }}>
+            This Home Token is a tamper-evident maintenance record. Every entry is timestamped, photo-backed where applicable, and verifiable through Canopy.
+          </p>
         </div>
       </div>
+
+      {/* Certified inspection callout */}
+      {home.last_certified_inspection_at && (
+        <CertifiedInspectionCallout
+          homeId={home.id}
+          inspectedAt={home.last_certified_inspection_at}
+          inspectionCount={home.certified_inspection_count}
+          inspectionId={home.last_certified_inspection_id}
+        />
+      )}
 
       <HomeTokenShare
         homeId={home.id}
@@ -151,6 +270,43 @@ export default function HomeTokenShareView() {
         agentName={agentName}
         agentBrokerage={agentBrokerage}
       />
+
+      {/* 2026-05-02: "Get this for your home" CTA — buyer-side conversion
+          wedge. Only shown to anonymous viewers (the existing homeowner
+          and signed-in agent shouldn't be re-pitched on Canopy). */}
+      {!user && (
+        <div style={{
+          marginTop: 28,
+          padding: 22,
+          borderRadius: 14,
+          background: Colors.charcoal,
+          color: '#fff',
+          textAlign: 'center',
+        }}>
+          <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: Colors.copper, margin: 0 }}> // allow-lint
+            Want this for your home?
+          </p>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#fff', margin: '8px 0' }}> // allow-lint
+            Start your own Home Token in under 2 minutes.
+          </h2>
+          <p style={{ fontSize: 14, color: '#cdcdcd', margin: '0 0 16px' }}> // allow-lint
+            Free forever for the first home. Upgrade only when you want pro maintenance or the Annual Certified Home Inspection.
+          </p>
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate('/signup')}
+            style={{
+              background: Colors.copper, color: '#fff', border: 'none',
+              padding: '12px 22px', borderRadius: 10, fontSize: 14, fontWeight: 700, // allow-lint
+            }}
+          >
+            Create my free Home Token →
+          </button>
+          <p style={{ fontSize: FontSize.xs, color: '#9b9b9b', margin: '12px 0 0' }}> // allow-lint
+            Already a customer? <a href="/login" style={{ color: Colors.copper, textDecoration: 'none', fontWeight: 600 }}>Sign in</a>
+          </p>
+        </div>
+      )}
     </div>
   );
 }

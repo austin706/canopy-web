@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, getNotifications, markNotificationRead } from '@/services/supabase';
 import { useStore } from '@/store/useStore';
-import { Colors } from '@/constants/theme';
+import { Colors, FontSize } from '@/constants/theme';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import { PageSkeleton } from '@/components/Skeleton';
 import { showToast } from '@/components/Toast';
@@ -32,6 +32,9 @@ interface AssignedClient {
   id: string;
   full_name: string;
   email: string;
+  /** 2026-05-02: home_id surfaced so the Pro Portal can launch the
+   *  certified-inspection flow per-home rather than per-user. */
+  home_id?: string;
   address?: string;
   city?: string;
   state?: string;
@@ -122,7 +125,7 @@ export default function ProPortal() {
       const zipCounts: Record<string, number> = {};
       for (const h of (homeZips || [])) {
         const tier = (h as { profiles?: { subscription_tier?: string } }).profiles?.subscription_tier;
-        if (h.zip_code && (tier === 'pro' || tier === 'pro_plus')) {
+        if (h.zip_code && (tier === 'pro' || tier === 'pro_2')) {
           zipCounts[h.zip_code] = (zipCounts[h.zip_code] || 0) + 1;
         }
       }
@@ -144,7 +147,7 @@ export default function ProPortal() {
           const { count } = await supabase
             .from('profiles')
             .select('*, homes!inner(zip_code)', { count: 'exact', head: true })
-            .in('subscription_tier', ['pro', 'pro_plus'])
+            .in('subscription_tier', ['pro', 'pro_2'])
             .in('homes.zip_code', p.zip_codes);
           p.assigned_clients = count || 0;
         } else {
@@ -156,7 +159,7 @@ export default function ProPortal() {
       const { count: totalProClients } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .in('subscription_tier', ['pro', 'pro_plus']);
+        .in('subscription_tier', ['pro', 'pro_2']);
 
       setAllProviders(providers);
       setAdminStats({
@@ -183,7 +186,7 @@ export default function ProPortal() {
       let query = supabase
         .from('profiles')
         .select('id, full_name, email, subscription_tier')
-        .in('subscription_tier', ['pro', 'pro_plus'])
+        .in('subscription_tier', ['pro', 'pro_2'])
         .order('full_name');
 
       const { data: clients } = await query;
@@ -204,6 +207,7 @@ export default function ProPortal() {
 
         clientList.push({
           ...c,
+          home_id: homeData?.id,
           address: homeData?.address,
           city: homeData?.city,
           state: homeData?.state,
@@ -359,7 +363,7 @@ export default function ProPortal() {
         const { count } = await supabase
           .from('profiles')
           .select('*, homes!inner(zip_code)', { count: 'exact', head: true })
-          .in('subscription_tier', ['pro', 'pro_plus'])
+          .in('subscription_tier', ['pro', 'pro_2'])
           .in('homes.zip_code', providerData.zip_codes);
         clientCount = count || 0;
       }
@@ -368,7 +372,7 @@ export default function ProPortal() {
       const { data: clients } = await supabase
         .from('profiles')
         .select('id, full_name, email, subscription_tier')
-        .in('subscription_tier', ['pro', 'pro_plus']);
+        .in('subscription_tier', ['pro', 'pro_2']);
 
       const clientList: AssignedClient[] = [];
       for (const c of (clients || [])) {
@@ -498,7 +502,7 @@ export default function ProPortal() {
             { label: 'Upcoming Visits', value: adminStats.upcomingVisits, color: Colors.info },
           ].map(s => (
             <div key={s.label} className="card" style={{ textAlign: 'center', padding: '20px 16px' }}>
-              <div style={{ fontSize: 28, fontWeight: 'bold', color: s.color, marginBottom: 4 }}>{s.value}</div>
+              <div style={{ fontSize: FontSize.xxl, fontWeight: 'bold', color: s.color, marginBottom: 4 }}>{s.value}</div>
               <p style={{ margin: 0, fontSize: 12, color: Colors.medGray }}>{s.label}</p>
             </div>
           ))}
@@ -507,21 +511,21 @@ export default function ProPortal() {
         {/* Quick Actions */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
           <button className="card" onClick={() => navigate('/pro-portal/visit-schedule')}
-            style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: `2px solid ${Colors.sage}`, fontWeight: 600, fontSize: 15 }}>
+            style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: `2px solid ${Colors.sage}`, fontWeight: 600, fontSize: FontSize.md }}>
             Visit Schedule
           </button>
           <button className="card" onClick={() => navigate('/pro-portal/job-queue')}
-            style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: '2px solid transparent', fontWeight: 600, fontSize: 15 }}>
+            style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: '2px solid transparent', fontWeight: 600, fontSize: FontSize.md }}>
             All Service Requests
           </button>
           <button className="card" onClick={() => navigate('/pro-portal/quotes-invoices')}
-            style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: '2px solid transparent', fontWeight: 600, fontSize: 15 }}>
+            style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: '2px solid transparent', fontWeight: 600, fontSize: FontSize.md }}>
             Quotes & Invoices
           </button>
         </div>
 
         {/* Provider List with Zip Code Management */}
-        <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Canopy Providers</h2>
+        <h2 style={{ fontSize: FontSize.lg, fontWeight: 600, marginBottom: 16 }}>Canopy Providers</h2>
         {allProviders.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: 40, color: Colors.medGray }}>
             <p>No providers registered yet.</p>
@@ -533,13 +537,13 @@ export default function ProPortal() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 16, color: Colors.charcoal }}>{p.contact_name}</div>
-                    <div style={{ fontSize: 13, color: Colors.medGray, marginTop: 2 }}>
+                    <div style={{ fontSize: FontSize.sm, color: Colors.medGray, marginTop: 2 }}>
                       {p.email} {p.phone ? `· ${p.phone}` : ''}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <span style={{
-                      padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                      padding: '3px 10px', borderRadius: 20, fontSize: FontSize.xs, fontWeight: 600,
                       backgroundColor: p.is_available ? 'var(--color-success-muted, #e8f5e9)' : 'var(--color-error-muted, #fce4ec)',
                       color: p.is_available ? 'var(--color-success)' : 'var(--color-error)',
                     }}>
@@ -556,7 +560,7 @@ export default function ProPortal() {
                 <div style={{ marginTop: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: Colors.charcoal }}>Service Zip Codes:</span>
-                    <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, padding: '2px 8px' }}
+                    <button className="btn btn-ghost btn-sm" style={{ fontSize: FontSize.xs, padding: '2px 8px' }}
                       onClick={() => {
                         if (editingZips === p.id) {
                           setEditingZips(null);
@@ -580,7 +584,7 @@ export default function ProPortal() {
                           {availableZips.map(z => (
                             <label key={z.zip} style={{
                               display: 'flex', alignItems: 'center', gap: 8,
-                              padding: '4px 0', cursor: 'pointer', fontSize: 13,
+                              padding: '4px 0', cursor: 'pointer', fontSize: FontSize.sm,
                             }}>
                               <input
                                 type="checkbox"
@@ -595,7 +599,7 @@ export default function ProPortal() {
                               />
                               <span style={{ fontWeight: 500 }}>{z.zip}</span>
                               {z.count > 0 && (
-                                <span style={{ fontSize: 11, color: Colors.sage }}>
+                                <span style={{ fontSize: FontSize.xs, color: Colors.sage }}>
                                   ({z.count} Pro client{z.count !== 1 ? 's' : ''})
                                 </span>
                               )}
@@ -610,7 +614,7 @@ export default function ProPortal() {
                             value={zipInput}
                             onChange={e => setZipInput(e.target.value)}
                             placeholder="74101, 74104, 74105..."
-                            style={{ flex: 1, fontSize: 13 }}
+                            style={{ flex: 1, fontSize: FontSize.sm }}
                           />
                         </div>
                       )}
@@ -665,7 +669,7 @@ export default function ProPortal() {
         {selectedProvider && (
           <div style={{ marginTop: 32 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>
+              <h2 style={{ fontSize: FontSize.lg, fontWeight: 600, margin: 0 }}>
                 Clients for {selectedProvider.contact_name}
               </h2>
               <button className="btn btn-ghost btn-sm" onClick={() => setSelectedProvider(null)}>Close</button>
@@ -685,24 +689,40 @@ export default function ProPortal() {
                       <th>Zip</th>
                       <th>Tier</th>
                       <th>Email</th>
+                      <th aria-label="Actions"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {providerClients.map(c => (
                       <tr key={c.id}>
                         <td style={{ fontWeight: 600 }}>{c.full_name || '—'}</td>
-                        <td style={{ fontSize: 13 }}>{c.address ? `${c.address}, ${c.city}` : '—'}</td>
+                        <td style={{ fontSize: FontSize.sm }}>{c.address ? `${c.address}, ${c.city}` : '—'}</td>
                         <td>{c.zip_code || '—'}</td>
                         <td>
                           <span style={{
-                            padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
-                            backgroundColor: c.subscription_tier === 'pro_plus' ? 'var(--color-copper-muted, #EDE7F6)' : Colors.sageMuted,
-                            color: c.subscription_tier === 'pro_plus' ? 'var(--color-copper, #7B1FA2)' : Colors.sage,
+                            padding: '2px 8px', borderRadius: 4, fontSize: FontSize.xs, fontWeight: 600,
+                            backgroundColor: c.subscription_tier === 'pro_2' ? 'var(--color-copper-muted, #EDE7F6)' : Colors.sageMuted,
+                            color: c.subscription_tier === 'pro_2' ? 'var(--color-copper, #7B1FA2)' : Colors.sage,
                           }}>
-                            {c.subscription_tier === 'pro_plus' ? 'Pro+' : 'Pro'}
+                            {c.subscription_tier === 'pro_2' ? 'Pro 2-Pack' : 'Pro'}
                           </span>
                         </td>
-                        <td style={{ fontSize: 13, color: Colors.medGray }}>{c.email}</td>
+                        <td style={{ fontSize: FontSize.sm, color: Colors.medGray }}>{c.email}</td>
+                        <td>
+                          {/* 2026-05-02: Inspector launches the Annual Certified Home
+                              Inspection flow for this client's home. Disabled if no
+                              home_id (shouldn't happen for Pro tier subscribers). */}
+                          {c.home_id ? (
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => navigate(`/pro-portal/certified-inspection/${c.home_id}`)}
+                              title="Conduct Annual Maintenance Inspection"
+                              style={{ fontSize: 12 }}
+                            >
+                              🛡️ Inspect
+                            </button>
+                          ) : null}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -749,35 +769,35 @@ export default function ProPortal() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
         <div className="card" style={{ textAlign: 'center', padding: '24px 16px' }}>
-          <div style={{ fontSize: 28, fontWeight: 'bold', color: Colors.sage, marginBottom: 4 }}>{stats.upcomingVisits}</div>
-          <p style={{ margin: 0, fontSize: 13, color: Colors.medGray }}>Upcoming Visits</p>
+          <div style={{ fontSize: FontSize.xxl, fontWeight: 'bold', color: Colors.sage, marginBottom: 4 }}>{stats.upcomingVisits}</div>
+          <p style={{ margin: 0, fontSize: FontSize.sm, color: Colors.medGray }}>Upcoming Visits</p>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '24px 16px' }}>
-          <div style={{ fontSize: 28, fontWeight: 'bold', color: Colors.copper, marginBottom: 4 }}>{stats.completedThisMonth}</div>
-          <p style={{ margin: 0, fontSize: 13, color: Colors.medGray }}>Completed This Month</p>
+          <div style={{ fontSize: FontSize.xxl, fontWeight: 'bold', color: Colors.copper, marginBottom: 4 }}>{stats.completedThisMonth}</div>
+          <p style={{ margin: 0, fontSize: FontSize.sm, color: Colors.medGray }}>Completed This Month</p>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '24px 16px' }}>
-          <div style={{ fontSize: 28, fontWeight: 'bold', color: Colors.warning, marginBottom: 4 }}>{stats.assignedClients}</div>
-          <p style={{ margin: 0, fontSize: 13, color: Colors.medGray }}>Assigned Clients</p>
+          <div style={{ fontSize: FontSize.xxl, fontWeight: 'bold', color: Colors.warning, marginBottom: 4 }}>{stats.assignedClients}</div>
+          <p style={{ margin: 0, fontSize: FontSize.sm, color: Colors.medGray }}>Assigned Clients</p>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 32 }}>
         <button className="card" onClick={() => navigate('/pro-portal/visit-schedule')}
-          style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: `2px solid ${Colors.sage}`, fontWeight: 600, fontSize: 15 }}>
+          style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: `2px solid ${Colors.sage}`, fontWeight: 600, fontSize: FontSize.md }}>
           Service Calendar
         </button>
         <button className="card" onClick={() => navigate('/pro-portal/job-queue')}
-          style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: '2px solid transparent', fontWeight: 600, fontSize: 15 }}>
+          style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: '2px solid transparent', fontWeight: 600, fontSize: FontSize.md }}>
           Visit Queue
         </button>
         <button className="card" onClick={() => navigate('/pro-portal/quotes-invoices')}
-          style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: '2px solid transparent', fontWeight: 600, fontSize: 15 }}>
+          style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: '2px solid transparent', fontWeight: 600, fontSize: FontSize.md }}>
           Quotes & Invoices
         </button>
         <button className="card" onClick={() => navigate('/pro-portal/payouts')}
-          style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: '2px solid transparent', fontWeight: 600, fontSize: 15 }}>
+          style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: '2px solid transparent', fontWeight: 600, fontSize: FontSize.md }}>
           Payouts
         </button>
       </div>
@@ -785,7 +805,7 @@ export default function ProPortal() {
       {/* New Clients Needing First Visit */}
       {newClients.length > 0 && (
         <div style={{ marginBottom: 32 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>
+          <h2 style={{ fontSize: FontSize.lg, fontWeight: 600, marginBottom: 8 }}>
             New Clients
             <span style={{
               marginLeft: 8, padding: '2px 8px', borderRadius: 10, fontSize: 12,
@@ -794,7 +814,7 @@ export default function ProPortal() {
               {newClients.length} need first visit
             </span>
           </h2>
-          <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 12 }}>
+          <p style={{ fontSize: FontSize.sm, color: Colors.medGray, marginBottom: 12 }}>
             These Pro subscribers haven't had their first bimonthly visit yet. Schedule their orientation visit to get started.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -810,7 +830,7 @@ export default function ProPortal() {
                       {c.full_name || c.email}
                       {c.hasFirstVisit && (
                         <span style={{
-                          marginLeft: 8, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                          marginLeft: 8, padding: '2px 8px', borderRadius: 4, fontSize: FontSize.xs, fontWeight: 600,
                           backgroundColor: `${Colors.sage}20`, color: Colors.sage,
                         }}>
                           Visit Proposed
@@ -835,7 +855,7 @@ export default function ProPortal() {
       )}
 
       {/* Upcoming Visits */}
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Upcoming Visits</h2>
+      <h2 style={{ fontSize: FontSize.lg, fontWeight: 600, marginBottom: 12 }}>Upcoming Visits</h2>
       {upcomingVisits.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 32, color: Colors.medGray }}>
           <p>No upcoming visits. Check your Service Calendar to propose new visits.</p>
@@ -849,7 +869,7 @@ export default function ProPortal() {
                   <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px' }}>
                     {v.title}
                     <span style={{
-                      marginLeft: 8, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                      marginLeft: 8, padding: '2px 8px', borderRadius: 4, fontSize: FontSize.xs, fontWeight: 600,
                       backgroundColor: v.status === 'confirmed' ? 'var(--color-success-muted, #e8f5e9)' : 'var(--color-copper-muted, #FFF3CD)',
                       color: v.status === 'confirmed' ? 'var(--color-success)' : 'var(--color-warning)',
                     }}>
@@ -869,7 +889,7 @@ export default function ProPortal() {
       )}
 
       {/* Pending Service Requests */}
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>
+      <h2 style={{ fontSize: FontSize.lg, fontWeight: 600, marginBottom: 12 }}>
         Service Requests
         {pendingRequests.length > 0 && (
           <span style={{
@@ -897,14 +917,14 @@ export default function ProPortal() {
                     <p style={{ fontWeight: 600, fontSize: 14, color: Colors.charcoal, margin: '0 0 4px' }}>
                       {(r.category || r.service_type || 'Service Request').replace(/^\w/, (c: string) => c.toUpperCase())}
                       <span style={{
-                        marginLeft: 8, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                        marginLeft: 8, padding: '2px 8px', borderRadius: 4, fontSize: FontSize.xs, fontWeight: 600,
                         backgroundColor: statusColor + '20', color: statusColor,
                       }}>
                         {r.status}
                       </span>
                       {r.urgency && (
                         <span style={{
-                          marginLeft: 4, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                          marginLeft: 4, padding: '2px 8px', borderRadius: 4, fontSize: FontSize.xs, fontWeight: 600,
                           backgroundColor: r.urgency === 'urgent' ? Colors.error + '20' : Colors.warning + '20',
                           color: r.urgency === 'urgent' ? Colors.error : Colors.warning,
                         }}>
@@ -912,7 +932,7 @@ export default function ProPortal() {
                         </span>
                       )}
                     </p>
-                    <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 4px' }}>
+                    <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: '0 0 4px' }}>
                       {r.description}
                     </p>
                     <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
@@ -936,7 +956,7 @@ export default function ProPortal() {
       )}
 
       {/* Assigned Clients */}
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>My Clients</h2>
+      <h2 style={{ fontSize: FontSize.lg, fontWeight: 600, marginBottom: 12 }}>My Clients</h2>
       {myClients.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 32, color: Colors.medGray }}>
           <p>No clients assigned to your service area yet.</p>
@@ -954,10 +974,10 @@ export default function ProPortal() {
                     {c.full_name || 'Unknown'}
                     <span style={{
                       marginLeft: 8, padding: '2px 6px', borderRadius: 4, fontSize: 10, fontWeight: 600,
-                      backgroundColor: c.subscription_tier === 'pro_plus' ? 'var(--color-copper-muted, #EDE7F6)' : Colors.sageMuted,
-                      color: c.subscription_tier === 'pro_plus' ? 'var(--color-copper, #7B1FA2)' : Colors.sage,
+                      backgroundColor: c.subscription_tier === 'pro_2' ? 'var(--color-copper-muted, #EDE7F6)' : Colors.sageMuted,
+                      color: c.subscription_tier === 'pro_2' ? 'var(--color-copper, #7B1FA2)' : Colors.sage,
                     }}>
-                      {c.subscription_tier === 'pro_plus' ? 'Pro+' : 'Pro'}
+                      {c.subscription_tier === 'pro_2' ? 'Pro 2-Pack' : 'Pro'}
                     </span>
                   </p>
                   <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
@@ -978,18 +998,18 @@ export default function ProPortal() {
           {(provider?.zip_codes || []).length > 0 ? (
             (provider?.zip_codes || []).map(zip => (
               <span key={zip} style={{
-                padding: '3px 10px', borderRadius: 4, fontSize: 13, fontWeight: 500,
+                padding: '3px 10px', borderRadius: 4, fontSize: FontSize.sm, fontWeight: 500,
                 backgroundColor: Colors.sageMuted, color: Colors.sage,
               }}>{zip}</span>
             ))
           ) : (
-            <span style={{ fontSize: 13, color: Colors.medGray }}>No zip codes assigned. Contact your Canopy admin.</span>
+            <span style={{ fontSize: FontSize.sm, color: Colors.medGray }}>No zip codes assigned. Contact your Canopy admin.</span>
           )}
         </div>
       </div>
 
       {/* Notifications */}
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>
+      <h2 style={{ fontSize: FontSize.lg, fontWeight: 600, marginBottom: 12 }}>
         Alerts
         {proNotifications.filter(n => !n.read).length > 0 && (
           <span style={{
@@ -1019,13 +1039,13 @@ export default function ProPortal() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <p style={{ fontSize: 14, fontWeight: n.read ? 500 : 700, margin: 0 }}>{n.title}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 11, color: Colors.medGray }}>
+                  <span style={{ fontSize: FontSize.xs, color: Colors.medGray }}>
                     {n.created_at ? new Date(n.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}
                   </span>
                   {!n.read && (
                     <button
                       className="btn btn-ghost btn-sm"
-                      style={{ fontSize: 11, padding: '2px 8px' }}
+                      style={{ fontSize: FontSize.xs, padding: '2px 8px' }}
                       onClick={async () => {
                         try {
                           await markNotificationRead(n.id);
@@ -1040,7 +1060,7 @@ export default function ProPortal() {
                   )}
                 </div>
               </div>
-              <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>{n.body}</p>
+              <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: 0 }}>{n.body}</p>
               {n.action_url && (
                 <button
                   className="btn btn-ghost btn-sm"

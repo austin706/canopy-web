@@ -24,14 +24,12 @@ const TIER_COLORS: Record<string, string> = {
   free: '#6B7280',
   home: '#3B82F6',
   pro: '#8B5CF6',
-  pro_plus: '#EC4899',
 };
 
 const TIER_LABELS: Record<string, string> = {
   free: 'Free',
   home: 'Home',
   pro: 'Pro',
-  pro_plus: 'Pro+',
 };
 
 interface UserDetail {
@@ -359,7 +357,6 @@ export default function AdminUsers() {
             <option value="free">Free</option>
             <option value="home">Home</option>
             <option value="pro">Pro</option>
-            <option value="pro_plus">Pro+</option>
           </select>
           <select
             className="admin-filter-select"
@@ -389,7 +386,6 @@ export default function AdminUsers() {
                 <option value="free">Free</option>
                 <option value="home">Home</option>
                 <option value="pro">Pro</option>
-                <option value="pro_plus">Pro+</option>
               </select>
               <button
                 className="btn btn-primary btn-sm"
@@ -485,8 +481,9 @@ export default function AdminUsers() {
                           >
                             <option value="free">Free</option>
                             <option value="home">Home</option>
+                            <option value="home_2">Home 2-Pack</option>
                             <option value="pro">Pro</option>
-                            <option value="pro_plus">Pro+</option>
+                            <option value="pro_2">Pro 2-Pack</option>
                           </select>
                         </div>
                       </td>

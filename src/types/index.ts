@@ -18,7 +18,10 @@ export type {
   VisitSummaryData,
 } from './inspection';
 
-export type SubscriptionTier = 'free' | 'home' | 'home_2' | 'pro' | 'pro_2' | 'pro_plus';
+// 2026-04-29: 'pro_plus' tier killed. The Pro+ name is now the umbrella
+// brand for the curated add-on bundle (concierge tier for Home/Pro users).
+// Annual Certified Home Inspection lives in add_on_categories as id='inspection'.
+export type SubscriptionTier = 'free' | 'home' | 'home_2' | 'pro' | 'pro_2';
 
 // ─── ENUM TYPES ───────────────────────────────────────────
 
@@ -426,6 +429,14 @@ export interface Home {
   ownership_verification_date?: string;
   ownership_verification_notes?: string;
   ownership_documents_url?: string;
+
+  // ─── CERTIFIED HOME INSPECTION ROLLUP (2026-04-29) ───
+  /** Most recent certified-inspection timestamp; surfaces on Home Token share view. */
+  last_certified_inspection_at?: string;
+  /** FK to home_inspections.id for the most recent inspection. */
+  last_certified_inspection_id?: string;
+  /** Lifetime count of certified inspections completed on this home. */
+  certified_inspection_count?: number;
 
   // ─── ENVIRONMENTAL ───
   climate_zone?: string;
@@ -978,34 +989,27 @@ export interface VisitAllocation {
   created_at: string;
 }
 
-// ─── Pro+ Concierge Subscriptions ───
-export type ProPlusStatus = 'consultation_requested' | 'consultation_scheduled' | 'consultation_completed' | 'quote_pending' | 'quote_approved' | 'active' | 'paused' | 'cancelled';
+// ─── Concierge Inquiries (formerly Pro+ Concierge Subscriptions) ───
+// 2026-04-29: Pro+ tier killed. The Pro+ name is now the umbrella brand
+// for the curated add-on bundle. This interface mirrors the renamed
+// concierge_inquiries table (was pro_plus_inquiries).
+export type ConciergeInquiryStatus =
+  | 'new' | 'contacted' | 'quoted' | 'enrolled' | 'declined';
 
-export interface ProPlusSubscription {
+export interface ConciergeInquiry {
   id: string;
-  homeowner_id: string;
-  home_id: string;
-  pro_provider_id: string;
-  consultation_requested_at?: string;
-  consultation_scheduled_date?: string;
-  consultation_completed_at?: string;
-  consultation_notes?: string;
-  quoted_monthly_rate?: number;
-  quoted_at?: string;
-  quote_valid_until?: string;
-  homeowner_approved_at?: string;
-  status: ProPlusStatus;
-  stripe_subscription_id?: string;
-  stripe_customer_id?: string;
-  current_monthly_rate?: number;
-  coverage_notes?: string;
-  scope_exclusions: string;
-  started_at?: string;
-  cancelled_at?: string;
+  user_id?: string | null;
+  home_id?: string | null;
+  email: string;
+  city?: string | null;
+  state?: string | null;
+  /** Which add_on_categories.id slugs the homeowner is interested in. */
+  interested_categories: string[];
+  notes?: string | null;
+  status: ConciergeInquiryStatus;
+  contacted_at?: string | null;
   created_at: string;
   updated_at: string;
-  // Joined fields
-  provider?: ProProvider;
 }
 
 // ─── Quotes ───
@@ -1026,7 +1030,7 @@ export interface Quote {
   quote_number: string;
   title: string;
   description?: string;
-  service_type?: 'add_on' | 'one_off' | 'pro_plus_extra';
+  service_type?: 'add_on' | 'one_off';
   status: QuoteStatus;
   line_items: LineItem[];
   subtotal: number;

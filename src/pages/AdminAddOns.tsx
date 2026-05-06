@@ -89,7 +89,7 @@ export default function AdminAddOns() {
         .select(`
           *,
           home:homes(address, city, state, zip_code),
-          profile:profiles!home_add_ons_user_id_fkey(first_name, last_name, email),
+          profile:profiles!home_add_ons_user_id_fkey(full_name, email),
           category:add_on_categories(display_name, icon, frequency, is_recurring)
         `)
         .order('created_at', { ascending: false });

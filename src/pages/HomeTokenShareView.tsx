@@ -42,7 +42,7 @@ function CertifiedInspectionCallout({
         <p style={{ fontSize: FontSize.sm, fontWeight: 700, color: Colors.charcoal, margin: 0 }}>
           Canopy Maintenance Inspection on file
         </p>
-        <p style={{ fontSize: 12, color: Colors.medGray, margin: '2px 0 0' }}> // allow-lint
+        <p style={{ fontSize: 12 /* allow-lint */, color: Colors.medGray, margin: '2px 0 0' }}>
           Last inspected {new Date(inspectedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
           {inspectionCount && inspectionCount > 1 ? ` · ${inspectionCount} inspections total` : ''}
         </p>
@@ -185,16 +185,16 @@ export default function HomeTokenShareView() {
             Canopy Home Token
           </span>
         </div>
-        <h1 style={{ fontSize: 26, fontWeight: 700, color: Colors.charcoal, margin: '0 0 6px', lineHeight: 1.2 }}> // allow-lint
+        <h1 style={{ fontSize: 26 /* allow-lint */, fontWeight: 700, color: Colors.charcoal, margin: '0 0 6px', lineHeight: 1.2 }}>
           {primaryLine}
         </h1>
         {secondaryLine && (
-          <p style={{ fontSize: 14, color: Colors.medGray, margin: '0 0 16px' }}>{secondaryLine}</p> // allow-lint
+          <p style={{ fontSize: 14 /* allow-lint */, color: Colors.medGray, margin: '0 0 16px' }}>{secondaryLine}</p>
         )}
         {/* Completeness bar */}
         <div style={{ marginTop: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: Colors.charcoal }}>Record completeness</span> // allow-lint
+            <span style={{ fontSize: 12 /* allow-lint */, fontWeight: 600, color: Colors.charcoal }}>Record completeness</span>
             <span style={{ fontSize: FontSize.sm, fontWeight: 700, color: completenessTone }}>{completeness}%</span>
           </div>
           <div style={{
@@ -283,13 +283,13 @@ export default function HomeTokenShareView() {
           color: '#fff',
           textAlign: 'center',
         }}>
-          <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: Colors.copper, margin: 0 }}> // allow-lint
+          <p style={{ fontSize: 12 /* allow-lint */, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: Colors.copper, margin: 0 }}>
             Want this for your home?
           </p>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#fff', margin: '8px 0' }}> // allow-lint
+          <h2 style={{ fontSize: 20 /* allow-lint */, fontWeight: 700, color: '#fff', margin: '8px 0' }}>
             Start your own Home Token in under 2 minutes.
           </h2>
-          <p style={{ fontSize: 14, color: '#cdcdcd', margin: '0 0 16px' }}> // allow-lint
+          <p style={{ fontSize: 14 /* allow-lint */, color: '#cdcdcd', margin: '0 0 16px' }}>
             Free forever for the first home. Upgrade only when you want pro maintenance or the Annual Certified Home Inspection.
           </p>
           <button
@@ -302,7 +302,7 @@ export default function HomeTokenShareView() {
           >
             Create my free Home Token →
           </button>
-          <p style={{ fontSize: FontSize.xs, color: '#9b9b9b', margin: '12px 0 0' }}> // allow-lint
+          <p style={{ fontSize: FontSize.xs, color: '#9b9b9b', margin: '12px 0 0' }}>
             Already a customer? <a href="/login" style={{ color: Colors.copper, textDecoration: 'none', fontWeight: 600 }}>Sign in</a>
           </p>
         </div>

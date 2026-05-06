@@ -59,11 +59,13 @@ export default function ProJobQueue() {
   const loadVisitsForProvider = async (providerId: string) => {
     setLoading(true);
     try {
+      // 2026-05-06 schema-mismatch fix: pro_monthly_visits has confirmed_date /
+      // proposed_date (no `visit_date`); profiles has full_name (no first/last).
       const { data: visitsData, error: visitsError } = await supabase
         .from('pro_monthly_visits')
-        .select(`*, home:homes(*), homeowner:profiles(first_name, last_name)`)
+        .select(`*, home:homes(*), homeowner:profiles(full_name, email)`)
         .eq('pro_provider_id', providerId)
-        .eq('visit_date', selectedDate)
+        .or(`confirmed_date.eq.${selectedDate},and(confirmed_date.is.null,proposed_date.eq.${selectedDate})`)
         .order('created_at', { ascending: true });
 
       if (visitsError) throw visitsError;
@@ -127,18 +129,22 @@ export default function ProJobQueue() {
 
       setProvider(providerData);
 
-      // Load visits for selected date — visit_date is a DATE column, use .eq()
+      // Load visits for selected date.
+      // 2026-05-06 schema-mismatch fix: pro_monthly_visits has no `visit_date`
+      // column — use confirmed_date (or fall back to proposed_date when the
+      // visit hasn't been homeowner-confirmed yet). profiles has `full_name`,
+      // not first_name/last_name.
       const { data: visitsData, error: visitsError } = await supabase
         .from('pro_monthly_visits')
         .select(
           `
           *,
           home:homes(*),
-          homeowner:profiles(first_name, last_name)
+          homeowner:profiles(full_name, email)
         `
         )
         .eq('pro_provider_id', providerData.id)
-        .eq('visit_date', selectedDate)
+        .or(`confirmed_date.eq.${selectedDate},and(confirmed_date.is.null,proposed_date.eq.${selectedDate})`)
         .order('created_at', { ascending: true });
 
       if (visitsError) throw visitsError;

@@ -93,7 +93,7 @@ export default function ProAddOnQuotes() {
         .select(`
           *,
           home:homes(address, city, state, zip_code),
-          profile:profiles!home_add_ons_user_id_fkey(first_name, last_name),
+          profile:profiles!home_add_ons_user_id_fkey(full_name, email),
           category:add_on_categories(display_name, icon, frequency)
         `)
         .in('category_id', categoryIds)

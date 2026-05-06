@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Colors, FontWeight, BorderRadius } from '@/constants/theme';
+import { Colors, FontWeight, BorderRadius, FontSize } from '@/constants/theme';
 import { PRICING, ANNUAL_DISCOUNT_PERCENT } from '@/constants/pricing';
 import type { BillingInterval } from '@/constants/pricing';
 import { trackEvent } from '@/utils/analytics';
@@ -85,17 +85,17 @@ const HERO_COPY: Record<HeroVariant, HeroCopy> = {
     variant: 'outcome_promise',
     h1: 'Never forget a maintenance task, lose a manual, or overpay a contractor again.',
     subhead:
-      'Canopy is the AI home-care system built for Tulsa: it scans your equipment, builds a personalized calendar, and keeps a verified service history that transfers when you sell.',
+      "Snap a photo of any appliance. Canopy figures out what it is, when it needs attention, and lines up a vetted Tulsa pro before things break — and keeps a record buyers will trust the day you list.",
     primaryCta: 'Start free — takes 2 minutes',
-    secondaryCta: 'How it works',
+    secondaryCta: 'See how it works',
   },
   certainty_loop: {
     variant: 'certainty_loop',
     h1: 'Stop guessing. Start knowing.',
     subhead:
-      "Canopy is the AI-powered platform that tracks every piece of equipment in your home, tells you exactly what needs attention and when, and builds a verified maintenance record that protects your home's value.",
-    primaryCta: 'Get Started Free',
-    secondaryCta: 'See How It Works',
+      "Canopy reads every appliance label in your home, tells you exactly what needs attention and when, and builds a tamper-evident record of every visit, repair, and replacement — so the value you put in shows the day you list.",
+    primaryCta: 'Get started free',
+    secondaryCta: 'See it in action',
   },
 };
 
@@ -224,20 +224,20 @@ export default function Landing() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <picture>
-            <source srcSet="/canopy-watercolor-logo.avif" type="image/avif" />
-            <source srcSet="/canopy-watercolor-logo.webp" type="image/webp" />
-            <img
-              src="/canopy-watercolor-logo.png"
-              alt="Canopy"
-              width={44}
-              height={32}
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-              style={{ objectFit: 'contain' }}
-            />
-          </picture>
+          {/* 2026-05-06: avif/webp variants in /public are 8110-byte placeholders
+              (real PNG is 1.19MB). Browser preferred AVIF, decoded garbage,
+              naturalWidth=0, alt text rendered next to wordmark. Going PNG-only
+              until proper avif/webp encodes are generated. */}
+          <img
+            src="/canopy-watercolor-logo.png"
+            alt="Canopy"
+            width={44}
+            height={32}
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            style={{ objectFit: 'contain' }}
+          />
           <span style={{ fontSize: 20, fontWeight: FontWeight.bold, color: Colors.charcoal }}>Canopy</span>
         </div>
 
@@ -294,11 +294,11 @@ export default function Landing() {
           <a href="/support" style={{ padding: '12px 0', fontSize: 16, color: Colors.charcoal, textDecoration: 'none', fontWeight: FontWeight.medium }}>Support</a>
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
             <button onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
-              style={{ flex: 1, padding: 12, fontSize: 15, fontWeight: FontWeight.medium, background: 'transparent', color: Colors.charcoal, border: `1px solid ${Colors.lightGray}`, borderRadius: BorderRadius.md, cursor: 'pointer', fontFamily: fontStack }}>
+              style={{ flex: 1, padding: 12, fontSize: FontSize.md, fontWeight: FontWeight.medium, background: 'transparent', color: Colors.charcoal, border: `1px solid ${Colors.lightGray}`, borderRadius: BorderRadius.md, cursor: 'pointer', fontFamily: fontStack }}>
               Log In
             </button>
             <button onClick={() => { setMobileMenuOpen(false); ctaToSignup('mobile_menu'); }}
-              style={{ flex: 1, padding: 12, fontSize: 15, fontWeight: FontWeight.semibold, background: Colors.copper, color: Colors.white, border: 'none', borderRadius: BorderRadius.md, cursor: 'pointer', fontFamily: fontStack }}>
+              style={{ flex: 1, padding: 12, fontSize: FontSize.md, fontWeight: FontWeight.semibold, background: Colors.copper, color: Colors.white, border: 'none', borderRadius: BorderRadius.md, cursor: 'pointer', fontFamily: fontStack }}>
               Get Started
             </button>
           </div>
@@ -402,40 +402,237 @@ export default function Landing() {
       background: Colors.cream, padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack,
     }}>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
+        <p style={{
+          textAlign: 'center', fontSize: FontSize.sm, fontWeight: FontWeight.bold,
+          letterSpacing: 1.4, textTransform: 'uppercase', color: Colors.copper,
+          margin: '0 0 12px 0',
+        }}>
+          How Canopy works
+        </p>
         <h2 style={{
           fontSize: isMobile ? 26 : 38, fontWeight: FontWeight.bold,
-          color: Colors.charcoal, textAlign: 'center', margin: '0 0 56px 0',
+          color: Colors.charcoal, textAlign: 'center', margin: '0 0 16px 0',
+          lineHeight: 1.2,
         }}>
-          Start in 2 minutes · full setup in about 10
+          Two minutes to start. Ten to feel set up.
         </h2>
         <p style={{
-          fontSize: isMobile ? 14 : 16, color: Colors.medGray,
-          textAlign: 'center', margin: '-40px 0 40px 0', maxWidth: 620, marginLeft: 'auto', marginRight: 'auto',
+          fontSize: isMobile ? 15 : 17, color: Colors.medGray,
+          textAlign: 'center', margin: '0 auto 56px', maxWidth: 620, lineHeight: 1.6,
         }}>
-          Equipment and document upload can happen later — no pressure on day one.
+          Add equipment and documents whenever you have a minute — your plan starts working from day one either way.
         </p>
 
         <div style={{
           display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 32 : 48,
         }}>
           {[
-            { step: '1', title: 'Scan Your Equipment', desc: "Walk through your home and snap photos of appliance labels. Canopy's AI identifies make, model, serial number, and age — then builds your equipment inventory and a personalized maintenance plan." },
-            { step: '2', title: 'Follow Your Plan', desc: 'Get a maintenance calendar tailored to your specific equipment, climate zone, and season. Clear instructions for each task, with reminders so nothing slips through the cracks.' },
-            { step: '3', title: 'Go Hands-Off with Pro', desc: 'Upgrade to Pro and get a Canopy-certified technician at your door every other month. They inspect, maintain, and catch small problems before they become expensive ones.' },
+            { step: '1', title: 'Scan your equipment', desc: "Walk through your home and snap photos of appliance labels. Canopy reads make, model, serial, and age — then builds your inventory and the maintenance plan around it." },
+            { step: '2', title: 'Follow your plan', desc: 'A calendar tailored to your specific equipment, climate, and season. Clear instructions, weather-aware alerts, and reminders so nothing slips.' },
+            { step: '3', title: 'Layer in Pro when you’re ready', desc: 'Want it hands-off? Upgrade to Pro and a Canopy-certified technician shows up every other month to inspect, tune, and catch small things before they become expensive.' },
           ].map((item) => (
             <div key={item.step} style={{ textAlign: 'center' }}>
               <div style={{
                 width: 52, height: 52, borderRadius: '50%',
                 background: Colors.sage, color: Colors.white,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 22, fontWeight: FontWeight.bold, margin: '0 auto 20px',
+                fontSize: FontSize.xl, fontWeight: FontWeight.bold, margin: '0 auto 20px',
               }}>
                 {item.step}
               </div>
               <h3 style={{ fontSize: 19, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 10px 0' }}>{item.title}</h3>
-              <p style={{ fontSize: 15, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+              <p style={{ fontSize: FontSize.md, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
             </div>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // HOME TOKEN + MAINTENANCE INSPECTION — the moat
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 2026-05-06: most homeowner-care apps are calendars. The transferable,
+  // tamper-evident maintenance record is what makes Canopy not a glorified
+  // Notion template — it's the credibility wedge agents and buyers care
+  // about. This section pulls Home Token + the Annual Maintenance Inspection
+  // out of the FAQ + add-ons grid and gives them the visual real estate the
+  // moat deserves.
+  const HomeTokenSection = () => (
+    <section style={{
+      background: `linear-gradient(180deg, ${Colors.warmWhite} 0%, ${Colors.cream} 100%)`,
+      padding: isMobile ? '64px 16px' : '112px 24px',
+      fontFamily: fontStack,
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Subtle copper accent ribbon, top-right */}
+      <div aria-hidden="true" style={{
+        position: 'absolute', top: -40, right: -80, width: 320, height: 320,
+        borderRadius: '50%',
+        background: `radial-gradient(circle, ${Colors.copper}10 0%, transparent 70%)`,
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        maxWidth: 1200, margin: '0 auto', position: 'relative',
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1.05fr 1fr',
+        gap: isMobile ? 40 : 80,
+        alignItems: 'center',
+      }}>
+        {/* Copy column */}
+        <div>
+          <p style={{
+            fontSize: FontSize.sm, fontWeight: FontWeight.bold,
+            letterSpacing: 1.4, textTransform: 'uppercase',
+            color: Colors.copper, margin: '0 0 16px',
+          }}>
+            The Canopy Home Token
+          </p>
+          <h2 style={{
+            fontSize: isMobile ? 30 : 44, fontWeight: FontWeight.bold,
+            color: Colors.charcoal, margin: '0 0 20px', lineHeight: 1.15,
+          }}>
+            The maintenance record buyers actually trust.
+          </h2>
+          <p style={{
+            fontSize: isMobile ? 16 : 18, color: Colors.medGray,
+            lineHeight: 1.6, margin: '0 0 28px',
+          }}>
+            Every visit, repair, replacement, and warranty is timestamped, photo-backed where applicable, and tied to the home itself — not your account. When you list, you hand the buyer a verifiable Home Token. The HomeLight data says it&apos;s worth roughly <strong style={{ color: Colors.charcoal }}>$14,000</strong> in inspection objections you don&apos;t have to negotiate away.
+          </p>
+          <ul style={{
+            listStyle: 'none', padding: 0, margin: '0 0 32px',
+            display: 'grid', gap: 14,
+          }}>
+            {[
+              { icon: '🛡️', text: <>Optional <strong>Annual Maintenance Inspection</strong> by a Canopy-vetted Pro stamps a tamper-evident record onto the Token — from $149/yr.</> },
+              { icon: '📸', text: <>Photo-backed visit logs, manuals, warranties, and receipts in one place — automatically organized.</> },
+              { icon: '🤝', text: <>Transfer the Token to the next owner with one click. Their care continues yours.</> },
+            ].map((item, i) => (
+              <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <span aria-hidden="true" style={{ fontSize: FontSize.xl, lineHeight: '28px', flexShrink: 0 }}>{item.icon}</span>
+                <span style={{ fontSize: FontSize.md, color: Colors.charcoal, lineHeight: 1.55 }}>{item.text}</span>
+              </li>
+            ))}
+          </ul>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+            <button onClick={() => ctaToSignup('home_token')}
+              style={{
+                padding: '14px 28px', fontSize: FontSize.md, fontWeight: FontWeight.semibold,
+                background: Colors.copper, color: Colors.white, border: 'none',
+                borderRadius: BorderRadius.lg, cursor: 'pointer', fontFamily: fontStack,
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.background = Colors.copperDark; (e.target as HTMLElement).style.transform = 'translateY(-2px)'; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.background = Colors.copper; (e.target as HTMLElement).style.transform = 'translateY(0)'; }}>
+              Start your Home Token →
+            </button>
+            <button onClick={() => scrollToSection('pricing')}
+              style={{
+                padding: '14px 28px', fontSize: FontSize.md, fontWeight: FontWeight.semibold,
+                background: 'transparent', color: Colors.copper, border: 'none',
+                cursor: 'pointer', fontFamily: fontStack,
+              }}>
+              See pricing
+            </button>
+          </div>
+        </div>
+
+        {/* Mock Home Token preview — styled to mimic the public share view */}
+        <div aria-hidden="true" style={{
+          position: 'relative',
+          background: Colors.white,
+          borderRadius: 18,
+          padding: isMobile ? 20 : 28,
+          boxShadow: '0 24px 64px -16px rgba(38, 32, 28, 0.18), 0 4px 12px rgba(38, 32, 28, 0.06)',
+          border: `1px solid ${Colors.copper}20`,
+          maxWidth: isMobile ? '100%' : 480,
+          marginLeft: isMobile ? 0 : 'auto',
+          transform: isMobile ? 'none' : 'rotate(-1.5deg)',
+        }}>
+          {/* Token header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: FontSize.lg }}>🏡</span>
+            <span style={{
+              fontSize: FontSize.xs, fontWeight: FontWeight.bold,
+              letterSpacing: 0.7, textTransform: 'uppercase', color: Colors.copper,
+            }}>Canopy Home Token</span>
+          </div>
+          <h3 style={{ fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: Colors.charcoal, margin: '0 0 4px', lineHeight: 1.2 }}>
+            1247 Cedar Ridge Dr
+          </h3>
+          <p style={{ fontSize: 14, color: Colors.medGray, margin: '0 0 16px' }}>
+            Tulsa, OK · 2,400 sqft · Built 1998
+          </p>
+
+          {/* Completeness bar */}
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: FontWeight.semibold, color: Colors.charcoal }}>Record completeness</span>
+              <span style={{ fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.sageDark }}>92%</span>
+            </div>
+            <div style={{ height: 8, borderRadius: 4, background: Colors.lightGray, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', width: '92%', borderRadius: 4,
+                background: `linear-gradient(90deg, ${Colors.sage}, ${Colors.sageDark})`,
+              }} />
+            </div>
+          </div>
+
+          {/* Trust badges */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+            {[
+              { label: 'Maintenance Inspection ✓', tone: Colors.copper },
+              { label: '12 visits logged', tone: Colors.sage },
+              { label: 'Warranties on file', tone: Colors.sage },
+            ].map((b) => (
+              <span key={b.label} style={{
+                fontSize: FontSize.xs, fontWeight: FontWeight.semibold,
+                padding: '4px 10px', borderRadius: 999,
+                background: `${b.tone}18`, color: b.tone,
+              }}>
+                {b.label}
+              </span>
+            ))}
+          </div>
+
+          {/* Maintenance Inspection callout — the wedge */}
+          <div style={{
+            display: 'flex', gap: 12,
+            padding: 14, borderRadius: 12,
+            background: `linear-gradient(135deg, ${Colors.cream} 0%, ${Colors.copper}10 100%)`,
+            border: `1px solid ${Colors.copper}30`,
+            marginBottom: 14,
+          }}>
+            <span style={{ fontSize: FontSize.xl, lineHeight: 1, flexShrink: 0 }}>🛡️</span>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, letterSpacing: 0.5, textTransform: 'uppercase', color: Colors.copper, margin: 0 }}>
+                Maintenance Inspection on file
+              </p>
+              <p style={{ fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '2px 0 0' }}>
+                Last inspected April 12, 2026
+              </p>
+            </div>
+          </div>
+
+          {/* Recent activity rows */}
+          <div style={{ display: 'grid', gap: 8 }}>
+            {[
+              { icon: '🔧', label: 'HVAC quarterly tune-up', date: 'Apr 28' },
+              { icon: '💧', label: 'Water heater anode replaced', date: 'Mar 14' },
+              { icon: '🍂', label: 'Gutters cleared & inspected', date: 'Nov 02' },
+            ].map((row) => (
+              <div key={row.label} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '6px 0', borderTop: `1px solid ${Colors.lightGray}`,
+              }}>
+                <span aria-hidden="true" style={{ fontSize: 14 }}>{row.icon}</span>
+                <span style={{ flex: 1, fontSize: 12, color: Colors.charcoal }}>{row.label}</span>
+                <span style={{ fontSize: FontSize.xs, color: Colors.medGray }}>{row.date}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -557,7 +754,7 @@ export default function Landing() {
               </div>
               <h3
                 style={{
-                  fontSize: 18,
+                  fontSize: FontSize.lg,
                   fontWeight: FontWeight.semibold,
                   color: Colors.charcoal,
                   margin: '0 0 8px 0',
@@ -578,7 +775,7 @@ export default function Landing() {
               </p>
               <div
                 style={{
-                  fontSize: 13,
+                  fontSize: FontSize.sm,
                   fontWeight: FontWeight.semibold,
                   color: Colors.charcoal,
                   marginBottom: 4,
@@ -608,7 +805,7 @@ export default function Landing() {
 
         <p
           style={{
-            fontSize: 13,
+            fontSize: FontSize.sm,
             color: Colors.medGray,
             textAlign: 'center',
             maxWidth: 640,
@@ -626,7 +823,7 @@ export default function Landing() {
               color: Colors.copper,
               cursor: 'pointer',
               textDecoration: 'underline',
-              fontSize: 13,
+              fontSize: FontSize.sm,
               fontFamily: fontStack,
               padding: 0,
             }}
@@ -655,23 +852,23 @@ export default function Landing() {
         key: 'new_owner',
         icon: '🔑',
         title: 'Just bought a home?',
-        desc: 'Scan your equipment in minutes. Canopy builds your maintenance plan, stores warranties, and kicks off your Home Token from day one.',
-        cta: 'Start free',
+        desc: 'Scan your equipment in minutes. Your maintenance plan, warranties, and Home Token start working from day one.',
+        cta: 'Set up day one',
         destination: '/signup',
       },
       {
         key: 'established',
         icon: '🏡',
         title: 'Been in it a few years?',
-        desc: 'Replace that junk drawer of receipts. Document what you\'ve done, catch what you\'ve missed, and build proof of care that protects resale value.',
-        cta: 'See how it works',
+        desc: 'Replace the junk drawer of receipts. Document what you\'ve done, catch what you missed, and build the proof of care that protects resale value.',
+        cta: 'See your home health',
         destination: '/signup',
       },
       {
         key: 'selling_soon',
         icon: '📋',
         title: 'Selling soon?',
-        desc: 'Walk into listing day with a documented history and a Sale Prep checklist our Tulsa pros built. Preview what\'s inside before you sign up.',
+        desc: 'Walk into listing day with a verifiable maintenance record and a Sale Prep checklist Tulsa agents helped us build. Worth ~$14k against inspection objections per HomeLight.',
         cta: 'Preview Sale Prep',
         destination: '/sale-prep-preview',
       },
@@ -758,7 +955,7 @@ export default function Landing() {
                 <div style={{ fontSize: 32, marginBottom: 14 }}>{p.icon}</div>
                 <h3
                   style={{
-                    fontSize: 18,
+                    fontSize: FontSize.lg,
                     fontWeight: FontWeight.semibold,
                     color: Colors.charcoal,
                     margin: '0 0 8px 0',
@@ -835,7 +1032,7 @@ export default function Landing() {
               }}
               onMouseEnter={(e) => cardHover(e, true)}
               onMouseLeave={(e) => cardHover(e, false)}>
-              <div style={{ fontSize: 28, marginBottom: 12 }}>{f.icon}</div>
+              <div style={{ fontSize: FontSize.xxl, marginBottom: 12 }}>{f.icon}</div>
               <h3 style={{ fontSize: 17, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>{f.title}</h3>
               <p style={{ fontSize: 14, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>{f.desc}</p>
             </div>
@@ -922,7 +1119,7 @@ export default function Landing() {
         </div>
 
         <p style={{
-          fontSize: 13, color: Colors.medGray, textAlign: 'center',
+          fontSize: FontSize.sm, color: Colors.medGray, textAlign: 'center',
           margin: '36px auto 0', maxWidth: 700, lineHeight: 1.6,
         }}>
           Additional figures drawn from the NAR REALTORS® Confidence Index, Bankrate 2025 Home Affordability Report, Angi State of Home Spending, Freddie Mac, and Department of Energy / Energy Star published guidance on HVAC lifespan.
@@ -959,27 +1156,27 @@ export default function Landing() {
     const itemStyle: React.CSSProperties = { fontSize: 14, color: Colors.medGray, marginBottom: 10, display: 'flex', gap: 8 };
     const checkStyle: React.CSSProperties = { color: Colors.sage, flexShrink: 0 };
 
-    // Comparison table data
-    const rows: Array<[string, string, string, string, string]> = [
-      ['Equipment items', 'Up to 3', 'Unlimited', 'Unlimited', 'Unlimited'],
-      ['Maintenance calendar (40+ tasks)', 'Basic', '✓', '✓', '✓'],
-      ['AI equipment scans (photo)', '1 lifetime', 'Unlimited', 'Unlimited', 'Unlimited'],
-      ['AI chat messages', '5/mo', 'Unlimited', 'Unlimited', 'Unlimited'],
-      ['Text model lookup', '2/mo', 'Unlimited', 'Unlimited', 'Unlimited'],
-      ['Maintenance history', '90 days', 'Full', 'Full', 'Full'],
-      ['Weather-smart alerts', '✓', '✓', '✓', '✓'],
-      ['Document vault', '✓', '✓', '✓', '✓'],
-      ['Secure notes (PIN-protected)', '—', '✓', '✓', '✓'],
-      ['Home health score', '—', '✓', '✓', '✓'],
-      ['Home Token + completeness score', '—', '✓', '✓', '✓'],
-      ['Sale prep checklist', '—', '✓', '✓', '✓'],
-      ['Bimonthly pro visits', '—', '—', '6/yr', 'Custom cadence'],
-      ['Detailed inspection reports', '—', '—', '✓', '✓'],
-      ['Priority scheduling', '—', '—', '✓', '✓'],
-      ['Dedicated pro provider', '—', '—', '—', '✓'],
-      ['Canopy Certified Pro network', '—', '—', '✓', '✓'],
+    // Comparison table data — Pro+ column dropped 2026-05-06 (tier killed
+    // 2026-04-29 pre-launch).
+    const rows: Array<[string, string, string, string]> = [
+      ['Equipment items', 'Up to 3', 'Unlimited', 'Unlimited'],
+      ['Maintenance calendar (40+ tasks)', 'Basic', '✓', '✓'],
+      ['AI equipment scans (photo)', '1 lifetime', 'Unlimited', 'Unlimited'],
+      ['AI chat messages', '5/mo', 'Unlimited', 'Unlimited'],
+      ['Text model lookup', '2/mo', 'Unlimited', 'Unlimited'],
+      ['Maintenance history', '90 days', 'Full', 'Full'],
+      ['Weather-smart alerts', '✓', '✓', '✓'],
+      ['Document vault', '✓', '✓', '✓'],
+      ['Secure notes (PIN-protected)', '—', '✓', '✓'],
+      ['Home health score', '—', '✓', '✓'],
+      ['Home Token + completeness score', '—', '✓', '✓'],
+      ['Sale prep checklist', '—', '✓', '✓'],
+      ['Bimonthly pro visits', '—', '—', '6/yr'],
+      ['Detailed inspection reports', '—', '—', '✓'],
+      ['Priority scheduling', '—', '—', '✓'],
+      ['Canopy Certified Pro network', '—', '—', '✓'],
     ];
-    const headers = ['Free', 'Home', 'Pro', 'Pro+'];
+    const headers = ['Free', 'Home', 'Pro'];
 
     const cell: React.CSSProperties = {
       padding: isMobile ? '10px 8px' : '14px 16px',
@@ -1009,7 +1206,7 @@ export default function Landing() {
       top: 0,
     };
     const renderValue = (v: string) => {
-      if (v === '✓') return <span style={{ color: Colors.sage, fontWeight: FontWeight.bold, fontSize: 18 }} aria-label="included">✓</span>;
+      if (v === '✓') return <span style={{ color: Colors.sage, fontWeight: FontWeight.bold, fontSize: FontSize.lg }} aria-label="included">✓</span>;
       if (v === '—') return <span style={{ color: Colors.medGray }} aria-label="not included">—</span>;
       return v;
     };
@@ -1075,7 +1272,7 @@ export default function Landing() {
                   {interval === 'monthly' ? 'Monthly' : 'Annual'}
                   {interval === 'yearly' && (
                     <span style={{
-                      fontSize: 11,
+                      fontSize: FontSize.xs,
                       fontWeight: FontWeight.bold,
                       background: active ? 'rgba(255,255,255,0.25)' : Colors.sageMuted,
                       color: active ? Colors.white : Colors.sageDark,
@@ -1099,18 +1296,18 @@ export default function Landing() {
           }}>
             {/* Free */}
             <div style={baseCard}>
-              <h3 style={{ fontSize: 22, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>Free</h3>
-              <div style={{ fontSize: 28, fontWeight: FontWeight.bold, color: Colors.copper, margin: '0 0 8px 0' }}>
+              <h3 style={{ fontSize: FontSize.xl, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>Free</h3>
+              <div style={{ fontSize: FontSize.xxl, fontWeight: FontWeight.bold, color: Colors.copper, margin: '0 0 8px 0' }}>
                 $0<span style={{ fontSize: 14, color: Colors.medGray }}>/mo</span>
               </div>
-              <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 24px 0', fontWeight: FontWeight.medium, minHeight: 38 }}>Get to know your home</p>
+              <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: '0 0 24px 0', fontWeight: FontWeight.medium, minHeight: 38 }}>Get to know your home</p>
               <ul style={listStyle}>
                 {['Up to 3 equipment items', 'Basic maintenance calendar', 'Weather alerts', '5 AI chat messages/mo', '2 text lookups/mo', '1 AI equipment scan', '90-day history'].map((i) => (
                   <li key={i} style={itemStyle}><span style={checkStyle}>✓</span> {i}</li>
                 ))}
               </ul>
               <button onClick={() => ctaToSignup('pricing_free')} style={{
-                width: '100%', padding: 12, fontSize: 15, fontWeight: FontWeight.semibold,
+                width: '100%', padding: 12, fontSize: FontSize.md, fontWeight: FontWeight.semibold,
                 background: Colors.lightGray, color: Colors.charcoal, border: 'none',
                 borderRadius: BorderRadius.lg, cursor: 'pointer', fontFamily: fontStack,
               }}>
@@ -1124,13 +1321,13 @@ export default function Landing() {
                 position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
                 background: Colors.copper, color: Colors.white,
                 padding: '6px 16px', borderRadius: BorderRadius.full,
-                fontSize: 11, fontWeight: FontWeight.semibold, whiteSpace: 'nowrap',
+                fontSize: FontSize.xs, fontWeight: FontWeight.semibold, whiteSpace: 'nowrap',
               }}>MOST POPULAR</div>
-              <h3 style={{ fontSize: 22, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>Home</h3>
-              <div style={{ fontSize: 28, fontWeight: FontWeight.bold, color: Colors.copper, margin: '0 0 8px 0' }}>
-                {homeDisplay.price}<span style={{ fontSize: 13, color: Colors.medGray }}>{homeDisplay.period}</span>
+              <h3 style={{ fontSize: FontSize.xl, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>Home</h3>
+              <div style={{ fontSize: FontSize.xxl, fontWeight: FontWeight.bold, color: Colors.copper, margin: '0 0 8px 0' }}>
+                {homeDisplay.price}<span style={{ fontSize: FontSize.sm, color: Colors.medGray }}>{homeDisplay.period}</span>
               </div>
-              <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 24px 0', fontWeight: FontWeight.medium, minHeight: 38 }}>
+              <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: '0 0 24px 0', fontWeight: FontWeight.medium, minHeight: 38 }}>
                 Complete home management
               </p>
               <ul style={listStyle}>
@@ -1139,7 +1336,7 @@ export default function Landing() {
                 ))}
               </ul>
               <button onClick={() => ctaToSignup('pricing_home')} style={{
-                width: '100%', padding: 12, fontSize: 15, fontWeight: FontWeight.semibold,
+                width: '100%', padding: 12, fontSize: FontSize.md, fontWeight: FontWeight.semibold,
                 background: Colors.copper, color: Colors.white, border: 'none',
                 borderRadius: BorderRadius.lg, cursor: 'pointer', fontFamily: fontStack,
               }}>
@@ -1149,11 +1346,11 @@ export default function Landing() {
 
             {/* Pro */}
             <div style={baseCard}>
-              <h3 style={{ fontSize: 22, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>Pro</h3>
-              <div style={{ fontSize: 28, fontWeight: FontWeight.bold, color: Colors.copper, margin: '0 0 8px 0' }}>
-                {proDisplay.price}<span style={{ fontSize: 13, color: Colors.medGray }}>{proDisplay.period}</span>
+              <h3 style={{ fontSize: FontSize.xl, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>Pro</h3>
+              <div style={{ fontSize: FontSize.xxl, fontWeight: FontWeight.bold, color: Colors.copper, margin: '0 0 8px 0' }}>
+                {proDisplay.price}<span style={{ fontSize: FontSize.sm, color: Colors.medGray }}>{proDisplay.period}</span>
               </div>
-              <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 24px 0', fontWeight: FontWeight.medium, minHeight: 38 }}>
+              <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: '0 0 24px 0', fontWeight: FontWeight.medium, minHeight: 38 }}>
                 Full-service bimonthly care
               </p>
               <ul style={listStyle}>
@@ -1162,7 +1359,7 @@ export default function Landing() {
                 ))}
               </ul>
               <button onClick={() => ctaToSignup('pricing_pro')} style={{
-                width: '100%', padding: 12, fontSize: 15, fontWeight: FontWeight.semibold,
+                width: '100%', padding: 12, fontSize: FontSize.md, fontWeight: FontWeight.semibold,
                 background: Colors.lightGray, color: Colors.charcoal, border: 'none',
                 borderRadius: BorderRadius.lg, cursor: 'pointer', fontFamily: fontStack,
               }}>
@@ -1170,32 +1367,11 @@ export default function Landing() {
               </button>
             </div>
 
-            {/* Pro+ — Concierge */}
-            <div style={baseCard}>
-              <h3 style={{ fontSize: 22, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>Pro+</h3>
-              <div style={{ fontSize: 28, fontWeight: FontWeight.bold, color: Colors.copper, margin: '0 0 8px 0' }}>
-                Custom<span style={{ fontSize: 13, color: Colors.medGray, display: 'block', fontWeight: FontWeight.medium }}>Contact sales</span>
-              </div>
-              <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 24px 0', fontWeight: FontWeight.medium, minHeight: 38 }}>
-                Full home concierge service
-              </p>
-              <ul style={listStyle}>
-                {['Everything in Pro', 'Dedicated pro provider', 'Routine maintenance of all systems', 'Bigger jobs quoted separately', 'Priority scheduling & support', 'Custom cadence + scope'].map((i) => (
-                  <li key={i} style={itemStyle}><span style={checkStyle}>✓</span> {i}</li>
-                ))}
-              </ul>
-              <a
-                href="mailto:support@canopyhome.app?subject=Canopy%20Pro%2B%20Inquiry"
-                style={{
-                  display: 'block', width: '100%', padding: 12, fontSize: 15, fontWeight: FontWeight.semibold,
-                  background: 'transparent', color: Colors.copper, border: `2px solid ${Colors.copper}`,
-                  borderRadius: BorderRadius.lg, cursor: 'pointer', fontFamily: fontStack,
-                  textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box',
-                }}
-              >
-                Contact Sales
-              </a>
-            </div>
+            {/* Pro+ tier removed 2026-04-29 (pre-launch, 0 subscribers).
+                The "Pro+ services" name is now the umbrella brand for the
+                curated add-on bundle, sold per-add-on through the Add-Ons
+                section above. The card was still rendering on the landing
+                page at launch-readiness audit on 2026-05-06 — removed. */}
           </div>
 
           <p style={{ textAlign: 'center', fontSize: 14, color: Colors.medGray, margin: '0 0 32px 0' }}>
@@ -1241,13 +1417,12 @@ export default function Landing() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map(([feature, free, home, pro, proPlus], idx) => (
+                  {rows.map(([feature, free, home, pro], idx) => (
                     <tr key={feature} style={{ background: idx % 2 === 0 ? Colors.white : Colors.warmWhite }}>
                       <th scope="row" style={{ ...featureCell, background: idx % 2 === 0 ? Colors.white : Colors.warmWhite }}>{feature}</th>
                       <td style={cell}>{renderValue(free)}</td>
                       <td style={cell}>{renderValue(home)}</td>
                       <td style={cell}>{renderValue(pro)}</td>
-                      <td style={cell}>{renderValue(proPlus)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1347,6 +1522,68 @@ export default function Landing() {
   );
 
   // ═══════════════════════════════════════════════════════════════════════════════
+  // AGENT REFERRAL STRIP — for Tulsa real estate agents (lead-source channel)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 2026-05-06: Agents are explicitly a strategic lead source per the
+  // business model (no commission — closing-gift codes + co-branded share
+  // pages). The /agent landing exists but was buried in the footer.
+  // This thin strip surfaces it to anyone scrolling past the FAQ.
+  const AgentReferralStrip = () => (
+    <section style={{
+      background: `linear-gradient(135deg, ${Colors.sage}10 0%, ${Colors.copper}10 100%)`,
+      padding: isMobile ? '40px 16px' : '56px 24px',
+      fontFamily: fontStack,
+      borderTop: `1px solid ${Colors.lightGray}`,
+      borderBottom: `1px solid ${Colors.lightGray}`,
+    }}>
+      <div style={{
+        maxWidth: 980, margin: '0 auto',
+        display: 'flex', alignItems: 'center', gap: isMobile ? 16 : 32,
+        flexDirection: isMobile ? 'column' : 'row',
+        textAlign: isMobile ? 'center' : 'left',
+      }}>
+        <div aria-hidden="true" style={{
+          fontSize: 40, lineHeight: 1, flexShrink: 0,
+        }}>🔑</div>
+        <div style={{ flex: 1 }}>
+          <p style={{
+            fontSize: FontSize.sm, fontWeight: FontWeight.bold,
+            letterSpacing: 1.2, textTransform: 'uppercase',
+            color: Colors.copper, margin: '0 0 6px',
+          }}>
+            For Tulsa real estate agents
+          </p>
+          <h3 style={{
+            fontSize: isMobile ? 20 : 24, fontWeight: FontWeight.bold,
+            color: Colors.charcoal, margin: '0 0 6px', lineHeight: 1.25,
+          }}>
+            Your closing-gift program lives here.
+          </h3>
+          <p style={{
+            fontSize: FontSize.md, color: Colors.medGray,
+            lineHeight: 1.5, margin: 0, maxWidth: 560,
+          }}>
+            Co-branded gift codes, a buyer-facing Home Token for every closed deal, and analytics you can actually use. No commission, no kickback — just a tool your clients keep using a year after the sale.
+          </p>
+        </div>
+        <button
+          onClick={() => navigate('/agent')}
+          style={{
+            padding: '14px 24px', fontSize: FontSize.md, fontWeight: FontWeight.semibold,
+            background: Colors.charcoal, color: Colors.white, border: 'none',
+            borderRadius: BorderRadius.lg, cursor: 'pointer', fontFamily: fontStack,
+            transition: 'all 0.3s ease', flexShrink: 0,
+          }}
+          onMouseEnter={(e) => { (e.target as HTMLElement).style.transform = 'translateY(-2px)'; }}
+          onMouseLeave={(e) => { (e.target as HTMLElement).style.transform = 'translateY(0)'; }}
+        >
+          Agent Portal →
+        </button>
+      </div>
+    </section>
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════════
   // FINAL CTA
   // ═══════════════════════════════════════════════════════════════════════════════
   const FinalCta = () => (
@@ -1395,9 +1632,9 @@ export default function Landing() {
           marginBottom: 40, paddingBottom: 40, borderBottom: '1px solid rgba(255,255,255,0.1)',
         }}>
           <div>
-            <h3 style={{ fontSize: 18, fontWeight: FontWeight.bold, margin: '0 0 12px 0' }}>Canopy</h3>
+            <h3 style={{ fontSize: FontSize.lg, fontWeight: FontWeight.bold, margin: '0 0 12px 0' }}>Canopy</h3>
             <p style={{ fontSize: 14, color: 'var(--color-silver)', margin: 0, lineHeight: 1.5 }}>
-              AI-powered home maintenance. Understand, maintain, and protect your biggest investment.
+              The maintenance record your home should already have. Built in Tulsa.
             </p>
           </div>
           {[
@@ -1458,7 +1695,7 @@ export default function Landing() {
             </a>
           </div>
         </div>
-        <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-med-gray)' }}>
+        <div style={{ textAlign: 'center', fontSize: FontSize.sm, color: 'var(--color-med-gray)' }}>
           <p style={{ margin: 0 }}>© 2026 Canopy. All rights reserved.</p>
         </div>
       </div>
@@ -1474,6 +1711,10 @@ export default function Landing() {
             re-renders from mobileMenuOpen / resize / billingInterval. */}
         {HeroSection()}
         <HowItWorks />
+        {/* 2026-05-06: Home Token + Maintenance Inspection — the moat. Slotted
+            between How-It-Works and Add-Ons so the value prop lands before
+            the homeowner sees the per-service pricing grid. */}
+        <HomeTokenSection />
         <AddOnsSection />
         <WhoIsItFor />
         <FeaturesSection />
@@ -1481,6 +1722,7 @@ export default function Landing() {
         {PricingSection()}
         <TestimonialsSection isMobile={isMobile} />
         <FaqSection />
+        <AgentReferralStrip />
         <FinalCta />
         <Footer />
       </div>

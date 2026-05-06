@@ -15,7 +15,7 @@
 // ships, swap this component's testimonial source from constant to service.
 
 import { useEffect, useState } from 'react';
-import { Colors, FontWeight, BorderRadius } from '@/constants/theme';
+import { Colors, FontWeight, BorderRadius, FontSize } from '@/constants/theme';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/services/supabase';
 
 const MARKETING_FLOOR = 47;
@@ -23,12 +23,17 @@ const MARKETING_FLOOR = 47;
 // Hardcoded early-launch testimonial. Swap to live-admin-approved feed once
 // DL-7 testimonial request flow is live. First-name-plus-neighborhood format
 // matches how Canopy's drip emails already sign references.
+// 2026-05-06 — pulled the Marcus quote out of the trust strip; it was duplicated
+// verbatim in the testimonials section further down. Replaced with a Priya-led
+// pull quote that emphasizes the "actually shows up" piece (Pro visit cadence
+// is one of two unique value props). Marcus's full quote still anchors the
+// testimonials grid below.
 const LAUNCH_TESTIMONIAL = {
   quote:
-    'Canopy caught a water-heater recall I had no idea about and scheduled the furnace tune-up before winter hit. Feels like having a general contractor on retainer.',
-  first_name: 'Marcus',
-  neighborhood: 'Midtown Tulsa',
-  avatar_initial: 'M',
+    'Somebody actually shows up, fixes the little things, and logs it all. I stopped worrying about what I was missing.',
+  first_name: 'Priya',
+  neighborhood: 'South Tulsa',
+  avatar_initial: 'P',
 };
 
 const fontStack =
@@ -148,7 +153,7 @@ export default function TulsaTrustStrip({ isMobile }: Props) {
               position: 'absolute',
               top: 12,
               right: 12,
-              fontSize: 11,
+              fontSize: FontSize.xs,
               textTransform: 'uppercase',
               letterSpacing: 1,
               fontWeight: FontWeight.semibold,
@@ -159,7 +164,7 @@ export default function TulsaTrustStrip({ isMobile }: Props) {
           </div>
           <p
             style={{
-              fontSize: 13,
+              fontSize: FontSize.sm,
               fontWeight: FontWeight.semibold,
               margin: 0,
               lineHeight: 1.4,
@@ -195,7 +200,7 @@ export default function TulsaTrustStrip({ isMobile }: Props) {
             &ldquo;{LAUNCH_TESTIMONIAL.quote}&rdquo;
           </blockquote>
           <figcaption
-            style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: Colors.medGray }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: FontSize.sm, color: Colors.medGray }}
           >
             <div
               aria-hidden
@@ -209,7 +214,7 @@ export default function TulsaTrustStrip({ isMobile }: Props) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: FontWeight.bold,
-                fontSize: 15,
+                fontSize: FontSize.md,
               }}
             >
               {LAUNCH_TESTIMONIAL.avatar_initial}
@@ -232,10 +237,14 @@ export default function TulsaTrustStrip({ isMobile }: Props) {
             justifyContent: 'space-between',
           }}
         >
+          {/* 2026-05-06: replaced BBB "Accreditation pending" placeholder
+              with a concrete trust signal — every Pro is Checkr-verified
+              before they touch a customer's home. "Pending" was undercutting
+              trust; this says something we can actually deliver. */}
           <div
             style={{
               background: Colors.white,
-              border: `1px dashed ${Colors.lightGray}`,
+              border: `1px solid ${Colors.sage}30`,
               borderRadius: BorderRadius.md,
               padding: 16,
               textAlign: 'center',
@@ -245,11 +254,14 @@ export default function TulsaTrustStrip({ isMobile }: Props) {
               justifyContent: 'center',
               gap: 4,
             }}
-            aria-label="BBB accreditation placeholder"
+            aria-label="Provider verification"
           >
-            <div style={{ fontSize: 20, fontWeight: FontWeight.bold, color: Colors.sageDark }}>BBB</div>
-            <div style={{ fontSize: 11, color: Colors.medGray, lineHeight: 1.3 }}>
-              Accreditation pending
+            <div style={{ fontSize: FontSize.lg, marginBottom: 2 }}>✓</div>
+            <div style={{ fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.sageDark, lineHeight: 1.2 }}>
+              Background-checked Pros
+            </div>
+            <div style={{ fontSize: FontSize.xs, color: Colors.medGray, lineHeight: 1.3 }}>
+              Verified through Checkr · insurance on file
             </div>
           </div>
           <a

@@ -45,12 +45,17 @@ export async function activateSalePrep(
     .single();
   if (error) throw error;
 
-  // Auto-notify the linked agent
+  // Auto-notify the linked agent. 2026-05-06: agent_id lives on profiles
+  // (the owner-↔-agent link), not homes. Two-step lookup: home → owner →
+  // owner's agent.
   try {
-    const { data: home } = await supabase.from('homes').select('agent_id, address, city').eq('id', homeId).single();
-    if (home?.agent_id) {
-      const addr = home.address ? `${home.address}, ${home.city}` : 'their home';
-      await notifyAgentSalePrep(userId, home.agent_id, addr);
+    const { data: home } = await supabase.from('homes').select('user_id, address, city').eq('id', homeId).single();
+    if (home?.user_id) {
+      const { data: ownerProfile } = await supabase.from('profiles').select('agent_id').eq('id', home.user_id).single();
+      if (ownerProfile?.agent_id) {
+        const addr = home.address ? `${home.address}, ${home.city}` : 'their home';
+        await notifyAgentSalePrep(userId, ownerProfile.agent_id, addr);
+      }
     }
   } catch (e) { logger.warn('Failed to auto-notify agent on sale prep activation:', e); }
 
@@ -89,11 +94,16 @@ export async function toggleSalePrepItem(
       try {
         const { data: prep } = await supabase.from('home_sale_prep').select('home_id').eq('id', prepId).single();
         if (prep?.home_id) {
-          const { data: home } = await supabase.from('homes').select('user_id, address, city, agent_id').eq('id', prep.home_id).single();
-          if (home?.agent_id) {
+          // 2026-05-06: home → owner → owner's agent (agent_id lives on
+          // profiles, not homes). Owner profile read here doubles for
+          // ownerName below.
+          const { data: home } = await supabase.from('homes').select('user_id, address, city').eq('id', prep.home_id).single();
+          const { data: owner } = home?.user_id
+            ? await supabase.from('profiles').select('full_name, email, agent_id').eq('id', home.user_id).single()
+            : { data: null };
+          if (home && owner?.agent_id) {
             // Resolve agent's user_id for in-app notification
-            const { data: agent } = await supabase.from('agents').select('user_id, email, name').eq('id', home.agent_id).single();
-            const { data: owner } = await supabase.from('profiles').select('full_name, email').eq('id', home.user_id).single();
+            const { data: agent } = await supabase.from('agents').select('user_id, email, name').eq('id', owner.agent_id).single();
             const ownerName = owner?.full_name || owner?.email || 'Your client';
             const addr = `${home.address}, ${home.city}`;
             const msg = hitMilestone === 100
@@ -161,12 +171,16 @@ export async function closeSalePrep(prepId: string, status: 'completed' | 'cance
     .eq('id', prepId);
   if (error) throw error;
 
-  // Notify the linked agent
+  // Notify the linked agent. 2026-05-06: agent_id lives on profiles
+  // (owner-↔-agent), not homes. Two-step home → owner → agent.
   if (prep?.home_id) {
     try {
-      const { data: home } = await supabase.from('homes').select('agent_id, address, city').eq('id', prep.home_id).single();
-      if (home?.agent_id) {
-        const { data: agent } = await supabase.from('agents').select('email').eq('id', home.agent_id).single();
+      const { data: home } = await supabase.from('homes').select('user_id, address, city').eq('id', prep.home_id).single();
+      const { data: ownerProfile } = home?.user_id
+        ? await supabase.from('profiles').select('agent_id').eq('id', home.user_id).single()
+        : { data: null };
+      if (home && ownerProfile?.agent_id) {
+        const { data: agent } = await supabase.from('agents').select('email').eq('id', ownerProfile.agent_id).single();
         const addr = home.address ? `${home.address}, ${home.city}` : 'a home';
         const title = status === 'completed' ? 'Sale Prep Complete' : 'Sale Prep Cancelled';
         const body = status === 'completed'

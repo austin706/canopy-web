@@ -46,7 +46,7 @@ export async function generateInspectionsForVisit(
   // 1. Fetch equipment for this home
   const { data: equipment, error: eqErr } = await supabase
     .from('equipment')
-    .select('id, name, category, brand, model_number')
+    .select('id, name, category, make, model')
     .eq('home_id', homeId);
   if (eqErr) throw eqErr;
 
@@ -78,7 +78,7 @@ export async function generateInspectionsForVisit(
       equipment_id: eq.id,
       template_id: template.id,
       checklist_name: template.name,
-      equipment_name: [eq.brand, eq.name].filter(Boolean).join(' ') || eq.category,
+      equipment_name: [eq.make, eq.name].filter(Boolean).join(' ') || eq.category,
       equipment_category: eq.category,
       status: 'pending',
     });
@@ -276,12 +276,24 @@ export async function getVisitSummaryData(visitId: string): Promise<VisitSummary
     .single();
   if (hErr || !home) throw hErr || new Error('Home not found');
 
-  // Equipment
-  const { data: equipment, error: eErr } = await supabase
+  // Equipment. 2026-05-06: real columns are `make` and `model` (not `brand`
+  // and `model_number`); `condition` does not exist on equipment — use
+  // `notes` as the closest available signal. Mapped to the legacy
+  // VisitSummaryData shape on return so consumers don't have to change.
+  const { data: equipmentRows, error: eErr } = await supabase
     .from('equipment')
-    .select('id, name, category, brand, model_number, install_date, condition')
+    .select('id, name, category, make, model, install_date, notes')
     .eq('home_id', visit.home_id);
   if (eErr) throw eErr;
+  const equipment = (equipmentRows || []).map(e => ({
+    id: e.id,
+    name: e.name,
+    category: e.category,
+    brand: e.make ?? undefined,
+    model_number: e.model ?? undefined,
+    install_date: e.install_date ?? undefined,
+    condition: e.notes ?? undefined,
+  }));
 
   // Inspections with items
   const inspections = await getVisitInspections(visitId);
@@ -296,7 +308,7 @@ export async function getVisitSummaryData(visitId: string): Promise<VisitSummary
   return {
     visit,
     home,
-    equipment: equipment || [],
+    equipment,
     inspections,
     photos: photos || [],
     provider: visit.provider || { business_name: 'Canopy', contact_name: 'Tech' },

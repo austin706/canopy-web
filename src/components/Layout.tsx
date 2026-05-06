@@ -9,6 +9,7 @@ import { PLANS } from '@/services/subscriptionGate';
 import { Colors } from '@/constants/theme';
 import type { Home } from '@/types';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useLastActiveBeacon } from '@/utils/useLastActiveBeacon';
 import {
   CanopyLogo,
   NavDashboard, NavCalendar, NavWeather, NavEquipment, NavDocuments,
@@ -23,6 +24,11 @@ export default function Layout() {
   const tier = user?.subscription_tier || 'free';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showHomeSwitcher, setShowHomeSwitcher] = useState(false);
+
+  // 2026-05-02 hotfix: keep profiles.last_active_at fresh so admin
+  // segmentation + AdminUserView reflect real activity. Throttled to
+  // once per day per user; failure is silent.
+  useLastActiveBeacon(user?.id);
 
   // Load all homes for user on mount
   useEffect(() => {

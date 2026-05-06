@@ -110,25 +110,46 @@ export default function AgentPortal() {
       // Get all maintenance tasks for these clients
       const clientIds = clientList.map((c: any) => c.id);
       if (clientIds.length > 0) {
-        // Fetch tasks for health score calculation
-        const { data: allTasks } = await supabase
-          .from('maintenance_tasks')
-          .select('id, user_id, status, completed_at, due_date');
+        // 2026-05-06 fix: maintenance_tasks has no user_id column — tasks
+        // belong to a home, and the home belongs to the user. Build a
+        // home_id → client_id index so we can keep the per-client filter
+        // shape downstream. completed_at column is also wrong (real:
+        // completed_date). Equipment install_date column likewise renamed
+        // (was installation_date) and purchase_date doesn't exist.
+        const homeToClientId: Record<string, string> = {};
+        const clientHomeIds: string[] = [];
+        clientsWithHomes.forEach((c: any) => {
+          if (c.home?.id) {
+            homeToClientId[c.home.id] = c.id;
+            clientHomeIds.push(c.home.id);
+          }
+        });
+
+        // Fetch tasks for health score calculation (scoped to client homes)
+        const { data: allTasks } = clientHomeIds.length > 0
+          ? await supabase
+              .from('maintenance_tasks')
+              .select('id, home_id, status, completed_date, due_date')
+              .in('home_id', clientHomeIds)
+          : { data: [] as Array<{ id: string; home_id: string; status: string | null; completed_date: string | null; due_date: string }> };
 
         // Fetch recent completions for activity feed
-        const { data: recentTasks } = await supabase
-          .from('maintenance_tasks')
-          .select('id, user_id, title, status, completed_at')
-          .eq('status', 'completed')
-          .gte('completed_at', fourteenDaysAgo.toISOString())
-          .order('completed_at', { ascending: false })
-          .limit(10);
+        const { data: recentTasks } = clientHomeIds.length > 0
+          ? await supabase
+              .from('maintenance_tasks')
+              .select('id, home_id, title, status, completed_date')
+              .eq('status', 'completed')
+              .gte('completed_date', fourteenDaysAgo.toISOString())
+              .in('home_id', clientHomeIds)
+              .order('completed_date', { ascending: false })
+              .limit(10)
+          : { data: [] as Array<{ id: string; home_id: string; title: string; status: string | null; completed_date: string | null }> };
 
         // Fetch equipment for aging alerts
         const { data: equipmentData } = await supabase
           .from('equipment')
-          .select('id, name, home_id, installation_date, purchase_date')
-          .in('home_id', clientsWithHomes.filter((c: any) => c.home).map((c: any) => c.home.id));
+          .select('id, name, home_id, install_date')
+          .in('home_id', clientHomeIds);
 
         // Calculate rolling health scores per client (same algorithm as Dashboard)
         const healthScores: Record<string, number> = {};
@@ -137,7 +158,9 @@ export default function AgentPortal() {
         ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
         clientList.forEach((client: any) => {
-          const clientTasks = (allTasks || []).filter((t: any) => t.user_id === client.id);
+          const clientTasks = (allTasks || []).filter((t: any) =>
+            t.home_id && homeToClientId[t.home_id] === client.id
+          );
 
           // Component 1: Rolling 90-day completion (50%)
           const r90 = clientTasks.filter((t: any) => {
@@ -179,8 +202,10 @@ export default function AgentPortal() {
           healthScores[client.id] = Math.max(0, Math.min(100, Math.round(r90Rate * 0.5 + mRate * 0.3 + Math.max(0, 100 - ded) * 0.2)));
 
           // Find most recent task completion for this client
-          const clientRecentTasks = (recentTasks || []).filter((t: any) => t.user_id === client.id);
-          activityDates[client.id] = clientRecentTasks.length > 0 ? clientRecentTasks[0].completed_at : null;
+          const clientRecentTasks = (recentTasks || []).filter((t: any) =>
+            t.home_id && homeToClientId[t.home_id] === client.id
+          );
+          activityDates[client.id] = clientRecentTasks.length > 0 ? clientRecentTasks[0].completed_date : null;
         });
 
         // Build equipment alerts (80%+ of lifespan)
@@ -190,7 +215,7 @@ export default function AgentPortal() {
           if (client.home) {
             const homeEquipment = (equipmentData || []).filter((e: any) => e.home_id === client.home.id);
             homeEquipment.forEach((eq: any) => {
-              const installDate = eq.installation_date || eq.purchase_date;
+              const installDate = eq.install_date;
               if (installDate) {
                 const ageMs = now.getTime() - new Date(installDate).getTime();
                 const ageYears = ageMs / (365.25 * 24 * 60 * 60 * 1000);
@@ -226,15 +251,17 @@ export default function AgentPortal() {
         setClientActivityDates(activityDates);
         setClientEquipmentAlerts(equipmentAlerts);
 
-        // Format activity feed
+        // Format activity feed — resolve client via home_id (tasks have no
+        // user_id column).
         const feed = (recentTasks || [])
           .map((task: any) => {
-            const client = clientList.find((c: any) => c.id === task.user_id);
+            const clientId = task.home_id ? homeToClientId[task.home_id] : null;
+            const client = clientId ? clientList.find((c: any) => c.id === clientId) : null;
             return {
               id: task.id,
               clientName: client?.full_name || 'Unknown',
               taskTitle: task.title,
-              completedAt: task.completed_at,
+              completedAt: task.completed_date,
             };
           })
           .slice(0, 10);

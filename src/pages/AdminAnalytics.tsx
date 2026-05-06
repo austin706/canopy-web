@@ -155,9 +155,14 @@ export default function AdminAnalytics() {
         // 2026-05-02: include subscription_status + subscription_expires_at + updated_at so we
         // can compute a real churn signal instead of the 0 placeholder.
         supabase.from('profiles').select('id,created_at,updated_at,subscription_tier,subscription_status,subscription_expires_at').limit(LIMIT_PROFILES),
-        supabase.from('maintenance_tasks').select('id,user_id,created_at,status,template_id,due_date,completed_date').limit(LIMIT_TASKS),
+        // 2026-05-06: maintenance_tasks has no user_id column — derive
+        // owner via homes!inner(user_id) so the activation/retention
+        // metrics keep their per-user uniqueness.
+        supabase.from('maintenance_tasks').select('id,home_id,created_at,status,template_id,due_date,completed_date,homes!inner(user_id)').limit(LIMIT_TASKS),
         supabase.from('gift_codes').select('id,tier,redeemed_by,redeemed_at,created_at,expires_at').limit(LIMIT_GIFTS),
-        supabase.from('pro_requests').select('id,status,created_at,matched_at').limit(LIMIT_PRO_REQUESTS),
+        // 2026-05-06: pro_requests has no matched_at — approximate via
+        // updated_at (refer to the timesToAssignment block below).
+        supabase.from('pro_requests').select('id,status,created_at,updated_at').limit(LIMIT_PRO_REQUESTS),
         supabase.from('task_templates').select('id,title,category,source,task_level,active'),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', todayStartIso),
         supabase.from('notifications').select('id', { count: 'exact', head: true }).gte('created_at', last24hIso),
@@ -219,7 +224,20 @@ export default function AdminAnalytics() {
       const tasksSampleHitCap = tasks.length >= LIMIT_TASKS;
 
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const activeUserIds = new Set(tasks.filter(t => new Date(t.created_at || 0) > thirtyDaysAgo).map(t => t.user_id));
+      // 2026-05-06: extract owner from joined homes object — the join can
+      // arrive as { user_id } or [{ user_id }] depending on Supabase's
+      // relationship inference; tolerate both.
+      const taskOwnerId = (t: any): string | undefined => {
+        const h = t?.homes;
+        if (!h) return undefined;
+        return Array.isArray(h) ? h[0]?.user_id : h.user_id;
+      };
+      const activeUserIds = new Set(
+        tasks
+          .filter(t => new Date(t.created_at || 0) > thirtyDaysAgo)
+          .map(t => taskOwnerId(t))
+          .filter((id): id is string => Boolean(id))
+      );
       const activeUsers30d = activeUserIds.size;
 
       // Revenue Metrics
@@ -271,7 +289,9 @@ export default function AdminAnalytics() {
       const retentionRate = usersMonthAgo > 0 ? Math.round((activeUsers30d / usersMonthAgo) * 100) : 100;
 
       // Activation Metrics
-      const userIdsWithTask = new Set(tasks.map(t => t.user_id));
+      const userIdsWithTask = new Set(
+        tasks.map(t => taskOwnerId(t)).filter((id): id is string => Boolean(id))
+      );
       const usersWithHome = profiles.length;
       const usersWithEquipment = profiles.length;
       const usersWithTask = userIdsWithTask.size;
@@ -319,13 +339,22 @@ export default function AdminAnalytics() {
 
       const proRequestsByStatus = Object.entries(statusCounts).map(([status, count]) => ({ status, count }));
 
+      // 2026-05-06: pro_requests has no matched_at column. Approximate
+      // time-to-assignment as updated_at - created_at for rows whose
+      // status indicates they're past the pending phase. This drifts if
+      // a row was updated again after assignment (e.g. rescheduled);
+      // reasonable for an admin smoke metric, not a billing one. If a
+      // dedicated matched_at column is added later, restore the precise
+      // calc.
+      const ASSIGNED_STATUSES = new Set(['assigned', 'matched', 'scheduled', 'in_progress', 'completed']);
       const timesToAssignment = proRequests
-        .filter(pr => pr.matched_at && pr.created_at)
+        .filter(pr => pr.status && ASSIGNED_STATUSES.has(pr.status) && pr.updated_at && pr.created_at)
         .map(pr => {
           const created = new Date(pr.created_at || 0);
-          const matched = new Date(pr.matched_at || 0);
-          return Math.floor((matched.getTime() - created.getTime()) / (60 * 60 * 1000));
-        });
+          const updated = new Date(pr.updated_at || 0);
+          return Math.floor((updated.getTime() - created.getTime()) / (60 * 60 * 1000));
+        })
+        .filter(hours => hours >= 0);
 
       const avgTimeToAssignment = timesToAssignment.length > 0
         ? Math.round((timesToAssignment.reduce((a, b) => a + b, 0) / timesToAssignment.length) * 10) / 10

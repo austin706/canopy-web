@@ -1,6 +1,12 @@
 // ===============================================================
 // Supabase Client & Base Configuration
 // ===============================================================
+// 2026-05-06: production schema canonical types live in
+// src/types/database.generated.ts (re-generate via Supabase MCP
+// generate_typescript_types when the schema changes). New code SHOULD
+// import `Tables<'foo'>` from there for any DB row shape; existing
+// hand-written interfaces are being migrated incrementally to avoid a
+// massive nullable-mismatch tsc storm.
 import { createClient } from '@supabase/supabase-js';
 import logger from '@/utils/logger';
 

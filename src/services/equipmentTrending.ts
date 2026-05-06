@@ -51,10 +51,13 @@ function calculateRiskLevel(trend: EquipmentHealthSnapshot[]): 'low' | 'medium' 
 }
 
 export async function getEquipmentTrends(homeId: string): Promise<EquipmentTrend[]> {
-  // Get all completed visits for this home, ordered by date descending
+  // Get all completed visits for this home, ordered by date descending.
+  // 2026-05-06: pro_monthly_visits has no `overall_condition` column —
+  // condition lives per-inspection on visit_inspections (queried below).
+  // The visit-level `pro_notes` was selected but never read either; dropped.
   const { data: visits, error: visitError } = await supabase
     .from('pro_monthly_visits')
-    .select('id, completed_at, overall_condition, pro_notes')
+    .select('id, completed_at')
     .eq('home_id', homeId)
     .eq('status', 'completed')
     .order('completed_at', { ascending: false });

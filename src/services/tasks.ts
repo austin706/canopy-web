@@ -75,10 +75,12 @@ export const completeTaskWithRecurrence = async (args: {
   const result = data as CompleteTaskRpcResult;
 
   // Fan out notifications (homeowner/members) only on first completion.
+  // 2026-05-06: actor from auth, not a forced `as unknown as { user_id }`
+  // cast acknowledging the column doesn't exist on maintenance_tasks.
   const completed = result?.completed_task;
   if (completed?.home_id && !result?.already_completed) {
-    const actorId = (completed as unknown as { user_id?: string }).user_id || '';
-    notifyHomeMembers(completed.home_id, actorId,
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    notifyHomeMembers(completed.home_id, authUser?.id || '',
       'Task Completed',
       `"${completed.title || 'A maintenance task'}" has been marked as complete.`,
       'task', '/dashboard');
@@ -100,9 +102,13 @@ export const completeTask = async (taskId: string, notes?: string, photoUrl?: st
     .single();
   if (error) throw error;
 
-  // Notify other home members
-  if (data?.home_id && data?.user_id) {
-    notifyHomeMembers(data.home_id, data.user_id,
+  // Notify other home members. 2026-05-06: maintenance_tasks has no
+  // user_id column — derive actor from auth so the fan-out actually
+  // excludes the right person (was always undefined → owner got
+  // notified of their own completion).
+  if (data?.home_id) {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    notifyHomeMembers(data.home_id, authUser?.id || '',
       'Task Completed',
       `"${data.title || 'A maintenance task'}" has been marked as complete.`,
       'task', '/dashboard');
@@ -125,9 +131,10 @@ export const reopenTask = async (taskId: string) => {
     .single();
   if (error) throw error;
 
-  // Notify other home members
-  if (data?.home_id && data?.user_id) {
-    notifyHomeMembers(data.home_id, data.user_id,
+  // Notify other home members — actor from auth (no user_id on row).
+  if (data?.home_id) {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    notifyHomeMembers(data.home_id, authUser?.id || '',
       'Task Reopened',
       `"${data.title || 'A maintenance task'}" has been reopened and needs attention.`,
       'task', '/dashboard');
@@ -140,10 +147,12 @@ export const createTask = async (task: Partial<MaintenanceTask>) => {
   const { data, error } = await supabase.from('maintenance_tasks').insert(task).select().single();
   if (error) throw error;
 
-  // Notify other home members about the new task (skip bulk creates via createTasks)
+  // Notify other home members about the new task (skip bulk creates via
+  // createTasks). Actor from auth — the prior `(task as ...).user_id`
+  // cast was a hack acknowledging the column didn't exist.
   if (data?.home_id) {
-    const actorId = (task as Record<string, unknown>).user_id as string || '';
-    notifyHomeMembers(data.home_id, actorId,
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    notifyHomeMembers(data.home_id, authUser?.id || '',
       'New Task Added',
       `"${data.title || 'A new task'}" has been added to your home maintenance list.`,
       'task', '/dashboard');

@@ -3,8 +3,8 @@
 // Re-generate when schema changes; do NOT hand-edit.
 //
 // Usage:
-//   import type { Database, Tables } from '@/types/database.generated';
-//   type HomeAddOn = Tables<'home_add_ons'>; // exact production schema
+//   import type { Database, Tables } from \'@/types/database.generated\';
+//   type HomeAddOn = Tables<\'home_add_ons\'>; // exact production schema
 
 export type Json =
   | string
@@ -3976,6 +3976,7 @@ export type Database = {
           created_at: string | null
           current_period_end: string | null
           custom_pro_rate: number | null
+          dismissed_nudges: Json | null
           email: string | null
           full_name: string
           gift_code: string | null
@@ -4018,6 +4019,7 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           custom_pro_rate?: number | null
+          dismissed_nudges?: Json | null
           email?: string | null
           full_name: string
           gift_code?: string | null
@@ -4060,6 +4062,7 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           custom_pro_rate?: number | null
+          dismissed_nudges?: Json | null
           email?: string | null
           full_name?: string
           gift_code?: string | null
@@ -4612,6 +4615,105 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      referral_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string | null
+          id: string
+          referrer_id: string
+          updated_at: string | null
+          uses: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string | null
+          id?: string
+          referrer_id: string
+          updated_at?: string | null
+          uses?: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string | null
+          id?: string
+          referrer_id?: string
+          updated_at?: string | null
+          uses?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_codes_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_redemptions: {
+        Row: {
+          created_at: string | null
+          id: string
+          referee_credit_applied: boolean
+          referee_id: string
+          referee_subscribed_at: string | null
+          referral_code_id: string
+          referrer_credit_applied: boolean
+          referrer_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          referee_credit_applied?: boolean
+          referee_id: string
+          referee_subscribed_at?: string | null
+          referral_code_id: string
+          referrer_credit_applied?: boolean
+          referrer_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          referee_credit_applied?: boolean
+          referee_id?: string
+          referee_subscribed_at?: string | null
+          referral_code_id?: string
+          referrer_credit_applied?: boolean
+          referrer_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_redemptions_referee_id_fkey"
+            columns: ["referee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_redemptions_referral_code_id_fkey"
+            columns: ["referral_code_id"]
+            isOneToOne: false
+            referencedRelation: "referral_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_redemptions_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       secure_notes: {
         Row: {
@@ -6200,6 +6302,7 @@ export type Database = {
       }
       compute_next_retry_at: { Args: { attempt: number }; Returns: string }
       delete_user_and_data: { Args: { target_user_id: string }; Returns: Json }
+      dismiss_nudge: { Args: { p_nudge_key: string }; Returns: number }
       dismiss_recall_match: { Args: { p_match_id: string }; Returns: undefined }
       dl7_find_testimonial_candidates: {
         Args: {
@@ -6250,6 +6353,14 @@ export type Database = {
           retry_sms: boolean
           title: string
           user_id: string
+        }[]
+      }
+      get_or_create_referral_code: {
+        Args: never
+        Returns: {
+          active: boolean
+          code: string
+          uses: number
         }[]
       }
       has_vault_pin: { Args: { p_user_id?: string }; Returns: boolean }
@@ -6373,7 +6484,9 @@ export type Database = {
         Args: { p_channel: string; p_error: string; p_notification_id: string }
         Returns: undefined
       }
+      redeem_referral_code: { Args: { p_code: string }; Returns: Json }
       remove_vault_pin: { Args: { p_user_id?: string }; Returns: undefined }
+      reset_nudge: { Args: { p_nudge_key: string }; Returns: undefined }
       send_subscription_expiry_warnings: { Args: never; Returns: undefined }
       set_vault_pin: {
         Args: { p_pin?: string; p_user_id?: string }

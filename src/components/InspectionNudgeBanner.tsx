@@ -88,13 +88,12 @@ export default function InspectionNudgeBanner() {
         <p style={{ fontSize: FontSize.xs, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: Colors.copper, margin: 0 }}>
           Document the care
         </p>
-        {/* allow-lint: literal fontSize numbers below are intentional for this nudge */}
-        <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal, margin: '2px 0 4px' }}>
+        <p style={{ fontSize: FontSize.sm, fontWeight: 600, color: Colors.charcoal, margin: '2px 0 4px' }}>
           {neverInspected
             ? 'Add a Canopy Maintenance Inspection to your Home Token'
             : 'Time to refresh your Maintenance Inspection'}
         </p>
-        <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 10px', lineHeight: 1.4 }}>
+        <p style={{ fontSize: FontSize.xs, color: Colors.medGray, margin: '0 0 10px', lineHeight: 1.4 }}>
           {neverInspected
             ? 'A Canopy-vetted Pro walks every system in your home and stamps a tamper-evident maintenance record onto your Home Token. Annual — $149/yr base.'
             : 'Your last Maintenance Inspection was over a year ago. Refresh it to keep the credibility on your Home Token current.'}

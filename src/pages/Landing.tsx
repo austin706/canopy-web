@@ -325,27 +325,16 @@ export default function Landing() {
       position: 'relative',
       overflow: 'hidden',
     }}>
-      {/* 2026-05-07: paired soft accent ribbons. Sage glow top-left, copper
-          glow top-right. Same trick the SmartCalendar + HomeToken spotlight
-          sections use further down the page. Adds depth without committing
-          to a photo backdrop, which would push the asset-grade voice into
-          consumer-brand territory. aria-hidden — purely decorative. */}
-      {/* 2026-05-07 v3: 25% pass was still invisible against cream in
-          production (sage/cream and copper/cream are too close in luminance).
-          Per the v2 comment's pre-staged escalation, bumped to 5A/55 (~35%).
-          If still too subtle, the next move is to drop the lighter end of
-          the warmWhite→cream hero gradient so the ribbons sit on a slightly
-          cooler base that lets the tint read. */}
+      {/* 2026-05-07 v4: replaced the paired left/right radial accents with a
+          single bottom sage fade. The radial pair was reading as vertical
+          color bands framing the content like stage curtains, which made the
+          hero feel compressed into a desaturated middle column. A horizontal
+          fade at the bottom adds gentle atmosphere and creates a soft
+          transition into the cream-toned How-It-Works section below, without
+          bracketing the headline. aria-hidden, purely decorative. */}
       <div aria-hidden="true" style={{
-        position: 'absolute', top: -160, left: -180, width: 620, height: 620,
-        borderRadius: '50%',
-        background: `radial-gradient(circle, ${Colors.sage}5A 0%, transparent 70%)`,
-        pointerEvents: 'none',
-      }} />
-      <div aria-hidden="true" style={{
-        position: 'absolute', top: -120, right: -160, width: 560, height: 560,
-        borderRadius: '50%',
-        background: `radial-gradient(circle, ${Colors.copper}55 0%, transparent 72%)`,
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: 220,
+        background: `linear-gradient(180deg, transparent 0%, ${Colors.sage}1F 100%)`,
         pointerEvents: 'none',
       }} />
       <div style={{ maxWidth: 860, margin: '0 auto', position: 'relative' }}>

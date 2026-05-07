@@ -114,6 +114,11 @@ const HomeTokenShareView = lazyRetry(() => import('@/pages/HomeTokenShareView'))
 const Terms = lazyRetry(() => import('@/pages/Terms'));
 const Privacy = lazyRetry(() => import('@/pages/Privacy'));
 const Security = lazyRetry(() => import('@/pages/Security'));
+// 2026-05-07: permanent destination for QR codes and mobile-app deep links.
+// While iOS + Android are pre-launch, the page renders "coming soon" cards.
+// Once APPS_LIVE flips inside GetTheApp.tsx, the page UA-redirects to the
+// right Store on phones and shows badges + QR on desktop.
+const GetTheApp = lazyRetry(() => import('@/pages/GetTheApp'));
 const TestimonialSubmit = lazyRetry(() => import('@/pages/TestimonialSubmit'));
 const AdminTestimonials = lazyRetry(() => import('@/pages/AdminTestimonials'));
 const ContractorTerms = lazyRetry(() => import('@/pages/ContractorTerms'));
@@ -425,6 +430,7 @@ export default function App() {
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/security" element={<Security />} />
+          <Route path="/get-the-app" element={<GetTheApp />} />
           <Route path="/contractor-terms" element={<ContractorTerms />} />
           <Route path="/ai-disclaimer" element={<AIDisclaimer />} />
           <Route path="/cancellation" element={<CancellationPolicy />} />

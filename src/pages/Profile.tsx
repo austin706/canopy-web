@@ -5,7 +5,7 @@ import { supabase, updateProfile, redeemGiftCode, deleteUserAccount, exportUserD
 import { registerForWebPush, unregisterWebPush, isWebPushSubscribed } from '@/services/notifications';
 import { PLANS } from '@/services/subscriptionGate';
 import MessageBanner from '@/components/MessageBanner';
-import { Colors } from '@/constants/theme';
+import { Colors, FontSize } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { ThemeMode } from '@/constants/theme';
 import type { SubscriptionTier, UserPreferences, MaintenanceDepth } from '@/types';
@@ -356,7 +356,7 @@ export default function Profile() {
               If you cancel, the following features will be locked:
             </p>
             <div style={{ background: Colors.cream, borderRadius: 8, padding: 16, marginBottom: 20 }}>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 13, color: Colors.charcoal }}>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: FontSize.sm, color: Colors.charcoal }}>
                 <li style={{ marginBottom: 8, paddingLeft: 20, position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 0 }}>•</span>
                   Equipment items beyond 3
@@ -424,7 +424,7 @@ export default function Profile() {
       {/* Maintenance Preferences */}
       <div className="card mb-lg">
         <div className="flex items-center justify-between mb-lg">
-          <h3 style={{ fontSize: 18 }}>Maintenance Preferences</h3>
+          <h3 style={{ fontSize: FontSize.lg }}>Maintenance Preferences</h3>
           <button className="btn btn-secondary btn-sm" onClick={() => setEditingPreferences(!editingPreferences)}>
             {editingPreferences ? 'Cancel' : 'Edit'}
           </button>
@@ -433,19 +433,19 @@ export default function Profile() {
         {!editingPreferences && user?.user_preferences && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 4px 0' }}>Maintenance Depth</p>
+              <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: '0 0 4px 0' }}>Maintenance Depth</p>
               <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: Colors.charcoal }}>
                 {maintenanceDepth === 'simple' ? 'Just the Essentials' : maintenanceDepth === 'standard' ? 'Recommended' : 'Everything'}
               </p>
             </div>
             <div>
-              <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 4px 0' }}>Cleaning Tasks</p>
+              <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: '0 0 4px 0' }}>Cleaning Tasks</p>
               <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: Colors.charcoal }}>
                 {showCleaningTasks ? 'Enabled' : 'Disabled'}
               </p>
             </div>
             <div>
-              <p style={{ fontSize: 13, color: Colors.medGray, margin: '0 0 4px 0' }}>Pro Tasks</p>
+              <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: '0 0 4px 0' }}>Pro Tasks</p>
               <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: Colors.charcoal }}>
                 {showProTasks ? 'Enabled' : 'Disabled'}
               </p>
@@ -477,7 +477,7 @@ export default function Profile() {
                     <span style={{
                       position: 'absolute', top: -12, right: 16,
                       background: Colors.copper, color: Colors.white,
-                      fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6,
+                      fontSize: FontSize.xs, fontWeight: 700, padding: '3px 10px', borderRadius: 6,
                     }}>
                       Recommended
                     </span>
@@ -487,7 +487,7 @@ export default function Profile() {
                       <div style={{ fontWeight: 600, color: maintenanceDepth === option.value ? Colors.copper : Colors.charcoal, marginBottom: 4 }}>
                         {option.title}
                       </div>
-                      <p style={{ fontSize: 13, color: Colors.medGray, margin: 0, lineHeight: 1.4 }}>
+                      <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: 0, lineHeight: 1.4 }}>
                         {option.desc}
                       </p>
                     </div>
@@ -656,6 +656,26 @@ export default function Profile() {
       {/* Appearance / Dark Mode */}
       <ThemeToggle />
 
+      {/* Mobile app discovery card (DL-7).
+          Persistent home for the "get the Canopy app" CTA. The marketing
+          /get-the-app route handles UA detection and renders the right
+          Store CTA. While the apps are pre-launch, that page shows
+          "coming soon" cards. This card stays usable through the launch
+          transition without needing further code changes here. */}
+      <div className="card mt-lg">
+        <h3 style={{ fontSize: 16, marginBottom: 8 }}>Mobile app</h3>
+        <p className="text-sm text-gray mb-md">
+          Push notifications fire at the moment a task matters, so you stop scrolling email for what is due. Snap an appliance label in seconds, and your account syncs across web, iOS, and Android.
+        </p>
+        <a
+          href="/get-the-app"
+          className="btn btn-secondary btn-sm"
+          style={{ display: 'inline-block', textDecoration: 'none' }}
+        >
+          Get the Canopy app
+        </a>
+      </div>
+
       <button className="btn btn-danger btn-full" onClick={handleLogout}>Sign Out</button>
 
       {/* DD-4: Re-open Setup Checklist after dismiss/completion. */}
@@ -742,7 +762,7 @@ export default function Profile() {
             className="card"
             style={{ maxWidth: 480, width: '100%', padding: 24 }}
           >
-            <h3 id="delete-modal-title" style={{ fontSize: 18, marginBottom: 12, color: Colors.error }}>
+            <h3 id="delete-modal-title" style={{ fontSize: FontSize.lg, marginBottom: 12, color: Colors.error }}>
               Delete your Canopy account?
             </h3>
             <p className="text-sm" style={{ marginBottom: 12, lineHeight: 1.6 }}>
@@ -816,7 +836,7 @@ function ThemeToggle() {
               background: mode === opt.value ? 'var(--color-sage-muted, #f0f4f0)' : 'transparent',
               cursor: 'pointer',
               textAlign: 'center',
-              fontSize: 13,
+              fontSize: FontSize.sm,
               fontWeight: mode === opt.value ? 600 : 400,
               color: 'var(--color-charcoal)',
               transition: 'all 0.2s',

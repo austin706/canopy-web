@@ -135,6 +135,15 @@ const PAGE_META: Record<string, PageMeta> = {
       { name: 'Sale Prep Preview', path: '/sale-prep-preview' },
     ],
   },
+  '/get-the-app': {
+    title: 'Get the Canopy app | Canopy Home',
+    description:
+      'Download Canopy for iPhone, iPad, and Android. Push notifications fire at the moment a task matters, snap an appliance label and we read it, sync across web and mobile.',
+    breadcrumbs: [
+      { name: 'Home', path: '/' },
+      { name: 'Get the App', path: '/get-the-app' },
+    ],
+  },
   '/security': {
     title: 'Security & Privacy | Canopy Home',
     description:

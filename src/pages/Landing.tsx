@@ -1197,6 +1197,186 @@ export default function Landing() {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════
+  // ON EVERY SCREEN — mobile + web cross-platform pitch with push-notification
+  // benefit lead. Sits between StatsSection and PricingSection so the "yes I
+  // can use this on my phone" question is answered before the buyer hits the
+  // pricing decision. Apps not live yet (2026-05-07): all CTAs point to
+  // /get-the-app which renders "coming soon" cards until APPS_LIVE flips.
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const OnEveryScreenSection = () => (
+    <section style={{
+      background: Colors.cream,
+      padding: isMobile ? '64px 16px' : '112px 24px',
+      fontFamily: fontStack,
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Subtle copper accent ribbon, top-right (matches the spotlight pattern
+          used by HomeTokenSection). */}
+      <div aria-hidden="true" style={{
+        position: 'absolute', top: -80, right: -100, width: 380, height: 380,
+        borderRadius: '50%',
+        background: `radial-gradient(circle, ${Colors.copper}14 0%, transparent 70%)`,
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        maxWidth: 1200, margin: '0 auto', position: 'relative',
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1.05fr 1fr',
+        gap: isMobile ? 40 : 80,
+        alignItems: 'center',
+      }}>
+        {/* Left column: copy + CTA */}
+        <div>
+          <p style={{
+            fontSize: FontSize.sm, fontWeight: FontWeight.bold,
+            letterSpacing: 1.4, textTransform: 'uppercase', color: Colors.copper,
+            margin: '0 0 12px 0',
+          }}>
+            On every screen
+          </p>
+          <h2 style={{
+            fontSize: isMobile ? 26 : 38, fontWeight: FontWeight.bold,
+            color: Colors.charcoal, margin: '0 0 16px 0',
+            lineHeight: 1.2,
+          }}>
+            On-time, on your phone, when it matters.
+          </h2>
+          <p style={{
+            fontSize: isMobile ? 15 : 17, color: Colors.medGray,
+            lineHeight: 1.6, margin: '0 0 24px 0', maxWidth: 540,
+          }}>
+            Frost warning at 4pm? Canopy tells you to drip the faucets that night. Pro visit in 30 minutes? Your phone buzzes with the heads-up. Add-on service rescheduled? You know before the truck shows up.
+          </p>
+          <ul style={{
+            listStyle: 'none', padding: 0, margin: '0 0 32px',
+            display: 'grid', gap: 12,
+          }}>
+            {[
+              { icon: '📲', text: <><strong>Push notifications</strong> fire at the moment a task matters, not a digest you scroll past.</> },
+              { icon: '📷', text: <><strong>Snap an appliance label</strong> in seconds. Canopy reads make, model, and serial right from your phone.</> },
+              { icon: '☁️', text: <><strong>Sync across devices.</strong> Start a task on your laptop, finish it on your phone, log the receipt from the driveway.</> },
+            ].map((item, i) => (
+              <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <span aria-hidden="true" style={{ fontSize: FontSize.xl, lineHeight: '24px', flexShrink: 0 }}>{item.icon}</span>
+                <span style={{ fontSize: FontSize.md, color: Colors.charcoal, lineHeight: 1.55 }}>{item.text}</span>
+              </li>
+            ))}
+          </ul>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <a href="/get-the-app" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '12px 24px', fontSize: 15, fontWeight: FontWeight.semibold,
+              background: Colors.copper, color: Colors.white,
+              borderRadius: BorderRadius.lg, textDecoration: 'none',
+              transition: 'all 0.2s',
+            }}>
+              See app options →
+            </a>
+            <span style={{ fontSize: 13, color: Colors.medGray, alignSelf: 'center' }}>
+              {/* TODO_APP_LIVE: drop this line once iOS + Android are approved
+                  and live in their stores. */}
+              iOS &amp; Android in App Store review · launching with Tulsa
+            </span>
+          </div>
+        </div>
+
+        {/* Right column: stylized phone mockup with a notification preview.
+            Pure CSS — no real device frame, no stock photo. The notification
+            card is the actual selling moment: "this is what Canopy does that
+            your spreadsheet never could." */}
+        <div aria-hidden="true" style={{
+          display: 'flex', justifyContent: 'center', alignItems: 'center',
+          order: isMobile ? 2 : 0,
+        }}>
+          <div style={{
+            position: 'relative',
+            width: isMobile ? 280 : 320,
+            aspectRatio: '9 / 19',
+            background: Colors.charcoal,
+            borderRadius: 38,
+            padding: 10,
+            boxShadow: '0 32px 80px -20px rgba(38, 32, 28, 0.35), 0 8px 24px rgba(38, 32, 28, 0.12)',
+            transform: isMobile ? 'none' : 'rotate(-2deg)',
+          }}>
+            {/* Phone screen */}
+            <div style={{
+              position: 'relative',
+              width: '100%', height: '100%',
+              background: `linear-gradient(180deg, ${Colors.warmWhite} 0%, ${Colors.cream} 100%)`,
+              borderRadius: 30,
+              overflow: 'hidden',
+              padding: '36px 14px 14px',
+            }}>
+              {/* Status bar mock */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                fontSize: 11, color: Colors.charcoal, fontWeight: FontWeight.semibold,
+                marginBottom: 28, padding: '0 8px',
+              }}>
+                <span>4:02 PM</span>
+                <span style={{ fontSize: 9, opacity: 0.6 }}>● ● ●</span>
+              </div>
+              {/* Notification card */}
+              <div style={{
+                background: Colors.white,
+                borderRadius: 14,
+                padding: 14,
+                border: `1px solid ${Colors.lightGray}`,
+                boxShadow: '0 4px 12px rgba(38, 32, 28, 0.06)',
+                marginBottom: 12,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: 6,
+                    background: Colors.copper,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold,
+                  }}>C</div>
+                  <span style={{ fontSize: 11, fontWeight: FontWeight.semibold, color: Colors.charcoal, letterSpacing: 0.3 }}>CANOPY</span>
+                  <span style={{ fontSize: 10, color: Colors.medGray, marginLeft: 'auto' }}>now</span>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: FontWeight.semibold, color: Colors.charcoal, marginBottom: 4, lineHeight: 1.3 }}>
+                  ❄️ Hard freeze tonight in Tulsa
+                </div>
+                <div style={{ fontSize: 12, color: Colors.darkGray, lineHeight: 1.4 }}>
+                  Disconnect outdoor hoses and drip indoor faucets. Two of your zones face north, so start there.
+                </div>
+              </div>
+              {/* Second notification — pro visit */}
+              <div style={{
+                background: Colors.white,
+                borderRadius: 14,
+                padding: 14,
+                border: `1px solid ${Colors.lightGray}`,
+                boxShadow: '0 4px 12px rgba(38, 32, 28, 0.06)',
+                opacity: 0.85,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: 6,
+                    background: Colors.sage,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold,
+                  }}>C</div>
+                  <span style={{ fontSize: 11, fontWeight: FontWeight.semibold, color: Colors.charcoal, letterSpacing: 0.3 }}>CANOPY</span>
+                  <span style={{ fontSize: 10, color: Colors.medGray, marginLeft: 'auto' }}>2h ago</span>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: FontWeight.semibold, color: Colors.charcoal, marginBottom: 4, lineHeight: 1.3 }}>
+                  Pro visit confirmed for Thursday 10am
+                </div>
+                <div style={{ fontSize: 12, color: Colors.darkGray, lineHeight: 1.4 }}>
+                  HVAC quarterly tune-up. Marcus will text 30 minutes before arrival.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════════
   // WHO IS IT FOR — persona cards targeting the main entry-points into Canopy
   // ═══════════════════════════════════════════════════════════════════════════════
   const WhoIsItFor = () => {
@@ -2218,6 +2398,7 @@ export default function Landing() {
         <WhoIsItFor />
         <FeaturesSection />
         <StatsSection />
+        <OnEveryScreenSection />
         {PricingSection()}
         <TestimonialsSection isMobile={isMobile} />
         <FaqSection />

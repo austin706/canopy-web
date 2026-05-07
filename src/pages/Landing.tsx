@@ -85,7 +85,7 @@ const HERO_COPY: Record<HeroVariant, HeroCopy> = {
     variant: 'outcome_promise',
     h1: 'Never forget a maintenance task, lose a manual, or overpay a contractor again.',
     subhead:
-      "Snap a photo of any appliance. Canopy figures out what it is, when it needs attention, and lines up a vetted Tulsa pro before things break — and keeps a record buyers will trust the day you list.",
+      "Snap a photo of any appliance — Canopy figures out what it is, when it needs attention, and surfaces the right task on the right day. Weather-aware alerts, vetted Tulsa pros, and reminders that actually show up.",
     primaryCta: 'Start free — takes 2 minutes',
     secondaryCta: 'See how it works',
   },
@@ -93,7 +93,7 @@ const HERO_COPY: Record<HeroVariant, HeroCopy> = {
     variant: 'certainty_loop',
     h1: 'Stop guessing. Start knowing.',
     subhead:
-      "Canopy reads every appliance label in your home, tells you exactly what needs attention and when, and builds a tamper-evident record of every visit, repair, and replacement — so the value you put in shows the day you list.",
+      "Canopy reads every appliance label in your home, builds a maintenance calendar around your equipment and Tulsa weather, and gives you one place for every manual, warranty, and receipt. Care for your home like it's the biggest thing you own — because it is.",
     primaryCta: 'Get started free',
     secondaryCta: 'See it in action',
   },
@@ -444,6 +444,176 @@ export default function Landing() {
               <p style={{ fontSize: FontSize.md, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
             </div>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // SMART CALENDAR + WEATHER-AWARE ALERTS — the day-to-day care spotlight
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 2026-05-06: paired with HomeTokenSection below to bracket the two value
+  // props. SmartCalendar = the daily-life moat ("never forget"); HomeToken =
+  // the listing-day moat ("the record buyers trust"). Hero leads with daily
+  // care, this section anchors it visually with a tasks-this-week mock that
+  // weaves weather-aware alerts into the same rhythm.
+  const SmartCalendarSection = () => (
+    <section style={{
+      background: Colors.warmWhite,
+      padding: isMobile ? '64px 16px' : '112px 24px',
+      fontFamily: fontStack,
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Subtle sage accent ribbon, top-left for variety vs the copper one
+          on HomeTokenSection. */}
+      <div aria-hidden="true" style={{
+        position: 'absolute', top: -60, left: -100, width: 360, height: 360,
+        borderRadius: '50%',
+        background: `radial-gradient(circle, ${Colors.sage}14 0%, transparent 70%)`,
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        maxWidth: 1200, margin: '0 auto', position: 'relative',
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1.05fr',
+        gap: isMobile ? 40 : 80,
+        alignItems: 'center',
+      }}>
+        {/* Mock — placed left for visual variety vs HomeTokenSection (mock right) */}
+        <div aria-hidden="true" style={{
+          position: 'relative',
+          background: Colors.white,
+          borderRadius: 18,
+          padding: isMobile ? 20 : 28,
+          boxShadow: '0 24px 64px -16px rgba(38, 32, 28, 0.18), 0 4px 12px rgba(38, 32, 28, 0.06)',
+          border: `1px solid ${Colors.sage}25`,
+          maxWidth: isMobile ? '100%' : 480,
+          marginRight: isMobile ? 0 : 'auto',
+          transform: isMobile ? 'none' : 'rotate(1.2deg)',
+          order: isMobile ? 2 : 0,
+        }}>
+          {/* Calendar header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div>
+              <p style={{
+                fontSize: 11, fontWeight: FontWeight.bold,
+                letterSpacing: 0.7, textTransform: 'uppercase', color: Colors.sageDark,
+                margin: 0,
+              }}>This week</p>
+              <h3 style={{ fontSize: 18, fontWeight: FontWeight.bold, color: Colors.charcoal, margin: '2px 0 0' }}>
+                4 things on your plate
+              </h3>
+            </div>
+            <span style={{ fontSize: 11, color: Colors.medGray, fontWeight: FontWeight.semibold }}>May 6 — May 12</span>
+          </div>
+
+          {/* Weather-alert chip — weaves the weather-aware alert story into the calendar */}
+          <div style={{
+            display: 'flex', gap: 10, alignItems: 'flex-start',
+            padding: '12px 14px', borderRadius: 10, marginBottom: 14,
+            background: `linear-gradient(135deg, ${Colors.copper}10 0%, ${Colors.copper}05 100%)`,
+            border: `1px solid ${Colors.copper}25`,
+          }}>
+            <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1.4 }}>🌪️</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5, textTransform: 'uppercase', color: Colors.copper, margin: 0 }}>
+                Severe weather watch · Tulsa
+              </p>
+              <p style={{ fontSize: 12, color: Colors.charcoal, margin: '2px 0 0', lineHeight: 1.45 }}>
+                Storm cell Wed evening. Canopy added 2 prep tasks below.
+              </p>
+            </div>
+          </div>
+
+          {/* Task list — mix of prevention, weather, and add-on tasks */}
+          <div style={{ display: 'grid', gap: 8 }}>
+            {[
+              { day: 'Tue', icon: '🔧', title: 'Replace HVAC filter (16x25x1)', tag: 'Quarterly · 8 min', priority: Colors.medGray },
+              { day: 'Wed', icon: '🪜', title: 'Clear gutters on east side', tag: 'Storm prep', priority: Colors.copper },
+              { day: 'Wed', icon: '🚪', title: 'Stow patio cushions & umbrella', tag: 'Storm prep', priority: Colors.copper },
+              { day: 'Sat', icon: '🪳', title: 'Pest Shield quarterly visit', tag: 'Pro arriving 9 AM', priority: Colors.sage },
+            ].map((t) => (
+              <div key={t.title} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px', borderRadius: 10,
+                background: Colors.cream,
+                border: `1px solid ${Colors.lightGray}`,
+              }}>
+                <span style={{
+                  fontSize: 10, fontWeight: FontWeight.bold,
+                  color: t.priority, background: `${t.priority}15`,
+                  padding: '3px 8px', borderRadius: 999, flexShrink: 0,
+                  letterSpacing: 0.5,
+                }}>{t.day}</span>
+                <span aria-hidden="true" style={{ fontSize: 14 }}>{t.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: 0 }}>
+                    {t.title}
+                  </p>
+                  <p style={{ fontSize: 11, color: Colors.medGray, margin: '1px 0 0' }}>{t.tag}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer reassurance */}
+          <p style={{
+            fontSize: 11, color: Colors.medGray, margin: '14px 0 0',
+            textAlign: 'center', fontStyle: 'italic',
+          }}>
+            Each task includes step-by-step instructions, parts list, and a one-tap log.
+          </p>
+        </div>
+
+        {/* Copy column */}
+        <div style={{ order: isMobile ? 1 : 1 }}>
+          <p style={{
+            fontSize: 13, fontWeight: FontWeight.bold,
+            letterSpacing: 1.4, textTransform: 'uppercase',
+            color: Colors.sageDark, margin: '0 0 16px',
+          }}>
+            Day-to-day care
+          </p>
+          <h2 style={{
+            fontSize: isMobile ? 30 : 44, fontWeight: FontWeight.bold,
+            color: Colors.charcoal, margin: '0 0 20px', lineHeight: 1.15,
+          }}>
+            The right task on the right day — for your equipment, your weather, your home.
+          </h2>
+          <p style={{
+            fontSize: isMobile ? 16 : 18, color: Colors.medGray,
+            lineHeight: 1.6, margin: '0 0 28px',
+          }}>
+            Canopy reads each piece of equipment in your home and builds a maintenance calendar around it. Severe weather pulls prep tasks forward. Quarterly Pro Visits show up on the same calendar. One place for everything that keeps your home running.
+          </p>
+          <ul style={{
+            listStyle: 'none', padding: 0, margin: '0 0 32px',
+            display: 'grid', gap: 14,
+          }}>
+            {[
+              { icon: '📅', text: <><strong>40+ task templates</strong> tailored to make/model/age — not a generic checklist.</> },
+              { icon: '⛈️', text: <><strong>Weather-aware alerts</strong> pair Tulsa storm watches with actionable prep tasks the day before.</> },
+              { icon: '💬', text: <><strong>AI Home Assistant</strong> answers "what does this noise mean" or "how often should I…" grounded in your equipment.</> },
+              { icon: '📊', text: <><strong>Home Health Score</strong> tracks how well-maintained your home actually is — and what to fix next.</> },
+            ].map((item, i) => (
+              <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <span aria-hidden="true" style={{ fontSize: 22, lineHeight: '28px', flexShrink: 0 }}>{item.icon}</span>
+                <span style={{ fontSize: 15, color: Colors.charcoal, lineHeight: 1.55 }}>{item.text}</span>
+              </li>
+            ))}
+          </ul>
+          <button onClick={() => ctaToSignup('smart_calendar')}
+            style={{
+              padding: '14px 28px', fontSize: 15, fontWeight: FontWeight.semibold,
+              background: Colors.copper, color: Colors.white, border: 'none',
+              borderRadius: BorderRadius.lg, cursor: 'pointer', fontFamily: fontStack,
+              transition: 'all 0.3s ease',
+            }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.background = Colors.copperDark; (e.target as HTMLElement).style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.background = Colors.copper; (e.target as HTMLElement).style.transform = 'translateY(0)'; }}>
+            Build your home&apos;s plan →
+          </button>
         </div>
       </div>
     </section>
@@ -999,31 +1169,40 @@ export default function Landing() {
       background: '#F5F4F0', padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack,
     }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <p style={{
+          textAlign: 'center', fontSize: 13, fontWeight: FontWeight.bold,
+          letterSpacing: 1.4, textTransform: 'uppercase', color: Colors.copper,
+          margin: '0 0 12px 0',
+        }}>
+          And the rest
+        </p>
         <h2 style={{
           fontSize: isMobile ? 26 : 38, fontWeight: FontWeight.bold,
           color: Colors.charcoal, textAlign: 'center', margin: '0 0 12px 0',
         }}>
-          Everything your home needs in one place
+          Everything else your home needs in one place
         </h2>
         <p style={{
           fontSize: isMobile ? 15 : 17, color: Colors.medGray, textAlign: 'center',
           maxWidth: 560, margin: '0 auto 48px', lineHeight: 1.5,
         }}>
-          From day-one setup to selling your home — Canopy covers the full homeownership lifecycle.
+          The supporting cast that makes the calendar and the Home Token actually work.
         </p>
 
+        {/* 2026-05-06: Smart Maintenance Calendar + Document Vault/Home Token
+            were promoted to dedicated spotlight sections (SmartCalendarSection
+            and HomeTokenSection). Remaining features stay as a 4-card grid. */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
           gap: isMobile ? 16 : 24,
+          maxWidth: 920, margin: '0 auto',
         }}>
           {[
-            { icon: '📸', title: 'AI Equipment Scanner', desc: 'Point your camera at any appliance label. Canopy reads the make, model, serial number, and expected lifespan — then generates a personalized maintenance schedule in seconds.' },
-            { icon: '📅', title: 'Smart Maintenance Calendar', desc: '40+ task templates customized to your equipment, climate zone, and season. Weather-smart alerts pair severe weather with actionable prep tasks specific to your home.' },
-            { icon: '💬', title: 'AI Home Assistant', desc: 'Ask anything about your home. Get instant, personalized answers grounded in your actual equipment, maintenance history, and local conditions.' },
-            { icon: '🔧', title: 'Bimonthly Pro Visits', desc: 'Canopy-certified technicians visit every other month to inspect systems, change filters, and generate detailed reports. Available on Pro plans in Tulsa.' },
-            { icon: '🗂️', title: 'Document Vault & Home Token', desc: 'Store warranties, manuals, inspection reports, and receipts. Everything builds toward your Home Token — the verified, timestamped record of your home\'s complete history that transfers when you sell.' },
-            { icon: '📊', title: 'Home Health Score', desc: 'A living score that reflects how well-maintained your home is. Track it over time, see exactly where to focus next, and use it as proof of care when you list.' },
+            { icon: '📸', title: 'AI Equipment Scanner', desc: 'Point your camera at any appliance label. Canopy reads make, model, serial, and expected lifespan, then generates the right maintenance schedule for that exact unit.' },
+            { icon: '💬', title: 'AI Home Assistant', desc: 'Ask anything about your home. "What does this noise mean?" "How do I drain my water heater?" — answers grounded in your actual equipment and local conditions.' },
+            { icon: '🔧', title: 'Bimonthly Pro Visits', desc: 'Canopy-certified technicians show up every other month to inspect systems, change filters, and log everything to your Home Token. Available on Pro plans in Tulsa.' },
+            { icon: '📊', title: 'Home Health Score', desc: 'A living score that reflects how well-maintained your home actually is. See exactly where to focus next, and watch the number climb as you keep up.' },
           ].map((f) => (
             <div key={f.title}
               style={{
@@ -1374,9 +1553,93 @@ export default function Landing() {
                 page at launch-readiness audit on 2026-05-06 — removed. */}
           </div>
 
-          <p style={{ textAlign: 'center', fontSize: 14, color: Colors.medGray, margin: '0 0 32px 0' }}>
+          <p style={{ textAlign: 'center', fontSize: 14, color: Colors.medGray, margin: '0 0 40px 0' }}>
             All plans include a 7-day money-back guarantee.
           </p>
+
+          {/* 2026-05-06: Pro+ tier was killed pre-launch (the umbrella name is
+              now reserved for the curated add-on bundle). This horizontal
+              promo block tells the concierge story without resurrecting the
+              tier — Pro + the add-ons you choose = full concierge coverage. */}
+          <div style={{
+            background: `linear-gradient(135deg, ${Colors.cream} 0%, ${Colors.copper}10 50%, ${Colors.cream} 100%)`,
+            border: `1px solid ${Colors.copper}30`,
+            borderRadius: BorderRadius.lg,
+            padding: isMobile ? 24 : 36,
+            marginBottom: 24,
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr',
+            gap: isMobile ? 24 : 40,
+            alignItems: 'center',
+          }}>
+            <div>
+              <p style={{
+                fontSize: 12, fontWeight: FontWeight.bold,
+                letterSpacing: 1.4, textTransform: 'uppercase',
+                color: Colors.copper, margin: '0 0 10px',
+              }}>
+                Want full concierge?
+              </p>
+              <h3 style={{
+                fontSize: isMobile ? 22 : 26, fontWeight: FontWeight.bold,
+                color: Colors.charcoal, margin: '0 0 12px', lineHeight: 1.25,
+              }}>
+                Pro + the add-ons you want = complete coverage.
+              </h3>
+              <p style={{
+                fontSize: 15, color: Colors.medGray,
+                lineHeight: 1.55, margin: '0 0 16px',
+              }}>
+                Stack pest, lawn, pool, septic, cleaning, and the Annual Maintenance Inspection on top of Pro&apos;s bimonthly visits. One login, one record, one place where everything that touches your home is logged.
+              </p>
+              <button
+                onClick={() => scrollToSection('add-ons')}
+                style={{
+                  padding: '12px 22px', fontSize: 14, fontWeight: FontWeight.semibold,
+                  background: Colors.copper, color: Colors.white, border: 'none',
+                  borderRadius: BorderRadius.lg, cursor: 'pointer', fontFamily: fontStack,
+                  transition: 'all 0.3s ease',
+                }}
+                onMouseEnter={(e) => { (e.target as HTMLElement).style.background = Colors.copperDark; (e.target as HTMLElement).style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={(e) => { (e.target as HTMLElement).style.background = Colors.copper; (e.target as HTMLElement).style.transform = 'translateY(0)'; }}
+              >
+                Browse add-ons →
+              </button>
+            </div>
+
+            {/* Stacked add-on chips visualizing the concierge build */}
+            <div style={{
+              display: 'flex', flexDirection: 'column', gap: 8,
+              padding: isMobile ? 14 : 18,
+              background: Colors.white,
+              borderRadius: BorderRadius.md,
+              border: `1px solid ${Colors.lightGray}`,
+            }}>
+              <p style={{ fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.7, textTransform: 'uppercase', color: Colors.medGray, margin: 0 }}>
+                Sample concierge stack · Tulsa
+              </p>
+              {[
+                { icon: '🔧', label: 'Pro plan — bimonthly visits', price: '$149/mo' },
+                { icon: '🛡️', label: 'Annual Maintenance Inspection', price: '~$149/yr' },
+                { icon: '🪳', label: 'Pest Shield', price: 'from $39/mo' },
+                { icon: '🌿', label: 'Lawn Care', price: 'from $59/mo' },
+                { icon: '🧹', label: 'House Cleaning', price: 'from $129/mo' },
+              ].map((row) => (
+                <div key={row.label} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '8px 10px', borderRadius: 8,
+                  background: Colors.cream,
+                }}>
+                  <span aria-hidden="true" style={{ fontSize: 16, flexShrink: 0 }}>{row.icon}</span>
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: FontWeight.semibold, color: Colors.charcoal }}>{row.label}</span>
+                  <span style={{ fontSize: 12, color: Colors.medGray, fontWeight: FontWeight.medium }}>{row.price}</span>
+                </div>
+              ))}
+              <p style={{ fontSize: 11, color: Colors.medGray, margin: '4px 0 0', textAlign: 'center', fontStyle: 'italic' }}>
+                Build the stack you actually want — add or drop any time.
+              </p>
+            </div>
+          </div>
 
           {/* Inline comparison details */}
           <details style={{
@@ -1711,9 +1974,11 @@ export default function Landing() {
             re-renders from mobileMenuOpen / resize / billingInterval. */}
         {HeroSection()}
         <HowItWorks />
-        {/* 2026-05-06: Home Token + Maintenance Inspection — the moat. Slotted
-            between How-It-Works and Add-Ons so the value prop lands before
-            the homeowner sees the per-service pricing grid. */}
+        {/* 2026-05-06: paired moat sections — daily-care first
+            (SmartCalendarSection: the right task on the right day, weather-
+            aware), then the listing-day moat (HomeTokenSection: the record
+            buyers actually trust). */}
+        <SmartCalendarSection />
         <HomeTokenSection />
         <AddOnsSection />
         <WhoIsItFor />

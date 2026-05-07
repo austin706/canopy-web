@@ -17,13 +17,18 @@ interface AddOnCard {
   bullets: string[];
 }
 
+// 2026-05-06 round-7: prices aligned to the canonical figures rendered on
+// Landing (/) so a homeowner doesn't see $39/mo on the homepage and $60/mo
+// here. Icons, taglines, and cadence also normalized to match the AddOns
+// section on Landing for consistency. Real prices are still per-property
+// quoted after assessment — these are the marketing floors.
 const RECURRING: AddOnCard[] = [
   {
     name: 'Pest Shield',
-    tagline: 'Keep bugs out, year-round.',
-    priceRange: 'From $60/mo',
-    cadence: 'Quarterly exterior · monthly interior optional',
-    icon: '🐜',
+    tagline: 'Quarterly treatments, no surprises.',
+    priceRange: 'From $39/mo',
+    cadence: 'Quarterly exterior · free re-services',
+    icon: '🪳',
     bullets: [
       'Licensed applicators, EPA-registered products',
       'Termite & rodent monitoring included',
@@ -31,23 +36,23 @@ const RECURRING: AddOnCard[] = [
     ],
   },
   {
-    name: 'Lawn & Grounds',
+    name: 'Lawn Care',
     tagline: 'A yard that looks taken care of — because it is.',
-    priceRange: 'From $150/mo',
-    cadence: 'Weekly mow · seasonal fertilization · irrigation checks',
+    priceRange: 'From $59/mo',
+    cadence: 'Bi-weekly mow · seasonal fertilization · irrigation checks',
     icon: '🌿',
     bullets: [
-      'Mowing, edging, trimming on a fixed schedule',
+      'Mow, edge, fertilize on a fixed schedule',
       'Irrigation zone testing and seasonal shutdown',
       'Optional: aeration, overseeding, mulch refresh',
     ],
   },
   {
-    name: 'Pool Care',
+    name: 'Pool Service',
     tagline: 'Swimmable every weekend.',
-    priceRange: 'From $150/mo',
-    cadence: 'Weekly service',
-    icon: '💧',
+    priceRange: 'From $149/mo',
+    cadence: 'Weekly chemistry, cleaning, and equipment checks',
+    icon: '🏊',
     bullets: [
       'Chemical balance checks and adjustments',
       'Skimmer and basket cleaning, brushing',
@@ -57,9 +62,9 @@ const RECURRING: AddOnCard[] = [
   {
     name: 'Septic Care',
     tagline: 'Aerobic systems, handled.',
-    priceRange: 'From $75/mo',
-    cadence: 'Quarterly inspection',
-    icon: '🔧',
+    priceRange: 'From $19/mo',
+    cadence: 'Scheduled inspections + on-call response',
+    icon: '💧',
     bullets: [
       'Chlorine refill, spray-head testing, alarm checks',
       'State-compliance reports for aerobic permits',
@@ -68,13 +73,13 @@ const RECURRING: AddOnCard[] = [
   },
   {
     name: 'House Cleaning',
-    tagline: 'Biweekly, by the same crew.',
-    priceRange: 'From $200/mo',
-    cadence: 'Biweekly standard · weekly available',
-    icon: '✨',
+    tagline: 'Bi-weekly, by the same crew.',
+    priceRange: 'From $129/mo',
+    cadence: 'Bi-weekly standard · weekly available',
+    icon: '🧹',
     bullets: [
       'Consistent crew, background-checked',
-      'Detailed checklist customized to your home',
+      'Detailed checklist scoped to your home',
       'One-time deep cleans available at quote',
     ],
   },

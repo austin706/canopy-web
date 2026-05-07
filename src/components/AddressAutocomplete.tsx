@@ -108,7 +108,15 @@ export default function AddressAutocomplete({
         aria-label={ariaLabel}
         aria-autocomplete="list"
         aria-expanded={showDropdown}
-        autoComplete="street-address"
+        // 2026-05-07: was `street-address` (single-field WHATWG token meaning
+        // "the entire address in one input"). Browsers' contact-card autofill
+        // dumped the whole address into just this field. For a multi-field
+        // form (we have separate City/State/ZIP inputs) the correct token is
+        // `address-line1`; the other three inputs get `address-level2` (city),
+        // `address-level1` (state), and `postal-code` so the browser can
+        // distribute the parts across all four.
+        autoComplete="address-line1"
+        name="address-line1"
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => predictions.length > 0 && setShowDropdown(true)}
         onKeyDown={handleKeyDown}

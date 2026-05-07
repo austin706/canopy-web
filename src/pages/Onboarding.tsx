@@ -1136,20 +1136,29 @@ export default function Onboarding() {
             />
           </div>
 
+          {/* 2026-05-07: autoComplete + name attributes added so browser
+              contact-card autofill distributes street/city/state/zip across
+              all four fields. Without these tokens the City/State/ZIP inputs
+              were anonymous to the browser; pairing them with `address-line1`
+              on the street autocomplete is what tells the browser "this is
+              one address split across four inputs." */}
           <div className="grid-3">
             <div className="form-group">
               <label>City *</label>
               <input className="form-input" placeholder="Tulsa" value={addressForm.city}
+                autoComplete="address-level2" name="address-level2"
                 onChange={e => setAddressForm({ ...addressForm, city: e.target.value })} />
             </div>
             <div className="form-group">
               <label>State *</label>
               <input className="form-input" placeholder="OK" value={addressForm.state}
+                autoComplete="address-level1" name="address-level1"
                 onChange={e => setAddressForm({ ...addressForm, state: e.target.value })} />
             </div>
             <div className="form-group">
               <label>ZIP *</label>
               <input className="form-input" placeholder="74103" value={addressForm.zip_code}
+                autoComplete="postal-code" name="postal-code" inputMode="numeric"
                 onChange={e => setAddressForm({ ...addressForm, zip_code: e.target.value })} />
             </div>
           </div>

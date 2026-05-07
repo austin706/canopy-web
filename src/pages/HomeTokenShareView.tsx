@@ -244,11 +244,14 @@ export default function HomeTokenShareView() {
             background: Colors.cream,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: FontSize.xxl,
-          }} role="img" aria-label="Home">🏡</div>
+          } as React.CSSProperties} role="img" aria-label="Home">🏡</div>
         )}
         <div style={{ flex: 1 }}>
-          <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: 0 }}>
-            This Home Token is a tamper-evident maintenance record. Every entry is timestamped, photo-backed where applicable, and verifiable through Canopy.
+          <p style={{ fontSize: FontSize.sm, color: Colors.charcoal, margin: 0, fontWeight: 600, lineHeight: 1.3 }}>
+            What you&apos;re looking at
+          </p>
+          <p style={{ fontSize: FontSize.xs, color: Colors.medGray, margin: '4px 0 0', lineHeight: 1.5 }}>
+            A tamper-evident maintenance record. Every entry — visit, repair, replacement, warranty, inspection — is timestamped, photo-backed where applicable, and verifiable through Canopy. The homeowner cannot edit history retroactively.
           </p>
         </div>
       </div>
@@ -271,42 +274,58 @@ export default function HomeTokenShareView() {
         agentBrokerage={agentBrokerage}
       />
 
-      {/* 2026-05-02: "Get this for your home" CTA — buyer-side conversion
-          wedge. Only shown to anonymous viewers (the existing homeowner
-          and signed-in agent shouldn't be re-pitched on Canopy). */}
+      {/* 2026-05-06: buyer-side conversion wedge. Only shown to anonymous
+          viewers — the existing homeowner and signed-in agent shouldn't
+          be re-pitched on Canopy. Copy reframed to land on buyers
+          specifically: they're looking at this BECAUSE they're considering
+          buying or repping a home. The pitch is: "you'll wish your next
+          home had this — start one for the home you're in now." */}
       {!user && (
         <div style={{
           marginTop: 28,
-          padding: 22,
-          borderRadius: 14,
-          background: Colors.charcoal,
+          padding: 24,
+          borderRadius: 16,
+          background: `linear-gradient(135deg, ${Colors.charcoal} 0%, #1a1a1a 100%)`,
           color: '#fff',
           textAlign: 'center',
+          border: `1px solid ${Colors.copper}40`,
         }}>
           <p style={{ fontSize: 12 /* allow-lint */, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: Colors.copper, margin: 0 }}>
-            Want this for your home?
+            Like what you&apos;re seeing?
           </p>
-          <h2 style={{ fontSize: 20 /* allow-lint */, fontWeight: 700, color: '#fff', margin: '8px 0' }}>
-            Start your own Home Token in under 2 minutes.
+          <h2 style={{ fontSize: 22 /* allow-lint */, fontWeight: 700, color: '#fff', margin: '10px 0', lineHeight: 1.25 }}>
+            Start a Home Token for the home you&apos;re in now.
           </h2>
-          <p style={{ fontSize: 14 /* allow-lint */, color: '#cdcdcd', margin: '0 0 16px' }}>
-            Free forever for the first home. Upgrade only when you want pro maintenance or the Annual Certified Home Inspection.
+          <p style={{ fontSize: 14 /* allow-lint */, color: '#cdcdcd', margin: '0 0 18px', lineHeight: 1.55, maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}>
+            Free forever for your first home. Layer in scheduled Pro visits and the Annual Maintenance Inspection only when you want the credibility on listing day.
           </p>
           <button
             className="btn btn-primary"
             onClick={() => navigate('/signup')}
             style={{
               background: Colors.copper, color: '#fff', border: 'none',
-              padding: '12px 22px', borderRadius: 10, fontSize: 14, fontWeight: 700, // allow-lint
+              padding: '13px 26px', borderRadius: 10, fontSize: 14, fontWeight: 700, // allow-lint
+              cursor: 'pointer',
             }}
           >
-            Create my free Home Token →
+            Start my free Home Token — 2 minutes
           </button>
-          <p style={{ fontSize: FontSize.xs, color: '#9b9b9b', margin: '12px 0 0' }}>
-            Already a customer? <a href="/login" style={{ color: Colors.copper, textDecoration: 'none', fontWeight: 600 }}>Sign in</a>
+          <p style={{ fontSize: FontSize.xs, color: '#9b9b9b', margin: '14px 0 0' }}>
+            No credit card · cancel anytime · <a href="/login" style={{ color: Colors.copper, textDecoration: 'none', fontWeight: 600 }}>sign in if you have an account</a>
           </p>
         </div>
       )}
+
+      {/* 2026-05-06: Verified-by-Canopy footer note for trust on the public
+          buyer-facing view. Anonymous viewers see this as reassurance that
+          the record they're looking at is real, not a homeowner-built spreadsheet. */}
+      <p style={{
+        fontSize: 11, // allow-lint
+        color: Colors.medGray, textAlign: 'center', margin: '20px 0 8px',
+        fontStyle: 'italic',
+      }}>
+        🛡️ Verified through Canopy · canopyhome.app
+      </p>
     </div>
   );
 }

@@ -45,28 +45,28 @@ export default function AgentLanding() {
             style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
             onClick={() => navigate('/')}
           >
-            <picture>
-              <source srcSet="/canopy-watercolor-logo.avif" type="image/avif" />
-              <source srcSet="/canopy-watercolor-logo.webp" type="image/webp" />
-              <img
-                src="/canopy-watercolor-logo.png"
-                alt="Canopy"
-                width={44}
-                height={32}
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-                style={{ objectFit: 'contain' }}
-              />
-            </picture>
-            <span style={{ fontSize: 20, fontWeight: FontWeight.bold, color: Colors.charcoal }}>Canopy</span>
-            <span style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.copper, marginLeft: 4 }}>for Agents</span>
+            {/* 2026-05-06: PNG-only — avif/webp variants in /public are
+                placeholders; the <picture> fallback was hitting them and
+                rendering naturalWidth=0 + duplicated alt text on every
+                page. Same fix as Landing. */}
+            <img
+              src="/canopy-watercolor-logo.png"
+              alt="Canopy"
+              width={44}
+              height={32}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              style={{ objectFit: 'contain' }}
+            />
+            <span style={{ fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.charcoal }}>Canopy</span>
+            <span style={{ fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: Colors.copper, marginLeft: 4 }}>for Agents</span>
           </div>
 
           <nav style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 24 }}>
             <a
               href="/"
-              style={{ fontSize: 14, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none' }}
+              style={{ fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none' }}
             >
               ← Home
             </a>
@@ -74,7 +74,7 @@ export default function AgentLanding() {
               onClick={() => window.location.href = '/agent-application'}
               style={{
                 padding: isMobile ? '8px 16px' : '8px 20px',
-                fontSize: 14,
+                fontSize: FontSize.sm,
                 fontWeight: FontWeight.semibold,
                 background: Colors.copper,
                 color: Colors.white,
@@ -93,139 +93,339 @@ export default function AgentLanding() {
       {/* Hero */}
       <section
         style={{
-          background: Colors.warmWhite,
-          padding: isMobile ? '60px 16px' : '100px 24px',
+          background: `linear-gradient(180deg, ${Colors.warmWhite} 0%, ${Colors.cream} 100%)`,
+          padding: isMobile ? '60px 16px' : '104px 24px',
           textAlign: 'center',
           fontFamily: fontStack,
         }}
       >
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <div style={{ maxWidth: 860, margin: '0 auto' }}>
+          <p style={{
+            fontSize: FontSize.sm, fontWeight: FontWeight.bold,
+            letterSpacing: 1.4, textTransform: 'uppercase',
+            color: Colors.copper, margin: '0 0 16px',
+          }}>
+            For real estate agents
+          </p>
           <h1
             style={{
-              fontSize: isMobile ? 32 : 48,
+              fontSize: isMobile ? 32 : 50,
               fontWeight: FontWeight.bold,
               color: Colors.charcoal,
-              margin: '0 0 24px 0',
-              lineHeight: 1.2,
+              margin: '0 0 20px 0',
+              lineHeight: 1.15,
             }}
           >
-            The perfect closing gift
+            A closing gift your clients keep using a year after the sale.
           </h1>
           <p
             style={{
               fontSize: isMobile ? 17 : 20,
               color: Colors.medGray,
-              margin: '0 0 40px 0',
-              lineHeight: 1.6,
-              maxWidth: '600px',
-              marginLeft: 'auto',
-              marginRight: 'auto',
+              margin: '0 auto 40px',
+              lineHeight: 1.55,
+              maxWidth: 660,
             }}
           >
-            Give your clients a Canopy subscription as a closing gift. Stay connected, build loyalty, and stand out from other agents — long after the sale.
+            Hand a Canopy code at closing. Your client gets a co-branded home-care app under your name. You get a buyer-facing Home Token for every listing, analytics on who&apos;s about to sell, and a tool that earns its keep on referrals — not commissions.
           </p>
-          <button
-            onClick={() => window.location.href = '/agent-application'}
-            style={{
-              padding: '14px 40px',
-              fontSize: 16,
-              fontWeight: FontWeight.semibold,
-              background: Colors.copper,
-              color: Colors.white,
-              border: 'none',
-              borderRadius: BorderRadius.lg,
-              cursor: 'pointer',
-              fontFamily: fontStack,
-              transition: 'all 0.3s ease',
-            }}
-            onMouseEnter={(e) => {
-              (e.target as HTMLElement).style.background = '#A66B3A';
-              (e.target as HTMLElement).style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              (e.target as HTMLElement).style.background = Colors.copper;
-              (e.target as HTMLElement).style.transform = 'translateY(0)';
-            }}
-          >
-            Apply Now — Free
-          </button>
+          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
+            <button
+              onClick={() => window.location.href = '/agent-application'}
+              style={{
+                padding: '15px 32px',
+                fontSize: FontSize.md,
+                fontWeight: FontWeight.semibold,
+                background: Colors.copper,
+                color: Colors.white,
+                border: 'none',
+                borderRadius: BorderRadius.lg,
+                cursor: 'pointer',
+                fontFamily: fontStack,
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.target as HTMLElement).style.background = Colors.copperDark;
+                (e.target as HTMLElement).style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                (e.target as HTMLElement).style.background = Colors.copper;
+                (e.target as HTMLElement).style.transform = 'translateY(0)';
+              }}
+            >
+              Apply — takes 2 minutes
+            </button>
+            <a
+              href="#sample"
+              style={{
+                padding: '15px 28px',
+                fontSize: FontSize.md,
+                fontWeight: FontWeight.semibold,
+                background: 'transparent',
+                color: Colors.copper,
+                border: `2px solid ${Colors.copper}`,
+                borderRadius: BorderRadius.lg,
+                cursor: 'pointer',
+                fontFamily: fontStack,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+            >
+              See a sample
+            </a>
+          </div>
+          <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: 0 }}>
+            Free to apply · no commission, no kickback · gift codes priced at our cost
+          </p>
         </div>
       </section>
 
-      {/* Benefits */}
+      {/* Co-branded Home Token spotlight — the moat from the agent's POV */}
       <section
+        id="sample"
         style={{
           background: Colors.white,
-          padding: isMobile ? '48px 16px' : '80px 24px',
+          padding: isMobile ? '64px 16px' : '104px 24px',
+          fontFamily: fontStack,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div aria-hidden="true" style={{
+          position: 'absolute', top: -60, right: -100, width: 360, height: 360,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${Colors.copper}10 0%, transparent 70%)`,
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          maxWidth: 1180, margin: '0 auto', position: 'relative',
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1.05fr',
+          gap: isMobile ? 40 : 80,
+          alignItems: 'center',
+        }}>
+          {/* Mock — a co-branded buyer-facing share page snippet */}
+          <div aria-hidden="true" style={{
+            position: 'relative',
+            background: Colors.white,
+            borderRadius: 18,
+            padding: isMobile ? 20 : 28,
+            boxShadow: '0 24px 64px -16px rgba(38, 32, 28, 0.18), 0 4px 12px rgba(38, 32, 28, 0.06)',
+            border: `1px solid ${Colors.copper}25`,
+            maxWidth: isMobile ? '100%' : 460,
+            marginRight: isMobile ? 0 : 'auto',
+            transform: isMobile ? 'none' : 'rotate(-1.4deg)',
+            order: isMobile ? 2 : 0,
+          }}>
+            {/* Agent attribution bar */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 14px', marginBottom: 14,
+              background: Colors.cream,
+              border: `1px solid ${Colors.copper}30`,
+              borderRadius: 10,
+            }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%',
+                background: Colors.copper, color: Colors.white,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: FontWeight.bold, fontSize: FontSize.sm, flexShrink: 0,
+              }}>YN</div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, letterSpacing: 0.5, textTransform: 'uppercase', color: Colors.copper, margin: 0 }}>
+                  Maintained with care · gift of
+                </p>
+                <p style={{ fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '1px 0 0' }}>
+                  Your Name · Brokerage
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ fontSize: FontSize.md }}>🏡</span>
+              <span style={{
+                fontSize: FontSize.xs, fontWeight: FontWeight.bold,
+                letterSpacing: 0.7, textTransform: 'uppercase', color: Colors.copper,
+              }}>Canopy Home Token</span>
+            </div>
+            <h3 style={{ fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.charcoal, margin: '0 0 4px', lineHeight: 1.2 }}>
+              1247 Cedar Ridge Dr
+            </h3>
+            <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: '0 0 14px' }}>
+              Built 1998 · 2,400 sqft · 3 bed · 2 bath
+            </p>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                <span style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.charcoal }}>Record completeness</span>
+                <span style={{ fontSize: 12, fontWeight: FontWeight.bold, color: '#5C7A4F' }}>94%</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: Colors.lightGray, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: '94%', background: 'linear-gradient(90deg, #8FAA7E, #5C7A4F)' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 12 }}>
+              {[
+                { label: 'Inspection ✓', tone: Colors.copper },
+                { label: '14 visits logged', tone: '#5C7A4F' },
+                { label: 'Warranties on file', tone: '#5C7A4F' },
+              ].map((b) => (
+                <span key={b.label} style={{
+                  fontSize: 10, fontWeight: FontWeight.semibold,
+                  padding: '3px 9px', borderRadius: 999,
+                  background: `${b.tone}18`, color: b.tone,
+                }}>
+                  {b.label}
+                </span>
+              ))}
+            </div>
+
+            <p style={{
+              fontSize: FontSize.xs, color: Colors.medGray, margin: 0,
+              textAlign: 'center', fontStyle: 'italic',
+              borderTop: `1px solid ${Colors.lightGray}`, paddingTop: 10,
+            }}>
+              Buyers and inspectors see your name on every share.
+            </p>
+          </div>
+
+          {/* Copy column */}
+          <div>
+            <p style={{
+              fontSize: FontSize.sm, fontWeight: FontWeight.bold,
+              letterSpacing: 1.4, textTransform: 'uppercase',
+              color: Colors.copper, margin: '0 0 16px',
+            }}>
+              Your name · Their record
+            </p>
+            <h2 style={{
+              fontSize: isMobile ? 30 : 42, fontWeight: FontWeight.bold,
+              color: Colors.charcoal, margin: '0 0 20px', lineHeight: 1.15,
+            }}>
+              Every closed deal gets a Home Token with your name on it.
+            </h2>
+            <p style={{
+              fontSize: isMobile ? 16 : 18, color: Colors.medGray,
+              lineHeight: 1.6, margin: '0 0 28px',
+            }}>
+              When your client is ready to sell — to a buyer agent, an inspector, a contractor — the Home Token they share is co-branded with your name. The whole town becomes a referral surface, automatically.
+            </p>
+            <ul style={{
+              listStyle: 'none', padding: 0, margin: '0 0 32px',
+              display: 'grid', gap: 14,
+            }}>
+              {[
+                { icon: '🎁', text: <><strong>Gift codes</strong> at closing — 1, 5, 10, 25, or custom batch. We mint them; you hand them off.</> },
+                { icon: '🏷️', text: <><strong>Co-branded share pages</strong> with your photo + brokerage. Every time the home is shown or transferred, your name leads.</> },
+                { icon: '📊', text: <><strong>Activity analytics</strong> show which clients are active, who&apos;s logging maintenance, and who flipped on Sale Prep — your earliest "ready-to-sell" signal.</> },
+                { icon: '🤝', text: <><strong>Reactivation campaign</strong> automatically nudges clients who lapse, so the relationship doesn&apos;t go quiet between deals.</> },
+              ].map((item, i) => (
+                <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <span aria-hidden="true" style={{ fontSize: FontSize.xl, lineHeight: '28px', flexShrink: 0 }}>{item.icon}</span>
+                  <span style={{ fontSize: FontSize.md, color: Colors.charcoal, lineHeight: 1.55 }}>{item.text}</span>
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={() => window.location.href = '/agent-application'}
+              style={{
+                padding: '14px 28px', fontSize: FontSize.md, fontWeight: FontWeight.semibold,
+                background: Colors.copper, color: Colors.white, border: 'none',
+                borderRadius: BorderRadius.lg, cursor: 'pointer', fontFamily: fontStack,
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.background = Colors.copperDark; (e.target as HTMLElement).style.transform = 'translateY(-2px)'; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.background = Colors.copper; (e.target as HTMLElement).style.transform = 'translateY(0)'; }}
+            >
+              Get my agent portal →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Why this beats other closing gifts */}
+      <section
+        style={{
+          background: Colors.cream,
+          padding: isMobile ? '56px 16px' : '88px 24px',
           fontFamily: fontStack,
         }}
       >
-        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+          <p style={{
+            textAlign: 'center', fontSize: FontSize.sm, fontWeight: FontWeight.bold,
+            letterSpacing: 1.4, textTransform: 'uppercase', color: Colors.copper,
+            margin: '0 0 12px',
+          }}>
+            Beats the gift basket
+          </p>
           <h2
             style={{
-              fontSize: isMobile ? 28 : 36,
+              fontSize: isMobile ? 26 : 36,
               fontWeight: FontWeight.bold,
               color: Colors.charcoal,
               textAlign: 'center',
-              margin: isMobile ? '0 0 36px 0' : '0 0 56px 0',
+              margin: '0 0 16px 0',
+              lineHeight: 1.2,
             }}
           >
-            Why agents love Canopy
+            A closing gift that compounds.
           </h2>
+          <p style={{
+            fontSize: isMobile ? 15 : 17, color: Colors.medGray,
+            textAlign: 'center', maxWidth: 620,
+            margin: '0 auto 48px', lineHeight: 1.6,
+          }}>
+            Wine gets drunk in a weekend. A nice charcuterie board lasts a Thursday. Canopy keeps showing up in your client&apos;s pocket every time something needs a filter, a tune-up, or a Pro.
+          </p>
 
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-              gap: isMobile ? '24px' : '40px',
+              gap: isMobile ? 16 : 24,
             }}
           >
             {[
               {
-                icon: '🎁',
-                title: 'Memorable Closing Gift',
-                desc: 'Stand out from the wine-and-cheese crowd. Give your clients a tool they\'ll actually use every month.',
-              },
-              {
-                icon: '🤝',
-                title: 'Stay Connected',
-                desc: 'When clients use Canopy, you stay on their radar — without awkward check-in calls.',
-              },
-              {
-                icon: '📊',
-                title: 'Track Client Engagement',
-                desc: 'See which clients are active, when they log maintenance, and when they might be ready to sell.',
-              },
-              {
-                icon: '💼',
-                title: 'Branded Agent Portal',
-                desc: 'Your own dashboard to manage gift codes, view client homes, and track your portfolio.',
+                icon: '📅',
+                title: 'Used 30+ times a year',
+                desc: 'Quarterly Pro visits, weather alerts, equipment lookups, document storage. Your name is the wrapper on every single touch.',
               },
               {
                 icon: '🏷️',
-                title: 'Bulk Gift Codes',
-                desc: 'Purchase codes in bulk at a discount. Assign them to clients at closing in seconds.',
+                title: 'Priced at our cost',
+                desc: 'Buy gift codes in batches of 1, 5, 10, 25, or custom. We charge what we charge homeowners — no markup, no commission, no kickback.',
               },
               {
-                icon: '⭐',
-                title: 'Build Your Reputation',
-                desc: 'Clients who maintain their homes are happier clients — and happier clients leave better reviews.',
+                icon: '🛬',
+                title: 'Sale-ready in 90 days',
+                desc: 'Sale Prep checklist + verified Home Token = listing day with documented care. HomeLight pegs it at ~$14k against inspection objections.',
+              },
+              {
+                icon: '🔁',
+                title: 'Built for the second deal',
+                desc: 'Activity analytics surface clients who flipped on Sale Prep — your earliest signal someone&apos;s thinking about moving.',
               },
             ].map((item) => (
               <div
                 key={item.title}
                 style={{
-                  background: '#F5F4F0',
-                  padding: isMobile ? '24px' : '32px',
-                  borderRadius: BorderRadius.lg,
+                  background: Colors.white,
+                  padding: isMobile ? '24px' : '28px',
+                  borderRadius: 14,
+                  border: `1px solid ${Colors.lightGray}`,
+                  boxShadow: '0 1px 2px rgba(38, 32, 28, 0.04)',
                 }}
               >
-                <div style={{ fontSize: 32, marginBottom: 12 }} role="img" aria-label={item.title}>
+                <div style={{ fontSize: FontSize.xxl, marginBottom: 10 }} role="img" aria-label={item.title}>
                   {item.icon}
                 </div>
                 <h3
                   style={{
-                    fontSize: 18,
+                    fontSize: FontSize.lg,
                     fontWeight: FontWeight.semibold,
                     color: Colors.charcoal,
                     margin: '0 0 8px 0',
@@ -233,7 +433,7 @@ export default function AgentLanding() {
                 >
                   {item.title}
                 </h3>
-                <p style={{ fontSize: 15, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>
+                <p style={{ fontSize: 14.5, color: Colors.medGray, lineHeight: 1.55, margin: 0 }}>
                   {item.desc}
                 </p>
               </div>
@@ -270,9 +470,9 @@ export default function AgentLanding() {
             }}
           >
             {[
-              { step: '1', title: 'Sign Up', desc: 'Create your agent account and get access to the partner portal.' },
-              { step: '2', title: 'Purchase Codes', desc: 'Buy gift codes individually or in bulk at a discount.' },
-              { step: '3', title: 'Gift at Closing', desc: 'Hand your client a code. They activate Canopy and you stay connected.' },
+              { step: '1', title: 'Apply in 2 minutes', desc: 'Tell us your name, brokerage, and primary market. We approve same-day.' },
+              { step: '2', title: 'Mint codes on demand', desc: 'Buy codes in batches at our cost. Your portal auto-generates a co-branded share link for each one.' },
+              { step: '3', title: 'Hand it off at closing', desc: 'Drop the code in the closing folder (or text it). Your client activates, you stay top-of-mind for life.' },
             ].map((item) => (
               <div key={item.step}>
                 <div
@@ -285,17 +485,17 @@ export default function AgentLanding() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 20,
+                    fontSize: FontSize.lg,
                     fontWeight: FontWeight.bold,
                     margin: '0 auto 16px',
                   }}
                 >
                   {item.step}
                 </div>
-                <h3 style={{ fontSize: 18, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>
+                <h3 style={{ fontSize: FontSize.lg, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>
                   {item.title}
                 </h3>
-                <p style={{ fontSize: 15, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>
+                <p style={{ fontSize: FontSize.md, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>
                   {item.desc}
                 </p>
               </div>
@@ -313,13 +513,13 @@ export default function AgentLanding() {
               textAlign: 'left',
             }}
           >
-            <h3 style={{ fontSize: 16, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>
+            <h3 style={{ fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: '0 0 8px 0' }}>
               About the agent program
             </h3>
-            <p style={{ fontSize: 14, color: Colors.medGray, lineHeight: 1.6, margin: '0 0 6px 0' }}>
+            <p style={{ fontSize: FontSize.sm, color: Colors.medGray, lineHeight: 1.6, margin: '0 0 6px 0' }}>
               Canopy's agent program is a <strong>referral and client-retention tool</strong> — agents don't receive commissions or referral fees from Canopy. The value is relationship-building: your clients get a branded home-maintenance app under your name, and you stay top-of-mind for their next move.
             </p>
-            <p style={{ fontSize: 13, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>
+            <p style={{ fontSize: FontSize.sm, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>
               Gift codes and custom agent pages are offered at no cost. Canopy-certified service providers (separate program) pay a 15% platform fee when they complete jobs through the app.
             </p>
           </div>
@@ -329,31 +529,32 @@ export default function AgentLanding() {
       {/* CTA */}
       <section
         style={{
-          background: Colors.charcoal,
-          padding: isMobile ? '48px 16px' : '80px 24px',
+          background: `linear-gradient(135deg, ${Colors.charcoal} 0%, #1a1a1a 100%)`,
+          padding: isMobile ? '56px 16px' : '88px 24px',
           textAlign: 'center',
           fontFamily: fontStack,
         }}
       >
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+        <div style={{ maxWidth: 640, margin: '0 auto' }}>
           <h2
             style={{
-              fontSize: isMobile ? 28 : 36,
+              fontSize: isMobile ? 28 : 38,
               fontWeight: FontWeight.bold,
               color: Colors.white,
               margin: '0 0 16px 0',
+              lineHeight: 1.2,
             }}
           >
-            Ready to partner with Canopy?
+            Stop hoping for the second listing. Build it in.
           </h2>
-          <p style={{ fontSize: 17, color: 'var(--color-silver)', margin: '0 0 32px 0', lineHeight: 1.6 }}>
-            Apply in about two minutes and we'll get you set up with your agent portal.
+          <p style={{ fontSize: isMobile ? 16 : 18, color: 'var(--color-silver)', margin: '0 0 32px 0', lineHeight: 1.6 }}>
+            Two-minute application. Same-day approval. Your portal lights up with co-branded share pages and bulk gift codes the moment you&apos;re in.
           </p>
           <button
             onClick={() => window.location.href = '/agent-application'}
             style={{
-              padding: '14px 40px',
-              fontSize: 16,
+              padding: '15px 32px',
+              fontSize: FontSize.md,
               fontWeight: FontWeight.semibold,
               background: Colors.copper,
               color: Colors.white,
@@ -361,9 +562,12 @@ export default function AgentLanding() {
               borderRadius: BorderRadius.lg,
               cursor: 'pointer',
               fontFamily: fontStack,
+              transition: 'all 0.3s ease',
             }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.transform = 'translateY(0)'; }}
           >
-            Apply Now
+            Apply for the agent program →
           </button>
         </div>
       </section>
@@ -378,7 +582,7 @@ export default function AgentLanding() {
           fontFamily: fontStack,
         }}
       >
-        <p style={{ fontSize: 13, color: 'var(--color-med-gray)', margin: 0 }}>
+        <p style={{ fontSize: FontSize.sm, color: 'var(--color-med-gray)', margin: 0 }}>
           © 2026 Canopy. All rights reserved.
         </p>
       </footer>

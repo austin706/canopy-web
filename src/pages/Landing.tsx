@@ -330,16 +330,20 @@ export default function Landing() {
           sections use further down the page. Adds depth without committing
           to a photo backdrop, which would push the asset-grade voice into
           consumer-brand territory. aria-hidden — purely decorative. */}
+      {/* 2026-05-07 v2: bumped opacity from 1A/18 (~10%) to 40/3D (~25%) and
+          enlarged radius. The 10% pass was invisible against the cream
+          gradient. These should now read as soft tinted glows without being
+          loud. If still too subtle in production, push to 5A/55 (~35%). */}
       <div aria-hidden="true" style={{
-        position: 'absolute', top: -120, left: -140, width: 480, height: 480,
+        position: 'absolute', top: -160, left: -180, width: 620, height: 620,
         borderRadius: '50%',
-        background: `radial-gradient(circle, ${Colors.sage}1A 0%, transparent 70%)`,
+        background: `radial-gradient(circle, ${Colors.sage}40 0%, transparent 70%)`,
         pointerEvents: 'none',
       }} />
       <div aria-hidden="true" style={{
-        position: 'absolute', top: -80, right: -120, width: 420, height: 420,
+        position: 'absolute', top: -120, right: -160, width: 560, height: 560,
         borderRadius: '50%',
-        background: `radial-gradient(circle, ${Colors.copper}18 0%, transparent 72%)`,
+        background: `radial-gradient(circle, ${Colors.copper}3D 0%, transparent 72%)`,
         pointerEvents: 'none',
       }} />
       <div style={{ maxWidth: 860, margin: '0 auto', position: 'relative' }}>

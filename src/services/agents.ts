@@ -64,9 +64,11 @@ export const redeemGiftCode = async (code: string, userId: string) => {
   await supabase.from('profiles').update(profileUpdate).eq('id', userId);
 
   // If the gift code has a pending home (pre-configured by agent), create it for the user
+  let createdHomeId: string | null = null;
   if (gc.pending_home && typeof gc.pending_home === 'object') {
+    createdHomeId = crypto.randomUUID();
     const homeData = {
-      id: crypto.randomUUID(),
+      id: createdHomeId,
       user_id: userId,
       ...gc.pending_home,
       created_at: new Date().toISOString(),
@@ -74,6 +76,48 @@ export const redeemGiftCode = async (code: string, userId: string) => {
     await supabase.from('homes').upsert(homeData);
     // Mark onboarding as complete since home is set up
     await supabase.from('profiles').update({ onboarding_complete: true }).eq('id', userId);
+  }
+
+  // 2026-05-07 (Phase 2): apply pending_equipment if the agent pre-captured
+  // any equipment for this home. Each entry becomes an equipment row tied
+  // to the newly-created home. Only fires if a home was created from
+  // pending_home — equipment without a home would orphan, so we skip it.
+  if (createdHomeId && Array.isArray(gc.pending_equipment) && gc.pending_equipment.length > 0) {
+    const equipmentRows = gc.pending_equipment
+      .filter((e): e is Record<string, unknown> => e !== null && typeof e === 'object')
+      .map((eq) => ({
+        id: crypto.randomUUID(),
+        home_id: createdHomeId!,
+        // Defaults satisfy the NOT NULL constraints. Agent UIs should
+        // always populate `name` + `category`, but if a record sneaks
+        // through without them we don't want the whole transaction to
+        // fail — better to land an equipment row that the buyer can
+        // edit than to lose the entire pre-onboard.
+        category: typeof eq.category === 'string' ? eq.category : 'other',
+        name: typeof eq.name === 'string'
+          ? eq.name
+          : (typeof eq.make === 'string' && typeof eq.model === 'string' ? `${eq.make} ${eq.model}` : 'Equipment'),
+        ...eq,
+        // Force the home_id over anything in the JSONB so a malformed
+        // entry can't write equipment to a different home.
+        home_id_override: undefined, // sentinel — gets overwritten below
+        created_at: new Date().toISOString(),
+      }));
+    // Strip the sentinel
+    const cleanRows = equipmentRows.map((r) => {
+      const { home_id_override, ...rest } = r as Record<string, unknown>;
+      void home_id_override;
+      return rest;
+    });
+    if (cleanRows.length > 0) {
+      const { error: equipErr } = await supabase.from('equipment').insert(cleanRows);
+      // Non-fatal: if equipment insert fails (RLS, constraint, etc.), we
+      // still want the redemption to succeed. The buyer can re-add later.
+      if (equipErr) {
+        // eslint-disable-next-line no-console
+        console.warn('[redeemGiftCode] pending_equipment insert failed:', equipErr);
+      }
+    }
   }
 
   let agent = null;

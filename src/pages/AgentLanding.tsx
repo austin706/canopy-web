@@ -442,6 +442,129 @@ export default function AgentLanding() {
         </div>
       </section>
 
+      {/* 2026-05-07 (Phase 1): Pre-onboard spotlight. Sells the white-glove
+          activation experience, which is the agent program's biggest
+          differentiator from a generic referral fee. Lives between "Beats
+          the gift basket" and "How It Works" so the natural reading flow
+          is value → differentiator → mechanics. Spec: AGENT_PREONBOARD_LIVE_SCAN_SPEC_2026-05-07.md */}
+      <section
+        style={{
+          background: Colors.cream,
+          padding: isMobile ? '64px 16px' : '112px 24px',
+          fontFamily: fontStack,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div aria-hidden="true" style={{
+          position: 'absolute', top: -80, left: -100, width: 380, height: 380,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${Colors.copper}14 0%, transparent 70%)`,
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          maxWidth: 1200, margin: '0 auto', position: 'relative',
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1.05fr',
+          gap: isMobile ? 40 : 80,
+          alignItems: 'center',
+        }}>
+          {/* Mock card showing what the agent fills in */}
+          <div aria-hidden="true" style={{
+            position: 'relative',
+            background: Colors.white,
+            borderRadius: 18,
+            padding: isMobile ? 20 : 28,
+            boxShadow: '0 24px 64px -16px rgba(38, 32, 28, 0.18), 0 4px 12px rgba(38, 32, 28, 0.06)',
+            border: `1px solid ${Colors.copper}25`,
+            maxWidth: isMobile ? '100%' : 460,
+            transform: isMobile ? 'none' : 'rotate(-1.4deg)',
+            order: isMobile ? 2 : 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: Colors.copper }}>
+                Pre-onboard
+              </span>
+              <span style={{ fontSize: 11, color: Colors.medGray }}>· Code CNPY-3K9X</span>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
+              Marcus &amp; Priya Thompson
+            </div>
+            <div style={{ fontSize: 12, color: Colors.medGray, marginBottom: 14 }}>
+              Home plan, 12 months
+            </div>
+            <div style={{ display: 'grid', gap: 8, fontSize: 12 }}>
+              {[
+                ['Address', '3003 W 77th St, Tulsa, OK 74103'],
+                ['Year built', '1998'],
+                ['Sq. ft.', '2,400'],
+                ['Roof', 'Asphalt shingle, 2015'],
+                ['HVAC', 'Central gas / Central AC'],
+                ['Foundation', 'Slab'],
+                ['Lawn', 'Bermuda'],
+              ].map(([label, value]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '4px 0', borderBottom: `1px solid ${Colors.lightGray}` }}>
+                  <span style={{ color: Colors.medGray, fontWeight: 500 }}>{label}</span>
+                  <span style={{ color: Colors.charcoal, fontWeight: 600, textAlign: 'right' }}>{value}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{
+              marginTop: 16, padding: '10px 12px',
+              background: Colors.success + '15',
+              border: `1px solid ${Colors.success}40`,
+              borderRadius: 10,
+              fontSize: 12, fontWeight: 600, color: Colors.success,
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <span aria-hidden="true">✓</span>
+              <span>Ready for Marcus to sign in.</span>
+            </div>
+          </div>
+
+          {/* Copy column */}
+          <div>
+            <p style={{
+              fontSize: FontSize.sm, fontWeight: FontWeight.bold,
+              letterSpacing: 1.4, textTransform: 'uppercase', color: Colors.copper,
+              margin: '0 0 12px 0',
+            }}>
+              The white-glove gift
+            </p>
+            <h2 style={{
+              fontSize: isMobile ? 26 : 38, fontWeight: FontWeight.bold,
+              color: Colors.charcoal, margin: '0 0 16px 0', lineHeight: 1.2,
+            }}>
+              Pre-onboard the home for your client.
+            </h2>
+            <p style={{
+              fontSize: isMobile ? 15 : 17, color: Colors.medGray,
+              lineHeight: 1.6, margin: '0 0 24px 0', maxWidth: 540,
+            }}>
+              Buy a code, then walk through the property data with the MLS listing in front of you. Address, year built, roof, HVAC, foundation. When your client redeems the code at closing, they sign in and the home is already set up. No onboarding wizard, no &quot;where do I start.&quot; First impression: this works.
+            </p>
+            <ul style={{
+              listStyle: 'none', padding: 0, margin: '0 0 32px',
+              display: 'grid', gap: 12,
+            }}>
+              {[
+                { icon: '🏷️', text: <><strong>Five minutes per home</strong> with the MLS data you already have. Address autocomplete pulls in city, state, ZIP for you.</> },
+                { icon: '🪄', text: <><strong>Maintenance plan generates automatically</strong> the moment your client lands on their dashboard. No setup screen, no friction.</> },
+                { icon: '✏️', text: <><strong>Edit anytime before redemption.</strong> Forgot the roof install year? Open the code, fill it in, save.</> },
+              ].map((item, i) => (
+                <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <span aria-hidden="true" style={{ fontSize: FontSize.xl, lineHeight: '24px', flexShrink: 0 }}>{item.icon}</span>
+                  <span style={{ fontSize: FontSize.md, color: Colors.charcoal, lineHeight: 1.55 }}>{item.text}</span>
+                </li>
+              ))}
+            </ul>
+            <p style={{ fontSize: 13, color: Colors.medGray, margin: 0 }}>
+              Available the moment you&apos;re approved as a Canopy agent.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* How It Works */}
       <section
         style={{

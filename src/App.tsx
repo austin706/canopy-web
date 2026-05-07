@@ -77,6 +77,9 @@ const AgentPortal = lazyRetry(() => import('@/pages/AgentPortal'));
 const AgentProfile = lazyRetry(() => import('@/pages/AgentProfile'));
 const AgentClientHome = lazyRetry(() => import('@/pages/AgentClientHome'));
 const AgentPurchaseCodes = lazyRetry(() => import('@/pages/AgentPurchaseCodes'));
+// 2026-05-07 (Phase 1): per-code property pre-fill so the buyer lands on a
+// ready-to-use dashboard at redemption. Spec: AGENT_PREONBOARD_LIVE_SCAN_SPEC_2026-05-07.md
+const AgentPreOnboard = lazyRetry(() => import('@/pages/AgentPreOnboard'));
 const AgentLinkClient = lazyRetry(() => import('@/pages/AgentLinkClient'));
 const TaskDetail = lazyRetry(() => import('@/pages/TaskDetail'));
 const EquipmentDetail = lazyRetry(() => import('@/pages/EquipmentDetail'));
@@ -457,6 +460,7 @@ export default function App() {
             <Route path="/agent-portal/profile" element={<AgentProfile />} />
             <Route path="/agent-portal/client/:clientId" element={<AgentClientHome />} />
             <Route path="/agent-portal/purchase-codes" element={<AgentPurchaseCodes />} />
+            <Route path="/agent-portal/pre-onboard/:codeId" element={<AgentPreOnboard />} />
             <Route path="/agent-portal/link-client" element={<AgentLinkClient />} />
           </Route>
 

@@ -29,6 +29,10 @@ interface GiftCode {
   redeemed_at?: string;
   expires_at?: string;
   created_at: string;
+  // 2026-05-07: surfaced so the table can show "Pre-onboarded" status and
+  // route to /agent-portal/pre-onboard/:codeId for editing. JSON shape is
+  // intentionally loose — see AgentPreOnboard.tsx for the form fields.
+  pending_home?: Record<string, unknown> | null;
 }
 
 const WHOLESALE_RATES = {
@@ -488,7 +492,7 @@ export default function AgentPurchaseCodes() {
             <div className="card table-container">
               <table>
                 <thead>
-                  <tr><th>Code</th><th>Tier</th><th>Duration</th><th>Client</th><th>Status</th><th>Action</th></tr>
+                  <tr><th>Code</th><th>Tier</th><th>Duration</th><th>Client</th><th>Status</th><th>Pre-onboard</th><th>Action</th></tr>
                 </thead>
                 <tbody>
                   {displayCodes.map(c => (
@@ -514,6 +518,32 @@ export default function AgentPurchaseCodes() {
                         }}>
                           {c.redeemed_by ? 'Redeemed' : 'Available'}
                         </span>
+                      </td>
+                      <td>
+                        {/* 2026-05-07 (Phase 1): pre-onboard status pill +
+                            edit/start link. Once redeemed, the data has
+                            already been used to create the home so editing
+                            here would have no effect. We hide the link in
+                            that case. Spec: AGENT_PREONBOARD_LIVE_SCAN_SPEC_2026-05-07.md */}
+                        {c.pending_home && Object.keys(c.pending_home).length > 0 ? (
+                          <span style={{
+                            fontSize: FontSize.xs, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
+                            background: Colors.success + '20', color: Colors.success,
+                          }}>
+                            ✓ Ready
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: FontSize.xs, color: Colors.medGray }}>—</span>
+                        )}
+                        {!c.redeemed_by && (
+                          <a
+                            href={`/agent-portal/pre-onboard/${c.id}`}
+                            onClick={(e) => { e.preventDefault(); navigate(`/agent-portal/pre-onboard/${c.id}`); }}
+                            style={{ display: 'block', fontSize: 11, color: Colors.copper, marginTop: 4, textDecoration: 'none' }}
+                          >
+                            {c.pending_home && Object.keys(c.pending_home).length > 0 ? 'Edit' : 'Set up the home →'}
+                          </a>
+                        )}
                       </td>
                       <td>
                         {!c.redeemed_by && (

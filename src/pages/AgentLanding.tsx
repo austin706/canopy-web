@@ -176,7 +176,7 @@ export default function AgentLanding() {
             </a>
           </div>
           <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: 0 }}>
-            Free to apply · no commission, no kickback · gift codes priced at our cost
+            Free to apply · no commission, no kickback · gift a Home plan year for $60
           </p>
         </div>
       </section>
@@ -378,7 +378,7 @@ export default function AgentLanding() {
             textAlign: 'center', maxWidth: 620,
             margin: '0 auto 48px', lineHeight: 1.6,
           }}>
-            Wine gets drunk in a weekend. A nice charcuterie board lasts a Thursday. Canopy keeps showing up in your client&apos;s pocket every time something needs a filter, a tune-up, or a Pro.
+            Wine gets drunk in a weekend. A charcuterie board doesn&apos;t make it to Thursday. Canopy keeps showing up in your client&apos;s pocket every time something needs a filter, a tune-up, or a Pro.
           </p>
 
           <div
@@ -391,23 +391,23 @@ export default function AgentLanding() {
             {[
               {
                 icon: '📅',
-                title: 'Used 30+ times a year',
-                desc: 'Quarterly Pro visits, weather alerts, equipment lookups, document storage. Your name is the wrapper on every single touch.',
+                title: 'Used most weeks of the year',
+                desc: 'Weather alerts, AI task reminders, equipment lookups, document storage, the AI Home Assistant. Your name is the wrapper on every single touch.',
               },
               {
                 icon: '🏷️',
-                title: 'Priced at our cost',
-                desc: 'Buy gift codes in batches of 1, 5, 10, 25, or custom. We charge what we charge homeowners. No markup, no commission, no kickback.',
+                title: '$60 a year, wholesale',
+                desc: 'Buy Home-plan gift codes in batches of 1, 5, 10, 25, or custom. Agents pay $60 for a full year, about 28% below the retail price your client would otherwise see. No commission, no kickback.',
               },
               {
                 icon: '🛬',
-                title: 'Sale-ready in 90 days',
+                title: 'Sale-ready by listing day',
                 desc: 'Sale Prep checklist + verified Home Token = listing day with documented care. HomeLight pegs it at ~$14k against inspection objections.',
               },
               {
                 icon: '🔁',
                 title: 'Built for the second deal',
-                desc: 'Activity analytics surface clients who flipped on Sale Prep, your earliest signal someone&apos;s thinking about moving.',
+                desc: "Your activity analytics show which clients flipped on Sale Prep. That's the earliest signal someone's getting ready to list.",
               },
             ].map((item) => (
               <div

@@ -37,7 +37,7 @@ const RECURRING: AddOnCard[] = [
   },
   {
     name: 'Lawn Care',
-    tagline: 'A yard that looks taken care of — because it is.',
+    tagline: 'A yard that looks taken care of, because it is.',
     priceRange: 'From $59/mo',
     cadence: 'Bi-weekly mow · seasonal fertilization · irrigation checks',
     icon: '🌿',
@@ -171,7 +171,7 @@ export default function AddOnsLanding() {
             Recurring home services, from one app
           </h1>
           <p style={{ fontSize: isMobile ? 17 : 20, color: Colors.medGray, margin: '0 0 32px', lineHeight: 1.5 }}>
-            Pest control, lawn care, pool service, septic, cleaning — managed alongside the maintenance you already track in Canopy. Vetted local providers. Transparent quoting. Cancel anytime.
+            Pest control, lawn care, pool service, septic, cleaning, all managed alongside the maintenance you already track in Canopy. Vetted local providers. Transparent quoting. Cancel anytime.
           </p>
           <button
             onClick={() => navigate('/signup')}
@@ -252,7 +252,7 @@ export default function AddOnsLanding() {
             Seasonal & annual services
           </h2>
           <p style={{ fontSize: 16, color: Colors.medGray, margin: '0 0 28px', lineHeight: 1.6 }}>
-            One-time bookings — Canopy reminds you when they're due and routes the request to a local provider.
+            One-time bookings. Canopy reminds you when they're due and routes the request to a local provider.
           </p>
           <div
             style={{
@@ -313,7 +313,7 @@ export default function AddOnsLanding() {
             One app for your whole home.
           </h2>
           <p style={{ fontSize: 17, color: Colors.silver, margin: '0 0 32px', lineHeight: 1.6 }}>
-            Maintenance tracking, service add-ons, and a full history of every visit — in one place.
+            Maintenance tracking, service add-ons, and a full history of every visit, all in one place.
           </p>
           <button
             onClick={() => navigate('/signup')}

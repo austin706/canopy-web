@@ -299,10 +299,10 @@ export default function ProLanding() {
               display: 'grid', gap: 14,
             }}>
               {[
-                { icon: '📋', text: <><strong>Quote &amp; invoice</strong> in-app — line items, photos, signatures. Homeowner approves, you get paid.</> },
-                { icon: '💸', text: <><strong>Stripe Connect payouts</strong> — money lands in your bank, usually next business day. No invoicing software, no chasing checks.</> },
-                { icon: '📅', text: <><strong>You set availability</strong> — block off Saturdays, vacations, busy seasons. Visits propose around your calendar.</> },
-                { icon: '⭐', text: <><strong>Reputation that compounds</strong> — every visit logs to the homeowner&apos;s Home Token. When they sell, your name is on the record buyers see.</> },
+                { icon: '📋', text: <><strong>Quote &amp; invoice</strong> in-app, with line items, photos, and signatures. Homeowner approves, you get paid.</> },
+                { icon: '💸', text: <><strong>Stripe Connect payouts</strong> land in your bank, usually next business day. No invoicing software, no chasing checks.</> },
+                { icon: '📅', text: <><strong>You set availability</strong>. Block off Saturdays, vacations, busy seasons. Visits propose around your calendar.</> },
+                { icon: '⭐', text: <><strong>Reputation that compounds</strong>. Every visit logs to the homeowner&apos;s Home Token. When they sell, your name is on the record buyers see.</> },
               ].map((item, i) => (
                 <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <span aria-hidden="true" style={{ fontSize: FontSize.xl, lineHeight: '28px', flexShrink: 0 }}>{item.icon}</span>
@@ -499,7 +499,7 @@ export default function ProLanding() {
               Straightforward pricing
             </h3>
             <p style={{ fontSize: FontSize.sm, color: Colors.medGray, lineHeight: 1.6, margin: '0 0 6px 0' }}>
-              Canopy charges a <strong>15% platform fee</strong> on completed jobs. No monthly fees, no lead-bidding, no subscription — you only pay when you get paid. Payouts are handled through Stripe Connect (standard processing fees apply).
+              Canopy charges a <strong>15% platform fee</strong> on completed jobs. No monthly fees, no lead-bidding, no subscription. You only pay when you get paid. Payouts are handled through Stripe Connect (standard processing fees apply).
             </p>
             <p style={{ fontSize: FontSize.sm, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>
               Full terms in the <a href="/contractor-terms" style={{ color: Colors.copper, textDecoration: 'underline' }}>Contractor Agreement</a>.

@@ -127,7 +127,7 @@ export default function AgentLanding() {
               maxWidth: 660,
             }}
           >
-            Hand a Canopy code at closing. Your client gets a co-branded home-care app under your name. You get a buyer-facing Home Token for every listing, analytics on who&apos;s about to sell, and a tool that earns its keep on referrals — not commissions.
+            Hand a Canopy code at closing. Your client gets a co-branded home-care app under your name. You get a buyer-facing Home Token for every listing, analytics on who&apos;s about to sell, and a tool that earns its keep on referrals, not commissions.
           </p>
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
             <button
@@ -153,7 +153,7 @@ export default function AgentLanding() {
                 (e.target as HTMLElement).style.transform = 'translateY(0)';
               }}
             >
-              Apply — takes 2 minutes
+              Apply, takes 2 minutes
             </button>
             <a
               href="#sample"
@@ -310,16 +310,16 @@ export default function AgentLanding() {
               fontSize: isMobile ? 16 : 18, color: Colors.medGray,
               lineHeight: 1.6, margin: '0 0 28px',
             }}>
-              When your client is ready to sell — to a buyer agent, an inspector, a contractor — the Home Token they share is co-branded with your name. The whole town becomes a referral surface, automatically.
+              When your client is ready to sell, whether to a buyer agent, an inspector, or a contractor, the Home Token they share is co-branded with your name. The whole town becomes a referral surface, automatically.
             </p>
             <ul style={{
               listStyle: 'none', padding: 0, margin: '0 0 32px',
               display: 'grid', gap: 14,
             }}>
               {[
-                { icon: '🎁', text: <><strong>Gift codes</strong> at closing — 1, 5, 10, 25, or custom batch. We mint them; you hand them off.</> },
+                { icon: '🎁', text: <><strong>Gift codes</strong> at closing in batches of 1, 5, 10, 25, or custom. We mint them; you hand them off.</> },
                 { icon: '🏷️', text: <><strong>Co-branded share pages</strong> with your photo + brokerage. Every time the home is shown or transferred, your name leads.</> },
-                { icon: '📊', text: <><strong>Activity analytics</strong> show which clients are active, who&apos;s logging maintenance, and who flipped on Sale Prep — your earliest "ready-to-sell" signal.</> },
+                { icon: '📊', text: <><strong>Activity analytics</strong> show which clients are active, who&apos;s logging maintenance, and who flipped on Sale Prep, your earliest "ready-to-sell" signal.</> },
                 { icon: '🤝', text: <><strong>Reactivation campaign</strong> automatically nudges clients who lapse, so the relationship doesn&apos;t go quiet between deals.</> },
               ].map((item, i) => (
                 <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
@@ -397,7 +397,7 @@ export default function AgentLanding() {
               {
                 icon: '🏷️',
                 title: 'Priced at our cost',
-                desc: 'Buy gift codes in batches of 1, 5, 10, 25, or custom. We charge what we charge homeowners — no markup, no commission, no kickback.',
+                desc: 'Buy gift codes in batches of 1, 5, 10, 25, or custom. We charge what we charge homeowners. No markup, no commission, no kickback.',
               },
               {
                 icon: '🛬',
@@ -407,7 +407,7 @@ export default function AgentLanding() {
               {
                 icon: '🔁',
                 title: 'Built for the second deal',
-                desc: 'Activity analytics surface clients who flipped on Sale Prep — your earliest signal someone&apos;s thinking about moving.',
+                desc: 'Activity analytics surface clients who flipped on Sale Prep, your earliest signal someone&apos;s thinking about moving.',
               },
             ].map((item) => (
               <div
@@ -517,7 +517,7 @@ export default function AgentLanding() {
               About the agent program
             </h3>
             <p style={{ fontSize: FontSize.sm, color: Colors.medGray, lineHeight: 1.6, margin: '0 0 6px 0' }}>
-              Canopy's agent program is a <strong>referral and client-retention tool</strong> — agents don't receive commissions or referral fees from Canopy. The value is relationship-building: your clients get a branded home-maintenance app under your name, and you stay top-of-mind for their next move.
+              Canopy's agent program is a <strong>referral and client-retention tool</strong>. Agents don't receive commissions or referral fees from Canopy. The value is relationship-building: your clients get a branded home-maintenance app under your name, and you stay top-of-mind for their next move.
             </p>
             <p style={{ fontSize: FontSize.sm, color: Colors.medGray, lineHeight: 1.6, margin: 0 }}>
               Gift codes and custom agent pages are offered at no cost. Canopy-certified service providers (separate program) pay a 15% platform fee when they complete jobs through the app.

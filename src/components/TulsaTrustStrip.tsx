@@ -117,7 +117,7 @@ export default function TulsaTrustStrip({ isMobile }: Props) {
             lineHeight: 1.3,
           }}
         >
-          Canopy launched in Tulsa — and {fetched ? 'currently protects' : 'protects'}{' '}
+          Canopy launched in Tulsa, and {fetched ? 'currently protects' : 'protects'}{' '}
           <span style={{ color: Colors.copper }}>{displayCount} Tulsa homes</span>.
         </h3>
       </div>

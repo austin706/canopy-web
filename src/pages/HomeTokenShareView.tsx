@@ -251,7 +251,7 @@ export default function HomeTokenShareView() {
             What you&apos;re looking at
           </p>
           <p style={{ fontSize: FontSize.xs, color: Colors.medGray, margin: '4px 0 0', lineHeight: 1.5 }}>
-            A tamper-evident maintenance record. Every entry — visit, repair, replacement, warranty, inspection — is timestamped, photo-backed where applicable, and verifiable through Canopy. The homeowner cannot edit history retroactively.
+            A tamper-evident maintenance record. Every entry (visit, repair, replacement, warranty, inspection) is timestamped, photo-backed where applicable, and verifiable through Canopy. The homeowner cannot edit history retroactively.
           </p>
         </div>
       </div>
@@ -308,7 +308,7 @@ export default function HomeTokenShareView() {
               cursor: 'pointer',
             }}
           >
-            Start my free Home Token — 2 minutes
+            Start my free Home Token, 2 minutes
           </button>
           <p style={{ fontSize: FontSize.xs, color: '#9b9b9b', margin: '14px 0 0' }}>
             No credit card · cancel anytime · <a href="/login" style={{ color: Colors.copper, textDecoration: 'none', fontWeight: 600 }}>sign in if you have an account</a>

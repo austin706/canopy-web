@@ -14,35 +14,35 @@ import TestimonialsSection from '@/components/TestimonialsSection';
 const FAQ_ITEMS: Array<{ q: string; a: string }> = [
   {
     q: 'Is Canopy really free? Do I need a credit card to sign up?',
-    a: 'Yes — the Free plan is free forever, no credit card required. It includes up to 3 equipment items, a basic maintenance calendar, weather-smart alerts, 5 AI chat messages per month, 2 text lookups per month, 1 lifetime AI equipment scan, and 90 days of maintenance history.',
+    a: 'Yes. The Free plan is free forever, no credit card required. It includes up to 3 equipment items, a basic maintenance calendar, weather-smart alerts, 5 AI chat messages per month, 2 text lookups per month, 1 lifetime AI equipment scan, and 90 days of maintenance history.',
   },
   {
     q: 'What does the AI equipment scanner actually do?',
-    a: 'You point your phone at the label on your HVAC, water heater, dishwasher, or any other appliance. Canopy reads the make, model, and serial number, looks up the expected lifespan and recall history, and automatically builds a personalized maintenance plan for that specific piece of equipment — filter sizes, service intervals, the whole thing.',
+    a: 'You point your phone at the label on your HVAC, water heater, dishwasher, or any other appliance. Canopy reads the make, model, and serial number, looks up the expected lifespan and recall history, and automatically builds a personalized maintenance plan for that specific piece of equipment, including filter sizes, service intervals, and everything else.',
   },
   {
     q: "How is Canopy different from a spreadsheet or Google Drive folder?",
-    a: "A spreadsheet holds information — Canopy acts on it. Canopy tells you what needs attention next, when to schedule it, what it should cost, and who in your area is qualified to do it. It generates a verified, timestamped home history (the Home Token) that transfers to the next owner when you sell, which a folder of receipts simply can't do.",
+    a: "A spreadsheet holds information. Canopy acts on it. Canopy tells you what needs attention next, when to schedule it, what it should cost, and who in your area is qualified to do it. It generates a verified, timestamped home history (the Home Token) that transfers to the next owner when you sell, which a folder of receipts simply can't do.",
   },
   {
     q: "Do I have to hire Canopy's pros, or can I use my own contractors?",
-    a: 'Canopy is designed to work both ways. On the Free and Home plans you handle maintenance yourself (or with your own contractors) and log it in Canopy. On the Pro plan, Canopy-vetted technicians visit every other month to handle it for you. You can always log outside work regardless of plan — Canopy will track it the same way.',
+    a: 'Canopy is designed to work both ways. On the Free and Home plans you handle maintenance yourself (or with your own contractors) and log it in Canopy. On the Pro plan, Canopy-vetted technicians visit every other month to handle it for you. You can always log outside work regardless of plan, and Canopy will track it the same way.',
   },
   {
     q: 'What is a Home Token and why does it matter when I sell?',
-    a: "A Home Token is the complete, timestamped, verified record of your home's maintenance history — every pro visit, inspection, task completed, document uploaded, and equipment serviced. When you sell, you transfer the Home Token to the buyer at closing. Buyers who see a documented maintenance history are more likely to offer close to asking and less likely to back out during inspection contingencies.",
+    a: "A Home Token is the complete, timestamped, verified record of your home's maintenance history: every pro visit, inspection, task completed, document uploaded, and equipment serviced. When you sell, you transfer the Home Token to the buyer at closing. Buyers who see a documented maintenance history are more likely to offer close to asking and less likely to back out during inspection contingencies.",
   },
   {
     q: 'Where is Canopy available right now?',
-    a: 'Canopy is launching in Tulsa, Oklahoma first, where we can guarantee pro visit coverage. The software side (AI, calendar, document vault, Home Token, weather alerts) works anywhere in the US — you can use the Free and Home plans today no matter where you live. Pro visits roll out to Oklahoma City, Dallas / Fort Worth, and additional metros through 2026.',
+    a: 'Canopy is launching in Tulsa, Oklahoma first, where we can guarantee pro visit coverage. The software side (AI, calendar, document vault, Home Token, weather alerts) works anywhere in the US, so you can use the Free and Home plans today no matter where you live. Pro visits roll out to Oklahoma City, Dallas / Fort Worth, and additional metros through 2026.',
   },
   {
     q: 'Does Canopy work on iOS and Android, or just the web?',
-    a: 'All three. Canopy runs on iOS, Android, and the web at canopyhome.app. Your account and data sync across all three automatically — start a task on your phone, finish it on your laptop.',
+    a: 'All three. Canopy runs on iOS, Android, and the web at canopyhome.app. Your account and data sync across all three automatically, so you can start a task on your phone and finish it on your laptop.',
   },
   {
     q: 'Can I cancel anytime? What about refunds?',
-    a: 'Yes, you can cancel anytime directly from your account settings. Every paid plan includes a 7-day money-back guarantee — if Canopy is not for you, email support@canopyhome.app within 7 days of your first charge and we will refund you, no questions asked.',
+    a: 'Yes, you can cancel anytime directly from your account settings. Every paid plan includes a 7-day money-back guarantee. If Canopy is not for you, email support@canopyhome.app within 7 days of your first charge and we will refund you, no questions asked.',
   },
   {
     q: 'How is my home data protected?',
@@ -50,7 +50,7 @@ const FAQ_ITEMS: Array<{ q: string; a: string }> = [
   },
   {
     q: 'What happens to my data if I delete my account?',
-    a: "You can delete your account and all of your data from the Profile screen in under a minute. Before you delete, you can export a complete copy of your data as a portable JSON file — profile, homes, equipment, maintenance logs, documents, invoices, and history — so you keep everything. Deletion is permanent and covers every table we store about you (required by California and EU law).",
+    a: "You can delete your account and all of your data from the Profile screen in under a minute. Before you delete, you can export a complete copy of your data as a portable JSON file (profile, homes, equipment, maintenance logs, documents, invoices, and history), so you keep everything. Deletion is permanent and covers every table we store about you (required by California and EU law).",
   },
 ];
 
@@ -85,8 +85,8 @@ const HERO_COPY: Record<HeroVariant, HeroCopy> = {
     variant: 'outcome_promise',
     h1: 'Never forget a maintenance task, lose a manual, or overpay a contractor again.',
     subhead:
-      "Snap a photo of any appliance — Canopy figures out what it is, when it needs attention, and surfaces the right task on the right day. Weather-aware alerts, vetted pros, and reminders that actually show up.",
-    primaryCta: 'Start free — takes 2 minutes',
+      "Snap a photo of any appliance. Canopy figures out what it is, when it needs attention, and surfaces the right task on the right day. Weather-aware alerts, vetted pros, and reminders that actually show up.",
+    primaryCta: 'Start free, takes 2 minutes',
     secondaryCta: 'See how it works',
   },
   certainty_loop: {
@@ -392,7 +392,7 @@ export default function Landing() {
         </div>
 
         <p style={{ fontSize: 14, color: Colors.medGray, margin: 0 }}>
-          Free forever — no credit card required
+          Free forever. No credit card required.
         </p>
 
         {/* 2026-05-06 round-6: TulsaTrustStrip moved out of the hero. Sitting
@@ -523,7 +523,7 @@ export default function Landing() {
                 4 things on your plate
               </h3>
             </div>
-            <span style={{ fontSize: FontSize.xs, color: Colors.medGray, fontWeight: FontWeight.semibold }}>May 6 — May 12</span>
+            <span style={{ fontSize: FontSize.xs, color: Colors.medGray, fontWeight: FontWeight.semibold }}>May 6 to May 12</span>
           </div>
 
           {/* Weather-alert chip — weaves the weather-aware alert story into the calendar */}
@@ -597,7 +597,7 @@ export default function Landing() {
             fontSize: isMobile ? 30 : 44, fontWeight: FontWeight.bold,
             color: Colors.charcoal, margin: '0 0 20px', lineHeight: 1.15,
           }}>
-            The right task on the right day — for your equipment, your weather, your home.
+            The right task on the right day, for your equipment, your weather, your home.
           </h2>
           <p style={{
             fontSize: isMobile ? 16 : 18, color: Colors.medGray,
@@ -610,10 +610,10 @@ export default function Landing() {
             display: 'grid', gap: 14,
           }}>
             {[
-              { icon: '📅', text: <><strong>40+ task templates</strong> tailored to make/model/age — not a generic checklist.</> },
+              { icon: '📅', text: <><strong>40+ task templates</strong> tailored to make, model, and age. Not a generic checklist.</> },
               { icon: '⛈️', text: <><strong>Weather-aware alerts</strong> pair your local storm watches with actionable prep tasks the day before.</> },
               { icon: '💬', text: <><strong>AI Home Assistant</strong> answers "what does this noise mean" or "how often should I…" grounded in your equipment.</> },
-              { icon: '📊', text: <><strong>Home Health Score</strong> tracks how well-maintained your home actually is — and what to fix next.</> },
+              { icon: '📊', text: <><strong>Home Health Score</strong> tracks how well-maintained your home actually is, and what to fix next.</> },
             ].map((item, i) => (
               <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                 <span aria-hidden="true" style={{ fontSize: FontSize.xl, lineHeight: '28px', flexShrink: 0 }}>{item.icon}</span>
@@ -687,15 +687,15 @@ export default function Landing() {
             fontSize: isMobile ? 16 : 18, color: Colors.medGray,
             lineHeight: 1.6, margin: '0 0 28px',
           }}>
-            Every visit, repair, replacement, and warranty is timestamped, photo-backed where applicable, and tied to the home itself — not your account. When you list, you hand the buyer a verifiable Home Token. The HomeLight data says it&apos;s worth roughly <strong style={{ color: Colors.charcoal }}>$14,000</strong> in inspection objections you don&apos;t have to negotiate away.
+            Every visit, repair, replacement, and warranty is timestamped, photo-backed where applicable, and tied to the home itself, not your account. When you list, you hand the buyer a verifiable Home Token. The HomeLight data says it&apos;s worth roughly <strong style={{ color: Colors.charcoal }}>$14,000</strong> in inspection objections you don&apos;t have to negotiate away.
           </p>
           <ul style={{
             listStyle: 'none', padding: 0, margin: '0 0 32px',
             display: 'grid', gap: 14,
           }}>
             {[
-              { icon: '🛡️', text: <>Optional <strong>Annual Maintenance Inspection</strong> by a Canopy-vetted Pro stamps a tamper-evident record onto the Token — from $149/yr.</> },
-              { icon: '📸', text: <>Photo-backed visit logs, manuals, warranties, and receipts in one place — automatically organized.</> },
+              { icon: '🛡️', text: <>Optional <strong>Annual Maintenance Inspection</strong> by a Canopy-vetted Pro stamps a tamper-evident record onto the Token. From $149/yr.</> },
+              { icon: '📸', text: <>Photo-backed visit logs, manuals, warranties, and receipts in one place, automatically organized.</> },
               { icon: '🤝', text: <>Transfer the Token to the next owner with one click. Their care continues yours.</> },
             ].map((item, i) => (
               <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
@@ -891,7 +891,7 @@ export default function Landing() {
               lineHeight: 1.6,
             }}
           >
-            Pest, lawn, pool, septic, cleaning — and anything else recurring that touches your home. One login, one invoice, one verified record of what was done and when.
+            Pest, lawn, pool, septic, cleaning, and anything else recurring that touches your home. One login, one invoice, one verified record of what was done and when.
           </p>
 
           {/* 2026-05-06 round-5: ZipPreCheck lives here instead of the hero —
@@ -1050,7 +1050,7 @@ export default function Landing() {
       { icon: '🔧', title: 'Plumbing',            examples: 'Water heaters, leaks, repipes' },
       { icon: '❄️', title: 'HVAC install',        examples: 'New systems, ductwork, zoning' },
       { icon: '🛁', title: 'Remodels',            examples: 'Kitchen, bath, basement finish' },
-      { icon: '✨', title: 'Anything else',       examples: 'Tell us the job — chances are we have a Pro' },
+      { icon: '✨', title: 'Anything else',       examples: 'Tell us the job. Chances are we have a Pro' },
     ];
 
     return (
@@ -1090,7 +1090,7 @@ export default function Landing() {
             textAlign: 'center', maxWidth: 660,
             margin: '0 auto 48px', lineHeight: 1.6,
           }}>
-            Tap the <strong style={{ color: Colors.charcoal }}>Canopy Certified Pro Network</strong> — vetted contractors, fixed-fee quotes, and every job logs straight to your Home Token. No more chasing three estimates from people who never call back.
+            Tap the <strong style={{ color: Colors.charcoal }}>Canopy Certified Pro Network</strong>: vetted contractors, fixed-fee quotes, and every job logs straight to your Home Token. No more chasing three estimates from people who never call back.
           </p>
 
           {/* Category grid */}
@@ -1178,7 +1178,7 @@ export default function Landing() {
               fontSize: 12, color: Colors.medGray, margin: '14px 0 0',
               fontStyle: 'italic',
             }}>
-              Available on Pro plans in active service areas. Free and Home tiers can still request — we&apos;ll route to your area as the network expands.
+              Available on Pro plans in active service areas. Free and Home tiers can still request, and we&apos;ll route to your area as the network expands.
             </p>
           </div>
         </div>
@@ -1255,7 +1255,7 @@ export default function Landing() {
               lineHeight: 1.6,
             }}
           >
-            Canopy meets you where you are — from day-one setup to listing day.
+            Canopy meets you where you are, from day-one setup to listing day.
           </p>
 
           <div
@@ -1380,7 +1380,7 @@ export default function Landing() {
         }}>
           {[
             { icon: '📸', title: 'AI Equipment Scanner', desc: 'Point your camera at any appliance label. Canopy reads make, model, serial, and expected lifespan, then generates the right maintenance schedule for that exact unit.' },
-            { icon: '💬', title: 'AI Home Assistant', desc: 'Ask anything about your home. "What does this noise mean?" "How do I drain my water heater?" — answers grounded in your actual equipment and local conditions.' },
+            { icon: '💬', title: 'AI Home Assistant', desc: 'Ask anything about your home. "What does this noise mean?" "How do I drain my water heater?" Answers grounded in your actual equipment and local conditions.' },
             { icon: '🔧', title: 'Bimonthly Pro Visits', desc: 'Canopy-certified technicians show up every other month to inspect systems, change filters, and log everything to your Home Token. Available on Pro plans in Tulsa.' },
             { icon: '📊', title: 'Home Health Score', desc: 'A living score that reflects how well-maintained your home actually is. See exactly where to focus next, and watch the number climb as you keep up.' },
           ].map((f) => (
@@ -1419,7 +1419,7 @@ export default function Landing() {
           fontSize: isMobile ? 15 : 17, color: Colors.medGray, textAlign: 'center',
           maxWidth: 640, margin: '0 auto 48px', lineHeight: 1.6,
         }}>
-          Deferred maintenance is the single largest hidden cost of homeownership. Canopy exists to make routine care effortless — and keep these numbers from becoming yours.
+          Deferred maintenance is the single largest hidden cost of homeownership. Canopy exists to make routine care effortless, and keep these numbers from becoming yours.
         </p>
 
         <div style={{
@@ -1541,14 +1541,14 @@ export default function Landing() {
       ['Maintenance history', '90 days', 'Full', 'Full'],
       ['Weather-smart alerts', '✓', '✓', '✓'],
       ['Document vault', '✓', '✓', '✓'],
-      ['Secure notes (PIN-protected)', '—', '✓', '✓'],
-      ['Home health score', '—', '✓', '✓'],
-      ['Home Token + completeness score', '—', '✓', '✓'],
-      ['Sale prep checklist', '—', '✓', '✓'],
-      ['Bimonthly pro visits', '—', '—', '6/yr'],
-      ['Detailed inspection reports', '—', '—', '✓'],
-      ['Priority scheduling', '—', '—', '✓'],
-      ['Canopy Certified Pro network', '—', '—', '✓'],
+      ['Secure notes (PIN-protected)', '·', '✓', '✓'],
+      ['Home health score', '·', '✓', '✓'],
+      ['Home Token + completeness score', '·', '✓', '✓'],
+      ['Sale prep checklist', '·', '✓', '✓'],
+      ['Bimonthly pro visits', '·', '·', '6/yr'],
+      ['Detailed inspection reports', '·', '·', '✓'],
+      ['Priority scheduling', '·', '·', '✓'],
+      ['Canopy Certified Pro network', '·', '·', '✓'],
     ];
     const headers = ['Free', 'Home', 'Pro'];
 
@@ -1581,7 +1581,7 @@ export default function Landing() {
     };
     const renderValue = (v: string) => {
       if (v === '✓') return <span style={{ color: Colors.sage, fontWeight: FontWeight.bold, fontSize: FontSize.lg }} aria-label="included">✓</span>;
-      if (v === '—') return <span style={{ color: Colors.medGray }} aria-label="not included">—</span>;
+      if (v === '·') return <span style={{ color: Colors.medGray }} aria-label="not included">·</span>;
       return v;
     };
 
@@ -1824,7 +1824,7 @@ export default function Landing() {
                 Sample concierge stack · Tulsa
               </p>
               {[
-                { icon: '🔧', label: 'Pro plan — bimonthly visits', price: '$149/mo' },
+                { icon: '🔧', label: 'Pro plan, bimonthly visits', price: '$149/mo' },
                 { icon: '🛡️', label: 'Annual Maintenance Inspection', price: '~$149/yr' },
                 { icon: '🪳', label: 'Pest Shield', price: 'from $39/mo' },
                 { icon: '🌿', label: 'Lawn Care', price: 'from $59/mo' },
@@ -1841,7 +1841,7 @@ export default function Landing() {
                 </div>
               ))}
               <p style={{ fontSize: FontSize.xs, color: Colors.medGray, margin: '4px 0 0', textAlign: 'center', fontStyle: 'italic' }}>
-                Build the stack you actually want — add or drop any time.
+                Build the stack you actually want, and add or drop any time.
               </p>
             </div>
           </div>
@@ -2031,7 +2031,7 @@ export default function Landing() {
             fontSize: FontSize.md, color: Colors.medGray,
             lineHeight: 1.5, margin: 0, maxWidth: 560,
           }}>
-            Co-branded gift codes, a buyer-facing Home Token for every closed deal, and analytics you can actually use. No commission, no kickback — just a tool your clients keep using a year after the sale.
+            Co-branded gift codes, a buyer-facing Home Token for every closed deal, and analytics you can actually use. No commission, no kickback. Just a tool your clients keep using a year after the sale.
           </p>
         </div>
         <button

@@ -138,7 +138,7 @@ export default function ZipPreCheck({ isMobile, fontStack, onCtaSignup }: ZipPre
               You&apos;re covered in {zip}.
             </div>
             <div style={{ fontSize: 13, color: Colors.medGray, marginTop: 2 }}>
-              Full Canopy — software + pro visits — is live in your area.
+              Full Canopy (software + pro visits) is live in your area.
             </div>
           </div>
         </div>
@@ -146,7 +146,7 @@ export default function ZipPreCheck({ isMobile, fontStack, onCtaSignup }: ZipPre
           <button
             onClick={() => onCtaSignup('zip_precheck_covered')}
             style={primaryBtn(fontStack)}
-            aria-label="Get started — coverage confirmed"
+            aria-label="Get started, coverage confirmed"
           >
             Get Started Free
           </button>
@@ -171,7 +171,7 @@ export default function ZipPreCheck({ isMobile, fontStack, onCtaSignup }: ZipPre
               </div>
               <div style={{ fontSize: 13, color: Colors.medGray, marginTop: 2 }}>
                 We&apos;ll email you the moment pro visits open in {zip}.
-                Meanwhile, start with the free plan — it works anywhere.
+                Meanwhile, start with the free plan. It works anywhere.
               </div>
             </div>
           </div>
@@ -196,7 +196,7 @@ export default function ZipPreCheck({ isMobile, fontStack, onCtaSignup }: ZipPre
           <span style={{ fontSize: 22, marginRight: 10 }}>⏳</span>
           <div style={{ textAlign: 'left' }}>
             <div style={{ fontSize: 15, fontWeight: FontWeight.semibold, color: Colors.charcoal }}>
-              Pro visits aren&apos;t in {zip} yet — we&apos;re coming.
+              Pro visits aren&apos;t in {zip} yet, but we&apos;re coming.
             </div>
             <div style={{ fontSize: 13, color: Colors.medGray, marginTop: 2 }}>
               Add your email and we&apos;ll tell you the moment we launch. Or jump into the free plan now.
@@ -238,7 +238,7 @@ export default function ZipPreCheck({ isMobile, fontStack, onCtaSignup }: ZipPre
           style={linkBtn(fontStack)}
           aria-label="Skip waitlist and start with the free plan"
         >
-          Skip — start with the free plan
+          Skip, start with the free plan
         </button>
       </CheckCard>
     );
@@ -256,7 +256,7 @@ export default function ZipPreCheck({ isMobile, fontStack, onCtaSignup }: ZipPre
             </div>
             <div style={{ fontSize: 13, color: Colors.medGray, marginTop: 2 }}>
               AI maintenance planning, equipment tracking, and the document vault work anywhere in the US.
-              Pro visits roll out to your metro next — we&apos;ll notify you.
+              Pro visits roll out to your metro next, and we&apos;ll notify you.
             </div>
           </div>
         </div>
@@ -296,7 +296,7 @@ export default function ZipPreCheck({ isMobile, fontStack, onCtaSignup }: ZipPre
       aria-label="Check Canopy coverage by ZIP code"
     >
       <label htmlFor="zip-precheck" style={{ fontSize: 13, fontWeight: FontWeight.semibold, color: Colors.sageDark }}>
-        Now serving Tulsa &amp; surrounding ZIPs —
+        Now serving Tulsa &amp; surrounding ZIPs:
       </label>
       <input
         id="zip-precheck"

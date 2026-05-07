@@ -28,7 +28,7 @@ export default function SalePrepPreview() {
   const CATEGORY_BLURBS: Record<string, string> = {
     exterior: 'Curb appeal moves offers. Canopy prioritizes the cheap wins that change how a home photographs.',
     interior: 'Walk-through polish: declutter, deep clean, freshen paint, fix the small stuff buyers will flag.',
-    systems: 'Prove the mechanicals work — HVAC, plumbing, electrical, water heater — with documentation.',
+    systems: 'Prove the mechanicals work (HVAC, plumbing, electrical, water heater) with documentation.',
     documentation: 'Warranties, permits, and maintenance history that defuse inspection-driven price cuts.',
     staging: 'Presentation details that make rooms feel bigger, brighter, and ready to list.',
   };
@@ -120,7 +120,7 @@ export default function SalePrepPreview() {
                 lineHeight: 1.2,
               }}
             >
-              Get your home ready to list — without the scramble.
+              Get your home ready to list, without the scramble.
             </h1>
             <p
               style={{
@@ -156,7 +156,7 @@ export default function SalePrepPreview() {
                 fontFamily: fontStack,
               }}
             >
-              Start free — includes Sale Prep
+              Start free, includes Sale Prep
             </button>
             <p style={{ fontSize: 13, color: Colors.medGray, marginTop: 16 }}>
               Free plan works anywhere. Sale Prep kit unlocks the moment you sign up.
@@ -189,7 +189,7 @@ export default function SalePrepPreview() {
               }}
             >
               {totalItems} curated prep items across {SALE_PREP_CATEGORIES.length} categories.
-              Sample items below — the full checklist and pro-booking flow are
+              Sample items below. The full checklist and pro-booking flow are
               inside the app.
             </p>
 

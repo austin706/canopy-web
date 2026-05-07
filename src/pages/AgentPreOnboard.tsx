@@ -55,6 +55,38 @@ interface PendingHome {
   google_place_id?: string | null;
 }
 
+// Phase 2 (2026-05-07): equipment captured during pre-onboard. At redemption,
+// services/agents.ts iterates this array and creates equipment rows for the
+// new home. Agents on web enter manually; agents on mobile (when the live
+// scan ships) point their phone at appliance labels and capture in seconds.
+interface PendingEquipmentItem {
+  category: string;
+  name: string;
+  make?: string;
+  model?: string;
+  serial_number?: string;
+  install_date?: string;
+  location_in_home?: string;
+  notes?: string;
+}
+
+const EQUIPMENT_CATEGORIES = [
+  { value: 'hvac', label: 'HVAC (furnace / AC / heat pump)' },
+  { value: 'water_heater', label: 'Water heater' },
+  { value: 'dishwasher', label: 'Dishwasher' },
+  { value: 'washer', label: 'Washing machine' },
+  { value: 'dryer', label: 'Dryer' },
+  { value: 'refrigerator', label: 'Refrigerator' },
+  { value: 'range', label: 'Range / oven' },
+  { value: 'microwave', label: 'Microwave' },
+  { value: 'garbage_disposal', label: 'Garbage disposal' },
+  { value: 'water_softener', label: 'Water softener' },
+  { value: 'garage_door_opener', label: 'Garage door opener' },
+  { value: 'sump_pump', label: 'Sump pump' },
+  { value: 'generator', label: 'Generator' },
+  { value: 'other', label: 'Other' },
+];
+
 interface GiftCode {
   id: string;
   code: string;
@@ -67,6 +99,7 @@ interface GiftCode {
   redeemed_at?: string | null;
   expires_at?: string | null;
   pending_home?: PendingHome | null;
+  pending_equipment?: PendingEquipmentItem[] | null;
 }
 
 export default function AgentPreOnboard() {
@@ -81,6 +114,8 @@ export default function AgentPreOnboard() {
 
   // Form state — mirrors AgentPortal handleCreateClient field set, plus
   // foundation_type and stories which were missing there.
+  const [equipment, setEquipment] = useState<PendingEquipmentItem[]>([]);
+
   const [form, setForm] = useState<PendingHome>({
     address: '',
     city: '',
@@ -120,7 +155,7 @@ export default function AgentPreOnboard() {
       try {
         const { data, error: fetchErr } = await supabase
           .from('gift_codes')
-          .select('id, code, tier, duration_months, agent_id, client_name, client_email, redeemed_by, redeemed_at, expires_at, pending_home')
+          .select('id, code, tier, duration_months, agent_id, client_name, client_email, redeemed_by, redeemed_at, expires_at, pending_home, pending_equipment')
           .eq('id', codeId)
           .single();
         if (fetchErr) throw fetchErr;
@@ -130,6 +165,9 @@ export default function AgentPreOnboard() {
         // can edit a partial entry without losing fields.
         if (data?.pending_home && typeof data.pending_home === 'object') {
           setForm((prev) => ({ ...prev, ...(data.pending_home as PendingHome) }));
+        }
+        if (Array.isArray(data?.pending_equipment)) {
+          setEquipment(data.pending_equipment as PendingEquipmentItem[]);
         }
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Could not load this code.';
@@ -165,9 +203,19 @@ export default function AgentPreOnboard() {
         // narrow assignment — we know the shape matches
         (cleaned as Record<string, unknown>)[k] = v;
       });
+      // Clean equipment list — drop entries that are missing the
+      // required NOT NULL fields (category + name). Empty entries from
+      // an "Add equipment" click that the agent never filled in.
+      const cleanedEquipment = equipment.filter(
+        (e) => typeof e.category === 'string' && e.category.length > 0
+            && typeof e.name === 'string' && e.name.trim().length > 0,
+      );
       const { error: updateErr } = await supabase
         .from('gift_codes')
-        .update({ pending_home: cleaned })
+        .update({
+          pending_home: cleaned,
+          pending_equipment: cleanedEquipment.length > 0 ? cleanedEquipment : null,
+        })
         .eq('id', code.id);
       if (updateErr) throw updateErr;
       showToast({ message: 'Home pre-onboarded. Your client will land on a ready-to-use dashboard when they redeem.' });
@@ -473,6 +521,130 @@ export default function AgentPreOnboard() {
             <option value="mixed">Mixed</option>
           </select>
         </div>
+      </section>
+
+      {/* Equipment (Phase 2). Web-side is manual entry — agents on web
+          add a row per appliance and fill in make/model/serial as time
+          allows. The mobile app gets the live-scan flow that captures
+          this data automatically. Both write to gift_codes.pending_equipment;
+          redemption flow in services/agents.ts inserts equipment rows. */}
+      <section className="card" style={{ marginBottom: Spacing.lg, padding: Spacing.lg }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
+          <div>
+            <h2 style={{ fontSize: FontSize.lg, margin: 0 }}>Equipment</h2>
+            <p className="text-gray text-sm" style={{ margin: '2px 0 0 0' }}>
+              Add HVAC, water heater, appliances, and other home equipment. Use the mobile app to scan labels automatically (coming soon).
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => setEquipment((prev) => [
+              ...prev,
+              { category: 'hvac', name: '', make: '', model: '', serial_number: '', install_date: '', location_in_home: '', notes: '' },
+            ])}
+          >
+            + Add equipment
+          </button>
+        </div>
+
+        {equipment.length === 0 ? (
+          <p className="text-gray text-sm" style={{ marginBottom: 0 }}>
+            No equipment added yet. The buyer can also add equipment after redeeming.
+          </p>
+        ) : (
+          <div style={{ display: 'grid', gap: Spacing.md }}>
+            {equipment.map((item, idx) => (
+              <div key={idx} style={{
+                border: `1px solid ${Colors.lightGray}`,
+                borderRadius: BorderRadius.md,
+                padding: Spacing.md,
+                background: Colors.cream,
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: 12, marginBottom: 12, alignItems: 'end' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Category</label>
+                    <select
+                      className="form-select"
+                      value={item.category}
+                      onChange={(e) => setEquipment((prev) => prev.map((x, i) => i === idx ? { ...x, category: e.target.value } : x))}
+                    >
+                      {EQUIPMENT_CATEGORIES.map((c) => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Name *</label>
+                    <input
+                      className="form-input"
+                      value={item.name}
+                      onChange={(e) => setEquipment((prev) => prev.map((x, i) => i === idx ? { ...x, name: e.target.value } : x))}
+                      placeholder="e.g. Furnace, Water heater, Dishwasher"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setEquipment((prev) => prev.filter((_, i) => i !== idx))}
+                    aria-label={`Remove ${item.name || 'equipment'}`}
+                    style={{ color: Colors.error }}
+                  >
+                    Remove
+                  </button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Make</label>
+                    <input
+                      className="form-input"
+                      value={item.make ?? ''}
+                      onChange={(e) => setEquipment((prev) => prev.map((x, i) => i === idx ? { ...x, make: e.target.value } : x))}
+                      placeholder="Carrier"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Model</label>
+                    <input
+                      className="form-input"
+                      value={item.model ?? ''}
+                      onChange={(e) => setEquipment((prev) => prev.map((x, i) => i === idx ? { ...x, model: e.target.value } : x))}
+                      placeholder="58TP080"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Install date</label>
+                    <input
+                      className="form-input"
+                      type="date"
+                      value={item.install_date ?? ''}
+                      onChange={(e) => setEquipment((prev) => prev.map((x, i) => i === idx ? { ...x, install_date: e.target.value } : x))}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Serial number</label>
+                    <input
+                      className="form-input"
+                      value={item.serial_number ?? ''}
+                      onChange={(e) => setEquipment((prev) => prev.map((x, i) => i === idx ? { ...x, serial_number: e.target.value } : x))}
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Location</label>
+                    <input
+                      className="form-input"
+                      value={item.location_in_home ?? ''}
+                      onChange={(e) => setEquipment((prev) => prev.map((x, i) => i === idx ? { ...x, location_in_home: e.target.value } : x))}
+                      placeholder="Garage, basement, attic..."
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Save */}

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import logger from '@/utils/logger';
 import { upsertHome, upsertEquipment, updateProfile, createTasks, redeemGiftCode, supabase, createHomeJoinRequest, sendNotification, insertProInterest, getUserHomes } from '@/services/supabase';
-import { verifyAddress, findExistingProperty } from '@/services/addressVerification';
+import { findExistingProperty } from '@/services/addressVerification';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { generateTasksForHome, generateEquipmentLifecycleAlerts } from '@/services/taskEngine';
 import { PLANS, isProAvailableInArea, loadServiceAreas, getEquipmentLimit, getHomeLimit, isPremium } from '@/services/subscriptionGate';
@@ -121,12 +121,6 @@ export default function Onboarding() {
   const [homeLimitReached, setHomeLimitReached] = useState<'upgrade' | 'contact' | null>(null);
   const [userHomeCount, setUserHomeCount] = useState(0);
 
-  // Address verification state
-  const [verifiedAddress, setVerifiedAddress] = useState<{
-    normalizedAddress: string; city: string; state: string; zipCode: string;
-    latitude?: number; longitude?: number; isValid: boolean;
-  } | null>(null);
-  const [showVerifiedConfirm, setShowVerifiedConfirm] = useState(false);
   // Google Places canonical identity — captured when the user picks a
   // suggestion from AddressAutocomplete. This is the primary dedup key.
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
@@ -394,74 +388,19 @@ export default function Onboarding() {
     }
     setSaving(true);
     try {
-      // Verify & standardize address (USPS + geocoding)
-      let verified;
-      try {
-        verified = await verifyAddress(
-          addressForm.address, addressForm.city, addressForm.state, addressForm.zip_code
-        );
-      } catch (err) {
-        console.warn('Address verification failed:', err);
-        verified = null;
-      }
-
-      // If USPS returned a different standardized address, show confirmation
-      if (verified && verified.normalizedAddress) {
-        const rawUpper = addressForm.address.trim().toUpperCase().replace(/[.,]/g, '');
-        const normalizedDiffers = verified.normalizedAddress !== rawUpper
-          || verified.city.toUpperCase() !== addressForm.city.trim().toUpperCase()
-          || verified.zipCode !== addressForm.zip_code.trim();
-
-        if (normalizedDiffers) {
-          // Show the standardized address to the user for confirmation
-          setVerifiedAddress(verified);
-          setShowVerifiedConfirm(true);
-          setSaving(false);
-          return;
-        }
-      }
-
-      // No difference or no verification — proceed directly
-      await saveAddressAndCheckDuplicates(verified);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  /** Accept USPS-standardized address — update form fields and proceed */
-  const handleAcceptVerifiedAddress = async () => {
-    if (!verifiedAddress) return;
-    // Update form with standardized values
-    setAddressForm(prev => ({
-      ...prev,
-      address: verifiedAddress.normalizedAddress,
-      city: verifiedAddress.city,
-      state: verifiedAddress.state,
-      zip_code: verifiedAddress.zipCode,
-    }));
-    setShowVerifiedConfirm(false);
-    setSaving(true);
-    try {
-      await saveAddressAndCheckDuplicates(verifiedAddress);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  /** Keep original address the user typed */
-  const handleKeepOriginalAddress = async () => {
-    setShowVerifiedConfirm(false);
-    setSaving(true);
-    try {
-      // Still use the verified data for lat/lng and duplicate check, but keep raw address text
-      await saveAddressAndCheckDuplicates(verifiedAddress);
+      // 2026-05-07: USPS verification removed. Google Places autocomplete
+      // + place_id are the canonical identity; we don't mail anything,
+      // don't issue legal records, and don't route by ZIP+4. USPS rejected
+      // legitimate brand-new construction and rural addresses behind a
+      // confusing modal. Save proceeds directly.
+      await saveAddressAndCheckDuplicates();
     } finally {
       setSaving(false);
     }
   };
 
   /** Shared: build homeData, check for duplicates, save */
-  const saveAddressAndCheckDuplicates = async (verified: typeof verifiedAddress) => {
+  const saveAddressAndCheckDuplicates = async () => {
     if (!user) return;
     const homeData: any = {
       id: crypto.randomUUID(),
@@ -474,22 +413,21 @@ export default function Onboarding() {
       bathrooms: parseInt(addressForm.bathrooms) || 2,
       garage_spaces: parseInt(addressForm.garage_spaces) || 0,
       created_at: new Date().toISOString(),
-      // Store verified data when available
-      ...(verified?.normalizedAddress && { normalized_address: verified.normalizedAddress }),
-      ...(verified?.zipCode && verified.zipCode.includes('-') && { zip_plus4: verified.zipCode }),
-      ...(verified?.latitude && { latitude: verified.latitude }),
-      ...(verified?.longitude && { longitude: verified.longitude }),
+      // 2026-05-07: persist a basic uppercase normalized form for fallback
+      // dedup when the user typed manually without picking a Google
+      // suggestion. lat/lng come from Google Places onPlaceSelected (set
+      // separately in addressForm if available).
+      normalized_address: addressForm.address.trim().toUpperCase().replace(/[.,]/g, ''),
       // Canonical identity key — Google Places ID, captured in onPlaceSelected.
-      // This is the primary dedup key; USPS normalized_address is secondary.
       ...(selectedPlaceId && { google_place_id: selectedPlaceId }),
     };
 
     // Check if this property already exists (either owned by this user or another)
     try {
       const match = await findExistingProperty(
-        verified?.normalizedAddress || '',
-        verified?.latitude,
-        verified?.longitude,
+        homeData.normalized_address,
+        undefined,
+        undefined,
         addressForm.address, addressForm.city, addressForm.state, addressForm.zip_code,
         user.id,
         selectedPlaceId || undefined,
@@ -1431,76 +1369,6 @@ export default function Onboarding() {
                 onClick={() => setShowOwnHomeModal(false)}
               >
                 Enter a Different Address
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ===== Verified Address Confirmation Modal ===== */}
-      {showVerifiedConfirm && verifiedAddress && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', zIndex: 9999, padding: 20,
-        }}>
-          <div style={{
-            background: 'var(--color-card-background)', borderRadius: 16, padding: 32, maxWidth: 440, width: '100%',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: 16 }}>
-              <span style={{ fontSize: 36 }}>&#x2705;</span>
-            </div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
-              Address Verified
-            </h3>
-            <p style={{ color: Colors.medGray, fontSize: 14, lineHeight: 1.6, textAlign: 'center', marginBottom: 16 }}>
-              We standardized your address using USPS. Would you like to use the corrected version?
-            </p>
-
-            <div style={{ marginBottom: 20 }}>
-              <div style={{
-                padding: 14, backgroundColor: 'var(--color-success)15', borderRadius: 10,
-                border: `1px solid ${Colors.sage}40`, marginBottom: 10,
-              }}>
-                <p style={{ fontSize: 11, color: Colors.sage, fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase' }}>USPS Standardized</p>
-                <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: Colors.charcoal }}>
-                  {verifiedAddress.normalizedAddress}
-                </p>
-                <p style={{ margin: '2px 0 0', fontSize: 13, color: Colors.charcoal }}>
-                  {verifiedAddress.city}, {verifiedAddress.state} {verifiedAddress.zipCode}
-                </p>
-              </div>
-              <div style={{
-                padding: 14, backgroundColor: 'var(--color-input-background, #F5F0E8)', borderRadius: 10,
-                border: `1px solid var(--color-light-gray)`,
-              }}>
-                <p style={{ fontSize: 11, color: Colors.medGray, fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase' }}>You entered</p>
-                <p style={{ margin: 0, fontSize: 14, color: Colors.medGray }}>
-                  {addressForm.address}
-                </p>
-                <p style={{ margin: '2px 0 0', fontSize: 13, color: Colors.medGray }}>
-                  {addressForm.city}, {addressForm.state} {addressForm.zip_code}
-                </p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-                onClick={handleAcceptVerifiedAddress}
-                disabled={saving}
-              >
-                {saving ? 'Saving...' : 'Use Standardized Address'}
-              </button>
-              <button
-                className="btn btn-ghost"
-                style={{ width: '100%', color: Colors.medGray }}
-                onClick={handleKeepOriginalAddress}
-                disabled={saving}
-              >
-                {saving ? 'Saving...' : 'Keep My Original'}
               </button>
             </div>
           </div>

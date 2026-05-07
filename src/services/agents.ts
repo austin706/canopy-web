@@ -83,32 +83,29 @@ export const redeemGiftCode = async (code: string, userId: string) => {
   // to the newly-created home. Only fires if a home was created from
   // pending_home — equipment without a home would orphan, so we skip it.
   if (createdHomeId && Array.isArray(gc.pending_equipment) && gc.pending_equipment.length > 0) {
-    const equipmentRows = gc.pending_equipment
-      .filter((e): e is Record<string, unknown> => e !== null && typeof e === 'object')
-      .map((eq) => ({
-        id: crypto.randomUUID(),
-        home_id: createdHomeId!,
+    const rawList = gc.pending_equipment as Array<Record<string, unknown>>;
+    const cleanRows: Array<Record<string, unknown>> = rawList
+      .filter((e: unknown): e is Record<string, unknown> => e !== null && typeof e === 'object')
+      .map((eq: Record<string, unknown>) => {
         // Defaults satisfy the NOT NULL constraints. Agent UIs should
         // always populate `name` + `category`, but if a record sneaks
         // through without them we don't want the whole transaction to
         // fail — better to land an equipment row that the buyer can
         // edit than to lose the entire pre-onboard.
-        category: typeof eq.category === 'string' ? eq.category : 'other',
-        name: typeof eq.name === 'string'
-          ? eq.name
-          : (typeof eq.make === 'string' && typeof eq.model === 'string' ? `${eq.make} ${eq.model}` : 'Equipment'),
-        ...eq,
-        // Force the home_id over anything in the JSONB so a malformed
-        // entry can't write equipment to a different home.
-        home_id_override: undefined, // sentinel — gets overwritten below
-        created_at: new Date().toISOString(),
-      }));
-    // Strip the sentinel
-    const cleanRows = equipmentRows.map((r) => {
-      const { home_id_override, ...rest } = r as Record<string, unknown>;
-      void home_id_override;
-      return rest;
-    });
+        const fallbackName = typeof eq.make === 'string' && typeof eq.model === 'string'
+          ? `${eq.make} ${eq.model}`
+          : 'Equipment';
+        return {
+          ...eq,
+          id: crypto.randomUUID(),
+          // Force home_id over anything in the JSONB so a malformed entry
+          // can't write equipment to a different home.
+          home_id: createdHomeId!,
+          category: typeof eq.category === 'string' ? eq.category : 'other',
+          name: typeof eq.name === 'string' ? eq.name : fallbackName,
+          created_at: new Date().toISOString(),
+        };
+      });
     if (cleanRows.length > 0) {
       const { error: equipErr } = await supabase.from('equipment').insert(cleanRows);
       // Non-fatal: if equipment insert fails (RLS, constraint, etc.), we

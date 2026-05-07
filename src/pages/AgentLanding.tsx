@@ -500,7 +500,7 @@ export default function AgentLanding() {
                 ['Sq. ft.', '2,400'],
                 ['Roof', 'Asphalt shingle, 2015'],
                 ['HVAC', 'Central gas / Central AC'],
-                ['Foundation', 'Slab'],
+                ['Equipment', '7 items captured'],
                 ['Lawn', 'Bermuda'],
               ].map(([label, value]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '4px 0', borderBottom: `1px solid ${Colors.lightGray}` }}>
@@ -548,7 +548,7 @@ export default function AgentLanding() {
               display: 'grid', gap: 12,
             }}>
               {[
-                { icon: '🏷️', text: <><strong>Five minutes per home</strong> with the MLS data you already have. Address autocomplete pulls in city, state, ZIP for you.</> },
+                { icon: '🏷️', text: <><strong>Property + equipment</strong> in one workflow. MLS data goes in, then add the HVAC, water heater, appliances. Address autocomplete fills in city, state, ZIP for you.</> },
                 { icon: '🪄', text: <><strong>Maintenance plan generates automatically</strong> the moment your client lands on their dashboard. No setup screen, no friction.</> },
                 { icon: '✏️', text: <><strong>Edit anytime before redemption.</strong> Forgot the roof install year? Open the code, fill it in, save.</> },
               ].map((item, i) => (

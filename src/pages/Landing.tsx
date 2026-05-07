@@ -317,10 +317,14 @@ export default function Landing() {
       textAlign: 'center', fontFamily: fontStack,
     }}>
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
-        {/* DL-2: ZIP pre-check pill — inline coverage lookup against
-            service_areas with three outcome states (covered / coming soon
-            / free-only). Persists to localStorage for onboarding reuse. */}
-        <ZipPreCheck isMobile={isMobile} fontStack={fontStack} onCtaSignup={ctaToSignup} />
+        {/* 2026-05-06 round-5: ZipPreCheck moved out of the hero. Putting it
+            up here implied the whole product is geo-gated, which contradicts
+            the national Home tier messaging. Now lives inside AddOnsSection
+            (and is mirrored in CertifiedProNetworkSection) where Pro service
+            availability is the actual question being asked.
+            Original DL-2 spec: 3-outcome inline lookup against service_areas
+            (covered / coming soon / free-only). Component still persists the
+            ZIP to localStorage for onboarding reuse. */}
 
         {/* DL-6 — variant-driven headline. `outcome_promise` is the longer
             audit-recommended copy; `certainty_loop` is the current production
@@ -380,16 +384,16 @@ export default function Landing() {
           </button>
         </div>
 
-        <p style={{ fontSize: 14, color: Colors.medGray, margin: '0 0 32px 0' }}>
+        <p style={{ fontSize: 14, color: Colors.medGray, margin: 0 }}>
           Free forever — no credit card required
         </p>
 
-        {/* DL-5 — Localized trust strip. Replaces the generic "bank-level
-            encryption / powered by AI / web+iOS / 2 minutes" badge row with a
-            Tulsa-specific proof strip: live count of Tulsa homes, named
-            testimonial, neighborhood visual, BBB slot. Encryption language
-            has moved to the /security page (linked from within the strip). */}
-        <TulsaTrustStrip isMobile={isMobile} />
+        {/* 2026-05-06 round-6: TulsaTrustStrip moved out of the hero. Sitting
+            here, it implied the whole product was Tulsa-only and undercut
+            the national Home tier story. The strip now lives further down
+            the page — after the geo-gated AddOns + CertifiedProNetwork
+            sections — where local proof actually answers the user's
+            "is this for me here" question. */}
       </div>
     </section>
   );
@@ -869,12 +873,20 @@ export default function Landing() {
               color: Colors.medGray,
               textAlign: 'center',
               maxWidth: 620,
-              margin: '0 auto 40px',
+              margin: '0 auto 28px',
               lineHeight: 1.6,
             }}
           >
             Pest, lawn, pool, septic, cleaning — and anything else recurring that touches your home. One login, one invoice, one verified record of what was done and when.
           </p>
+
+          {/* 2026-05-06 round-5: ZipPreCheck lives here instead of the hero —
+              this is where service-area availability is the actual question.
+              Component renders a 3-outcome inline lookup against service_areas
+              (covered / coming soon / free-only); same one as before. */}
+          <div style={{ marginBottom: 36 }}>
+            <ZipPreCheck isMobile={isMobile} fontStack={fontStack} onCtaSignup={ctaToSignup} />
+          </div>
         </div>
 
         {/* Horizontal-scroll row on mobile, 5-column grid on desktop */}
@@ -2009,7 +2021,7 @@ export default function Landing() {
           </p>
         </div>
         <button
-          onClick={() => navigate('/agent')}
+          onClick={() => navigate('/for-agents')}
           style={{
             padding: '14px 24px', fontSize: FontSize.md, fontWeight: FontWeight.semibold,
             background: Colors.charcoal, color: Colors.white, border: 'none',
@@ -2019,7 +2031,7 @@ export default function Landing() {
           onMouseEnter={(e) => { (e.target as HTMLElement).style.transform = 'translateY(-2px)'; }}
           onMouseLeave={(e) => { (e.target as HTMLElement).style.transform = 'translateY(0)'; }}
         >
-          Agent Portal →
+          See the agent program →
         </button>
       </div>
     </section>
@@ -2165,6 +2177,20 @@ export default function Landing() {
             marketplace as recurring add-ons, different cadence. Pairs with
             AddOnsSection so the marketplace story is complete. */}
         <CertifiedProNetworkSection />
+        {/* 2026-05-06 round-6: Tulsa local-proof bar (Tulsa homes count,
+            Priya pull quote, Checkr-verified badge, Security link). Sits
+            right after the two geo-gated sections (AddOns + Certified Pro
+            Network) so it answers the "is this for me here" question
+            instead of leading the page with Tulsa branding that contradicts
+            the national Home tier. Wrapped in a sage-tinted backdrop so it
+            reads as a deliberate local-proof moment, not a duplicate hero. */}
+        <section style={{
+          background: Colors.warmWhite,
+          padding: isMobile ? '32px 16px' : '48px 24px',
+          fontFamily: fontStack,
+        }}>
+          <TulsaTrustStrip isMobile={isMobile} />
+        </section>
         <WhoIsItFor />
         <FeaturesSection />
         <StatsSection />

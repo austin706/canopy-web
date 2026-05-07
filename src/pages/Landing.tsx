@@ -85,7 +85,7 @@ const HERO_COPY: Record<HeroVariant, HeroCopy> = {
     variant: 'outcome_promise',
     h1: 'Never forget a maintenance task, lose a manual, or overpay a contractor again.',
     subhead:
-      "Snap a photo of any appliance — Canopy figures out what it is, when it needs attention, and surfaces the right task on the right day. Weather-aware alerts, vetted Tulsa pros, and reminders that actually show up.",
+      "Snap a photo of any appliance — Canopy figures out what it is, when it needs attention, and surfaces the right task on the right day. Weather-aware alerts, vetted pros, and reminders that actually show up.",
     primaryCta: 'Start free — takes 2 minutes',
     secondaryCta: 'See how it works',
   },
@@ -93,7 +93,7 @@ const HERO_COPY: Record<HeroVariant, HeroCopy> = {
     variant: 'certainty_loop',
     h1: 'Stop guessing. Start knowing.',
     subhead:
-      "Canopy reads every appliance label in your home, builds a maintenance calendar around your equipment and Tulsa weather, and gives you one place for every manual, warranty, and receipt. Care for your home like it's the biggest thing you own — because it is.",
+      "Canopy reads every appliance label in your home, builds a maintenance calendar tuned to your equipment and your local weather, and gives you one place for every manual, warranty, and receipt. Care for your home like it's the biggest thing you own — because it is.",
     primaryCta: 'Get started free',
     secondaryCta: 'See it in action',
   },
@@ -497,15 +497,15 @@ export default function Landing() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div>
               <p style={{
-                fontSize: 11, fontWeight: FontWeight.bold,
+                fontSize: FontSize.xs, fontWeight: FontWeight.bold,
                 letterSpacing: 0.7, textTransform: 'uppercase', color: Colors.sageDark,
                 margin: 0,
               }}>This week</p>
-              <h3 style={{ fontSize: 18, fontWeight: FontWeight.bold, color: Colors.charcoal, margin: '2px 0 0' }}>
+              <h3 style={{ fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.charcoal, margin: '2px 0 0' }}>
                 4 things on your plate
               </h3>
             </div>
-            <span style={{ fontSize: 11, color: Colors.medGray, fontWeight: FontWeight.semibold }}>May 6 — May 12</span>
+            <span style={{ fontSize: FontSize.xs, color: Colors.medGray, fontWeight: FontWeight.semibold }}>May 6 — May 12</span>
           </div>
 
           {/* Weather-alert chip — weaves the weather-aware alert story into the calendar */}
@@ -517,7 +517,7 @@ export default function Landing() {
           }}>
             <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1.4 }}>🌪️</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5, textTransform: 'uppercase', color: Colors.copper, margin: 0 }}>
+              <p style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, letterSpacing: 0.5, textTransform: 'uppercase', color: Colors.copper, margin: 0 }}>
                 Severe weather watch · Tulsa
               </p>
               <p style={{ fontSize: 12, color: Colors.charcoal, margin: '2px 0 0', lineHeight: 1.45 }}>
@@ -548,10 +548,10 @@ export default function Landing() {
                 }}>{t.day}</span>
                 <span aria-hidden="true" style={{ fontSize: 14 }}>{t.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: 0 }}>
+                  <p style={{ fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.charcoal, margin: 0 }}>
                     {t.title}
                   </p>
-                  <p style={{ fontSize: 11, color: Colors.medGray, margin: '1px 0 0' }}>{t.tag}</p>
+                  <p style={{ fontSize: FontSize.xs, color: Colors.medGray, margin: '1px 0 0' }}>{t.tag}</p>
                 </div>
               </div>
             ))}
@@ -559,7 +559,7 @@ export default function Landing() {
 
           {/* Footer reassurance */}
           <p style={{
-            fontSize: 11, color: Colors.medGray, margin: '14px 0 0',
+            fontSize: FontSize.xs, color: Colors.medGray, margin: '14px 0 0',
             textAlign: 'center', fontStyle: 'italic',
           }}>
             Each task includes step-by-step instructions, parts list, and a one-tap log.
@@ -569,7 +569,7 @@ export default function Landing() {
         {/* Copy column */}
         <div style={{ order: isMobile ? 1 : 1 }}>
           <p style={{
-            fontSize: 13, fontWeight: FontWeight.bold,
+            fontSize: FontSize.sm, fontWeight: FontWeight.bold,
             letterSpacing: 1.4, textTransform: 'uppercase',
             color: Colors.sageDark, margin: '0 0 16px',
           }}>
@@ -593,19 +593,19 @@ export default function Landing() {
           }}>
             {[
               { icon: '📅', text: <><strong>40+ task templates</strong> tailored to make/model/age — not a generic checklist.</> },
-              { icon: '⛈️', text: <><strong>Weather-aware alerts</strong> pair Tulsa storm watches with actionable prep tasks the day before.</> },
+              { icon: '⛈️', text: <><strong>Weather-aware alerts</strong> pair your local storm watches with actionable prep tasks the day before.</> },
               { icon: '💬', text: <><strong>AI Home Assistant</strong> answers "what does this noise mean" or "how often should I…" grounded in your equipment.</> },
               { icon: '📊', text: <><strong>Home Health Score</strong> tracks how well-maintained your home actually is — and what to fix next.</> },
             ].map((item, i) => (
               <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <span aria-hidden="true" style={{ fontSize: 22, lineHeight: '28px', flexShrink: 0 }}>{item.icon}</span>
-                <span style={{ fontSize: 15, color: Colors.charcoal, lineHeight: 1.55 }}>{item.text}</span>
+                <span aria-hidden="true" style={{ fontSize: FontSize.xl, lineHeight: '28px', flexShrink: 0 }}>{item.icon}</span>
+                <span style={{ fontSize: FontSize.md, color: Colors.charcoal, lineHeight: 1.55 }}>{item.text}</span>
               </li>
             ))}
           </ul>
           <button onClick={() => ctaToSignup('smart_calendar')}
             style={{
-              padding: '14px 28px', fontSize: 15, fontWeight: FontWeight.semibold,
+              padding: '14px 28px', fontSize: FontSize.md, fontWeight: FontWeight.semibold,
               background: Colors.copper, color: Colors.white, border: 'none',
               borderRadius: BorderRadius.lg, cursor: 'pointer', fontFamily: fontStack,
               transition: 'all 0.3s ease',
@@ -820,7 +820,7 @@ export default function Landing() {
       desc: string;
       startsAt: number; // monthly floor in USD
     }> = [
-      { slug: 'pest',     category: 'pest',     icon: '🪳', title: 'Pest Shield',    desc: 'Quarterly treatments + free re-services. Tulsa Certified Pros handle the rotation so you never think about it.', startsAt: 39 },
+      { slug: 'pest',     category: 'pest',     icon: '🪳', title: 'Pest Shield',    desc: 'Quarterly treatments + free re-services. Canopy Certified Pros handle the rotation so you never think about it.', startsAt: 39 },
       { slug: 'lawn',     category: 'lawn',     icon: '🌿', title: 'Lawn Care',      desc: 'Mow, edge, and fertilize on a bi-weekly schedule built around your yard size and grass type.', startsAt: 59 },
       { slug: 'pool',     category: 'pool',     icon: '🏊', title: 'Pool Service',   desc: 'Weekly chemistry, cleaning, and equipment checks. Log book stays in Canopy.', startsAt: 149 },
       { slug: 'septic',   category: 'septic',   icon: '💧', title: 'Septic Care',    desc: 'Scheduled inspections, pumping reminders, and on-call response when something goes wrong.', startsAt: 19 },
@@ -843,6 +843,13 @@ export default function Landing() {
         aria-labelledby="add-ons-heading"
       >
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 16px' : 0 }}>
+          <p style={{
+            textAlign: 'center', fontSize: FontSize.sm, fontWeight: FontWeight.bold,
+            letterSpacing: 1.4, textTransform: 'uppercase', color: Colors.copper,
+            margin: '0 0 12px',
+          }}>
+            Recurring services
+          </p>
           <h2
             id="add-ons-heading"
             style={{
@@ -866,8 +873,7 @@ export default function Landing() {
               lineHeight: 1.6,
             }}
           >
-            Layer Canopy-vetted recurring services onto your plan. One login, one
-            invoice, one record of what was done and when.
+            Pest, lawn, pool, septic, cleaning — and anything else recurring that touches your home. One login, one invoice, one verified record of what was done and when.
           </p>
         </div>
 
@@ -1007,6 +1013,154 @@ export default function Landing() {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════
+  // CERTIFIED PRO NETWORK — for bigger one-off jobs (roof, electrical,
+  // plumbing, HVAC install, remodels, etc.) — different cadence from the
+  // recurring AddOns above. Same vetted-Pros marketplace, different product.
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const CertifiedProNetworkSection = () => {
+    const categories: Array<{ icon: string; title: string; examples: string }> = [
+      { icon: '🏠', title: 'Roofing & gutters',  examples: 'Replacements, repairs, gutter guards' },
+      { icon: '⚡', title: 'Electrical',          examples: 'Panel upgrades, EV chargers, rewiring' },
+      { icon: '🔧', title: 'Plumbing',            examples: 'Water heaters, leaks, repipes' },
+      { icon: '❄️', title: 'HVAC install',        examples: 'New systems, ductwork, zoning' },
+      { icon: '🛁', title: 'Remodels',            examples: 'Kitchen, bath, basement finish' },
+      { icon: '✨', title: 'Anything else',       examples: 'Tell us the job — chances are we have a Pro' },
+    ];
+
+    return (
+      <section style={{
+        background: Colors.cream,
+        padding: isMobile ? '64px 16px' : '96px 24px',
+        fontFamily: fontStack,
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Subtle copper accent bottom-right for visual rhythm vs the sage-
+            tinted SmartCalendarSection and warmWhite AddOnsSection above. */}
+        <div aria-hidden="true" style={{
+          position: 'absolute', bottom: -100, right: -120, width: 380, height: 380,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${Colors.copper}10 0%, transparent 70%)`,
+          pointerEvents: 'none',
+        }} />
+
+        <div style={{ maxWidth: 1080, margin: '0 auto', position: 'relative' }}>
+          <p style={{
+            textAlign: 'center', fontSize: FontSize.sm, fontWeight: FontWeight.bold,
+            letterSpacing: 1.4, textTransform: 'uppercase', color: Colors.copper,
+            margin: '0 0 12px',
+          }}>
+            For bigger jobs
+          </p>
+          <h2 style={{
+            fontSize: isMobile ? 28 : 40, fontWeight: FontWeight.bold,
+            color: Colors.charcoal, textAlign: 'center',
+            margin: '0 0 16px', lineHeight: 1.2,
+          }}>
+            Need a roof? A panel upgrade? A bath remodel?
+          </h2>
+          <p style={{
+            fontSize: isMobile ? 15 : 17, color: Colors.medGray,
+            textAlign: 'center', maxWidth: 660,
+            margin: '0 auto 48px', lineHeight: 1.6,
+          }}>
+            Tap the <strong style={{ color: Colors.charcoal }}>Canopy Certified Pro Network</strong> — vetted contractors, fixed-fee quotes, and every job logs straight to your Home Token. No more chasing three estimates from people who never call back.
+          </p>
+
+          {/* Category grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+            gap: isMobile ? 12 : 18,
+            marginBottom: 40,
+          }}>
+            {categories.map((cat) => (
+              <div key={cat.title} style={{
+                background: Colors.white,
+                border: `1px solid ${Colors.lightGray}`,
+                borderRadius: 14,
+                padding: isMobile ? 16 : 20,
+                display: 'flex', alignItems: 'flex-start', gap: 12,
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                boxShadow: '0 1px 2px rgba(38, 32, 28, 0.04)',
+              }}>
+                <span aria-hidden="true" style={{ fontSize: 24, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>{cat.icon}</span>
+                <div style={{ minWidth: 0 }}>
+                  <h3 style={{
+                    fontSize: FontSize.md, fontWeight: FontWeight.semibold,
+                    color: Colors.charcoal, margin: '0 0 3px',
+                  }}>
+                    {cat.title}
+                  </h3>
+                  <p style={{ fontSize: 12.5, color: Colors.medGray, margin: 0, lineHeight: 1.45 }}>
+                    {cat.examples}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* How-it-works inline strip */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: isMobile ? 8 : 18, flexWrap: 'wrap',
+            padding: isMobile ? '16px 14px' : '18px 24px',
+            borderRadius: 12,
+            background: Colors.white,
+            border: `1px solid ${Colors.lightGray}`,
+            marginBottom: 28,
+          }}>
+            {[
+              { n: '1', label: 'Tell us the job' },
+              { n: '2', label: 'Vetted Pro quotes' },
+              { n: '3', label: 'You approve & schedule' },
+              { n: '4', label: 'Work logs to your Home Token' },
+            ].map((s, i, arr) => (
+              <div key={s.n} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 12 }}>
+                <span style={{
+                  width: 22, height: 22, borderRadius: '50%',
+                  background: Colors.sage, color: Colors.white,
+                  fontSize: 12, fontWeight: FontWeight.bold,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>{s.n}</span>
+                <span style={{ fontSize: isMobile ? 12 : 14, fontWeight: FontWeight.medium, color: Colors.charcoal }}>{s.label}</span>
+                {i < arr.length - 1 && !isMobile && (
+                  <span aria-hidden="true" style={{ color: Colors.medGray, fontSize: 14 }}>→</span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <div style={{ textAlign: 'center' }}>
+            <button
+              onClick={() => ctaToSignup('certified_pro_network')}
+              style={{
+                padding: '14px 28px', fontSize: FontSize.md, fontWeight: FontWeight.semibold,
+                background: Colors.copper, color: Colors.white, border: 'none',
+                borderRadius: BorderRadius.lg, cursor: 'pointer', fontFamily: fontStack,
+                transition: 'all 0.3s ease',
+                marginRight: 8,
+              }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.background = Colors.copperDark; (e.target as HTMLElement).style.transform = 'translateY(-2px)'; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.background = Colors.copper; (e.target as HTMLElement).style.transform = 'translateY(0)'; }}
+            >
+              Request a Pro for your job →
+            </button>
+            <p style={{
+              fontSize: 12, color: Colors.medGray, margin: '14px 0 0',
+              fontStyle: 'italic',
+            }}>
+              Available on Pro plans in active service areas. Free and Home tiers can still request — we&apos;ll route to your area as the network expands.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════════
   // WHO IS IT FOR — persona cards targeting the main entry-points into Canopy
   // ═══════════════════════════════════════════════════════════════════════════════
   const WhoIsItFor = () => {
@@ -1038,7 +1192,7 @@ export default function Landing() {
         key: 'selling_soon',
         icon: '📋',
         title: 'Selling soon?',
-        desc: 'Walk into listing day with a verifiable maintenance record and a Sale Prep checklist Tulsa agents helped us build. Worth ~$14k against inspection objections per HomeLight.',
+        desc: 'Walk into listing day with a verifiable maintenance record and a Sale Prep checklist real estate agents helped us build. Worth ~$14k against inspection objections per HomeLight.',
         cta: 'Preview Sale Prep',
         destination: '/sale-prep-preview',
       },
@@ -1170,7 +1324,7 @@ export default function Landing() {
     }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <p style={{
-          textAlign: 'center', fontSize: 13, fontWeight: FontWeight.bold,
+          textAlign: 'center', fontSize: FontSize.sm, fontWeight: FontWeight.bold,
           letterSpacing: 1.4, textTransform: 'uppercase', color: Colors.copper,
           margin: '0 0 12px 0',
         }}>
@@ -1319,17 +1473,32 @@ export default function Landing() {
       ? { price: fmt(PRICING.pro.stripe.yearly / 12), period: '/mo, billed annually' }
       : { price: fmt(PRICING.pro.stripe.monthly), period: '/mo' };
 
+    // 2026-05-06 round-3: pricing-card aesthetic pass.
+    // - Cards now have a soft top→bottom inner gradient to add depth without
+    //   moving off-brand. Borders stay 1px (was 2px) to feel less heavy.
+    // - Featured card gets a copper border + a slightly larger box-shadow,
+    //   but no transform/scale — that was throwing off vertical alignment
+    //   with adjacent cards and forcing the MOST-POPULAR pill to overlap
+    //   the adjacent borders awkwardly.
+    // - Padding bumped on featured to compensate visually for what scale was
+    //   doing, so the featured card still reads as the hero of the row.
     const baseCard: React.CSSProperties = {
-      background: Colors.white, border: `2px solid ${Colors.lightGray}`,
-      padding: '40px 24px', borderRadius: BorderRadius.lg, textAlign: 'center',
+      background: `linear-gradient(180deg, ${Colors.white} 0%, ${Colors.warmWhite} 100%)`,
+      border: `1px solid ${Colors.lightGray}`,
+      padding: '44px 28px 36px',
+      borderRadius: 16,
+      textAlign: 'center',
       display: 'flex', flexDirection: 'column',
+      boxShadow: '0 1px 2px rgba(38, 32, 28, 0.04)',
+      transition: 'transform 0.25s ease, box-shadow 0.25s ease',
     };
     const featuredCard: React.CSSProperties = {
       ...baseCard,
+      background: Colors.white,
       border: `2px solid ${Colors.copper}`,
+      padding: '52px 28px 40px',
       position: 'relative',
-      transform: isMobile ? 'none' : 'scale(1.04)',
-      boxShadow: '0 12px 32px rgba(196, 132, 78, 0.15)',
+      boxShadow: '0 24px 48px -16px rgba(196, 132, 78, 0.28), 0 4px 12px rgba(38, 32, 28, 0.06)',
     };
     const listStyle: React.CSSProperties = { listStyle: 'none', padding: 0, margin: '0 0 28px 0', textAlign: 'left', flex: 1 };
     const itemStyle: React.CSSProperties = { fontSize: 14, color: Colors.medGray, marginBottom: 10, display: 'flex', gap: 8 };
@@ -1466,12 +1635,19 @@ export default function Landing() {
             })}
           </div>
 
+          {/* 2026-05-06 round-3: grid was still repeat(4, 1fr) after Pro+
+              was killed → empty 4th slot threw off centering. Fixed to
+              repeat(3, 1fr) and capped width so cards aren't excessively
+              wide on large screens. */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
-            gap: isMobile ? 20 : 20,
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+            gap: isMobile ? 20 : 24,
             marginBottom: 32,
             alignItems: 'stretch',
+            maxWidth: 1080,
+            marginLeft: 'auto',
+            marginRight: 'auto',
           }}>
             {/* Free */}
             <div style={baseCard}>
@@ -1564,13 +1740,16 @@ export default function Landing() {
           <div style={{
             background: `linear-gradient(135deg, ${Colors.cream} 0%, ${Colors.copper}10 50%, ${Colors.cream} 100%)`,
             border: `1px solid ${Colors.copper}30`,
-            borderRadius: BorderRadius.lg,
+            borderRadius: 16,
             padding: isMobile ? 24 : 36,
             marginBottom: 24,
             display: 'grid',
             gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr',
             gap: isMobile ? 24 : 40,
             alignItems: 'center',
+            maxWidth: 1080,
+            marginLeft: 'auto',
+            marginRight: 'auto',
           }}>
             <div>
               <p style={{
@@ -1587,7 +1766,7 @@ export default function Landing() {
                 Pro + the add-ons you want = complete coverage.
               </h3>
               <p style={{
-                fontSize: 15, color: Colors.medGray,
+                fontSize: FontSize.md, color: Colors.medGray,
                 lineHeight: 1.55, margin: '0 0 16px',
               }}>
                 Stack pest, lawn, pool, septic, cleaning, and the Annual Maintenance Inspection on top of Pro&apos;s bimonthly visits. One login, one record, one place where everything that touches your home is logged.
@@ -1615,7 +1794,7 @@ export default function Landing() {
               borderRadius: BorderRadius.md,
               border: `1px solid ${Colors.lightGray}`,
             }}>
-              <p style={{ fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.7, textTransform: 'uppercase', color: Colors.medGray, margin: 0 }}>
+              <p style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, letterSpacing: 0.7, textTransform: 'uppercase', color: Colors.medGray, margin: 0 }}>
                 Sample concierge stack · Tulsa
               </p>
               {[
@@ -1631,11 +1810,11 @@ export default function Landing() {
                   background: Colors.cream,
                 }}>
                   <span aria-hidden="true" style={{ fontSize: 16, flexShrink: 0 }}>{row.icon}</span>
-                  <span style={{ flex: 1, fontSize: 13, fontWeight: FontWeight.semibold, color: Colors.charcoal }}>{row.label}</span>
+                  <span style={{ flex: 1, fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.charcoal }}>{row.label}</span>
                   <span style={{ fontSize: 12, color: Colors.medGray, fontWeight: FontWeight.medium }}>{row.price}</span>
                 </div>
               ))}
-              <p style={{ fontSize: 11, color: Colors.medGray, margin: '4px 0 0', textAlign: 'center', fontStyle: 'italic' }}>
+              <p style={{ fontSize: FontSize.xs, color: Colors.medGray, margin: '4px 0 0', textAlign: 'center', fontStyle: 'italic' }}>
                 Build the stack you actually want — add or drop any time.
               </p>
             </div>
@@ -1981,6 +2160,11 @@ export default function Landing() {
         <SmartCalendarSection />
         <HomeTokenSection />
         <AddOnsSection />
+        {/* 2026-05-06 round-4: Certified Pro Network for one-off bigger jobs
+            (roof, electrical, plumbing, HVAC install, remodel). Same vetted
+            marketplace as recurring add-ons, different cadence. Pairs with
+            AddOnsSection so the marketplace story is complete. */}
+        <CertifiedProNetworkSection />
         <WhoIsItFor />
         <FeaturesSection />
         <StatsSection />

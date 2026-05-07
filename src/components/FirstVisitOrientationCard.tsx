@@ -43,7 +43,7 @@ const PRO_TIERS = new Set(['pro', 'pro_2']);
 
 const EXPECT_BULLETS: string[] = [
   'Walkthrough of HVAC, plumbing, water heater, and safety sensors (~45 min).',
-  'Photos of everything inspected — so your Home Token stays current.',
+  'Photos of everything inspected, so your Home Token stays current.',
   'AI-generated summary emailed within 24 hours with priorities ranked.',
   'Recommended tasks auto-added to your Canopy calendar; nothing pressure-sold.',
 ];
@@ -170,7 +170,7 @@ export default function FirstVisitOrientationCard({ isMobile }: Props) {
         month: 'short',
         day: 'numeric',
       })
-    : 'Date pending — we\u2019ll propose one soon';
+    : 'Date pending. We\u2019ll propose one soon';
 
   async function handleToggleSms(next: boolean) {
     if (!user?.id || saving) return;

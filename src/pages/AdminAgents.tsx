@@ -516,27 +516,27 @@ export default function AdminAgents() {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                         <div>
                           <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 500 }}>Brokerage</p>
-                          <p style={{ fontSize: 14, color: Colors.charcoal, margin: 0 }}>{app.brokerage || '—'}</p>
+                          <p style={{ fontSize: 14, color: Colors.charcoal, margin: 0 }}>{app.brokerage || '-'}</p>
                         </div>
                         <div>
                           <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 500 }}>License Number</p>
-                          <p style={{ fontSize: 14, color: Colors.charcoal, margin: 0 }}>{app.license_number || '—'}</p>
+                          <p style={{ fontSize: 14, color: Colors.charcoal, margin: 0 }}>{app.license_number || '-'}</p>
                         </div>
                         <div>
                           <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 500 }}>License State</p>
-                          <p style={{ fontSize: 14, color: Colors.charcoal, margin: 0 }}>{app.license_state || '—'}</p>
+                          <p style={{ fontSize: 14, color: Colors.charcoal, margin: 0 }}>{app.license_state || '-'}</p>
                         </div>
                         <div>
                           <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 500 }}>Phone</p>
-                          <p style={{ fontSize: 14, color: Colors.charcoal, margin: 0 }}>{app.phone || '—'}</p>
+                          <p style={{ fontSize: 14, color: Colors.charcoal, margin: 0 }}>{app.phone || '-'}</p>
                         </div>
                         <div>
                           <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 500 }}>Experience</p>
-                          <p style={{ fontSize: 14, color: Colors.charcoal, margin: 0 }}>{app.years_experience ? `${app.years_experience} years` : '—'}</p>
+                          <p style={{ fontSize: 14, color: Colors.charcoal, margin: 0 }}>{app.years_experience ? `${app.years_experience} years` : '-'}</p>
                         </div>
                         <div>
                           <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 500 }}>Referral Source</p>
-                          <p style={{ fontSize: 14, color: Colors.charcoal, margin: 0 }}>{app.referral_source || '—'}</p>
+                          <p style={{ fontSize: 14, color: Colors.charcoal, margin: 0 }}>{app.referral_source || '-'}</p>
                         </div>
                       </div>
 
@@ -544,7 +544,7 @@ export default function AdminAgents() {
                         <div style={{ marginBottom: 16 }}>
                           <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 4px 0', fontWeight: 500 }}>Service Area ZIPs</p>
                           <p style={{ fontSize: 14, color: Colors.charcoal, margin: 0 }}>
-                            {Array.isArray(app.service_area_zips) ? app.service_area_zips.join(', ') : '—'}
+                            {Array.isArray(app.service_area_zips) ? app.service_area_zips.join(', ') : '-'}
                           </p>
                         </div>
                       )}

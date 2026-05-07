@@ -65,13 +65,13 @@ interface PageMeta {
 
 const PAGE_META: Record<string, PageMeta> = {
   '/': {
-    title: 'Canopy — Smart Home Maintenance',
+    title: 'Canopy | Smart Home Maintenance',
     description:
       'Track equipment, manage maintenance tasks, get weather alerts, and keep your home in peak condition with AI-powered insights.',
     ogImage: '/og/canopy-landing.png',
   },
   '/for-agents': {
-    title: 'Canopy for Real Estate Agents — Gift Home Maintenance to Buyers',
+    title: 'Canopy for Real Estate Agents | Gift Home Maintenance to Buyers',
     description:
       'Give your buyers the gift of organized home maintenance. Create client gift codes, track engagement, and build lasting relationships after closing.',
     ogImage: '/og/canopy-agents.png',
@@ -81,7 +81,7 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/for-pros': {
-    title: 'Canopy for Service Providers — Grow Your Home Maintenance Business',
+    title: 'Canopy for Service Providers | Grow Your Home Maintenance Business',
     description:
       'Join the Canopy network as a certified pro. Get matched with homeowners, manage visits, and grow your service business.',
     ogImage: '/og/canopy-pros.png',
@@ -91,7 +91,7 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/apply-pro': {
-    title: 'Apply as a Pro — Canopy Home',
+    title: 'Apply as a Pro | Canopy Home',
     description:
       "Apply to join the Canopy provider network. We're looking for skilled, reliable home maintenance professionals in Tulsa.",
     ogImage: '/og/canopy-pros.png',
@@ -102,7 +102,7 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/signup': {
-    title: 'Sign Up — Canopy Home',
+    title: 'Sign Up | Canopy Home',
     description: 'Create your free Canopy account and start organizing your home maintenance today.',
     breadcrumbs: [
       { name: 'Home', path: '/' },
@@ -110,7 +110,7 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/login': {
-    title: 'Log In — Canopy Home',
+    title: 'Log In | Canopy Home',
     description: 'Sign in to your Canopy account to manage your home maintenance, equipment, and tasks.',
     breadcrumbs: [
       { name: 'Home', path: '/' },
@@ -118,7 +118,7 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/support': {
-    title: 'Support — Canopy Home',
+    title: 'Support | Canopy Home',
     description: 'Get help with your Canopy account, report bugs, or contact our support team.',
     breadcrumbs: [
       { name: 'Home', path: '/' },
@@ -126,7 +126,7 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/sale-prep-preview': {
-    title: 'Selling Soon? The Canopy Sale Prep Playbook — Canopy Home',
+    title: 'Selling Soon? The Canopy Sale Prep Playbook | Canopy Home',
     description:
       '5 categories of pre-listing prep tasks for Tulsa home sellers: curb appeal, systems check, documents, deep clean, and marketing-ready photos.',
     ogImage: '/og/canopy-sale-prep.png',
@@ -136,7 +136,7 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/security': {
-    title: 'Security & Privacy — Canopy Home',
+    title: 'Security & Privacy | Canopy Home',
     description:
       'How Canopy protects your home data: bank-level encryption, PIN-protected notes, row-level isolation, export/delete on demand, no data sale, full audit trail.',
     ogImage: '/og/canopy-security.png',
@@ -146,7 +146,7 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/testimonial/submit': {
-    title: 'Share Your Canopy Story — Canopy Home',
+    title: 'Share Your Canopy Story | Canopy Home',
     description:
       'Share a sentence or two about your experience with Canopy. Helps other Tulsa homeowners figure out whether Canopy is right for them.',
     breadcrumbs: [
@@ -155,14 +155,14 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/terms': {
-    title: 'Terms of Service — Canopy Home',
+    title: 'Terms of Service | Canopy Home',
     breadcrumbs: [
       { name: 'Home', path: '/' },
       { name: 'Terms of Service', path: '/terms' },
     ],
   },
   '/privacy': {
-    title: 'Privacy Policy — Canopy Home',
+    title: 'Privacy Policy | Canopy Home',
     breadcrumbs: [
       { name: 'Home', path: '/' },
       { name: 'Privacy Policy', path: '/privacy' },
@@ -172,7 +172,7 @@ const PAGE_META: Record<string, PageMeta> = {
   // previous entry under /cancellation-policy never matched. Kept legacy key
   // as an alias below in case any outbound links still use the old URL.
   '/cancellation': {
-    title: 'Cancellation & Refund Policy — Canopy Home',
+    title: 'Cancellation & Refund Policy | Canopy Home',
     description:
       'How to cancel your Canopy subscription, what happens to your data, and our 7-day refund window on Stripe purchases.',
     breadcrumbs: [
@@ -181,7 +181,7 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/cancellation-policy': {
-    title: 'Cancellation & Refund Policy — Canopy Home',
+    title: 'Cancellation & Refund Policy | Canopy Home',
     description:
       'How to cancel your Canopy subscription, what happens to your data, and our 7-day refund window on Stripe purchases.',
     breadcrumbs: [
@@ -190,7 +190,7 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/ai-disclaimer': {
-    title: 'AI Recommendations Disclaimer — Canopy Home',
+    title: 'AI Recommendations Disclaimer | Canopy Home',
     description:
       'How Canopy uses AI, the limits of AI-generated recommendations, and when to consult a licensed professional.',
     breadcrumbs: [
@@ -199,7 +199,7 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/pci-compliance': {
-    title: 'PCI DSS Compliance — Canopy Home',
+    title: 'PCI DSS Compliance | Canopy Home',
     description:
       'Canopy\'s payment architecture: all card data is handled by Stripe (PCI DSS Level 1). Canopy never stores, processes, or transmits cardholder data.',
     breadcrumbs: [
@@ -208,7 +208,7 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/contractor-terms': {
-    title: 'Pro Provider Agreement — Canopy Home',
+    title: 'Pro Provider Agreement | Canopy Home',
     description:
       'Terms, payouts, 15% Canopy fee, scheduling, quality standards, and independent-contractor status for Canopy Pro Providers.',
     breadcrumbs: [
@@ -217,7 +217,7 @@ const PAGE_META: Record<string, PageMeta> = {
     ],
   },
   '/add-ons': {
-    title: 'Canopy Add-Ons — Routine Cleaning, Gutters, HVAC & More',
+    title: 'Canopy Add-Ons | Routine Cleaning, Gutters, HVAC & More',
     description:
       'Stack on recurring services to the Canopy platform. Per-property quotes, contractor-matched, billed monthly alongside your Home or Pro subscription.',
     breadcrumbs: [
@@ -298,13 +298,13 @@ export function usePageMeta() {
     } else if (!lookupPath.startsWith('/a/')) {
       // Reset to default for pages without specific meta; preserve the
       // dynamic agent-microsite titles which set their own doc.title.
-      document.title = 'Canopy — Smart Home Maintenance';
+      document.title = 'Canopy | Smart Home Maintenance';
     }
 
     // --- Description ---
     const description =
       meta?.description ??
-      'Canopy Home — smart home maintenance tracking, weather alerts, equipment management, and seasonal task reminders for homeowners.';
+      'Canopy Home, smart home maintenance tracking, weather alerts, equipment management, and seasonal task reminders for homeowners.';
     const descTag = upsertMeta('name', 'description');
     const ogDesc = upsertMeta('property', 'og:description');
     const twDesc = upsertMeta('name', 'twitter:description');

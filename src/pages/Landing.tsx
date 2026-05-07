@@ -322,8 +322,27 @@ export default function Landing() {
       background: `linear-gradient(180deg, ${Colors.warmWhite} 0%, ${Colors.cream} 100%)`,
       padding: isMobile ? '56px 16px 64px' : '96px 24px 112px',
       textAlign: 'center', fontFamily: fontStack,
+      position: 'relative',
+      overflow: 'hidden',
     }}>
-      <div style={{ maxWidth: 860, margin: '0 auto' }}>
+      {/* 2026-05-07: paired soft accent ribbons. Sage glow top-left, copper
+          glow top-right. Same trick the SmartCalendar + HomeToken spotlight
+          sections use further down the page. Adds depth without committing
+          to a photo backdrop, which would push the asset-grade voice into
+          consumer-brand territory. aria-hidden — purely decorative. */}
+      <div aria-hidden="true" style={{
+        position: 'absolute', top: -120, left: -140, width: 480, height: 480,
+        borderRadius: '50%',
+        background: `radial-gradient(circle, ${Colors.sage}1A 0%, transparent 70%)`,
+        pointerEvents: 'none',
+      }} />
+      <div aria-hidden="true" style={{
+        position: 'absolute', top: -80, right: -120, width: 420, height: 420,
+        borderRadius: '50%',
+        background: `radial-gradient(circle, ${Colors.copper}18 0%, transparent 72%)`,
+        pointerEvents: 'none',
+      }} />
+      <div style={{ maxWidth: 860, margin: '0 auto', position: 'relative' }}>
         {/* 2026-05-06 round-5: ZipPreCheck moved out of the hero. Putting it
             up here implied the whole product is geo-gated, which contradicts
             the national Home tier messaging. Now lives inside AddOnsSection
@@ -390,10 +409,6 @@ export default function Landing() {
             {heroCopy.secondaryCta}
           </button>
         </div>
-
-        <p style={{ fontSize: 14, color: Colors.medGray, margin: 0 }}>
-          Free forever. No credit card required.
-        </p>
 
         {/* 2026-05-06 round-6: TulsaTrustStrip moved out of the hero. Sitting
             here, it implied the whole product was Tulsa-only and undercut
@@ -2069,7 +2084,7 @@ export default function Landing() {
         <p style={{
           fontSize: isMobile ? 16 : 18, color: 'var(--color-silver)', lineHeight: 1.6, margin: '0 0 36px 0',
         }}>
-          Start in 2 minutes. Free forever. Upgrade when you're ready.
+          Start in 2 minutes. Upgrade when you're ready.
         </p>
         <button onClick={() => ctaToSignup('final_cta')}
           style={{

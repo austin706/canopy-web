@@ -251,7 +251,7 @@ function generateTasksForHomeImpl(
   // Use DB templates as the source of truth (migration 061 seeds all built-in
   // templates as source='built_in' rows with stable TEXT ids). A hardcoded
   // template is only used as a fallback when no DB row with the same id AND no
-  // DB row with the same title|category exists — which should only happen in
+  // DB row with the same title|category exists · which should only happen in
   // fresh-dev environments that haven't run migration 061.
   const convertedDB = customTemplates
     .filter((db) => db.active)
@@ -266,7 +266,7 @@ function generateTasksForHomeImpl(
   // that only provide metadata overrides (is_cleaning, service_type, etc.) and
   // rely on the DB for the full template body. If their matching DB row is missing
   // (e.g., because migration 061 hasn't been seeded with that specific id), the
-  // stub would fall through here WITHOUT applicable_months/title/category — and
+  // stub would fall through here WITHOUT applicable_months/title/category · and
   // the forEach below would crash on `template.applicable_months.includes(...)`.
   // See: refrigerator-coils-clean, garbage-disposal-clean, vent-hood-degrease,
   // dishwasher-clean, washing-machine-clean, garbage-bins-clean,
@@ -418,7 +418,7 @@ function generateTasksForHomeImpl(
       if (fpCount > 1) {
         effectiveTemplate = {
           ...template,
-          description: `${template.description} (You have ${fpCount} fireplaces — repeat for each.)`,
+          description: `${template.description} (You have ${fpCount} fireplaces · repeat for each.)`,
         };
       }
     }
@@ -448,9 +448,9 @@ function generateTasksForHomeImpl(
             userPreferences,
           );
         });
-        return; // Skip normal flow — consumable-specific tasks were generated
+        return; // Skip normal flow · consumable-specific tasks were generated
       }
-      // Fallback: no consumables scanned yet — generate generic task via normal flow
+      // Fallback: no consumables scanned yet · generate generic task via normal flow
     }
 
     // Route to appropriate scheduling logic
@@ -554,7 +554,7 @@ function generateTasksForHomeImpl(
 }
 
 /**
- * Generate DYNAMIC tasks — creates MULTIPLE future occurrences across the next 18 months.
+ * Generate DYNAMIC tasks · creates MULTIPLE future occurrences across the next 18 months.
  * This ensures the calendar has tasks in every month, not just the next occurrence.
  * On completion, createNextDynamicTask() will handle rescheduling from the completion date.
  */
@@ -597,7 +597,7 @@ function generateDynamicTask(
 }
 
 /**
- * Generate SEASONAL tasks — for each applicable month in the next 12 months.
+ * Generate SEASONAL tasks · for each applicable month in the next 12 months.
  * Creates one task per applicable month to fill out the calendar.
  */
 function generateSeasonalTasks(
@@ -687,7 +687,7 @@ function generateSeasonalTasks(
 /**
  * Generate one task per matching equipment consumable. Interval pulled
  * from the consumable row when present, else template default, else 90 days.
- * One unique task per (template.id, consumable.id) — the consumable.name
+ * One unique task per (template.id, consumable.id) · the consumable.name
  * is suffixed to the title so the dashboard shows distinct entries.
  */
 function generateConsumableTask(
@@ -702,8 +702,8 @@ function generateConsumableTask(
 ) {
   // Make each consumable's task title unique so dedup works correctly
   const suffix = consumable.spec
-    ? ` — ${consumable.name} (${consumable.spec})`
-    : ` — ${consumable.name}`;
+    ? ` · ${consumable.name} (${consumable.spec})`
+    : ` · ${consumable.name}`;
   const scopedTitle = `${template.title}${suffix}`;
 
   // Interval priority: consumable row → template default → 90 days
@@ -782,7 +782,7 @@ function createTaskFromTemplate(
     interval_days: template.interval_days,
     template_id: template.id,
     // C-11 (migration 066): snapshot the template version so we can detect stale
-    // tasks later. Absent for hardcoded TASK_TEMPLATES — only DB templates carry a version.
+    // tasks later. Absent for hardcoded TASK_TEMPLATES · only DB templates carry a version.
     template_version: template.template_version,
     items_to_have_on_hand: template.items_to_have_on_hand,
     service_purpose: template.service_purpose,

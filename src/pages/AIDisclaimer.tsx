@@ -19,11 +19,11 @@ export default function AIDisclaimer() {
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>What AI Does in Canopy</h2>
       <p>Canopy leverages AI to enhance your home maintenance experience across several features:</p>
       <ul style={{ paddingLeft: 24, marginTop: 8 }}>
-        <li style={{ marginBottom: 8 }}><strong>Equipment scanning</strong> — Uses computer vision to identify make, model, and serial numbers from photos of your HVAC, water heater, appliances, and other equipment.</li>
-        <li style={{ marginBottom: 8 }}><strong>Maintenance task generation</strong> — Creates personalized task schedules based on your home profile, equipment, climate zone, age of systems, and season.</li>
-        <li style={{ marginBottom: 8 }}><strong>AI Home Assistant</strong> — Provides a conversational interface that answers questions about your home, maintenance tasks, equipment specifications, and best practices.</li>
-        <li style={{ marginBottom: 8 }}><strong>Inspection summaries</strong> — Generates summaries and actionable insights from professional inspection data and photos provided by Pro Providers.</li>
-        <li style={{ marginBottom: 8 }}><strong>Document analysis</strong> — Extracts tasks, recommendations, and information from uploaded inspection reports and maintenance documents.</li>
+        <li style={{ marginBottom: 8 }}><strong>Equipment scanning</strong>:Uses computer vision to identify make, model, and serial numbers from photos of your HVAC, water heater, appliances, and other equipment.</li>
+        <li style={{ marginBottom: 8 }}><strong>Maintenance task generation</strong>:Creates personalized task schedules based on your home profile, equipment, climate zone, age of systems, and season.</li>
+        <li style={{ marginBottom: 8 }}><strong>AI Home Assistant</strong>:Provides a conversational interface that answers questions about your home, maintenance tasks, equipment specifications, and best practices.</li>
+        <li style={{ marginBottom: 8 }}><strong>Inspection summaries</strong>:Generates summaries and actionable insights from professional inspection data and photos provided by Pro Providers.</li>
+        <li style={{ marginBottom: 8 }}><strong>Document analysis</strong>:Extracts tasks, recommendations, and information from uploaded inspection reports and maintenance documents.</li>
       </ul>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Important Limitations</h2>
@@ -34,7 +34,7 @@ export default function AIDisclaimer() {
         <li style={{ marginBottom: 8 }}>Engineering evaluations for structural concerns.</li>
         <li style={{ marginBottom: 8 }}>Building code compliance reviews or permit requirements.</li>
       </ul>
-      <p>Additionally, AI may produce inaccurate, incomplete, or outdated recommendations. Climate and equipment data used to generate recommendations may not reflect your exact conditions. AI does not inspect your home — all recommendations are based solely on data you provide or that we infer from your profile.</p>
+      <p>Additionally, AI may produce inaccurate, incomplete, or outdated recommendations. Climate and equipment data used to generate recommendations may not reflect your exact conditions. AI does not inspect your home. All recommendations are based solely on data you provide or that we infer from your profile.</p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Your Responsibility</h2>
       <p>You are responsible for verifying the accuracy and relevance of AI-generated recommendations before acting on them. Always consult qualified professionals for:</p>
@@ -47,7 +47,7 @@ export default function AIDisclaimer() {
       <p>Report any AI recommendations that concern you to support@canopyhome.app immediately. Canopy is not responsible for outcomes, property damage, personal injury, increased repair costs, voided warranties, or other consequences resulting from following or not following AI recommendations.</p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Data & Privacy</h2>
-      <p>AI processes your home data — including address, property details, equipment information, maintenance history, and photos — to generate personalized recommendations. Your data is not used to train or improve AI models. Conversations with the AI Home Assistant are not shared with third parties and are used only to improve your experience within Canopy. See our Privacy Policy for full details on how we collect, use, and protect your information.</p>
+      <p>AI processes your home data (including address, property details, equipment information, maintenance history, and photos) to generate personalized recommendations. Your data is not used to train or improve AI models. Conversations with the AI Home Assistant are not shared with third parties and are used only to improve your experience within Canopy. See our Privacy Policy for full details on how we collect, use, and protect your information.</p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Accuracy & Updates</h2>
       <p>AI models are updated periodically and may produce different recommendations as our technology improves. We work to improve accuracy, but we cannot guarantee that all AI-generated content is correct. Historical recommendations may not reflect current best practices, updated equipment specifications, or newly discovered issues.</p>

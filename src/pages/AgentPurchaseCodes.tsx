@@ -124,7 +124,7 @@ export default function AgentPurchaseCodes() {
     if (effectiveMonths < 1) return;
     if (delivery === 'direct' && !clientEmail.trim()) return;
     if (isBatch && delivery === 'direct') {
-      showToast({ message: 'Batch orders generate codes — switch delivery to Gift Code.' });
+      showToast({ message: 'Batch orders generate codes. Switch delivery to Gift Code.' });
       return;
     }
     setPurchasing(true);
@@ -307,7 +307,7 @@ export default function AgentPurchaseCodes() {
               {delivery === 'code' && (
                 <div style={{ marginTop: 10 }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: FontSize.sm }}>Client Name (optional — shown when they redeem)</label>
+                    <label style={{ fontSize: FontSize.sm }}>Client Name (optional, shown when they redeem)</label>
                     <input className="form-input" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Jane Smith" />
                   </div>
                 </div>
@@ -353,7 +353,7 @@ export default function AgentPurchaseCodes() {
             </div>
             {isBatch && delivery === 'direct' && (
               <p style={{ fontSize: FontSize.xs, color: Colors.warning, marginTop: 8 }}>
-                Batch orders deliver as gift codes — pick "Gift Code" delivery above.
+                Batch orders deliver as gift codes. Pick "Gift Code" delivery above.
               </p>
             )}
           </div>
@@ -388,7 +388,7 @@ export default function AgentPurchaseCodes() {
                 background: Colors.cream, border: `1px dashed ${rate.color}`,
               }}>
                 <p style={{ fontSize: FontSize.sm, fontWeight: 600, color: Colors.charcoal, margin: 0 }}>
-                  {clientName || 'Friend'}, welcome home — here's a year of Canopy on me.
+                  {clientName || 'Friend'}, welcome home. Here's a year of Canopy on me.
                 </p>
                 <p style={{ fontSize: FontSize.xs, color: Colors.medGray, margin: '6px 0 0' }}>
                   Canopy {rate.label} · {effectiveMonths} month{effectiveMonths !== 1 ? 's' : ''} · redeem at canopyhome.app
@@ -505,7 +505,7 @@ export default function AgentPurchaseCodes() {
                         </span>
                       </td>
                       <td>{c.duration_months} mo</td>
-                      <td>{c.client_name || c.client_email || '—'}</td>
+                      <td>{c.client_name || c.client_email || '-'}</td>
                       <td>
                         <span style={{
                           fontSize: FontSize.xs, padding: '2px 8px', borderRadius: 4, fontWeight: 600,

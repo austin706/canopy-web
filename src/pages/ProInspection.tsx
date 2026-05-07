@@ -224,7 +224,7 @@ export default function ProInspection() {
     priority: TaskPriority = 'medium',
   ) => {
     if (!user || !visit || !home) {
-      showToast({ message: 'Missing visit context — cannot add task.' });
+      showToast({ message: 'Missing visit context. Cannot add task.' });
       return;
     }
     if (tasksFromFindings[item.id]) {
@@ -234,7 +234,7 @@ export default function ProInspection() {
     try {
       setCreatingTaskForItem(item.id);
       const inspection = inspections.find((i) => i.id === inspectionId);
-      const equipmentLabel = inspection?.equipment_name ? ` — ${inspection.equipment_name}` : '';
+      const equipmentLabel = inspection?.equipment_name ? `: ${inspection.equipment_name}` : '';
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 14); // default 2-week window for follow-up
       const description = [
@@ -620,12 +620,12 @@ export default function ProInspection() {
             border: `1px solid ${Colors.sage}40`,
           }}>
             <p style={{ fontWeight: 700, fontSize: FontSize.sm, color: Colors.sage, margin: '0 0 4px' }}>
-              First Visit — Orientation
+              First Visit · Orientation
             </p>
             <p style={{ fontSize: FontSize.sm, color: Colors.charcoal, margin: 0, lineHeight: 1.5 }}>
               This is this homeowner's first Pro visit. Please do a thorough walkthrough of all systems,
               document equipment details and conditions, and set a maintenance baseline.
-              Take extra time to explain what you're checking and why — this sets the tone for the relationship.
+              Take extra time to explain what you're checking and why. This sets the tone for the relationship.
             </p>
           </div>
         )}
@@ -1145,7 +1145,7 @@ export default function ProInspection() {
                 color: Colors.charcoal,
               }}
             >
-              Homeowner Signature <span style={{ color: Colors.medGray, fontWeight: 400 }}>(optional — if homeowner is present)</span>
+              Homeowner Signature <span style={{ color: Colors.medGray, fontWeight: 400 }}>(optional, if homeowner is present)</span>
             </label>
             <input
               type="text"
@@ -1216,7 +1216,7 @@ export default function ProInspection() {
                 <strong>🛡️ Stamp this visit onto the Home Token</strong>
                 <br />
                 <span style={{ fontSize: FontSize.xs, color: Colors.medGray }}>
-                  Adds a tamper-evident maintenance inspection record using your visit findings — visible to the homeowner and any buyer the Home Token is shared with.
+                  Adds a tamper-evident maintenance inspection record using your visit findings, visible to the homeowner and any buyer the Home Token is shared with.
                 </span>
               </span>
             </label>

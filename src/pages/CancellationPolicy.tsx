@@ -19,19 +19,19 @@ export default function CancellationPolicy() {
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>Subscription Plans</h2>
       <p>Canopy offers the following subscription tiers:</p>
       <ul style={{ paddingLeft: 24, marginTop: 8 }}>
-        <li style={{ marginBottom: 8 }}><strong>Free</strong> — Access to core home management features, equipment tracking, and task organization.</li>
-        <li style={{ marginBottom: 8 }}><strong>Home</strong> — $6.99/month or $75.49/year. Includes AI-powered maintenance recommendations, task scheduling, equipment scanning, and inspection summaries.</li>
-        <li style={{ marginBottom: 8 }}><strong>Pro</strong> — $149/month or $1,609/year. Includes all Home features plus priority pro provider matching, advanced analytics, and unlimited inspections.</li>
-        <li style={{ marginBottom: 8 }}><strong>Pro+ services</strong> — Curated add-on bundle (Annual Certified Home Inspection, pest, lawn, pool, septic, cleaning, deep services). Sold per-add-on through the Add-Ons page on top of any subscription.</li>
+        <li style={{ marginBottom: 8 }}><strong>Free</strong>: Access to core home management features, equipment tracking, and task organization.</li>
+        <li style={{ marginBottom: 8 }}><strong>Home</strong>: $6.99/month or $75.49/year. Includes AI-powered maintenance recommendations, task scheduling, equipment scanning, and inspection summaries.</li>
+        <li style={{ marginBottom: 8 }}><strong>Pro</strong>: $149/month or $1,609/year. Includes all Home features plus priority pro provider matching, advanced analytics, and unlimited inspections.</li>
+        <li style={{ marginBottom: 8 }}><strong>Pro+ services</strong>: Curated add-on bundle (Annual Certified Home Inspection, pest, lawn, pool, septic, cleaning, deep services). Sold per-add-on through the Add-Ons page on top of any subscription.</li>
       </ul>
       <p>Subscriptions can be purchased via Stripe (web and mobile), Apple App Store, or Google Play Store. Billing and cancellation methods depend on your purchase platform.</p>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>How to Cancel</h2>
       <p>You can cancel your subscription using any of these methods:</p>
       <ul style={{ paddingLeft: 24, marginTop: 8 }}>
-        <li style={{ marginBottom: 8 }}><strong>In-app (mobile)</strong> — Open the Canopy app, go to your Profile, select Subscription, and tap Cancel Plan.</li>
-        <li style={{ marginBottom: 8 }}><strong>Web</strong> — Visit canopyhome.app, log in, navigate to your Subscription settings, and click Cancel Plan.</li>
-        <li style={{ marginBottom: 8 }}><strong>App Store</strong> — iOS: Open Settings, tap your Apple ID, select Subscriptions, find Canopy, and tap Cancel Subscription. Android: Open Google Play, go to your account, select Subscriptions, find Canopy, and tap Manage Subscription, then Cancel.</li>
+        <li style={{ marginBottom: 8 }}><strong>In-app (mobile)</strong>: Open the Canopy app, go to your Profile, select Subscription, and tap Cancel Plan.</li>
+        <li style={{ marginBottom: 8 }}><strong>Web</strong>: Visit canopyhome.app, log in, navigate to your Subscription settings, and click Cancel Plan.</li>
+        <li style={{ marginBottom: 8 }}><strong>App Store</strong>: iOS: Open Settings, tap your Apple ID, select Subscriptions, find Canopy, and tap Cancel Subscription. Android: Open Google Play, go to your account, select Subscriptions, find Canopy, and tap Manage Subscription, then Cancel.</li>
       </ul>
       <p>Cancellation takes effect at the end of your current billing period. You will retain full access to all paid features until the period ends.</p>
 

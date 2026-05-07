@@ -205,7 +205,7 @@ function StringListEditor({
         <button type="button" className="btn btn-ghost btn-sm" onClick={add} style={{ fontSize: 11 }}>+ Add</button>
       </div>
       {value.length === 0 && (
-        <div style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '4px 0' }}>None — click Add to create one.</div>
+        <div style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '4px 0' }}>None. Click Add to create one.</div>
       )}
       {value.map((text, idx) => (
         <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
@@ -605,13 +605,13 @@ export default function AdminReferenceData() {
                 <textarea className="form-input" value={editingTemplate.description || ''} onChange={e => setEditingTemplate({ ...editingTemplate, description: e.target.value })} style={{ minHeight: 40 }} />
               </div>
               <div style={{ marginTop: 8 }}>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Legacy Instructions (single paragraph — prefer Steps below)</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Legacy Instructions (single paragraph, prefer Steps below)</label>
                 <textarea className="form-input" value={editingTemplate.instructions || ''} onChange={e => setEditingTemplate({ ...editingTemplate, instructions: e.target.value })} style={{ minHeight: 40, fontSize: 12 }} />
               </div>
 
               {/* Ordered How-To Steps (instructions_json) */}
               <StringListEditor
-                label="How-To Steps (ordered — shown numbered on TaskDetail)"
+                label="How-To Steps (ordered, shown numbered on TaskDetail)"
                 value={editingTemplate.instructions_json || []}
                 onChange={arr => setEditingTemplate({ ...editingTemplate, instructions_json: arr.length ? arr : null })}
                 placeholder="e.g., Turn off breaker at the panel"
@@ -661,18 +661,18 @@ export default function AdminReferenceData() {
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Service Type</label>
                   <select className="form-select" value={editingTemplate.service_type || 'diy'} onChange={e => setEditingTemplate({ ...editingTemplate, service_type: e.target.value as any })}>
-                    <option value="diy">DIY — Homeowner handles</option>
-                    <option value="canopy_visit">Canopy Visit — Bimonthly tech</option>
-                    <option value="canopy_pro">Canopy Pro — Certified Pro dispatch</option>
-                    <option value="licensed_pro">Licensed Pro — Licensed contractor</option>
+                    <option value="diy">DIY: Homeowner handles</option>
+                    <option value="canopy_visit">Canopy Visit: Bimonthly tech</option>
+                    <option value="canopy_pro">Canopy Pro: Certified Pro dispatch</option>
+                    <option value="licensed_pro">Licensed Pro: Licensed contractor</option>
                   </select>
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Task Level</label>
                   <select className="form-select" value={editingTemplate.task_level || 'standard'} onChange={e => setEditingTemplate({ ...editingTemplate, task_level: e.target.value as any })}>
-                    <option value="core">Core — Basic essentials</option>
-                    <option value="standard">Standard — Recommended</option>
-                    <option value="comprehensive">Comprehensive — Everything</option>
+                    <option value="core">Core: Basic essentials</option>
+                    <option value="standard">Standard: Recommended</option>
+                    <option value="comprehensive">Comprehensive: Everything</option>
                   </select>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'end', paddingBottom: 4 }}>

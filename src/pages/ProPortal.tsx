@@ -695,9 +695,9 @@ export default function ProPortal() {
                   <tbody>
                     {providerClients.map(c => (
                       <tr key={c.id}>
-                        <td style={{ fontWeight: 600 }}>{c.full_name || '—'}</td>
+                        <td style={{ fontWeight: 600 }}>{c.full_name || '-'}</td>
                         <td style={{ fontSize: FontSize.sm }}>{c.address ? `${c.address}, ${c.city}` : '—'}</td>
-                        <td>{c.zip_code || '—'}</td>
+                        <td>{c.zip_code || '-'}</td>
                         <td>
                           <span style={{
                             padding: '2px 8px', borderRadius: 4, fontSize: FontSize.xs, fontWeight: 600,
@@ -878,7 +878,7 @@ export default function ProPortal() {
                   </p>
                   <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
                     {new Date(v.scheduled_date).toLocaleDateString()} at {v.scheduled_time}
-                    {v.user?.full_name ? ` — ${v.user.full_name}` : ''}
+                    {v.user?.full_name ? `, ${v.user.full_name}` : ''}
                     {v.home ? ` · ${v.home.address}, ${v.home.city}` : ''}
                   </p>
                 </div>
@@ -961,7 +961,7 @@ export default function ProPortal() {
         <div className="card" style={{ textAlign: 'center', padding: 32, color: Colors.medGray }}>
           <p>No clients assigned to your service area yet.</p>
           <p style={{ fontSize: 12, margin: '8px 0 0' }}>
-            Serving zip codes: {(provider?.zip_codes || []).join(', ') || 'None assigned — contact your admin'}
+            Serving zip codes: {(provider?.zip_codes || []).join(', ') || 'None assigned. Contact your admin.'}
           </p>
         </div>
       ) : (
@@ -982,7 +982,7 @@ export default function ProPortal() {
                   </p>
                   <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>
                     {c.address ? `${c.address}, ${c.city} ${c.state}` : c.email}
-                    {c.next_visit ? ` — Next visit: ${new Date(c.next_visit).toLocaleDateString()}` : ''}
+                    {c.next_visit ? ` · Next visit: ${new Date(c.next_visit).toLocaleDateString()}` : ''}
                   </p>
                 </div>
               </div>

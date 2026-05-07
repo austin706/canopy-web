@@ -15,7 +15,7 @@ interface EquipmentScannerProps {
 
 /** Photo tips for the expandable guide */
 const PHOTO_TIPS = [
-  { icon: '✓', label: 'Get close to the label', detail: 'Fill the frame with the nameplate — avoid full-equipment shots', good: true },
+  { icon: '✓', label: 'Get close to the label', detail: 'Fill the frame with the nameplate. Avoid full-equipment shots.', good: true },
   { icon: '✓', label: 'Good lighting, no flash', detail: 'Natural or overhead light works best. Flash causes glare on metal labels', good: true },
   { icon: '✓', label: 'Straight-on angle', detail: 'Hold your phone flat and parallel to the label to avoid distortion', good: true },
   { icon: '✗', label: 'Avoid blurry or far-away shots', detail: "If you can't read the text yourself, the AI won't be able to either", good: false },
@@ -653,7 +653,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
                 disabled={lookingUp}
                 style={{ fontSize: 12, color: Colors.medGray }}
               >
-                Skip lookup — just enter details myself
+                Skip lookup, just enter details myself
               </button>
             </div>
           )}
@@ -785,7 +785,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
                     <div>
                       <span style={{ fontSize: 13, fontWeight: 500, color: Colors.charcoal }}>{item.equipment}</span>
-                      <span style={{ fontSize: 12, color: Colors.medGray }}> — {item.location}</span>
+                      <span style={{ fontSize: 12, color: Colors.medGray }}> · {item.location}</span>
                     </div>
                   </div>
                 ))}
@@ -980,7 +980,7 @@ export default function EquipmentScanner({ onScanComplete, onClose }: EquipmentS
             )}
             {scanData.cached && (scanData.cache_hit_count ?? 1) > 1 && (
               <p style={{ fontSize: FontSize.xs, color: Colors.sageDark, marginTop: 6, fontStyle: 'italic' }}>
-                {(scanData.cache_hit_count ?? 1) - 1} other Canopy {((scanData.cache_hit_count ?? 1) - 1) === 1 ? 'home has' : 'homes have'} this model — auto-filled from our database.
+                {(scanData.cache_hit_count ?? 1) - 1} other Canopy {((scanData.cache_hit_count ?? 1) - 1) === 1 ? 'home has' : 'homes have'} this model. Auto-filled from our database.
               </p>
             )}
           </div>

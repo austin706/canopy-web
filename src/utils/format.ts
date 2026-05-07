@@ -55,27 +55,27 @@ const TIME_FMT = new Intl.DateTimeFormat('en-US', {
 
 export function formatDateShort(d: DateLike): string {
   const date = coerce(d);
-  return date ? SHORT_FMT.format(date) : '—';
+  return date ? SHORT_FMT.format(date) : '-';
 }
 
 export function formatDateLong(d: DateLike): string {
   const date = coerce(d);
-  return date ? LONG_FMT.format(date) : '—';
+  return date ? LONG_FMT.format(date) : '-';
 }
 
 export function formatDateWeekday(d: DateLike): string {
   const date = coerce(d);
-  return date ? WEEKDAY_FMT.format(date) : '—';
+  return date ? WEEKDAY_FMT.format(date) : '-';
 }
 
 export function formatTime(d: DateLike): string {
   const date = coerce(d);
-  return date ? TIME_FMT.format(date) : '—';
+  return date ? TIME_FMT.format(date) : '-';
 }
 
 export function formatDateTime(d: DateLike): string {
   const date = coerce(d);
-  if (!date) return '—';
+  if (!date) return '-';
   return `${SHORT_FMT.format(date)} · ${TIME_FMT.format(date)}`;
 }
 
@@ -85,7 +85,7 @@ export function formatDateTime(d: DateLike): string {
  */
 export function formatDateRelative(d: DateLike): string {
   const date = coerce(d);
-  if (!date) return '—';
+  if (!date) return '-';
 
   const now = Date.now();
   const diffMs = date.getTime() - now;
@@ -106,7 +106,7 @@ export function formatDateRelative(d: DateLike): string {
 }
 
 export function formatCurrency(n: number | null | undefined, mode: 'default' | 'compact' = 'default'): string {
-  if (n === null || n === undefined || Number.isNaN(n)) return '—';
+  if (n === null || n === undefined || Number.isNaN(n)) return '-';
   if (mode === 'compact' && Math.abs(n) >= 1000) {
     const sign = n < 0 ? '-' : '';
     const abs = Math.abs(n);

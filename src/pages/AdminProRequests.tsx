@@ -299,8 +299,8 @@ export default function AdminProRequests() {
                         {isExpanded ? '▼' : '▶'}
                       </td>
                       <td style={{ fontSize: 13, fontWeight: 500 }}>{r.category || r.service_type}</td>
-                      <td style={{ fontSize: 13, color: Colors.medGray }}>{homeZip || '—'}</td>
-                      <td style={{ fontSize: 13 }}>{r.user?.email || '—'}</td>
+                      <td style={{ fontSize: 13, color: Colors.medGray }}>{homeZip || '-'}</td>
+                      <td style={{ fontSize: 13 }}>{r.user?.email || '-'}</td>
                       <td>
                         <span className="admin-status" style={{
                           background: getStatusBadgeColor(r.status) + '20',
@@ -310,7 +310,7 @@ export default function AdminProRequests() {
                         </span>
                       </td>
                       <td style={{ fontSize: 13, color: Colors.medGray }}>
-                        {r.assigned_provider ? getProviderName(r.assigned_provider) : '—'}
+                        {r.assigned_provider ? getProviderName(r.assigned_provider) : '-'}
                       </td>
                       <td style={{ fontSize: 13, color: Colors.medGray }}>
                         {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -325,10 +325,10 @@ export default function AdminProRequests() {
                               <h4 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600 }}>Request Details</h4>
                               <div style={{ fontSize: 13, lineHeight: 1.6, color: Colors.charcoal }}>
                                 <div style={{ marginBottom: 8 }}>
-                                  <span style={{ color: Colors.medGray }}>Description:</span> {r.description || '—'}
+                                  <span style={{ color: Colors.medGray }}>Description:</span> {r.description || '-'}
                                 </div>
                                 <div style={{ marginBottom: 8 }}>
-                                  <span style={{ color: Colors.medGray }}>Homeowner:</span> {r.user?.full_name || r.user?.email || '—'}
+                                  <span style={{ color: Colors.medGray }}>Homeowner:</span> {r.user?.full_name || r.user?.email || '-'}
                                 </div>
                                 <div style={{ marginBottom: 8 }}>
                                   <span style={{ color: Colors.medGray }}>Submitted:</span> {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -401,7 +401,7 @@ export default function AdminProRequests() {
                                           const atCapacity = p.max_jobs_per_day && p.active_job_count != null && p.active_job_count >= p.max_jobs_per_day;
                                           return (
                                             <option key={p.id} value={p.id} disabled={!!atCapacity}>
-                                              {p.business_name || p.contact_name} {atCapacity ? ' — AT CAPACITY' : `[${p.active_job_count || 0} jobs]`}
+                                              {p.business_name || p.contact_name} {atCapacity ? ' · AT CAPACITY' : `[${p.active_job_count || 0} jobs]`}
                                             </option>
                                           );
                                         })}
@@ -413,7 +413,7 @@ export default function AdminProRequests() {
                                           const atCapacity = p.max_jobs_per_day && p.active_job_count != null && p.active_job_count >= p.max_jobs_per_day;
                                           return (
                                             <option key={p.id} value={p.id} disabled={!!atCapacity}>
-                                              {p.business_name || p.contact_name} {atCapacity ? ' — AT CAPACITY' : `[${p.active_job_count || 0} jobs]`}
+                                              {p.business_name || p.contact_name} {atCapacity ? ' · AT CAPACITY' : `[${p.active_job_count || 0} jobs]`}
                                             </option>
                                           );
                                         })}

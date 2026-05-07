@@ -71,7 +71,7 @@ function InspectionWedge({ homeId }: { homeId?: string }) {
           {lastInspectedAt ? 'Refresh your Maintenance Inspection before listing' : 'Add a Canopy Maintenance Inspection to your Home Token'}
         </p>
         <p style={{ fontSize: FontSize.sm, color: Colors.medGray, margin: 0, lineHeight: 1.4 }}>
-          A Canopy-vetted Pro walks every system, stamps a tamper-evident record onto your Home Token, and produces a buyer-facing PDF certificate. Buyers and agents value documented maintenance — it&apos;s a credibility lift right when it matters. From $149/yr.
+          A Canopy-vetted Pro walks every system, stamps a tamper-evident record onto your Home Token, and produces a buyer-facing PDF certificate. Buyers and agents value documented maintenance. It&apos;s a credibility lift right when it matters. From $149/yr.
         </p>
       </div>
       <button

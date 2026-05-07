@@ -229,7 +229,7 @@ export default function TestimonialSubmit() {
             }}
           >
             A couple sentences about Canopy goes a long way. We publish first name and
-            neighborhood only — never last name or address.
+            neighborhood only. Never last name or address.
           </p>
         </div>
 
@@ -247,7 +247,7 @@ export default function TestimonialSubmit() {
           >
             <div style={{ fontSize: 22, marginBottom: 6 }}>🌿</div>
             <div style={{ fontWeight: FontWeight.semibold, marginBottom: 4 }}>
-              Thanks — we got it.
+              Thanks, we got it.
             </div>
             <p style={{ fontSize: 14, margin: 0, lineHeight: 1.5 }}>
               We'll review and it'll show up on our Landing page once approved. You can close
@@ -287,7 +287,7 @@ export default function TestimonialSubmit() {
             }}
           >
             <div style={{ fontWeight: FontWeight.semibold, marginBottom: 4 }}>
-              You've already shared a testimonial — thank you!
+              You've already shared a testimonial. Thank you!
             </div>
             <p style={{ fontSize: 13, margin: 0, color: Colors.medGray }}>
               Want to update it? Email support@canopyhome.app and we'll swap it out.

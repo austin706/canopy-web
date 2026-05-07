@@ -432,7 +432,7 @@ export default function HomeDetails() {
               <p style={{ fontWeight: 600, marginBottom: 2 }}>{form.address}</p>
               <p style={{ fontSize: 13, color: 'var(--color-med-gray)' }}>{form.city}, {form.state} {form.zip_code}</p>
               <p className="text-xs text-gray" style={{ marginTop: 8, fontStyle: 'italic' }}>
-                Address can't be changed — it's tied to your Home Token and verification. Moving? Transfer this home to the buyer, then set up your new address.
+                Address can't be changed because it's tied to your Home Token and verification. Moving? Transfer this home to the buyer, then set up your new address.
               </p>
             </div>
           ) : (
@@ -877,10 +877,10 @@ export default function HomeDetails() {
           )}
           <h2 style={{ fontSize: 20, marginBottom: 4 }}>{home.address}</h2>
           <p className="text-sm text-gray mb-lg">{home.city}, {home.state} {home.zip_code}</p>
-          <Field label="Year Built"><p style={{ fontWeight: 500 }}>{home.year_built || '—'}</p></Field>
-          <Field label="Size"><p style={{ fontWeight: 500 }}>{home.square_footage?.toLocaleString() || '—'} sq ft &middot; {home.stories} stories &middot; {home.bedrooms} bed / {home.bathrooms} bath</p></Field>
-          <Field label="Roof"><p style={{ fontWeight: 500 }}>{home.roof_type?.replace(/_/g,' ') || '—'} {home.roof_install_year ? `(installed ${home.roof_install_year})` : ''}</p></Field>
-          <Field label="HVAC"><p style={{ fontWeight: 500 }}>{home.heating_type?.replace(/_/g,' ') || '—'} / {home.cooling_type?.replace(/_/g,' ') || '—'}</p></Field>
+          <Field label="Year Built"><p style={{ fontWeight: 500 }}>{home.year_built || '-'}</p></Field>
+          <Field label="Size"><p style={{ fontWeight: 500 }}>{home.square_footage?.toLocaleString() || '-'} sq ft &middot; {home.stories} stories &middot; {home.bedrooms} bed / {home.bathrooms} bath</p></Field>
+          <Field label="Roof"><p style={{ fontWeight: 500 }}>{home.roof_type?.replace(/_/g,' ') || '-'} {home.roof_install_year ? `(installed ${home.roof_install_year})` : ''}</p></Field>
+          <Field label="HVAC"><p style={{ fontWeight: 500 }}>{home.heating_type?.replace(/_/g,' ') || '-'} / {home.cooling_type?.replace(/_/g,' ') || '-'}</p></Field>
           {home.lawn_type && home.lawn_type !== 'none' && <Field label="Lawn"><p style={{ fontWeight: 500 }}>{home.lawn_type.replace(/_/g,' ')}</p></Field>}
           <Field label="Features">
             <div className="flex gap-sm" style={{ flexWrap: 'wrap' }}>
@@ -902,7 +902,7 @@ export default function HomeDetails() {
               <p style={{ fontWeight: 500 }}>
                 {home.number_of_hvac_filters} filter{home.number_of_hvac_filters > 1 ? 's' : ''}
                 {home.hvac_filter_size ? ` (${home.hvac_filter_size})` : ''}
-                {home.hvac_return_location ? ` — ${home.hvac_return_location === 'furnace' ? 'at furnace' : home.hvac_return_location}` : ''}
+                {home.hvac_return_location ? `, ${home.hvac_return_location === 'furnace' ? 'at furnace' : home.hvac_return_location}` : ''}
               </p>
             </Field>
           )}

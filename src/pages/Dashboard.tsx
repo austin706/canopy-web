@@ -313,7 +313,7 @@ export default function Dashboard() {
       showToast({ message: `Refreshed ${staleIds.length} task${staleIds.length === 1 ? '' : 's'}` });
     } catch (err) {
       console.warn('handleRefreshStaleTasks failed:', err);
-      showToast({ message: 'Could not refresh tasks — try again' });
+      showToast({ message: 'Could not refresh tasks. Try again.' });
     } finally {
       setStaleRefreshing(false);
     }
@@ -377,7 +377,7 @@ export default function Dashboard() {
         // the user sees an actionable message.
         const isNetwork = (error instanceof TypeError) || /fetch|network|offline/i.test(String(error));
         setWeatherError(isNetwork
-          ? 'Weather is unavailable — check your connection and refresh.'
+          ? 'Weather is unavailable. Check your connection and refresh.'
           : 'Weather service temporarily unavailable. We\'ll retry shortly.');
       } finally {
         setWeatherLoading(false);
@@ -508,7 +508,7 @@ export default function Dashboard() {
         ? { title: `Your Home Health Score dropped ${Math.abs(homeHealthAlert.delta ?? 0)} points`, accent: '#FF9800' }
         : homeHealthAlert.alert_type === 'below_threshold'
           ? { title: 'Your Home Health Score needs attention', accent: '#E53935' }
-          : { title: `${homeHealthAlert.overdue_count} overdue tasks — let's knock a few out`, accent: '#FF9800' })
+          : { title: `${homeHealthAlert.overdue_count} overdue tasks. Let's knock a few out.`, accent: '#FF9800' })
     : null;
 
   const costForecast = useMemo(() => generateCostForecast(equipment, home ? {
@@ -846,7 +846,7 @@ export default function Dashboard() {
         >
           <div style={{ flex: 1 }}>
             <p style={{ fontWeight: 600, marginBottom: 4 }}>
-              You told us you&apos;re thinking about selling — your Sale Prep kit is ready.
+              You told us you&apos;re thinking about selling. Your Sale Prep kit is ready.
             </p>
             <p className="text-xs text-gray" style={{ marginBottom: 12, lineHeight: 1.5 }}>
               Home Token, maintenance history, document vault, and the Sale Prep checklist are
@@ -1116,7 +1116,7 @@ export default function Dashboard() {
                   }}>&#127881;</div>
                   <h3 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: 8 }}>All tasks complete!</h3>
                   <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.6, maxWidth: 320, margin: '0 auto' }}>
-                    You've finished every task for this month. Your home is in great shape — enjoy the peace of mind!
+                    You've finished every task for this month. Your home is in great shape. Enjoy the peace of mind.
                   </p>
                 </div>
               )}

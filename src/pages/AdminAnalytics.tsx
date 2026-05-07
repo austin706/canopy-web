@@ -431,7 +431,7 @@ export default function AdminAnalytics() {
 
       const totalTasksDb = totalTasksCountRes.count ?? tasks.length;
       const dataWindowWarning = profilesSampleHitCap || tasksSampleHitCap
-        ? `Showing analytics for the first ${LIMIT_PROFILES.toLocaleString()} profiles and ${LIMIT_TASKS.toLocaleString()} tasks (DB has ${(totalUsers ?? 0).toLocaleString()} profiles, ${totalTasksDb.toLocaleString()} tasks). Cohort and template stats below are sampled — KPIs above are full counts.`
+        ? `Showing analytics for the first ${LIMIT_PROFILES.toLocaleString()} profiles and ${LIMIT_TASKS.toLocaleString()} tasks (DB has ${(totalUsers ?? 0).toLocaleString()} profiles, ${totalTasksDb.toLocaleString()} tasks). Cohort and template stats below are sampled. KPIs above are full counts.`
         : null;
 
       setData({
@@ -533,7 +533,7 @@ export default function AdminAnalytics() {
           background: `${Colors.warning}15`, border: `1px solid ${Colors.warning}`,
           fontSize: FontSize.sm, color: Colors.charcoal,
         }}>
-          <strong style={{ color: Colors.warning }}>Sampled view —</strong> {data.dataWindowWarning}
+          <strong style={{ color: Colors.warning }}>Sampled view:</strong> {data.dataWindowWarning}
         </div>
       )}
 
@@ -612,7 +612,7 @@ export default function AdminAnalytics() {
           </p>
           {data.recentSupportTickets.length === 0 ? (
             <p style={{ fontSize: FontSize.sm, color: Colors.medGray, fontStyle: 'italic', margin: 0 }}>
-              No open support tickets — quiet on the support front.
+              No open support tickets. Quiet on the support front.
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1170,13 +1170,13 @@ export default function AdminAnalytics() {
                       <td style={{ padding: '6px', textAlign: 'right', color: Colors.medGray }}>{t.skipped.toLocaleString()}</td>
                       <td style={{ padding: '6px', textAlign: 'right', color: t.overdue > 0 ? Colors.error : Colors.medGray }}>{t.overdue.toLocaleString()}</td>
                       <td style={{ padding: '6px', textAlign: 'right', fontWeight: 600, color: t.completionRate >= 70 ? Colors.success : t.completionRate >= 40 ? Colors.warning : Colors.error }}>
-                        {t.generated === 0 ? '—' : `${t.completionRate}%`}
+                        {t.generated === 0 ? '-' : `${t.completionRate}%`}
                       </td>
                       <td style={{ padding: '6px', textAlign: 'right', color: Colors.medGray }}>
-                        {t.avgDaysToComplete == null ? '—' : `${t.avgDaysToComplete > 0 ? '+' : ''}${t.avgDaysToComplete}d`}
+                        {t.avgDaysToComplete == null ? '-' : `${t.avgDaysToComplete > 0 ? '+' : ''}${t.avgDaysToComplete}d`}
                       </td>
                       <td style={{ padding: '6px', color: Colors.medGray }}>
-                        {t.lastCompletedAt ? new Date(t.lastCompletedAt).toLocaleDateString() : '—'}
+                        {t.lastCompletedAt ? new Date(t.lastCompletedAt).toLocaleDateString() : '-'}
                       </td>
                     </tr>
                   ))}

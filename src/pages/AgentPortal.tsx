@@ -565,7 +565,7 @@ export default function AgentPortal() {
                         {c.full_name?.charAt(0) || '?'}
                       </div>
                       <div>
-                        <p className="fw-600">{c.full_name || '—'}</p>
+                        <p className="fw-600">{c.full_name || '-'}</p>
                         <p className="text-xs text-gray">{c.email}</p>
                       </div>
                     </div>
@@ -601,19 +601,19 @@ export default function AgentPortal() {
                           </div>
                           <p className="text-sm text-gray mb-md">{c.home.city}, {c.home.state} {c.home.zip_code}</p>
                           <div className="grid-4" style={{ gap: 12 }}>
-                            <div><p className="text-xs text-gray">Year Built</p><p className="fw-600 text-sm">{c.home.year_built || '—'}</p></div>
-                            <div><p className="text-xs text-gray">Size</p><p className="fw-600 text-sm">{c.home.square_footage?.toLocaleString() || '—'} sqft</p></div>
+                            <div><p className="text-xs text-gray">Year Built</p><p className="fw-600 text-sm">{c.home.year_built || '-'}</p></div>
+                            <div><p className="text-xs text-gray">Size</p><p className="fw-600 text-sm">{c.home.square_footage?.toLocaleString() || '-'} sqft</p></div>
                             <div><p className="text-xs text-gray">Layout</p><p className="fw-600 text-sm">{c.home.bedrooms}bd / {c.home.bathrooms}ba</p></div>
-                            <div><p className="text-xs text-gray">Roof</p><p className="fw-600 text-sm">{c.home.roof_type?.replace(/_/g, ' ') || '—'}</p></div>
+                            <div><p className="text-xs text-gray">Roof</p><p className="fw-600 text-sm">{c.home.roof_type?.replace(/_/g, ' ') || '-'}</p></div>
                           </div>
                           <div className="grid-4 mt-sm" style={{ gap: 12 }}>
-                            <div><p className="text-xs text-gray">Heating</p><p className="fw-600 text-sm">{c.home.heating_type?.replace(/_/g, ' ') || '—'}</p></div>
-                            <div><p className="text-xs text-gray">Cooling</p><p className="fw-600 text-sm">{c.home.cooling_type?.replace(/_/g, ' ') || '—'}</p></div>
-                            <div><p className="text-xs text-gray">Lawn</p><p className="fw-600 text-sm">{c.home.lawn_type?.replace(/_/g, ' ') || '—'}</p></div>
+                            <div><p className="text-xs text-gray">Heating</p><p className="fw-600 text-sm">{c.home.heating_type?.replace(/_/g, ' ') || '-'}</p></div>
+                            <div><p className="text-xs text-gray">Cooling</p><p className="fw-600 text-sm">{c.home.cooling_type?.replace(/_/g, ' ') || '-'}</p></div>
+                            <div><p className="text-xs text-gray">Lawn</p><p className="fw-600 text-sm">{c.home.lawn_type?.replace(/_/g, ' ') || '-'}</p></div>
                             <div>
                               <p className="text-xs text-gray">Features</p>
                               <p className="fw-600 text-sm">
-                                {[c.home.has_pool && 'Pool', c.home.has_deck && 'Deck', c.home.has_sprinkler_system && 'Sprinklers', c.home.has_fireplace && 'Fireplace'].filter(Boolean).join(', ') || '—'}
+                                {[c.home.has_pool && 'Pool', c.home.has_deck && 'Deck', c.home.has_sprinkler_system && 'Sprinklers', c.home.has_fireplace && 'Fireplace'].filter(Boolean).join(', ') || '-'}
                               </p>
                             </div>
                           </div>
@@ -624,7 +624,7 @@ export default function AgentPortal() {
                           <button className="btn btn-primary" onClick={() => navigate(`/agent-portal/client/${c.id}`)}>Set Up Home for {c.full_name?.split(' ')[0] || 'Client'}</button>
                         </div>
                       )}
-                      <p className="text-xs text-gray mt-md">Joined: {c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</p>
+                      <p className="text-xs text-gray mt-md">Joined: {c.created_at ? new Date(c.created_at).toLocaleDateString() : '-'}</p>
 
                       {/* Home Health Score */}
                       {c.home && (
@@ -665,7 +665,7 @@ export default function AgentPortal() {
                                   {eq.name}
                                 </p>
                                 <p className="text-xs text-gray">
-                                  {eq.ageYears} years old (expected: {eq.estimatedLifespan} years) — {eq.percentOfLife}% of lifespan
+                                  {eq.ageYears} years old (expected: {eq.estimatedLifespan} years), {eq.percentOfLife}% of lifespan
                                 </p>
                               </div>
                             ))}
@@ -1032,9 +1032,9 @@ export default function AgentPortal() {
                       <tr key={c.id}>
                         <td><code style={{ background: Colors.copperMuted, padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{c.code}</code></td>
                         <td><span className="badge badge-copper">{c.tier}</span></td>
-                        <td className="text-sm">{c.client_name || '—'}</td>
+                        <td className="text-sm">{c.client_name || '-'}</td>
                         <td>{c.duration_months} months</td>
-                        <td>{c.expires_at ? (() => { const badge = getExpiryBadge(c.expires_at); return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: badge.color, background: badge.bg }}>{badge.text}</span>; })() : '—'}</td>
+                        <td>{c.expires_at ? (() => { const badge = getExpiryBadge(c.expires_at); return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: badge.color, background: badge.bg }}>{badge.text}</span>; })() : '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1054,8 +1054,8 @@ export default function AgentPortal() {
                       <tr key={c.id}>
                         <td><code style={{ opacity: 0.5 }}>{c.code}</code></td>
                         <td><span className="badge badge-gray">{c.tier}</span></td>
-                        <td className="text-sm">{c.client_name || '—'}</td>
-                        <td className="text-sm text-gray">{c.redeemed_at ? new Date(c.redeemed_at).toLocaleDateString() : '—'}</td>
+                        <td className="text-sm">{c.client_name || '-'}</td>
+                        <td className="text-sm text-gray">{c.redeemed_at ? new Date(c.redeemed_at).toLocaleDateString() : '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1099,17 +1099,17 @@ export default function AgentPortal() {
             {[
               {
                 subject: 'A gift for your new home!',
-                body: `Congratulations on your new home at [Address]! As a closing gift, I'd like to give you a year of Canopy Home — your home's new operating system. Canopy helps you stay on top of maintenance, track your equipment, and protect your investment. Here's your gift code: [CODE]. Just head to canopyhome.app, create an account, and enter this code. Welcome home! — [Agent Name]`,
+                body: `Congratulations on your new home at [Address]! As a closing gift, I'd like to give you a year of Canopy Home, your home's new operating system. Canopy helps you stay on top of maintenance, track your equipment, and protect your investment. Here's your gift code: [CODE]. Just head to canopyhome.app, create an account, and enter this code. Welcome home! [Agent Name]`,
                 title: 'Closing Gift',
               },
               {
                 subject: "How's the new house treating you?",
-                body: `Hey [Client Name], just checking in! I hope you're settling in at [Address]. Quick reminder — your Canopy account is ready to help you stay on top of home maintenance this season. Log in at canopyhome.app to see what tasks are coming up. Let me know if you need anything! — [Agent Name]`,
+                body: `Hey [Client Name], just checking in! I hope you're settling in at [Address]. Quick reminder: your Canopy account is ready to help you stay on top of home maintenance this season. Log in at canopyhome.app to see what tasks are coming up. Let me know if you need anything! [Agent Name]`,
                 title: 'Re-engagement',
               },
               {
                 subject: 'Know someone buying a home?',
-                body: `Hey [Client Name], I hope Canopy has been helpful for your home at [Address]! If you have any friends or family looking to buy or sell, I'd love to help — and I'll make sure they get the same Canopy gift to start their homeownership journey right. — [Agent Name]`,
+                body: `Hey [Client Name], I hope Canopy has been helpful for your home at [Address]! If you have any friends or family looking to buy or sell, I'd love to help, and I'll make sure they get the same Canopy gift to start their homeownership journey right. [Agent Name]`,
                 title: 'Referral Ask',
               },
             ].map((template, idx) => (
@@ -1294,7 +1294,7 @@ export default function AgentPortal() {
                         <tr key={c.id}>
                           <td><code style={{ background: Colors.copperMuted, padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{c.code}</code></td>
                           <td><span className="badge badge-copper">{c.tier}</span></td>
-                          <td className="text-sm">{c.client_name || '—'}</td>
+                          <td className="text-sm">{c.client_name || '-'}</td>
                           <td><span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: badge.color, background: badge.bg, opacity: badge.opacity || 1 }}>{badge.text}</span></td>
                         </tr>
                       );
@@ -1386,7 +1386,7 @@ export default function AgentPortal() {
                     {[
                       { step: '1', title: 'Set up a client', desc: 'Use the "+ New Client" tab to enter their info, home details, and pick a tier.' },
                       { step: '2', title: 'Share the gift code + QR code', desc: 'Give the client their gift code and your QR code (on a card, in an email, at closing).' },
-                      { step: '3', title: 'Client scans & redeems', desc: 'They scan the QR code, create an account, enter their gift code — and their home is ready.' },
+                      { step: '3', title: 'Client scans & redeems', desc: 'They scan the QR code, create an account, enter their gift code, and their home is ready.' },
                     ].map(item => (
                       <div key={item.step} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
                         <div style={{ width: 28, height: 28, borderRadius: 14, background: Colors.copperMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: Colors.copper, flexShrink: 0 }}>

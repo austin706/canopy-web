@@ -325,7 +325,7 @@ export default function Onboarding() {
       if (e.code === '23505' || e.message?.includes('duplicate')) {
         setNotifyMeSubmitted(prev => ({ ...prev, [tierInterest]: true }));
       } else {
-        setPlanMessage('Could not save your interest — please try again.');
+        setPlanMessage('Could not save your interest. Please try again.');
         setPlanMessageType('error');
         setTimeout(() => setPlanMessage(''), 5000);
       }
@@ -872,7 +872,7 @@ export default function Onboarding() {
         const session = await supabase.auth.getSession();
         const token = session.data.session?.access_token;
         if (!token || !SUPABASE_URL) {
-          setPlanMessage('Unable to start checkout — please try again.');
+          setPlanMessage('Unable to start checkout. Please try again.');
           setPlanMessageType('error');
           setTimeout(() => setPlanMessage(''), 5000);
           return;
@@ -900,7 +900,7 @@ export default function Onboarding() {
             window.location.replace(data.url);
             return;
           }
-          setPlanMessage(data?.error || 'Checkout failed — please try again or continue with the Free plan.');
+          setPlanMessage(data?.error || 'Checkout failed. Please try again or continue with the Free plan.');
           setPlanMessageType('error');
           setTimeout(() => setPlanMessage(''), 5000);
           return;
@@ -952,7 +952,7 @@ export default function Onboarding() {
       } catch (e: any) {
         closeCheckoutModal();
         console.warn('Stripe checkout not available:', e);
-        setPlanMessage(e.message || 'Checkout unavailable — please try again or continue with the Free plan.');
+        setPlanMessage(e.message || 'Checkout unavailable. Please try again or continue with the Free plan.');
         setPlanMessageType('error');
         setTimeout(() => setPlanMessage(''), 5000);
         return;
@@ -1065,7 +1065,7 @@ export default function Onboarding() {
           <p style={{ fontSize: 16, color: Colors.medGray, maxWidth: 420, margin: '0 auto 32px', lineHeight: 1.6 }}>
             {isAddPropertyMode
               ? "Add another property to your Canopy account. We'll set up a personalized maintenance plan for it."
-              : "Your home's maintenance co-pilot. We'll help you stay on top of everything your home needs — so nothing falls through the cracks."}
+              : "Your home's maintenance co-pilot. We'll help you stay on top of everything your home needs, so nothing falls through the cracks."}
           </p>
 
           <div style={{
@@ -1671,7 +1671,7 @@ export default function Onboarding() {
           )}
           {systemsForm.has_fireplace && skipFireplaceDetails && (
             <div className="text-xs text-gray" style={{ marginTop: 8 }}>
-              Fireplace details skipped — you'll finish from your dashboard.{' '}
+              Fireplace details skipped. You'll finish from your dashboard.{' '}
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSkipFireplaceDetails(false)}>Undo</button>
             </div>
           )}
@@ -1707,7 +1707,7 @@ export default function Onboarding() {
           )}
           {(systemsForm.heating_type || systemsForm.cooling_type) && skipFilterDetails && (
             <div className="text-xs text-gray" style={{ marginTop: 8 }}>
-              Filter sizes skipped — add them later from your dashboard.{' '}
+              Filter sizes skipped. Add them later from your dashboard.{' '}
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSkipFilterDetails(false)}>Undo</button>
             </div>
           )}
@@ -1781,7 +1781,7 @@ export default function Onboarding() {
           )}
           {systemsForm.has_pool && skipPoolDetails && (
             <div className="text-xs text-gray" style={{ marginTop: 8 }}>
-              Pool details skipped — you'll finish from your dashboard.{' '}
+              Pool details skipped. You'll finish from your dashboard.{' '}
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSkipPoolDetails(false)}>Undo</button>
             </div>
           )}
@@ -1925,7 +1925,7 @@ export default function Onboarding() {
                 handleSystemsSubmit();
               }
             }}
-            aria-label="Quick start — skip systems for now and go straight to your dashboard"
+            aria-label="Quick start, skip systems for now and go straight to your dashboard"
           >
             <div style={{ fontSize: FontSize.sm, fontWeight: 600, color: 'var(--color-copper)', marginBottom: 2 }}>
               Quick start →
@@ -1962,16 +1962,16 @@ export default function Onboarding() {
           >
             {proAvailable ? (
               <>
-                <strong>Good news — in-person Pro visits are available in your area.</strong>{' '}
+                <strong>Good news. In-person Pro visits are available in your area.</strong>{' '}
                 Free and Home plans are available everywhere. Pro includes a Certified Pro maintenance
                 visit every 2 months, which we currently run in and around Tulsa, OK.
               </>
             ) : (
               <>
                 <strong>Pro visits aren't live in your area yet.</strong>{' '}
-                You can still use the Free or Home plan — every digital feature works anywhere. Pro
+                You can still use the Free or Home plan. Every digital feature works anywhere. Pro
                 includes in-person Certified Pro visits, currently launching in Tulsa, OK. Tap <em>Notify Me</em>{' '}
-                on that plan below to join the waitlist — we'll email you when we're live near you.
+                on that plan below to join the waitlist, and we'll email you when we're live near you.
               </>
             )}
           </div>
@@ -2267,7 +2267,7 @@ export default function Onboarding() {
               lineHeight: 1.5,
             }}
           >
-            <strong>No equipment info handy?</strong> That's fine — Canopy works without it. You'll still get a full
+            <strong>No equipment info handy?</strong> That's fine. Canopy works without it. You'll still get a full
             maintenance plan based on your home's square footage, roof type, HVAC, and climate. You can scan equipment
             anytime from the Equipment tab.
           </div>
@@ -2284,7 +2284,7 @@ export default function Onboarding() {
               style={{ fontSize: 13 }}
               disabled={saving || generatingTasks}
             >
-              Skip — add equipment later
+              Skip, add equipment later
             </button>
           </div>
         </div>
@@ -2295,7 +2295,7 @@ export default function Onboarding() {
         <div className="card">
           <h2 style={{ fontSize: 20, marginBottom: 8 }}>You're all set!</h2>
           <p style={{ color: Colors.medGray, marginBottom: 24, fontSize: 14, lineHeight: 1.6 }}>
-            We have everything we need to build your personalized maintenance plan. Click below to generate your tasks — it takes just a few seconds.
+            We have everything we need to build your personalized maintenance plan. Click below to generate your tasks. It takes just a few seconds.
           </p>
 
           {/* Pro/Pro+ checkout success messaging — H-7 */}
@@ -2352,7 +2352,7 @@ export default function Onboarding() {
             </button>
           </div>
           <p style={{ fontSize: 12, color: Colors.medGray, marginTop: 12, textAlign: 'center' }}>
-            You'll finish setup from your dashboard — no rush.
+            You'll finish setup from your dashboard. No rush.
           </p>
         </div>
       )}

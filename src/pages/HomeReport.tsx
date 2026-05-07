@@ -156,12 +156,12 @@ export default function HomeReport() {
                 Home Maintenance Report
               </h1>
               <p style={{ fontSize: 14, opacity: 0.9 }}>
-                Prepared by Canopy — {reportDate}
+                Prepared by Canopy · {reportDate}
               </p>
               {home?.agent_attested_at && (
                 <p style={{ fontSize: 12, opacity: 0.85, marginTop: 6 }}>
                   ✓ Agent verified on {new Date(home.agent_attested_at).toLocaleDateString()}
-                  {home.agent_attestation_note && ` — "${home.agent_attestation_note}"`}
+                  {home.agent_attestation_note && `: "${home.agent_attestation_note}"`}
                 </p>
               )}
             </div>
@@ -257,14 +257,14 @@ export default function HomeReport() {
                     <tr key={eq.id} style={{ borderTop: `1px solid ${Colors.lightGray}` }}>
                       <td style={{ padding: '10px 14px', fontWeight: 500 }}>{eq.name}</td>
                       <td style={{ padding: '10px 14px', color: Colors.medGray }}>{eq.category.replace(/_/g, ' ')}</td>
-                      <td style={{ padding: '10px 14px' }}>{[eq.make, eq.model].filter(Boolean).join(' ') || '—'}</td>
-                      <td style={{ padding: '10px 14px' }}>{eq.install_date ? new Date(eq.install_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'}</td>
+                      <td style={{ padding: '10px 14px' }}>{[eq.make, eq.model].filter(Boolean).join(' ') || '-'}</td>
+                      <td style={{ padding: '10px 14px' }}>{eq.install_date ? new Date(eq.install_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '-'}</td>
                       <td style={{ padding: '10px 14px' }}>
                         {eq.warranty_expiry
                           ? <span style={{ color: new Date(eq.warranty_expiry) > now ? Colors.success : Colors.error }}>
-                              {new Date(eq.warranty_expiry) > now ? 'Active' : 'Expired'} — {new Date(eq.warranty_expiry).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                              {new Date(eq.warranty_expiry) > now ? 'Active' : 'Expired'} · {new Date(eq.warranty_expiry).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                             </span>
-                          : '—'
+                          : '-'
                         }
                       </td>
                     </tr>
@@ -329,9 +329,9 @@ export default function HomeReport() {
                                     {logEditCounts[log.id]} edit{logEditCounts[log.id] === 1 ? '' : 's'}
                                     {logLatestEditor[log.id] ? ` · ${logLatestEditor[log.id].name}` : ''}
                                   </span>
-                                ) : '—'}
+                                ) : '-'}
                               </td>
-                              <td style={{ padding: '8px 14px', textAlign: 'right' }}>{log.cost ? fmt(log.cost) : '—'}</td>
+                              <td style={{ padding: '8px 14px', textAlign: 'right' }}>{log.cost ? fmt(log.cost) : '-'}</td>
                             </tr>
                           );
                           })}
@@ -365,10 +365,10 @@ export default function HomeReport() {
                   {visits.map(v => (
                     <tr key={v.id} style={{ borderTop: `1px solid ${Colors.lightGray}` }}>
                       <td style={{ padding: '8px 14px' }}>
-                        {v.completed_at ? new Date(v.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                        {v.completed_at ? new Date(v.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
                       </td>
-                      <td style={{ padding: '8px 14px' }}>{v.provider?.business_name || '—'}</td>
-                      <td style={{ padding: '8px 14px' }}>{v.time_spent_minutes ? `${v.time_spent_minutes} min` : '—'}</td>
+                      <td style={{ padding: '8px 14px' }}>{v.provider?.business_name || '-'}</td>
+                      <td style={{ padding: '8px 14px' }}>{v.time_spent_minutes ? `${v.time_spent_minutes} min` : '-'}</td>
                       <td style={{ padding: '8px 14px' }}>
                         <span style={{
                           padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
@@ -379,7 +379,7 @@ export default function HomeReport() {
                         </span>
                       </td>
                       <td style={{ padding: '8px 14px' }}>
-                        {v.homeowner_rating ? `${'★'.repeat(v.homeowner_rating)}${'☆'.repeat(5 - v.homeowner_rating)}` : '—'}
+                        {v.homeowner_rating ? `${'★'.repeat(v.homeowner_rating)}${'☆'.repeat(5 - v.homeowner_rating)}` : '-'}
                       </td>
                     </tr>
                   ))}

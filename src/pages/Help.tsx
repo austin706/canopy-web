@@ -31,7 +31,7 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         id: 'what-is-canopy',
         question: 'What is Canopy?',
-        answer: 'Canopy is a home maintenance app that helps you keep track of your home\'s equipment, schedule maintenance tasks, receive weather alerts, and connect with professional service providers — all in one place. Whether you\'re a first-time homeowner or managing multiple properties, Canopy turns the overwhelming world of home maintenance into a simple, personalized plan.',
+        answer: 'Canopy is a home maintenance app that helps you keep track of your home\'s equipment, schedule maintenance tasks, receive weather alerts, and connect with professional service providers, all in one place. Whether you\'re a first-time homeowner or managing multiple properties, Canopy turns the overwhelming world of home maintenance into a simple, personalized plan.',
         keywords: ['about', 'overview', 'introduction'],
       },
       {
@@ -49,7 +49,7 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         id: 'add-equipment',
         question: 'How do I add equipment?',
-        answer: 'Go to the Equipment page and click "Add Equipment". Select a category (HVAC, Water Heater, Roof, etc.), fill in the details like make, model, serial number, and installation date, then click Save. You can also use the AI Equipment Scanner to photograph your equipment label — the scanner reads the nameplate and auto-fills make, model, serial number, capacity, and more.',
+        answer: 'Go to the Equipment page and click "Add Equipment". Select a category (HVAC, Water Heater, Roof, etc.), fill in the details like make, model, serial number, and installation date, then click Save. You can also use the AI Equipment Scanner to photograph your equipment label. The scanner reads the nameplate and auto-fills make, model, serial number, capacity, and more.',
         keywords: ['equipment', 'add', 'scan', 'nameplate'],
       },
       {
@@ -79,7 +79,7 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         id: 'weather-alerts',
         question: 'How do weather alerts work?',
-        answer: 'Canopy fetches real-time weather alerts from the National Weather Service based on your home\'s location. Each alert includes actionable maintenance tips — for example, a freeze warning tells you to disconnect hoses and drip faucets. Weather-smart task scheduling also cross-references the 5-day forecast with your outdoor tasks and bumps urgent ones to the top when conditions warrant it.',
+        answer: 'Canopy fetches real-time weather alerts from the National Weather Service based on your home\'s location. Each alert includes actionable maintenance tips. For example, a freeze warning tells you to disconnect hoses and drip faucets. Weather-smart task scheduling also cross-references the 5-day forecast with your outdoor tasks and bumps urgent ones to the top when conditions warrant it.',
         keywords: ['weather', 'alerts', 'forecast', 'NWS', 'smart scheduling'],
       },
       {
@@ -103,7 +103,7 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         id: 'subscription-plans',
         question: 'What\'s included in each plan?',
-        answer: 'Free: Basic calendar with generic checklists and up to 5 equipment slots. Home ($6.99/mo on web, $9.99/mo on iOS/Android): All AI-powered maintenance tasks, unlimited equipment, personalized checklists, weather-smart scheduling, cost forecasts, Home Token, and the AI Home Assistant. Home is DIY — you handle maintenance yourself with Canopy\'s guidance. Pro ($149/mo on web, $199/mo on iOS/Android): Everything in Home plus bimonthly professional home inspections with a Certified Pro. Pro+ services (sold per-add-on): The curated bundle on top of any subscription — Annual Maintenance Inspection ($149/yr base, scaled by sqft), pest, lawn, pool, septic, cleaning, deep services and more. Open Add-Ons in your dashboard. Note: a Canopy Maintenance Inspection documents the maintenance state of the home; it is not a substitute for a buyer\'s-side licensed home inspection before close.',
+        answer: 'Free: Basic calendar with generic checklists and up to 5 equipment slots. Home ($6.99/mo on web, $9.99/mo on iOS/Android): All AI-powered maintenance tasks, unlimited equipment, personalized checklists, weather-smart scheduling, cost forecasts, Home Token, and the AI Home Assistant. Home is DIY: you handle maintenance yourself with Canopy\'s guidance. Pro ($149/mo on web, $199/mo on iOS/Android): Everything in Home plus bimonthly professional home inspections with a Certified Pro. Pro+ services (sold per-add-on): The curated bundle on top of any subscription, including Annual Maintenance Inspection ($149/yr base, scaled by sqft), pest, lawn, pool, septic, cleaning, deep services and more. Open Add-Ons in your dashboard. Note: a Canopy Maintenance Inspection documents the maintenance state of the home; it is not a substitute for a buyer\'s-side licensed home inspection before close.',
         keywords: ['plans', 'pricing', 'tiers', 'free', 'home', 'pro', 'subscription'],
       },
       {
@@ -115,7 +115,7 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         id: 'cancel-subscription',
         question: 'How do I cancel or change my subscription?',
-        answer: 'Go to Profile → Subscription to manage your plan. You can upgrade, downgrade, or cancel at any time. If you cancel a paid plan, you keep access through the end of your current billing period. Your data is never deleted — it stays in your account even on the Free tier. The Home Token and all maintenance history persist regardless of subscription status.',
+        answer: 'Go to Profile → Subscription to manage your plan. You can upgrade, downgrade, or cancel at any time. If you cancel a paid plan, you keep access through the end of your current billing period. Your data is never deleted. It stays in your account even on the Free tier. The Home Token and all maintenance history persist regardless of subscription status.',
         keywords: ['cancel', 'downgrade', 'change plan', 'billing'],
       },
     ],
@@ -127,7 +127,7 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         id: 'pro-service',
         question: 'What is the Pro service?',
-        answer: 'Pro subscribers get regularly scheduled home inspections from a Certified Pro — a vetted, background-checked, insured technician trained in the Canopy system. During a visit, your pro walks through a comprehensive checklist covering HVAC, plumbing, electrical, roof, exterior, and more. After the visit, you receive an AI-generated summary with findings, photos, and prioritized recommendations. Need an Annual Maintenance Inspection (Home tier or pre-sale prep)? Add it from the Add-Ons page. The maintenance inspection is a Canopy-vetted Pro walkthrough that gets stamped onto your Home Token; for a buyer\'s-side licensed inspection before closing on a sale, hire a separate licensed home inspector.',
+        answer: 'Pro subscribers get regularly scheduled home inspections from a Certified Pro: a vetted, background-checked, insured technician trained in the Canopy system. During a visit, your pro walks through a comprehensive checklist covering HVAC, plumbing, electrical, roof, exterior, and more. After the visit, you receive an AI-generated summary with findings, photos, and prioritized recommendations. Need an Annual Maintenance Inspection (Home tier or pre-sale prep)? Add it from the Add-Ons page. The maintenance inspection is a Canopy-vetted Pro walkthrough that gets stamped onto your Home Token; for a buyer\'s-side licensed inspection before closing on a sale, hire a separate licensed home inspector.',
         keywords: ['pro', 'service', 'inspection', 'visit', 'technician', 'certified'],
       },
       {
@@ -151,13 +151,13 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         id: 'what-is-home-token',
         question: 'What is the Home Token?',
-        answer: 'The Home Token is a comprehensive digital record of your home — equipment inventory, maintenance history, inspection reports, verified ownership, and completeness score. Think of it as a "Carfax for your home." When you sell, you can transfer the Token to the buyer, giving them full context on the home\'s condition and care history. It\'s a powerful selling tool that demonstrates responsible homeownership.',
+        answer: 'The Home Token is a comprehensive digital record of your home: equipment inventory, maintenance history, inspection reports, verified ownership, and completeness score. Think of it as a "Carfax for your home." When you sell, you can transfer the Token to the buyer, giving them full context on the home\'s condition and care history. It\'s a powerful selling tool that demonstrates responsible homeownership.',
         keywords: ['token', 'maintenance passport', 'home report', 'transfer', 'sell'],
       },
       {
         id: 'home-transfer',
         question: 'How does the Home Token transfer work?',
-        answer: 'When selling your home, go to Home Token → Transfer. Enter the buyer\'s email address to initiate the transfer. The buyer receives an invitation to accept the Token, which transfers all maintenance history, equipment records, and inspection data to their account. Your agent can attest to the transfer for additional credibility. The transfer is permanent — once accepted, the new owner has full control.',
+        answer: 'When selling your home, go to Home Token → Transfer. Enter the buyer\'s email address to initiate the transfer. The buyer receives an invitation to accept the Token, which transfers all maintenance history, equipment records, and inspection data to their account. Your agent can attest to the transfer for additional credibility. The transfer is permanent. Once accepted, the new owner has full control.',
         keywords: ['transfer', 'sell', 'buyer', 'agent attestation', 'sale'],
       },
       {
@@ -169,7 +169,7 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         id: 'completeness-score',
         question: 'What is the completeness score?',
-        answer: 'The completeness score measures how thorough your Home Token is — from 0% to 100%. It factors in how many equipment items are registered, how much maintenance history exists, whether you have inspection reports, and whether ownership is verified. A higher score means more value when transferring to a buyer.',
+        answer: 'The completeness score measures how thorough your Home Token is, from 0% to 100%. It factors in how many equipment items are registered, how much maintenance history exists, whether you have inspection reports, and whether ownership is verified. A higher score means more value when transferring to a buyer.',
         keywords: ['completeness', 'score', 'token', 'value'],
       },
     ],
@@ -205,7 +205,7 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         id: 'secure-vault',
         question: 'What is the Secure Vault?',
-        answer: 'The Secure Vault stores sensitive home documents and notes (warranties, insurance policies, access codes, gate combinations) behind a PIN lock. All data is encrypted and stored securely in your account. Only you can access vault contents — household members with Editor or Viewer roles cannot see vault items.',
+        answer: 'The Secure Vault stores sensitive home documents and notes (warranties, insurance policies, access codes, gate combinations) behind a PIN lock. All data is encrypted and stored securely in your account. Only you can access vault contents. Household members with Editor or Viewer roles cannot see vault items.',
         keywords: ['vault', 'secure', 'PIN', 'documents', 'encrypted', 'warranty'],
       },
       {

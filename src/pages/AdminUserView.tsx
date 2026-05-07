@@ -160,7 +160,7 @@ export default function AdminUserView() {
             Viewing as {target.full_name || target.email} (read-only)
           </div>
           <div style={{ fontSize: 12, color: Colors.medGray }}>
-            Admin snapshot — writes are disabled. All views here are audited.
+            Admin snapshot. Writes are disabled. All views here are audited.
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -181,11 +181,11 @@ export default function AdminUserView() {
         <h2 style={{ margin: 0, marginBottom: 12 }}>{target.full_name || '(no name)'}</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
           <Field label="Email" value={target.email} />
-          <Field label="Phone" value={target.phone || '—'} />
+          <Field label="Phone" value={target.phone || '-'} />
           <Field label="Role" value={target.role || 'user'} />
           <Field label="Tier" value={tierPill(target.subscription_tier || 'free')} />
           <Field label="Signed up" value={new Date(target.created_at).toLocaleDateString()} />
-          <Field label="Last active" value={target.last_active_at ? new Date(target.last_active_at).toLocaleDateString() : '—'} />
+          <Field label="Last active" value={target.last_active_at ? new Date(target.last_active_at).toLocaleDateString() : '-'} />
           <Field label="Linked agent" value={detail?.agent ? `${detail.agent.name} (${detail.agent.brokerage})` : 'None'} />
           <Field label="Gift code" value={detail?.giftCodeDetails?.code || detail?.giftCode || 'None'} />
         </div>
@@ -202,7 +202,7 @@ export default function AdminUserView() {
               <div key={h.id} style={{ padding: 12, border: `1px solid ${Colors.lightGray}`, borderRadius: 8 }}>
                 <div style={{ fontWeight: 600 }}>{h.address}</div>
                 <div style={{ color: Colors.medGray, fontSize: 13 }}>
-                  {h.city}, {h.state} {h.zip_code} · Built {h.year_built || '—'} · {h.square_footage?.toLocaleString() || '—'} sqft · {h.bedrooms} bed / {h.bathrooms} bath
+                  {h.city}, {h.state} {h.zip_code} · Built {h.year_built || '-'} · {h.square_footage?.toLocaleString() || '-'} sqft · {h.bedrooms} bed / {h.bathrooms} bath
                 </div>
               </div>
             ))}
@@ -237,8 +237,8 @@ export default function AdminUserView() {
                   <td style={tdStyle}>{t.title}</td>
                   <td style={tdStyle}>{t.status}</td>
                   <td style={tdStyle}>{t.priority}</td>
-                  <td style={tdStyle}>{t.due_date ? new Date(t.due_date).toLocaleDateString() : '—'}</td>
-                  <td style={tdStyle}>{t.completed_date ? new Date(t.completed_date).toLocaleDateString() : '—'}</td>
+                  <td style={tdStyle}>{t.due_date ? new Date(t.due_date).toLocaleDateString() : '-'}</td>
+                  <td style={tdStyle}>{t.completed_date ? new Date(t.completed_date).toLocaleDateString() : '-'}</td>
                 </tr>
               ))}
             </tbody>
@@ -255,7 +255,7 @@ export default function AdminUserView() {
           <ul style={{ margin: 0, paddingLeft: 20 }}>
             {recentVisits.map((v) => (
               <li key={v.id} style={{ marginBottom: 4 }}>
-                {new Date(v.scheduled_date).toLocaleDateString()} — {v.status}
+                {new Date(v.scheduled_date).toLocaleDateString()} · {v.status}
               </li>
             ))}
           </ul>

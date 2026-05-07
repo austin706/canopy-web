@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// Home Inspections — service layer (web)
+// Home Inspections · service layer (web)
 // ═══════════════════════════════════════════════════════════════
 // 2026-05-02: Wraps the record_certified_inspection RPC and the
 // homeowner-facing read paths against the home_inspections table.
@@ -78,7 +78,7 @@ export interface SubmitInspectionParams {
   addOnVisitId?: string | null;
 }
 
-/** Submit a completed inspection — wraps record_certified_inspection. */
+/** Submit a completed inspection · wraps record_certified_inspection. */
 export async function submitInspection(p: SubmitInspectionParams): Promise<HomeInspectionRecord> {
   const { data, error } = await supabase.rpc('record_certified_inspection', {
     p_home_id: p.homeId,
@@ -97,7 +97,7 @@ export async function submitInspection(p: SubmitInspectionParams): Promise<HomeI
   if (error) throw error;
   const record = data as HomeInspectionRecord;
   // Fire-and-forget: generate the buyer-facing PDF certificate. We don't
-  // block the inspector on this — failure here shows up in edge fn logs
+  // block the inspector on this · failure here shows up in edge fn logs
   // but the inspection itself is already persisted + email-on-completion
   // trigger has already fired.
   generateCertificatePdf(record.id).catch(() => { /* observed via edge logs */ });
@@ -107,7 +107,7 @@ export async function submitInspection(p: SubmitInspectionParams): Promise<HomeI
 /**
  * Trigger PDF certificate generation. Returns the public PDF URL once the
  * edge function completes. Awaitable for clients that want to surface the
- * URL immediately; otherwise call as fire-and-forget — the URL is also
+ * URL immediately; otherwise call as fire-and-forget · the URL is also
  * written back to home_inspections.pdf_certificate_url server-side.
  */
 export async function generateCertificatePdf(inspectionId: string): Promise<string | null> {
@@ -115,7 +115,7 @@ export async function generateCertificatePdf(inspectionId: string): Promise<stri
     body: { inspection_id: inspectionId },
   });
   if (error) {
-    // Don't throw — the inspection record is the source of truth; the PDF
+    // Don't throw · the inspection record is the source of truth; the PDF
     // can be regenerated later if needed.
     return null;
   }
@@ -199,20 +199,20 @@ export function computeInspectionPrice(squareFootage: number | null | undefined)
 }
 
 /**
- * Default inspection systems — the minimum coverage we want a Canopy
+ * Default inspection systems · the minimum coverage we want a Canopy
  * certified inspection to walk through. Inspectors can edit or extend.
  */
 export const DEFAULT_INSPECTION_SYSTEMS: Array<{ system: string; label: string }> = [
   { system: 'hvac',           label: 'HVAC (heating + cooling)' },
   { system: 'water_heater',   label: 'Water heater' },
-  { system: 'plumbing',       label: 'Plumbing — supply, drain, fixtures' },
-  { system: 'electrical',     label: 'Electrical — panel, outlets, GFCI/AFCI' },
-  { system: 'roof',           label: 'Roof — shingles, flashings, gutters' },
+  { system: 'plumbing',       label: 'Plumbing · supply, drain, fixtures' },
+  { system: 'electrical',     label: 'Electrical · panel, outlets, GFCI/AFCI' },
+  { system: 'roof',           label: 'Roof · shingles, flashings, gutters' },
   { system: 'foundation',     label: 'Foundation + structural' },
-  { system: 'exterior',       label: 'Exterior envelope — siding, windows, doors' },
+  { system: 'exterior',       label: 'Exterior envelope · siding, windows, doors' },
   { system: 'attic_insulation', label: 'Attic + insulation' },
-  { system: 'kitchen',        label: 'Kitchen — appliances, plumbing, ventilation' },
-  { system: 'bathrooms',      label: 'Bathrooms — fixtures, ventilation, tile' },
+  { system: 'kitchen',        label: 'Kitchen · appliances, plumbing, ventilation' },
+  { system: 'bathrooms',      label: 'Bathrooms · fixtures, ventilation, tile' },
   { system: 'safety_alarms',  label: 'Smoke/CO alarms + fire extinguishers' },
-  { system: 'garage',         label: 'Garage — door, opener, sensors' },
+  { system: 'garage',         label: 'Garage · door, opener, sensors' },
 ];

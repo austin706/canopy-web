@@ -74,11 +74,75 @@ export default function AddressAutocomplete({
     setShowDropdown(false);
     setPredictions([]);
     onChange(prediction.mainText || prediction.fullText);
-    const details = await fetchPlaceDetails(prediction.placeId, sessionTokenRef.current);
-    if (details && onPlaceSelected) onPlaceSelected(details);
+
+    // 2026-05-07: defensive fallback. The places-autocomplete edge fn's
+    // "details" mode was silently returning empty city/state/zip in some
+    // cases (Google's addressComponents response not always populated for
+    // certain place types). Parse the secondaryText we already have in
+    // hand from the autocomplete prediction so the form fills SOMETHING
+    // even if details fails. Format is typically "City, State, USA" or
+    // "City, State 12345, USA".
+    const fallback = parsePredictionSecondaryText(prediction.secondaryText);
+    if (onPlaceSelected) {
+      onPlaceSelected({
+        placeId: prediction.placeId,
+        address: prediction.mainText || prediction.fullText,
+        city: fallback.city,
+        state: fallback.state,
+        zipCode: fallback.zipCode,
+        formatted: prediction.fullText,
+      });
+    }
+
+    try {
+      const details = await fetchPlaceDetails(prediction.placeId, sessionTokenRef.current);
+      // eslint-disable-next-line no-console
+      console.debug('[AddressAutocomplete] place details response:', { placeId: prediction.placeId, details });
+      if (details && onPlaceSelected) {
+        // Only override fallback fields if details has real values; never
+        // clobber a populated fallback with an empty details field.
+        onPlaceSelected({
+          placeId: details.placeId || prediction.placeId,
+          address: details.address || prediction.mainText || prediction.fullText,
+          city: details.city || fallback.city,
+          state: details.state || fallback.state,
+          zipCode: details.zipCode || fallback.zipCode,
+          latitude: details.latitude,
+          longitude: details.longitude,
+          formatted: details.formatted || prediction.fullText,
+        });
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[AddressAutocomplete] place details fetch failed; using prediction fallback:', err);
+    }
     // New session token after a successful details lookup
     sessionTokenRef.current = newPlacesSessionToken();
   };
+
+  // 2026-05-07: Parse "City, State [ZIP], USA" or "City, State, USA" from
+  // the autocomplete prediction's secondaryText. Best-effort, never throws.
+  function parsePredictionSecondaryText(secondaryText: string): { city: string; state: string; zipCode: string } {
+    const result = { city: '', state: '', zipCode: '' };
+    if (!secondaryText) return result;
+    const trimmed = secondaryText.replace(/,\s*USA\s*$/i, '').trim();
+    const parts = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+    if (parts.length === 0) return result;
+    if (parts.length === 1) {
+      result.state = parts[0].split(/\s+/)[0] ?? '';
+      return result;
+    }
+    result.city = parts[0];
+    const last = parts[parts.length - 1];
+    const stateZipMatch = last.match(/^([A-Za-z]{2})\s*(\d{5}(?:-\d{4})?)?$/);
+    if (stateZipMatch) {
+      result.state = stateZipMatch[1];
+      if (stateZipMatch[2]) result.zipCode = stateZipMatch[2].split('-')[0];
+    } else {
+      result.state = last.split(/\s+/)[0] ?? '';
+    }
+    return result;
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showDropdown || predictions.length === 0) return;

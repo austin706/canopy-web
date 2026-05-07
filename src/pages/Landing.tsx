@@ -91,9 +91,16 @@ const HERO_COPY: Record<HeroVariant, HeroCopy> = {
   },
   certainty_loop: {
     variant: 'certainty_loop',
-    h1: 'Stop guessing. Start knowing.',
+    h1: 'The plan your home always wanted.',
+    // 2026-05-07: rewritten away from feature-listed copy. Now opens with the
+    // asset frame (most valuable thing they own), positions Canopy as the
+    // operating layer ("the system that runs it"), folds the three product
+    // pillars into the colon-list, then collapses stakes + equity payoff into
+    // one sentence ("maintenance you'd skip becomes a record that follows the
+    // property"). Closer is a confident imperative tied back to the asset
+    // frame. No em dashes — Austin reads them as AI tells.
     subhead:
-      "Canopy reads every appliance label in your home, builds a maintenance calendar tuned to your equipment and your local weather, and gives you one place for every manual, warranty, and receipt. Care for your home like it's the biggest thing you own — because it is.",
+      "Your home is your most valuable asset. Canopy is the system that runs it: every appliance logged, every task tuned to your equipment and your local weather, every manual and warranty in one place. The maintenance you'd skip becomes a record that follows the property when you sell. Run it like the asset it is.",
     primaryCta: 'Get started free',
     secondaryCta: 'See it in action',
   },
@@ -418,22 +425,29 @@ export default function Landing() {
           color: Colors.charcoal, textAlign: 'center', margin: '0 0 16px 0',
           lineHeight: 1.2,
         }}>
-          Two minutes to start. Ten to feel set up.
+          Stop guessing what your house needs.
         </h2>
+        {/* 2026-05-07: rewritten away from time-anchored framing ("two
+            minutes to start") — setup speed wasn't the actual barrier for our
+            buyer. The real barrier is "I don't know what my house even
+            needs." Headline now answers that directly; subhead replaces the
+            "whenever you have a minute" time anchor with "at your own pace"
+            (same flexibility, no clock). Step descriptions normalized to
+            shared rhythm (each opens with an active verb). Em dashes removed. */}
         <p style={{
           fontSize: isMobile ? 15 : 17, color: Colors.medGray,
           textAlign: 'center', margin: '0 auto 56px', maxWidth: 620, lineHeight: 1.6,
         }}>
-          Add equipment and documents whenever you have a minute — your plan starts working from day one either way.
+          Show Canopy your equipment. We turn it into a maintenance plan tuned to your house, your climate, and your season. Build it out at your own pace.
         </p>
 
         <div style={{
           display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 32 : 48,
         }}>
           {[
-            { step: '1', title: 'Scan your equipment', desc: "Walk through your home and snap photos of appliance labels. Canopy reads make, model, serial, and age — then builds your inventory and the maintenance plan around it." },
-            { step: '2', title: 'Follow your plan', desc: 'A calendar tailored to your specific equipment, climate, and season. Clear instructions, weather-aware alerts, and reminders so nothing slips.' },
-            { step: '3', title: 'Layer in Pro when you’re ready', desc: 'Want it hands-off? Upgrade to Pro and a Canopy-certified technician shows up every other month to inspect, tune, and catch small things before they become expensive.' },
+            { step: '1', title: 'Scan your equipment', desc: 'Walk through your home and snap photos of appliance labels. Canopy reads make, model, serial, and age, then builds your inventory and the maintenance plan around it.' },
+            { step: '2', title: 'Follow your plan', desc: 'Get a calendar tuned to your equipment, your climate, and your season, with clear instructions, weather-aware alerts, and reminders so nothing falls through.' },
+            { step: '3', title: 'Layer in Pro when you’re ready', desc: 'Add Pro and a Canopy-certified technician comes by every other month to inspect, tune, and catch small things before they get expensive.' },
           ].map((item) => (
             <div key={item.step} style={{ textAlign: 'center' }}>
               <div style={{
@@ -2088,7 +2102,7 @@ export default function Landing() {
           <div>
             <h3 style={{ fontSize: FontSize.lg, fontWeight: FontWeight.bold, margin: '0 0 12px 0' }}>Canopy</h3>
             <p style={{ fontSize: 14, color: 'var(--color-silver)', margin: 0, lineHeight: 1.5 }}>
-              The maintenance record your home should already have. Built in Tulsa.
+              The maintenance record your home always wanted. Built in Tulsa.
             </p>
           </div>
           {[

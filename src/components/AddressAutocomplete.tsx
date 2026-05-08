@@ -75,14 +75,11 @@ export default function AddressAutocomplete({
     setPredictions([]);
     onChange(prediction.mainText || prediction.fullText);
 
-    // 2026-05-07: defensive fallback. The places-autocomplete edge fn's
-    // "details" mode was silently returning empty city/state/zip in some
-    // cases (Google's addressComponents response not always populated for
-    // certain place types). Parse the secondaryText we already have in
-    // hand from the autocomplete prediction so the form fills SOMETHING
-    // even if details fails. Format is typically "City, State, USA" or
-    // "City, State 12345, USA".
-    const fallback = parsePredictionSecondaryText(prediction.secondaryText);
+    // 2026-05-07 v2: harder fallback. Parses both secondaryText and fullText,
+    // maps full state names to abbreviations. See mobile mirror for the why.
+    const fallback = parseAddressFromPrediction(prediction);
+    // eslint-disable-next-line no-console
+    console.log('[AddressAutocomplete] handleSelect', { prediction, fallback });
     if (onPlaceSelected) {
       onPlaceSelected({
         placeId: prediction.placeId,
@@ -120,28 +117,85 @@ export default function AddressAutocomplete({
     sessionTokenRef.current = newPlacesSessionToken();
   };
 
-  // 2026-05-07: Parse "City, State [ZIP], USA" or "City, State, USA" from
-  // the autocomplete prediction's secondaryText. Best-effort, never throws.
-  function parsePredictionSecondaryText(secondaryText: string): { city: string; state: string; zipCode: string } {
+  // 2026-05-07 v2: parse address parts out of a Google Places prediction.
+  // Tries secondaryText first ("Tulsa, OK, USA"), falls back to the tail of
+  // fullText if secondary is empty ("3003 W 77th St, Tulsa, OK 74103, USA"),
+  // and converts full state names to abbreviations so the form's State
+  // input gets the 2-letter code it expects.
+  function parseAddressFromPrediction(prediction: PlacePrediction): { city: string; state: string; zipCode: string } {
+    // First try secondaryText (most predictions have this)
+    let result = parseLocalityChunk(prediction.secondaryText);
+    if (result.city && result.state) return result;
+
+    // Fall back: parse fullText, drop the first comma-separated chunk
+    // (the street address), and treat the rest as the locality chunk.
+    const full = prediction.fullText || '';
+    const firstComma = full.indexOf(',');
+    if (firstComma > 0 && firstComma < full.length - 1) {
+      const tail = full.substring(firstComma + 1).trim();
+      const tailParsed = parseLocalityChunk(tail);
+      // Merge — keep whatever secondaryText gave us, fill gaps from fullText
+      result = {
+        city: result.city || tailParsed.city,
+        state: result.state || tailParsed.state,
+        zipCode: result.zipCode || tailParsed.zipCode,
+      };
+    }
+    return result;
+  }
+
+  // Internal: parse a "City, State [ZIP], USA" chunk into pieces.
+  function parseLocalityChunk(chunk: string): { city: string; state: string; zipCode: string } {
     const result = { city: '', state: '', zipCode: '' };
-    if (!secondaryText) return result;
-    const trimmed = secondaryText.replace(/,\s*USA\s*$/i, '').trim();
+    if (!chunk) return result;
+    // Strip trailing ", USA" / ", United States"
+    const trimmed = chunk
+      .replace(/,\s*(USA|United\s+States(?:\s+of\s+America)?)\s*$/i, '')
+      .trim();
     const parts = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
     if (parts.length === 0) return result;
     if (parts.length === 1) {
-      result.state = parts[0].split(/\s+/)[0] ?? '';
+      // Single chunk — treat as state + maybe zip
+      result.state = stateToAbbrev(parts[0].split(/\s+/)[0] ?? '');
       return result;
     }
     result.city = parts[0];
+    // Last part: "State", "State 12345", "Oklahoma", "Oklahoma 74103", etc.
     const last = parts[parts.length - 1];
-    const stateZipMatch = last.match(/^([A-Za-z]{2})\s*(\d{5}(?:-\d{4})?)?$/);
-    if (stateZipMatch) {
-      result.state = stateZipMatch[1];
-      if (stateZipMatch[2]) result.zipCode = stateZipMatch[2].split('-')[0];
-    } else {
-      result.state = last.split(/\s+/)[0] ?? '';
+    // Try to peel a 5-digit ZIP off the end first
+    const zipMatch = last.match(/(\d{5}(?:-\d{4})?)\s*$/);
+    if (zipMatch) {
+      result.zipCode = zipMatch[1].split('-')[0];
+    }
+    // Then take the rest as the state name (could be "OK" or "Oklahoma")
+    const stateText = last.replace(/(\d{5}(?:-\d{4})?)\s*$/, '').trim();
+    if (stateText) {
+      result.state = stateToAbbrev(stateText);
     }
     return result;
+  }
+
+  // US state name → 2-letter abbreviation. Returns input unchanged if
+  // already an abbreviation or unrecognized. Case-insensitive.
+  function stateToAbbrev(input: string): string {
+    if (!input) return '';
+    const trimmed = input.trim();
+    if (trimmed.length === 2) return trimmed.toUpperCase();
+    const map: Record<string, string> = {
+      alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA',
+      colorado: 'CO', connecticut: 'CT', delaware: 'DE', florida: 'FL', georgia: 'GA',
+      hawaii: 'HI', idaho: 'ID', illinois: 'IL', indiana: 'IN', iowa: 'IA',
+      kansas: 'KS', kentucky: 'KY', louisiana: 'LA', maine: 'ME', maryland: 'MD',
+      massachusetts: 'MA', michigan: 'MI', minnesota: 'MN', mississippi: 'MS', missouri: 'MO',
+      montana: 'MT', nebraska: 'NE', nevada: 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ',
+      'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', ohio: 'OH',
+      oklahoma: 'OK', oregon: 'OR', pennsylvania: 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+      'south dakota': 'SD', tennessee: 'TN', texas: 'TX', utah: 'UT', vermont: 'VT',
+      virginia: 'VA', washington: 'WA', 'west virginia': 'WV', wisconsin: 'WI', wyoming: 'WY',
+      'district of columbia': 'DC',
+    };
+    const looked = map[trimmed.toLowerCase()];
+    return looked ?? trimmed;
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

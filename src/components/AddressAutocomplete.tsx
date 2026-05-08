@@ -39,9 +39,18 @@ export default function AddressAutocomplete({
   const sessionTokenRef = useRef<string>(newPlacesSessionToken());
   const debounceRef = useRef<number | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
+  // 2026-05-08: one-shot flag set by handleSelect to suppress the next
+  // fetch cycle. Without it, tapping a prediction calls onChange → the
+  // value-watching useEffect fires → fetches predictions for the just-
+  // selected text → dropdown re-opens 250ms later. See mobile mirror.
+  const justSelectedRef = useRef(false);
 
   // Debounced prediction fetch
   useEffect(() => {
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false;
+      return;
+    }
     if (!value || value.trim().length < 3) {
       setPredictions([]);
       return;
@@ -71,15 +80,17 @@ export default function AddressAutocomplete({
   }, []);
 
   const handleSelect = async (prediction: PlacePrediction) => {
+    // Set BEFORE onChange so the value-watching useEffect skips the fetch.
+    justSelectedRef.current = true;
     setShowDropdown(false);
     setPredictions([]);
     onChange(prediction.mainText || prediction.fullText);
 
-    // 2026-05-07 v2: harder fallback. Parses both secondaryText and fullText,
-    // maps full state names to abbreviations. See mobile mirror for the why.
+    // Parse the prediction's text payload as a defensive fallback. Fires
+    // onPlaceSelected with parsed values FIRST so the form shows something
+    // instantly while the details network call is in flight. Details then
+    // overrides with the canonical values.
     const fallback = parseAddressFromPrediction(prediction);
-    // eslint-disable-next-line no-console
-    console.log('[AddressAutocomplete] handleSelect', { prediction, fallback });
     if (onPlaceSelected) {
       onPlaceSelected({
         placeId: prediction.placeId,
@@ -94,7 +105,6 @@ export default function AddressAutocomplete({
     try {
       const details = await fetchPlaceDetails(prediction.placeId, sessionTokenRef.current);
       // eslint-disable-next-line no-console
-      console.debug('[AddressAutocomplete] place details response:', { placeId: prediction.placeId, details });
       if (details && onPlaceSelected) {
         // Only override fallback fields if details has real values; never
         // clobber a populated fallback with an empty details field.

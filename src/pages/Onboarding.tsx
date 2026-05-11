@@ -551,6 +551,36 @@ export default function Onboarding() {
       } catch {
         setHome(updatedHome);
       }
+
+      // 2026-05-08 (parity with mobile): when sewer_type === 'septic',
+      // auto-create a "Septic System" equipment row so the maintenance
+      // engine has a hook for septic-specific tasks. Mobile does this in
+      // app/onboarding/systems.tsx; web previously didn't, leaving septic
+      // homes without the corresponding equipment record. Best-effort —
+      // failures are swallowed so the onboarding flow doesn't block.
+      if (systemsForm.sewer_type === 'septic') {
+        try {
+          const { equipment: existingEquipment } = useStore.getState();
+          const alreadyHas = existingEquipment.some(
+            (e) => (e.name || '').toLowerCase() === 'septic system',
+          );
+          if (!alreadyHas) {
+            const septicEquipment: any = {
+              id: crypto.randomUUID(),
+              home_id: home.id,
+              category: 'plumbing',
+              name: 'Septic System',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+            await upsertEquipment(septicEquipment);
+            addEquipment(septicEquipment);
+          }
+        } catch (err) {
+          logger.warn('[onboarding] septic equipment auto-create failed', err);
+        }
+      }
+
       setStep(3);
     } finally {
       setSaving(false);

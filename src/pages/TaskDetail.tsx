@@ -311,7 +311,7 @@ export default function TaskDetail() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }}>
             <div>
               <p className="text-xs text-gray">Due Date</p>
               <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{new Date(task.due_date).toLocaleDateString()}</p>
@@ -329,7 +329,7 @@ export default function TaskDetail() {
         {(task.estimated_minutes || task.estimated_cost) && (
           <div className="card mb-lg">
             <p style={{ fontWeight: 600, marginBottom: 12 }}>Estimate</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }}>
               {task.estimated_minutes && (
                 <div>
                   <p className="text-xs text-gray">Time</p>
@@ -380,12 +380,20 @@ export default function TaskDetail() {
                               color: Colors.copper,
                               fontWeight: 500,
                               transition: 'background 0.15s',
+                              maxWidth: '100%',
+                              minWidth: 0,
+                              overflow: 'hidden',
                             }}
                             onMouseEnter={(e) => (e.currentTarget.style.background = '#FFF0E0')}
                             onMouseLeave={(e) => (e.currentTarget.style.background = '#FFF8F0')}
                           >
-                            <span style={{ fontSize: 13 }}>🛒</span>
-                            <span>{link.product_name}</span>
+                            <span style={{ fontSize: 13, flexShrink: 0 }}>🛒</span>
+                            <span style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              minWidth: 0,
+                            }}>{link.product_name}</span>
                             {link.price_estimate && (
                               <span style={{ fontWeight: 600, color: Colors.copperDark }}>${link.price_estimate.toFixed(2)}</span>
                             )}
@@ -414,30 +422,39 @@ export default function TaskDetail() {
         )}
 
         {/* Purchase / Affiliate Link */}
-        {task.purchase_url && (
-          <a
-            href={task.purchase_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="card mb-lg"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              background: '#FFF8F0',
-              border: `1px solid ${Colors.copper}40`,
-              textDecoration: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            <span style={{ fontSize: 20 }}>🛒</span>
-            <div>
-              <p style={{ fontWeight: 600, color: Colors.copper, fontSize: 14, margin: 0 }}>Buy Replacement</p>
-              <p style={{ fontSize: 12, color: Colors.medGray, margin: 0 }}>Order the exact part on Amazon</p>
-            </div>
-            <span style={{ marginLeft: 'auto', color: Colors.copper, fontSize: 18 }}>→</span>
-          </a>
-        )}
+        {task.purchase_url && (() => {
+          // F49 (2026-05-18): expose destination domain + explicit external-link
+          // affordance so the user knows the tap leaves the app.
+          let destDomain = '';
+          try { destDomain = new URL(task.purchase_url).hostname.replace(/^www\./, ''); } catch { destDomain = ''; }
+          return (
+            <a
+              href={task.purchase_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={destDomain ? `Buy replacement on ${destDomain} (opens in a new tab)` : 'Buy replacement (opens in a new tab)'}
+              className="card mb-lg"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                background: '#FFF8F0',
+                border: `1px solid ${Colors.copper}40`,
+                textDecoration: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ fontSize: 20 }}>🛒</span>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p style={{ fontWeight: 600, color: Colors.copper, fontSize: 14, margin: 0 }}>Buy Replacement</p>
+                <p style={{ fontSize: 12, color: Colors.medGray, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {destDomain ? `${destDomain} · opens in new tab` : 'Order the exact part on Amazon'}
+                </p>
+              </div>
+              <span aria-hidden="true" style={{ marginLeft: 'auto', color: Colors.copper, fontSize: 16, flexShrink: 0 }}>↗</span>
+            </a>
+          );
+        })()}
 
         {/* Why this matters (service_purpose) */}
         {task.service_purpose && (
@@ -541,7 +558,7 @@ export default function TaskDetail() {
                 Mark as Complete
               </button>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 12 }}>
                 <button
                   className="btn btn-ghost"
                   onClick={() => quickSkipTask(task).catch(() => {})}
@@ -739,7 +756,7 @@ export default function TaskDetail() {
               ))}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
               <button
                 className="btn btn-ghost"
                 onClick={() => setShowCategoryBundleModal(false)}

@@ -168,14 +168,14 @@ export default function Invoices() {
                   style={{ cursor: 'pointer', userSelect: 'none' }}
                   onClick={() => setExpandedId(expandedId === invoice.id ? null : invoice.id)}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
                         <p style={{ fontWeight: 600, fontSize: 14 }}>Invoice #{invoice.invoice_number || invoice.id.slice(0, 8).toUpperCase()}</p>
                         <p className="text-xs text-gray">{formatDate(invoice.issued_date)}</p>
                       </div>
                       <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{invoice.title}</p>
-                      <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
+                      <div style={{ display: 'flex', gap: 16, fontSize: 13, flexWrap: 'wrap' }}>
                         <div>
                           <p className="text-xs text-gray mb-xs">Total</p>
                           <p style={{ fontWeight: 600 }}>{formatCurrency(invoice.total_amount)}</p>
@@ -201,7 +201,7 @@ export default function Invoices() {
                 {/* Expanded Details */}
                 {expandedId === invoice.id && (
                   <div className="card" style={{ padding: 20, marginTop: -8, borderTop: `1px solid var(--color-border)`, borderRadius: '0 0 8px 8px' }}>
-                    {invoice.line_items && invoice.line_items.length > 0 && (
+                    {Array.isArray(invoice.line_items) && invoice.line_items.length > 0 && (
                       <div style={{ marginBottom: 20 }}>
                         <p className="text-xs fw-600 mb-sm">Line Items</p>
                         <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>

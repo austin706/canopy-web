@@ -1027,7 +1027,7 @@ export default function Onboarding() {
             🏡
           </div>
 
-          <h1 style={{ fontSize: 28, fontWeight: 700, color: Colors.charcoal, marginBottom: 8, lineHeight: 1.2 }}>
+          <h1 style={{ fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 700, color: Colors.charcoal, marginBottom: 8, lineHeight: 1.2 }}>
             {isAddPropertyMode ? 'Add a Property' : 'Welcome to Canopy'}
           </h1>
           <p style={{ fontSize: 16, color: Colors.medGray, maxWidth: 420, margin: '0 auto 32px', lineHeight: 1.6 }}>
@@ -1037,7 +1037,7 @@ export default function Onboarding() {
           </p>
 
           <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16,
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 16,
             maxWidth: 420, margin: '0 auto 32px', textAlign: 'left',
           }}>
             {VALUE_PROPS.map((prop) => (
@@ -2089,7 +2089,7 @@ export default function Onboarding() {
           </p>
 
           {/* Equipment Scanner + Inspection Uploader */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 24 }}>
             {/* Equipment Scanner */}
             <div style={{
               border: '1px solid var(--color-border)',
@@ -2275,7 +2275,7 @@ export default function Onboarding() {
           </p>
 
           {/* Summary cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, maxWidth: 420, margin: '0 auto 32px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 12, maxWidth: 420, margin: '0 auto 32px' }}>
             {[
               { label: 'Equipment', value: equipmentList.length, icon: '🔧' },
               { label: 'Systems', value: Object.entries(systemsForm).filter(([k, v]) => k.startsWith('has_') && v === true).length, icon: '🏠' },

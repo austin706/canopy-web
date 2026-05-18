@@ -203,10 +203,6 @@ export default function Visits() {
     return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const formatCurrency = (amount: number) => {
-    return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
   if (!hasPro) {
     return (
       <div className="page" style={{ maxWidth: 600 }}>
@@ -340,18 +336,18 @@ export default function Visits() {
               <p className="text-sm text-gray mb-lg">{upcomingVisit.pro_notes}</p>
             )}
 
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {upcomingVisit.status === 'proposed' && (
                 <>
-                  <button className="btn btn-primary" onClick={handleConfirm} style={{ flex: 1 }}>Confirm</button>
-                  <button className="btn btn-secondary" onClick={() => setShowRescheduleModal(true)} style={{ flex: 1 }}>Reschedule</button>
-                  <button className="btn btn-secondary" onClick={() => setShowCancelModal(true)} style={{ flex: 1 }}>Cancel</button>
+                  <button className="btn btn-primary" onClick={handleConfirm} style={{ flex: '1 1 110px' }}>Confirm</button>
+                  <button className="btn btn-secondary" onClick={() => setShowRescheduleModal(true)} style={{ flex: '1 1 110px' }}>Reschedule</button>
+                  <button className="btn btn-secondary" onClick={() => setShowCancelModal(true)} style={{ flex: '1 1 110px' }}>Cancel</button>
                 </>
               )}
               {upcomingVisit.status === 'confirmed' && (
                 <>
-                  <button className="btn btn-secondary" onClick={() => setShowRescheduleModal(true)} style={{ flex: 1 }}>Reschedule</button>
-                  <button className="btn btn-secondary" onClick={() => setShowCancelModal(true)} style={{ flex: 1 }}>Cancel</button>
+                  <button className="btn btn-secondary" onClick={() => setShowRescheduleModal(true)} style={{ flex: '1 1 110px' }}>Reschedule</button>
+                  <button className="btn btn-secondary" onClick={() => setShowCancelModal(true)} style={{ flex: '1 1 110px' }}>Cancel</button>
                 </>
               )}
             </div>
@@ -804,7 +800,7 @@ export default function Visits() {
 
       {/* Cancel Modal */}
       {showCancelModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
           <div className="card" style={{ maxWidth: 400, padding: 24 }}>
             <h2 style={{ marginBottom: 16 }}>Cancel Visit?</h2>
             <div style={{ padding: 12, background: '#FFF3CD', borderRadius: 8, marginBottom: 16, borderLeft: `4px solid #FFC107` }}>
@@ -812,9 +808,9 @@ export default function Visits() {
                 <strong>Cancellation Policy:</strong> If cancelled 48+ hours before your visit, you can rebook in the same month. Cancellations within 48 hours may forfeit this month's visit.
               </p>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-secondary" onClick={() => setShowCancelModal(false)} style={{ flex: 1 }}>Keep Visit</button>
-              <button className="btn" style={{ flex: 1, background: '#dc3545', color: 'white' }} onClick={handleCancel} disabled={canceling}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn btn-secondary" onClick={() => setShowCancelModal(false)} style={{ flex: '1 1 120px' }}>Keep Visit</button>
+              <button className="btn" style={{ flex: '1 1 120px', background: '#dc3545', color: 'white' }} onClick={handleCancel} disabled={canceling}>
                 {canceling ? 'Cancelling...' : 'Cancel Visit'}
               </button>
             </div>
@@ -824,7 +820,7 @@ export default function Visits() {
 
       {/* Reschedule Modal */}
       {showRescheduleModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
           <div className="card" style={{ maxWidth: 400, padding: 24 }}>
             <h2 style={{ marginBottom: 16 }}>Reschedule Visit</h2>
             <div className="form-group" style={{ marginBottom: 16 }}>
@@ -837,11 +833,11 @@ export default function Visits() {
                 min={new Date().toISOString().split('T')[0]}
               />
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-secondary" onClick={() => { setShowRescheduleModal(false); setNewDate(''); }} style={{ flex: 1 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn btn-secondary" onClick={() => { setShowRescheduleModal(false); setNewDate(''); }} style={{ flex: '1 1 120px' }}>
                 Cancel
               </button>
-              <button className="btn btn-primary" onClick={handleReschedule} disabled={!newDate || rescheduling} style={{ flex: 1 }}>
+              <button className="btn btn-primary" onClick={handleReschedule} disabled={!newDate || rescheduling} style={{ flex: '1 1 120px' }}>
                 {rescheduling ? 'Rescheduling...' : 'Reschedule'}
               </button>
             </div>
@@ -851,7 +847,7 @@ export default function Visits() {
 
       {/* Rating Modal */}
       {ratingVisitId && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
           <div className="card" style={{ maxWidth: 420, padding: 24 }}>
             <h2 style={{ marginBottom: 4 }}>Rate Your Visit</h2>
             <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 20 }}>How was your experience with this pro visit?</p>
@@ -891,11 +887,11 @@ export default function Visits() {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button
                 className="btn btn-secondary"
                 onClick={() => { setRatingVisitId(null); setRatingValue(0); setRatingReview(''); }}
-                style={{ flex: 1 }}
+                style={{ flex: '1 1 120px' }}
               >
                 Cancel
               </button>
@@ -903,7 +899,7 @@ export default function Visits() {
                 className="btn btn-primary"
                 onClick={handleRate}
                 disabled={ratingValue === 0 || submittingRating}
-                style={{ flex: 1 }}
+                style={{ flex: '1 1 120px' }}
               >
                 {submittingRating ? 'Submitting...' : 'Submit Rating'}
               </button>

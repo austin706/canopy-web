@@ -27,13 +27,15 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-const SUGGESTED_QUESTIONS = [
-  'What maintenance should I do this month?',
-  'My HVAC is making a strange noise — what could it be?',
-  'How often should I replace my water heater anode rod?',
-  'What are signs my roof needs replacing?',
-  'How can I lower my energy bill?',
-  'When should I winterize my hose bibs?',
+// F43 (2026-05-18): short chip labels + full question payload so chips don't
+// wrap to 3 lines on mobile but the AI still sees the full prompt context.
+const SUGGESTED_QUESTIONS: { label: string; prompt: string }[] = [
+  { label: 'This month’s maintenance?', prompt: 'What maintenance should I do this month?' },
+  { label: 'HVAC noise diagnosis', prompt: 'My HVAC is making a strange noise — what could it be?' },
+  { label: 'Water heater anode rod', prompt: 'How often should I replace my water heater anode rod?' },
+  { label: 'Signs of roof wear', prompt: 'What are signs my roof needs replacing?' },
+  { label: 'Lower my energy bill', prompt: 'How can I lower my energy bill?' },
+  { label: 'Winterize hose bibs', prompt: 'When should I winterize my hose bibs?' },
 ];
 
 export default function HomeAssistant() {
@@ -245,7 +247,7 @@ export default function HomeAssistant() {
   }
 
   return (
-    <div className="page" style={{ maxWidth: 800, display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)', padding: 0 }}>
+    <div className="page" style={{ maxWidth: 800, display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 80px)', minHeight: 'calc(100dvh - 80px)', padding: 0 }}>
       {/* Header */}
       <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${Colors.cream}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
@@ -318,15 +320,16 @@ export default function HomeAssistant() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 500, margin: '0 auto' }}>
               {SUGGESTED_QUESTIONS.map((q) => (
                 <button
-                  key={q}
-                  onClick={() => sendMessage(q)}
+                  key={q.label}
+                  onClick={() => sendMessage(q.prompt)}
                   style={{
                     padding: '8px 14px', borderRadius: 20, fontSize: 13,
                     border: `1px solid ${Colors.sage}40`, background: Colors.sageMuted,
                     color: Colors.sage, cursor: 'pointer', fontWeight: 500,
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  {q}
+                  {q.label}
                 </button>
               ))}
             </div>

@@ -122,9 +122,15 @@ export default function EquipmentDetail() {
   } else if (item.install_date) {
     age = Math.floor((Date.now() - new Date(item.install_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
   }
-  const lifespanPercent = Math.min((age / expectedLifespan) * 100, 100);
-  const isReplacementDue = lifespanPercent >= 95;
-  const isInspectionDue = lifespanPercent >= 80 && lifespanPercent < 95;
+  // F50 (2026-05-18): clamp age non-negative (future-dated installs) and guard
+  // against zero/invalid expectedLifespan to prevent NaN% / negative progress.
+  if (age < 0) age = 0;
+  const lifespanValid = expectedLifespan > 0 && Number.isFinite(expectedLifespan);
+  const lifespanPercent = lifespanValid
+    ? Math.max(0, Math.min(100, (age / expectedLifespan) * 100))
+    : 0;
+  const isReplacementDue = lifespanValid && lifespanPercent >= 95;
+  const isInspectionDue = lifespanValid && lifespanPercent >= 80 && lifespanPercent < 95;
 
   const handleGetProQuote = async () => {
     if (!user || !home) return;
@@ -238,7 +244,7 @@ export default function EquipmentDetail() {
                   {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                 <div className="form-group">
                   <label>Make</label>
                   <input className="form-input" value={editForm.make} onChange={(e) => setEditForm({ ...editForm, make: e.target.value })} />
@@ -258,7 +264,7 @@ export default function EquipmentDetail() {
           <div className="card mb-lg">
             <p style={{ fontWeight: 600, marginBottom: 12 }}>Installation & Location</p>
             <div className="flex-col gap-md">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                 <div className="form-group">
                   <label>Install Date</label>
                   <input className="form-input" type="date" value={editForm.install_date} onChange={(e) => setEditForm({ ...editForm, install_date: e.target.value })} />
@@ -283,7 +289,7 @@ export default function EquipmentDetail() {
                   <label>Filter Size</label>
                   <input className="form-input" value={editForm.filter_size} onChange={(e) => setEditForm({ ...editForm, filter_size: e.target.value })} placeholder="e.g. 20x25x1" />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                   <div className="form-group">
                     <label>Tonnage</label>
                     <input className="form-input" type="number" value={editForm.tonnage} onChange={(e) => setEditForm({ ...editForm, tonnage: e.target.value })} />
@@ -332,7 +338,7 @@ export default function EquipmentDetail() {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
             <button className="btn btn-ghost" onClick={() => setIsEditing(false)}>Cancel</button>
             <button className="btn btn-primary" onClick={handleSave} disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Changes'}</button>
           </div>
@@ -417,7 +423,7 @@ export default function EquipmentDetail() {
 
         {/* Basic Info */}
         <div className="card mb-lg">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }}>
             <div>
               <p className="text-xs text-gray">Category</p>
               <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{CATEGORIES.find(c => c.value === item.category)?.label}</p>
@@ -450,7 +456,7 @@ export default function EquipmentDetail() {
         </div>
 
         {/* Lifespan */}
-        {item.install_date && (
+        {item.install_date && lifespanValid && (
           <div className="card mb-lg">
             <p style={{ fontWeight: 600, marginBottom: 12 }}>Lifespan</p>
             <div style={{ marginBottom: 12 }}>
@@ -470,7 +476,7 @@ export default function EquipmentDetail() {
         {item.category === 'hvac' && (
           <div className="card mb-lg">
             <p style={{ fontWeight: 600, marginBottom: 12 }}>HVAC Details</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 12 }}>
               {item.filter_size && (
                 <div>
                   <p className="text-xs text-gray">Filter Size</p>
@@ -496,7 +502,7 @@ export default function EquipmentDetail() {
         {item.category === 'water_heater' && (
           <div className="card mb-lg">
             <p style={{ fontWeight: 600, marginBottom: 12 }}>Water Heater Details</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
               {item.tank_size_gallons && (
                 <div>
                   <p className="text-xs text-gray">Tank Size</p>
@@ -580,7 +586,7 @@ export default function EquipmentDetail() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 8 }}>
                         <div>
                           <p className="text-xs text-gray">Expires</p>
                           <p style={{ fontSize: 13, fontWeight: 500, color: Colors.charcoal }}>
@@ -639,7 +645,7 @@ export default function EquipmentDetail() {
 
         {/* Actions */}
         {!showAddWarranty && !editingWarranty && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
             <button className="btn btn-primary" onClick={() => setIsEditing(true)}>Edit</button>
             <button className="btn btn-danger" onClick={handleDelete}>Delete</button>
           </div>

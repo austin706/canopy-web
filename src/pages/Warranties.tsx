@@ -129,7 +129,16 @@ export default function Warranties() {
             <div
               role="tablist"
               aria-label="Warranty status filter"
-              style={{ display: 'flex', gap: 8, marginBottom: Spacing.sm, borderBottom: `1px solid ${Colors.lightGray}`, paddingBottom: Spacing.md }}
+              style={{
+                display: 'flex',
+                gap: 8,
+                marginBottom: Spacing.sm,
+                borderBottom: `1px solid ${Colors.lightGray}`,
+                paddingBottom: Spacing.md,
+                flexWrap: 'nowrap',
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch',
+              }}
             >
               {[
                 { key: 'all', label: 'All' },
@@ -151,6 +160,8 @@ export default function Warranties() {
                     borderBottom: filterStatus === tab.key ? `3px solid ${Colors.sage}` : 'none',
                     cursor: 'pointer',
                     fontSize: 14,
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {tab.label}

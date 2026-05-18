@@ -243,10 +243,10 @@ export default function Notifications() {
                     >
                       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                         <span style={{ flexShrink: 0, display: 'flex' }}><IconComponent size={20} color={'var(--color-copper)'} /></span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                            <p style={{ fontWeight: n.read ? 500 : 600, fontSize: 14, color: 'var(--color-charcoal)' }}>{n.title}</p>
-                            <span className="text-xs text-gray">{timeAgo(n.created_at)}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, gap: 8 }}>
+                            <p style={{ fontWeight: n.read ? 500 : 600, fontSize: 14, color: 'var(--color-charcoal)', minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.title}</p>
+                            <span className="text-xs text-gray" style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{timeAgo(n.created_at)}</span>
                           </div>
                           {n.body && <p className="text-sm text-gray" style={{ margin: 0 }}>{n.body}</p>}
                         </div>
@@ -269,7 +269,9 @@ export default function Notifications() {
               <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 6, color: 'var(--color-charcoal)' }}>Notification Categories</p>
               <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 16 }}>Choose how you receive each type of notification</p>
 
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginLeft: -4, marginRight: -4 }}>
+              <table style={{ width: '100%', minWidth: 480, borderCollapse: 'collapse' }}>
+                <caption className="sr-only">Per-category notification channel preferences</caption>
                 <thead>
                   <tr style={{ borderBottom: `1px solid var(--color-border)` }}>
                     <th style={{ textAlign: 'left', paddingBottom: 12, fontWeight: 600, fontSize: 12, color: 'var(--color-text-secondary)' }}>Category</th>
@@ -374,6 +376,7 @@ export default function Notifications() {
                   })()}
                 </tbody>
               </table>
+              </div>
             </div>
 
             {/* Section 2: Phone & Timezone */}

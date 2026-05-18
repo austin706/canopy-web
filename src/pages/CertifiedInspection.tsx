@@ -379,48 +379,59 @@ export default function CertifiedInspection() {
               borderRadius: 8,
               background: Colors.cream,
               marginTop: Spacing.md,
-              display: 'grid',
-              gridTemplateColumns: '1fr 160px 100px 100px auto',
+              display: 'flex',
+              flexDirection: 'column',
               gap: 8,
-              alignItems: 'start',
             }}
           >
-            <input
-              className="form-input"
-              placeholder="What needs fixing?"
-              value={r.title}
-              onChange={e => updateRepair(idx, { title: e.target.value })}
-            />
-            <select
-              className="form-select"
-              value={r.urgency}
-              onChange={e => updateRepair(idx, { urgency: e.target.value as RecommendedRepair['urgency'] })}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <input
+                className="form-input"
+                placeholder="What needs fixing?"
+                value={r.title}
+                onChange={e => updateRepair(idx, { title: e.target.value })}
+                style={{ flex: '1 1 0%', minWidth: 0 }}
+              />
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => removeRepair(idx)}
+                aria-label="Remove repair"
+                style={{ flexShrink: 0 }}
+              >
+                ×
+              </button>
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                gap: 8,
+              }}
             >
-              {URGENCY_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-            <input
-              type="number"
-              className="form-input"
-              placeholder="Cost low"
-              value={r.estimated_cost_low ?? ''}
-              onChange={e => updateRepair(idx, { estimated_cost_low: Number(e.target.value) || undefined })}
-            />
-            <input
-              type="number"
-              className="form-input"
-              placeholder="Cost high"
-              value={r.estimated_cost_high ?? ''}
-              onChange={e => updateRepair(idx, { estimated_cost_high: Number(e.target.value) || undefined })}
-            />
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => removeRepair(idx)}
-              aria-label="Remove repair"
-            >
-              ×
-            </button>
+              <select
+                className="form-select"
+                value={r.urgency}
+                onChange={e => updateRepair(idx, { urgency: e.target.value as RecommendedRepair['urgency'] })}
+              >
+                {URGENCY_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                className="form-input"
+                placeholder="Cost low"
+                value={r.estimated_cost_low ?? ''}
+                onChange={e => updateRepair(idx, { estimated_cost_low: Number(e.target.value) || undefined })}
+              />
+              <input
+                type="number"
+                className="form-input"
+                placeholder="Cost high"
+                value={r.estimated_cost_high ?? ''}
+                onChange={e => updateRepair(idx, { estimated_cost_high: Number(e.target.value) || undefined })}
+              />
+            </div>
           </div>
         ))}
       </section>

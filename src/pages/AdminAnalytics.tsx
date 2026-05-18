@@ -744,7 +744,7 @@ export default function AdminAnalytics() {
 
         {expandedSections.has('revenue') && (
           <div style={{ padding: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 16 }}>
               <div style={{ padding: 12, background: Colors.sageMuted, borderRadius: 6 }}>
                 <p style={{ fontSize: FontSize.xs, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>
                   MRR
@@ -826,7 +826,7 @@ export default function AdminAnalytics() {
 
         {expandedSections.has('churn') && (
           <div style={{ padding: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               <div style={{ padding: 12, background: Colors.error + '15', borderRadius: 6 }}>
                 <p style={{ fontSize: FontSize.xs, color: Colors.error, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Churned (30d)
@@ -1047,7 +1047,7 @@ export default function AdminAnalytics() {
 
         {expandedSections.has('pro-service') && (
           <div style={{ padding: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 16 }}>
               <div style={{ padding: 12, background: Colors.copper + '15', borderRadius: 6 }}>
                 <p style={{ fontSize: FontSize.xs, color: Colors.copper, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Total Requests

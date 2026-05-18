@@ -171,7 +171,7 @@ export default function Quotes() {
               {/* Expanded Details */}
               {expandedId === quote.id && (
                 <div className="card" style={{ padding: 20, marginTop: -8, borderTop: `1px solid ${Colors.lightGray}`, borderRadius: '0 0 8px 8px' }}>
-                  {quote.line_items && quote.line_items.length > 0 && (
+                  {Array.isArray(quote.line_items) && quote.line_items.length > 0 && (
                     <div style={{ marginBottom: 20 }}>
                       <p className="text-xs fw-600 mb-sm">Line Items</p>
                       <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>

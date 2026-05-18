@@ -44,6 +44,42 @@ export default function Documents() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // F28 (2026-05-18): category picker modal replaces the legacy native prompt()
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+
+  // F53 (2026-05-18): styled delete-confirm modal replaces native confirm()
+  // for both documents and secure notes.
+  const [pendingDelete, setPendingDelete] = useState<
+    | { kind: 'doc'; id: string; label: string }
+    | { kind: 'note'; id: string; label: string }
+    | null
+  >(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmPendingDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      if (pendingDelete.kind === 'doc') {
+        await deleteDocument(pendingDelete.id);
+        setDocuments(prev => prev.filter(d => d.id !== pendingDelete.id));
+      } else {
+        await deleteSecureNote(pendingDelete.id);
+        setSecureNotes(prev => prev.filter(n => n.id !== pendingDelete.id));
+        if (expandedNoteId === pendingDelete.id) setExpandedNoteId(null);
+      }
+      setPendingDelete(null);
+    } catch (err) {
+      logger.error('Failed to delete:', err);
+      showToast({ message: pendingDelete.kind === 'doc'
+        ? 'Failed to delete document. Please try again.'
+        : 'Failed to delete note. Please try again.' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // Secure Notes state
   const [secureNotes, setSecureNotes] = useState<SecureNote[]>([]);
   const [showAddNote, setShowAddNote] = useState(false);
@@ -209,25 +245,32 @@ export default function Documents() {
       return;
     }
 
-    const categoryPrompt = prompt('Select document category:\n1. Warranty\n2. Manual\n3. Receipt\n4. Inspection\n5. Insurance\n6. Other\n\nEnter number (1-6):');
-    if (!categoryPrompt) return;
+    // F28 (2026-05-18): stash the file and open the category-picker modal
+    // instead of the legacy native prompt(). Upload runs from the modal's
+    // category buttons via finishUpload().
+    setPendingFile(file);
+    setShowCategoryPicker(true);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
-    const categoryMap: Record<string, Document['category']> = {
-      '1': 'warranty',
-      '2': 'manual',
-      '3': 'receipt',
-      '4': 'inspection',
-      '5': 'insurance',
-      '6': 'other',
-    };
+  const cancelCategoryPicker = () => {
+    setPendingFile(null);
+    setShowCategoryPicker(false);
+  };
 
-    const category = categoryMap[categoryPrompt] || 'other';
-
+  const finishUpload = async (category: Document['category']) => {
+    const file = pendingFile;
+    if (!file) {
+      setShowCategoryPicker(false);
+      return;
+    }
     if (!home?.id || !user?.id) {
       showToast({ message: 'No home profile found. Please complete onboarding first.' });
+      cancelCategoryPicker();
       return;
     }
 
+    setShowCategoryPicker(false);
     setUploading(true);
     try {
       const fileName = `${user.id}/${Date.now()}-${file.name}`;
@@ -255,7 +298,7 @@ export default function Documents() {
       showToast({ message: 'Failed to upload: ' + (err.message || 'Unknown error') });
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      setPendingFile(null);
     }
   };
 
@@ -294,8 +337,12 @@ export default function Documents() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <div>
+      {/* F31 (2026-05-18): wrap title block + button in a flex-wrap row so tablet
+          widths between the global page-header column-stack breakpoint (768px)
+          don't fight the H1 for horizontal space; lift the hidden file <input>
+          out of the page-header flex children. */}
+      <div className="page-header" style={{ flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ flex: '1 1 220px', minWidth: 0 }}>
           <h1>Document Vault</h1>
           <p className="subtitle">Warranties, manuals, insurance documents</p>
         </div>
@@ -303,17 +350,18 @@ export default function Documents() {
           className="btn btn-primary"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
+          style={{ flexShrink: 0 }}
         >
           + {uploading ? 'Uploading...' : 'Add Document'}
         </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.png,.jpg,.jpeg,.heic,.heif,.webp,.gif,.doc,.docx,application/pdf,image/*,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          onChange={handleFileChange}
-          style={{ display: 'none' }}
-        />
       </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.png,.jpg,.jpeg,.heic,.heif,.webp,.gif,.doc,.docx,application/pdf,image/*,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
 
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
         {/* Home Inspection AI Analysis */}
@@ -673,17 +721,7 @@ export default function Documents() {
                     </a>
                     <button
                       className="btn btn-sm btn-ghost"
-                      onClick={async () => {
-                        if (confirm('Delete this document?')) {
-                          try {
-                            await deleteDocument(doc.id);
-                            setDocuments(prev => prev.filter(d => d.id !== doc.id));
-                          } catch (err) {
-                            logger.error('Failed to delete document:', err);
-                            showToast({ message: 'Failed to delete document. Please try again.' });
-                          }
-                        }
-                      }}
+                      onClick={() => setPendingDelete({ kind: 'doc', id: doc.id, label: doc.name })}
                     >
                       Delete
                     </button>
@@ -902,18 +940,7 @@ export default function Documents() {
                         </button>
                         <button
                           className="btn btn-sm btn-ghost"
-                          onClick={async () => {
-                            if (confirm('Delete this secure note?')) {
-                              try {
-                                await deleteSecureNote(note.id);
-                                setSecureNotes(prev => prev.filter(n => n.id !== note.id));
-                                if (expandedNoteId === note.id) setExpandedNoteId(null);
-                              } catch (err) {
-                                logger.error('Failed to delete note:', err);
-                                showToast({ message: 'Failed to delete note. Please try again.' });
-                              }
-                            }
-                          }}
+                          onClick={() => setPendingDelete({ kind: 'note', id: note.id, label: note.title })}
                         >
                           Delete
                         </button>
@@ -926,6 +953,120 @@ export default function Documents() {
           </div>
         )}
       </div>
+
+      {/* F28 (2026-05-18): category picker modal — replaces native prompt() */}
+      {showCategoryPicker && pendingFile && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="doc-category-picker-title"
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={cancelCategoryPicker}
+        >
+          <div
+            className="card"
+            style={{ maxWidth: 420, width: '100%', padding: 24 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="doc-category-picker-title" style={{ margin: 0, marginBottom: 6 }}>
+              Pick a category
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0, marginBottom: 16, wordBreak: 'break-word' }}>
+              for <strong style={{ color: 'var(--color-charcoal)' }}>{pendingFile.name}</strong>
+            </p>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                gap: 8,
+                marginBottom: 16,
+              }}
+            >
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => finishUpload(c.value)}
+                  style={{
+                    padding: '12px 8px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    borderRadius: 10,
+                    border: `1px solid ${Colors.lightGray}`,
+                    background: 'var(--color-background)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={cancelCategoryPicker}
+              style={{ width: '100%' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* F53 (2026-05-18): styled delete-confirm modal replaces native confirm() */}
+      {pendingDelete && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-confirm-title"
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => !deleting && setPendingDelete(null)}
+        >
+          <div
+            className="card"
+            style={{ maxWidth: 420, width: '100%', padding: 24 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="delete-confirm-title" style={{ margin: 0, marginBottom: 6, color: Colors.charcoal }}>
+              Delete {pendingDelete.kind === 'doc' ? 'document' : 'secure note'}?
+            </h3>
+            <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', margin: 0, marginBottom: 16, lineHeight: 1.5, wordBreak: 'break-word' }}>
+              This will permanently remove <strong style={{ color: Colors.charcoal }}>{pendingDelete.label}</strong>. This action can't be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setPendingDelete(null)}
+                disabled={deleting}
+                style={{ flex: '1 1 120px' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={confirmPendingDelete}
+                disabled={deleting}
+                style={{ flex: '1 1 120px', background: '#dc3545', color: 'white' }}
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

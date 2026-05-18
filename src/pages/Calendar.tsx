@@ -321,8 +321,8 @@ export default function Calendar() {
   if (activeTab === 'log') {
     return (
       <div className="page">
-        <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
+        <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ flex: '1 1 220px', minWidth: 0 }}>
             <h1>Calendar</h1>
             <p className="subtitle">Tasks, visits & maintenance history</p>
           </div>
@@ -332,6 +332,7 @@ export default function Calendar() {
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 16px', fontSize: 13, fontWeight: 600,
               borderRadius: 8, whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
             onClick={() => navigate('/task/create')}
           >
@@ -370,12 +371,12 @@ export default function Calendar() {
 
   return (
     <div className="page">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ flex: '1 1 220px', minWidth: 0 }}>
           <h1>Calendar</h1>
           <p className="subtitle">Tasks, visits & maintenance history</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
           <button
             className="btn btn-ghost btn-sm"
             style={{
@@ -438,9 +439,9 @@ export default function Calendar() {
         ))}
       </div>
 
-      {/* Monthly Summary Stats */}
+      {/* Monthly Summary Stats — F37 grid auto-fit so cells rebalance evenly instead of leaving a wrap gap */}
       <div className="card mb-md">
-        <div className="flex gap-lg items-center" style={{ flexWrap: 'wrap' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: 16 }}>
           <div>
             <p style={{ fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{monthStats.total}</p>
             <p className="text-xs text-gray">Tasks This Month</p>
@@ -861,6 +862,7 @@ export default function Calendar() {
                 <input
                   className="form-input"
                   readOnly
+                  aria-label="Calendar feed URL"
                   value={buildICalSubscribeUrl(calToken)}
                   onFocus={(e) => e.currentTarget.select()}
                   style={{ fontSize: 12, fontFamily: 'monospace' }}

@@ -60,15 +60,24 @@ export default function AgentLanding() {
               style={{ objectFit: 'contain' }}
             />
             <span style={{ fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.charcoal }}>Canopy</span>
-            <span style={{ fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: Colors.copper, marginLeft: 4 }}>for Agents</span>
+            {/* 2026-05-15 (F9): the "for Agents" tag hugging the wordmark
+                + a "← Home" text link + an "Apply Now" CTA was three
+                competing elements jammed into the header at iPhone width.
+                On mobile we drop the redundant "for Agents" tag (the
+                eyebrow under the hero already shouts FOR REAL ESTATE
+                AGENTS) and shorten the home link to the arrow alone. */}
+            {!isMobile && (
+              <span style={{ fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: Colors.copper, marginLeft: 4 }}>for Agents</span>
+            )}
           </div>
 
           <nav style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 24 }}>
             <a
               href="/"
+              aria-label="Back to Canopy home"
               style={{ fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: Colors.medGray, textDecoration: 'none' }}
             >
-              ← Home
+              {isMobile ? '←' : '← Home'}
             </a>
             <button
               onClick={() => window.location.href = '/agent-application'}

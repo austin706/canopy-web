@@ -118,7 +118,8 @@ export default function Refer() {
       {stats && (
         <div className="card" style={{ padding: 24 }}>
           <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Your referrals</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          {/* 2026-05-15 (F21): mobile-responsive grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 16 }}>
             <div>
               <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-primary)' }}>{stats.totalReferred}</div>
               <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Total signed up</div>

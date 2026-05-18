@@ -294,23 +294,28 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Subscription */}
+      {/* Subscription
+          2026-05-15 (F15): switched the outer flex to wrap + give the right-side
+          button column a min-width of 100% on wrap so the buttons stack BELOW
+          the plan info on narrow viewports. Previously "Manage Plan" and
+          "Cancel Subscription" truncated to "Manage P..." / "Cancel Subsc..."
+          at iPhone width because the flex row had no wrap path. */}
       <div className="card mb-lg" style={{ background: 'var(--color-copper-muted, #FFF3E0)' }}>
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between" style={{ flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ flex: '1 1 auto', minWidth: 0 }}>
             <p className="text-xs fw-600 text-copper mb-sm">SUBSCRIPTION</p>
             <h3>{plan?.name || 'Free'}</h3>
             <p className="text-sm text-gray">{(plan as any)?.inquireForPricing ? 'Concierge Plan' : `$${plan?.price || 0}${plan?.period}`}</p>
             {user?.subscription_expires_at && <p className="text-xs text-gray mt-sm">Expires: {new Date(user.subscription_expires_at).toLocaleDateString()}</p>}
           </div>
-          <div style={{ display: 'flex', gap: 8, flexDirection: 'column' }}>
+          <div style={{ display: 'flex', gap: 8, flexDirection: 'column', flex: '0 1 auto', minWidth: 160 }}>
             <button className="btn btn-primary" onClick={() => navigate('/subscription')}>
               {tier === 'free' ? 'Upgrade' : 'Manage Plan'}
             </button>
             {tier !== 'free' && (
               <button
                 className="btn btn-ghost btn-sm"
-                style={{ color: Colors.error, fontSize: 12 }}
+                style={{ color: Colors.error, fontSize: 12, whiteSpace: 'nowrap' }}
                 onClick={() => setShowDowngradeModal(true)}
               >
                 Cancel Subscription

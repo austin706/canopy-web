@@ -445,6 +445,10 @@ export default function App() {
           <Route path="/testimonial/submit" element={<TestimonialSubmit />} />
           <Route path="/apply-pro" element={<ApplyPro />} />
           <Route path="/for-agents" element={<AgentLanding />} />
+          {/* 2026-05-15 (F10): legacy URL kept as a redirect so any external
+              link or marketing artifact still pointing at /agent-landing
+              lands on the right page instead of the 404. */}
+          <Route path="/agent-landing" element={<Navigate to="/for-agents" replace />} />
           <Route path="/for-pros" element={<ProLanding />} />
           <Route path="/a/:slug" element={<AgentRedeem />} />
           <Route path="/agent-application" element={<AgentApplication />} />

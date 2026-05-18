@@ -511,12 +511,16 @@ export default function AgentPortal() {
           onSelect={setSelectedAgentId}
         />
       )}
-      <div className="flex items-center justify-between mb-lg">
-        <div>
+      {/* 2026-05-15 (F22): on mobile this row forced "Edit Profile" + "← Back
+          to Dashboard" buttons to fight the H1 for horizontal room, pushing
+          the page width past the viewport and clipping content. flex-wrap
+          lets the buttons drop below the title at narrow widths. */}
+      <div className="flex items-center justify-between mb-lg" style={{ flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ flex: '1 1 220px', minWidth: 0 }}>
           <h1>Agent Portal</h1>
           <p className="subtitle">{isAdmin ? 'Preview agent portal' : 'Manage your clients and gift codes'}</p>
         </div>
-        <div className="flex gap-sm">
+        <div className="flex gap-sm" style={{ flexShrink: 0 }}>
           <button className="btn btn-secondary" onClick={() => navigate('/agent-portal/profile')}>Edit Profile</button>
           <button className="btn btn-ghost" onClick={() => navigate('/')}>&larr; Back to Dashboard</button>
         </div>
@@ -1006,7 +1010,10 @@ export default function AgentPortal() {
       // ═══ Gift Codes Tab ═══
       tab === 'codes' ? (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }} className="mb-lg">
+          {/* 2026-05-15 (F22): was hardcoded `repeat(3, 1fr)` which forced
+              3 cards into the 390px iPhone viewport and clipped the right
+              card. auto-fit collapses to fewer columns on narrow widths. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }} className="mb-lg">
             <div className="card stat-card">
               <div className="stat-value" style={{ color: Colors.copper }}>{activeCodes.length}</div>
               <div className="stat-label">Available Codes</div>
@@ -1072,7 +1079,7 @@ export default function AgentPortal() {
           {/* Social Proof Stats */}
           <div className="card mb-lg" style={{ padding: 24, background: `linear-gradient(135deg, var(--color-copper)10, var(--color-sage)10)` }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, textAlign: 'center' }}>Your Impact</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }}>
               <div style={{ textAlign: 'center' }}>
                 <p style={{ fontSize: 32, fontWeight: 700, color: Colors.copper, marginBottom: 4 }}>{clients.length}</p>
                 <p className="text-sm text-gray">Families Helped</p>
@@ -1160,7 +1167,7 @@ export default function AgentPortal() {
         <>
           {/* Portfolio Overview */}
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Portfolio Overview</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }} className="mb-lg">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }} className="mb-lg">
             <div className="card stat-card">
               <div className="stat-value" style={{ color: Colors.success }}>
                 {clients.filter((c: any) => clientActivityDates[c.id]).length}
@@ -1218,7 +1225,7 @@ export default function AgentPortal() {
 
           {/* Code Performance */}
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Code Performance</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }} className="mb-lg">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }} className="mb-lg">
             <div className="card stat-card">
               <div className="stat-value" style={{ color: Colors.copper }}>{codes.length}</div>
               <div className="stat-label">Total Codes</div>
@@ -1265,7 +1272,7 @@ export default function AgentPortal() {
             {clients.length === 0 ? (
               <p className="text-sm text-gray">No clients yet.</p>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }}>
                 {['free', 'home', 'pro'].map(tier => {
                   const count = clients.filter(c => (c.subscription_tier || 'free') === tier).length;
                   const tierLabel = tier === 'free' ? 'Free' : tier.charAt(0).toUpperCase() + tier.slice(1);

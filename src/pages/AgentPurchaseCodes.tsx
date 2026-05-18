@@ -452,7 +452,8 @@ export default function AgentPurchaseCodes() {
       {tab === 'codes' && (
         <>
           {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+          {/* 2026-05-15 (F21): mobile-responsive grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
             <div className="card" style={{ textAlign: 'center', padding: 16 }}>
               <div style={{ fontSize: 24, fontWeight: 700, color: Colors.copper }}>{codes.length}</div>
               <div style={{ fontSize: 12, color: Colors.medGray }}>Total</div>

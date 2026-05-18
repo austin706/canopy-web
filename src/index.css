@@ -425,6 +425,12 @@ tr:hover td { background: var(--warm-white); }
   cursor: pointer;
   border-radius: 6px;
   transition: all 0.15s;
+  /* 2026-05-15 (F21): when the parent .tabs strip is overflowing horizontally
+     on mobile, each tab must keep its label on a single line and refuse to
+     shrink. Without this, AgentPortal's 7 tabs wrap to 3-line labels
+     ("+ / New / Client", "Gift / Codes / (0)") and the strip can't scroll. */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .tab.active { background: var(--white); color: var(--copper); box-shadow: var(--shadow-sm); }
 .tab:hover:not(.active) { color: var(--charcoal); }

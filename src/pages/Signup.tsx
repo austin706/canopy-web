@@ -153,9 +153,14 @@ export default function Signup() {
               You were referred by a friend — you'll both get 1 month free when you subscribe!
             </div>
           )}
+          {/* 2026-05-15 (F8): Login already shows a Canopy watercolor logo
+              + brand wordmark at the top of its form card. Signup was
+              text-only, which read as a different brand standard between
+              two adjacent surfaces. Match Login's treatment. */}
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <h1>Create Account</h1>
-            <p className="subtitle">Start managing your home with Canopy</p>
+            <div style={{ marginBottom: 12 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 48, width: 'auto', objectFit: 'contain' }} /></div>
+            <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Canopy</h1>
+            <p className="subtitle">Create your account</p>
           </div>
           {error && <div style={{ background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', padding: '10px 16px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{error}</div>}
           <form onSubmit={handleSignup}>

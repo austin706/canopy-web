@@ -113,7 +113,8 @@ export default function ClaimHome() {
               <h2 style={{ fontSize: 18, marginBottom: 16 }}>{homeData.address || 'Your New Home'}</h2>
               {homeData.city && <p className="text-sm text-gray" style={{ marginBottom: 16 }}>{homeData.city}, {homeData.state} {homeData.zip_code}</p>}
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+              {/* 2026-05-15 (F21): mobile-responsive grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
                 {homeData.year_built && (
                   <div><p className="text-xs text-gray">Year Built</p><p className="fw-600 text-sm">{homeData.year_built}</p></div>
                 )}

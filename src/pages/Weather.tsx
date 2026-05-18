@@ -73,7 +73,12 @@ export default function Weather() {
     );
   }
 
-  const visibleAlerts = displayWeather.alerts.filter(a => !dismissedAlerts.has(a.id));
+  // 2026-05-15 (F20): defensive — the fetchWeather edge function has shipped
+  // responses where `alerts` or `forecast` are missing entirely. Without
+  // these falls-back the Weather page crashes with "X.map is not a function"
+  // for those users (caught on live mobile during the audit).
+  const visibleAlerts = (displayWeather.alerts || []).filter(a => !dismissedAlerts.has(a.id));
+  const forecast = Array.isArray(displayWeather.forecast) ? displayWeather.forecast : [];
 
   return (
     <div className="page">
@@ -175,8 +180,11 @@ export default function Weather() {
         {/* 7-Day Forecast */}
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>5-Day Forecast</h2>
+          {forecast.length === 0 ? (
+            <p className="text-sm text-gray">Forecast unavailable right now. We'll keep trying.</p>
+          ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12 }}>
-            {displayWeather.forecast.map((day) => (
+            {forecast.map((day) => (
               <div key={day.date} className="card" style={{ padding: '14px 12px', textAlign: 'center', border: '1px solid var(--color-border, #E8E2D8)' }}>
                 <p className="text-xs text-gray fw-600">
                   {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
@@ -195,6 +203,7 @@ export default function Weather() {
               </div>
             ))}
           </div>
+          )}
         </div>
 
         {/* Maintenance Tips */}

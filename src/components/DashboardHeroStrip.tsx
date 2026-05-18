@@ -69,10 +69,17 @@ export function DashboardHeroStrip({
 
     if (overdueCount > 0) {
       const pointsBack = overdueCount === 1 ? 1 : Math.min(overdueCount * 1, 10);
+      // 2026-05-15 (F14): reframed to lead with the forward action instead
+      // of the problem statement. Same information, less negative tone.
+      // The NextActionHero above already surfaces the overdue task with
+      // its red rail; this card no longer duplicates the bad-news framing
+      // ("pulling your score down" → "to gain ~N points"). Tone moved from
+      // error red to warning amber so the cumulative first-paint impression
+      // isn't four red signals stacked. Audit F14.
       return {
-        label: `${overdueCount} overdue ${overdueCount === 1 ? 'task' : 'tasks'} pulling your score down`,
-        hint: `Clear ${overdueCount === 1 ? 'it' : 'one'} this week to claw back ~${pointsBack} ${pointsBack === 1 ? 'point' : 'points'}.`,
-        tone: colors.error,
+        label: `Clear ${overdueCount === 1 ? '1 overdue task' : `${overdueCount} overdue tasks`} to gain ~${pointsBack} ${pointsBack === 1 ? 'point' : 'points'}`,
+        hint: `Quickest win for your home health score this week.`,
+        tone: colors.warning,
       };
     }
     if (currentMonth < rolling90 - 10 && totalCount > 0) {

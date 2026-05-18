@@ -97,26 +97,42 @@
 /* ─── Responsive Design ─── */
 
 @media (max-width: 640px) {
+  /* 2026-05-15 (F2): the prior mobile layout stacked text + buttons
+     vertically with flex-direction:column, making the banner ~150px
+     tall — that fully obscured the "See it in action" hero CTA on
+     first paint. Kept the row layout, shrunk text + buttons + padding
+     so the banner is a thin (~64px) bottom strip the user can dismiss
+     without it sitting on top of any primary CTA. */
   .cookie-consent-banner {
-    padding: 16px;
+    padding: 10px 14px;
   }
 
   .cookie-consent-content {
-    flex-direction: column;
-    gap: 16px;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+
+  .cookie-consent-text {
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   .cookie-consent-text p {
-    font-size: 13px;
+    font-size: 12px;
+    line-height: 1.35;
   }
 
   .cookie-consent-buttons {
-    width: 100%;
-    justify-content: stretch;
+    width: auto;
+    flex-shrink: 0;
+    gap: 6px;
   }
 
   .cookie-consent-btn {
-    flex: 1;
-    padding: 12px 16px;
+    flex: 0 0 auto;
+    padding: 7px 12px;
+    font-size: 12px;
   }
 }

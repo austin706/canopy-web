@@ -298,6 +298,13 @@ export default function Landing() {
               {label}
             </a>
           ))}
+          {/* 2026-05-15 (F7): For Agents / For Pros / Add-On Services were
+              only reachable from the footer on mobile. Surface them here so
+              mobile visitors don't have to scroll the entire landing page
+              to find the right entry point. */}
+          <a href="/for-agents" style={{ padding: '12px 0', fontSize: 16, color: Colors.charcoal, textDecoration: 'none', fontWeight: FontWeight.medium }}>For Agents</a>
+          <a href="/for-pros" style={{ padding: '12px 0', fontSize: 16, color: Colors.charcoal, textDecoration: 'none', fontWeight: FontWeight.medium }}>For Pros</a>
+          <a href="/add-ons" style={{ padding: '12px 0', fontSize: 16, color: Colors.charcoal, textDecoration: 'none', fontWeight: FontWeight.medium }}>Add-On Services</a>
           <a href="/support" style={{ padding: '12px 0', fontSize: 16, color: Colors.charcoal, textDecoration: 'none', fontWeight: FontWeight.medium }}>Support</a>
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
             <button onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
@@ -320,7 +327,9 @@ export default function Landing() {
   const HeroSection = () => (
     <section style={{
       background: `linear-gradient(180deg, ${Colors.warmWhite} 0%, ${Colors.cream} 100%)`,
-      padding: isMobile ? '56px 16px 64px' : '96px 24px 112px',
+      /* 2026-05-15 (F6): mobile section padding shrunk to reduce total
+         landing scroll length (~14 viewports → ~12). Desktop unchanged. */
+      padding: isMobile ? '44px 16px 48px' : '96px 24px 112px',
       textAlign: 'center', fontFamily: fontStack,
       position: 'relative',
       overflow: 'hidden',
@@ -420,7 +429,7 @@ export default function Landing() {
   // ═══════════════════════════════════════════════════════════════════════════════
   const HowItWorks = () => (
     <section id="how-it-works" style={{
-      background: Colors.cream, padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack,
+      background: Colors.cream, padding: isMobile ? '36px 16px' : '80px 24px', fontFamily: fontStack,
     }}>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
         <p style={{
@@ -488,7 +497,7 @@ export default function Landing() {
   const SmartCalendarSection = () => (
     <section style={{
       background: Colors.warmWhite,
-      padding: isMobile ? '64px 16px' : '112px 24px',
+      padding: isMobile ? '48px 16px' : '112px 24px',
       fontFamily: fontStack,
       position: 'relative',
       overflow: 'hidden',
@@ -659,7 +668,7 @@ export default function Landing() {
   const HomeTokenSection = () => (
     <section style={{
       background: `linear-gradient(180deg, ${Colors.warmWhite} 0%, ${Colors.cream} 100%)`,
-      padding: isMobile ? '64px 16px' : '112px 24px',
+      padding: isMobile ? '48px 16px' : '112px 24px',
       fontFamily: fontStack,
       position: 'relative',
       overflow: 'hidden',
@@ -726,13 +735,19 @@ export default function Landing() {
               onMouseLeave={(e) => { (e.target as HTMLElement).style.background = Colors.copper; (e.target as HTMLElement).style.transform = 'translateY(0)'; }}>
               Start your Home Token →
             </button>
+            {/* 2026-05-15 (F5): "See pricing" used to be plain copper text
+                with no underline / arrow — read as static decoration next
+                to the primary "Start your Home Token →" button. Added the
+                underline + arrow so it obviously looks like a link target. */}
             <button onClick={() => scrollToSection('pricing')}
               style={{
                 padding: '14px 28px', fontSize: FontSize.md, fontWeight: FontWeight.semibold,
                 background: 'transparent', color: Colors.copper, border: 'none',
                 cursor: 'pointer', fontFamily: fontStack,
+                textDecoration: 'underline',
+                textUnderlineOffset: 4,
               }}>
-              See pricing
+              See pricing →
             </button>
           </div>
         </div>
@@ -865,7 +880,7 @@ export default function Landing() {
         id="add-ons"
         style={{
           background: Colors.warmWhite,
-          padding: isMobile ? '48px 0' : '80px 24px',
+          padding: isMobile ? '36px 0' : '80px 24px',
           fontFamily: fontStack,
         }}
         aria-labelledby="add-ons-heading"
@@ -1015,6 +1030,26 @@ export default function Landing() {
           ))}
         </div>
 
+        {/* 2026-05-15 (F3): explicit swipe affordance beneath the scroll-snap
+            carousel on mobile. The partial second-card glimpse on the right
+            is a passive hint; this caption is an active one so users know
+            there are more services off-screen. Desktop renders as a 5-col
+            grid so this line is hidden there. */}
+        {isMobile && (
+          <p
+            aria-hidden="true"
+            style={{
+              textAlign: 'center',
+              fontSize: 12,
+              color: Colors.medGray,
+              margin: '6px 0 0',
+              fontStyle: 'italic',
+            }}
+          >
+            ← Swipe to see all {cards.length} services →
+          </p>
+        )}
+
         <p
           style={{
             fontSize: FontSize.sm,
@@ -1066,7 +1101,7 @@ export default function Landing() {
     return (
       <section style={{
         background: Colors.cream,
-        padding: isMobile ? '64px 16px' : '96px 24px',
+        padding: isMobile ? '48px 16px' : '96px 24px',
         fontFamily: fontStack,
         position: 'relative',
         overflow: 'hidden',
@@ -1206,7 +1241,7 @@ export default function Landing() {
   const OnEveryScreenSection = () => (
     <section style={{
       background: Colors.cream,
-      padding: isMobile ? '64px 16px' : '112px 24px',
+      padding: isMobile ? '48px 16px' : '112px 24px',
       fontFamily: fontStack,
       position: 'relative',
       overflow: 'hidden',
@@ -1419,7 +1454,7 @@ export default function Landing() {
         id="who-is-it-for"
         style={{
           background: Colors.warmWhite,
-          padding: isMobile ? '56px 16px' : '80px 24px',
+          padding: isMobile ? '40px 16px' : '80px 24px',
           fontFamily: fontStack,
         }}
       >
@@ -1536,7 +1571,7 @@ export default function Landing() {
   // ═══════════════════════════════════════════════════════════════════════════════
   const FeaturesSection = () => (
     <section id="features" style={{
-      background: '#F5F4F0', padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack,
+      background: '#F5F4F0', padding: isMobile ? '36px 16px' : '80px 24px', fontFamily: fontStack,
     }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <p style={{
@@ -1596,7 +1631,7 @@ export default function Landing() {
   // ═══════════════════════════════════════════════════════════════════════════════
   const StatsSection = () => (
     <section style={{
-      background: Colors.warmWhite, padding: isMobile ? '56px 16px' : '88px 24px', fontFamily: fontStack,
+      background: Colors.warmWhite, padding: isMobile ? '40px 16px' : '88px 24px', fontFamily: fontStack,
     }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <h2 style={{
@@ -1777,7 +1812,7 @@ export default function Landing() {
 
     return (
       <section id="pricing" style={{
-        background: Colors.white, padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack,
+        background: Colors.white, padding: isMobile ? '36px 16px' : '80px 24px', fontFamily: fontStack,
       }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <h2 style={{
@@ -1877,9 +1912,15 @@ export default function Landing() {
                   <li key={i} style={itemStyle}><span style={checkStyle}>✓</span> {i}</li>
                 ))}
               </ul>
+              {/* 2026-05-15 (F4): the Free CTA was a lightGray-on-white
+                  button that visually "trailed off" next to the prominent
+                  copper Home button. Bumped to an outlined-copper
+                  treatment so the click target reads clearly without
+                  competing with the Most Popular card's solid copper. */}
               <button onClick={() => ctaToSignup('pricing_free')} style={{
                 width: '100%', padding: 12, fontSize: FontSize.md, fontWeight: FontWeight.semibold,
-                background: Colors.lightGray, color: Colors.charcoal, border: 'none',
+                background: 'transparent', color: Colors.copper,
+                border: `1.5px solid ${Colors.copper}`,
                 borderRadius: BorderRadius.lg, cursor: 'pointer', fontFamily: fontStack,
               }}>
                 Start Free
@@ -2103,7 +2144,7 @@ export default function Landing() {
   // ═══════════════════════════════════════════════════════════════════════════════
   const FaqSection = () => (
     <section id="faq" style={{
-      background: Colors.white, padding: isMobile ? '56px 16px' : '88px 24px', fontFamily: fontStack,
+      background: Colors.white, padding: isMobile ? '40px 16px' : '88px 24px', fontFamily: fontStack,
     }}>
       <div style={{ maxWidth: 820, margin: '0 auto' }}>
         <h2 style={{
@@ -2189,7 +2230,7 @@ export default function Landing() {
   const AgentReferralStrip = () => (
     <section style={{
       background: `linear-gradient(135deg, ${Colors.sage}10 0%, ${Colors.copper}10 100%)`,
-      padding: isMobile ? '40px 16px' : '56px 24px',
+      padding: isMobile ? '32px 16px' : '56px 24px',
       fontFamily: fontStack,
       borderTop: `1px solid ${Colors.lightGray}`,
       borderBottom: `1px solid ${Colors.lightGray}`,
@@ -2247,7 +2288,7 @@ export default function Landing() {
   const FinalCta = () => (
     <section style={{
       background: `linear-gradient(135deg, ${Colors.charcoal} 0%, #1a1a1a 100%)`,
-      padding: isMobile ? '48px 16px' : '80px 24px', fontFamily: fontStack, textAlign: 'center',
+      padding: isMobile ? '36px 16px' : '80px 24px', fontFamily: fontStack, textAlign: 'center',
     }}>
       <div style={{ maxWidth: 680, margin: '0 auto' }}>
         <h2 style={{

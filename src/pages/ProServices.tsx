@@ -423,14 +423,30 @@ export default function ProServices() {
     { key: 'invoices', label: 'Invoices' },
   ];
 
+  // 2026-05-15 (F17): 5 tabs × ~90px = ~450px which doesn't fit the 390px
+  // mobile viewport. Without overflow-x scroll, the right-most tab ("Invoices")
+  // gets clipped, and "Add-Ons" wraps mid-word to two lines. Make the tab
+  // strip horizontally scrollable + force each label to one line.
   const tabBar = (
-    <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${Colors.cream}`, marginBottom: 24 }}>
+    <div
+      role="tablist"
+      style={{
+        display: 'flex',
+        gap: 0,
+        borderBottom: `2px solid ${Colors.cream}`,
+        marginBottom: 24,
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+      }}
+    >
       {tabs.map(t => (
         <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
           padding: '10px 20px', fontSize: 14, fontWeight: activeTab === t.key ? 700 : 500,
           color: activeTab === t.key ? Colors.sage : Colors.medGray, background: 'none', border: 'none',
           borderBottomWidth: 3, borderBottomStyle: 'solid',
           borderBottomColor: activeTab === t.key ? Colors.sage : 'transparent', cursor: 'pointer', marginBottom: -2,
+          whiteSpace: 'nowrap', flexShrink: 0,
         }}>{t.label}</button>
       ))}
     </div>

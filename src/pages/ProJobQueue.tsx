@@ -372,7 +372,8 @@ export default function ProJobQueue() {
       </div>
 
       {/* Stats Bar */}
-      <div className="grid-3 mb-lg" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: Spacing.md }}>
+      {/* 2026-05-15 (F21): mobile-responsive grid */}
+      <div className="grid-3 mb-lg" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: Spacing.md }}>
         <div className="card" style={{ textAlign: 'center', padding: `${Spacing.md}px ${Spacing.sm}px` }}>
           <div style={{ fontSize: FontSize.xxl, fontWeight: FontWeight.bold, color: Colors.sage, marginBottom: Spacing.xs }}>
             {stats.todaysVisits}

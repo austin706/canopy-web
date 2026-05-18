@@ -1117,7 +1117,7 @@ export default function AdminAnalytics() {
         </div>
         {expandedSections.has('template-performance') && (
           <div style={{ padding: 16 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 16 }}>
               <div style={{ padding: 12, background: Colors.sage + '15', borderRadius: 6 }}>
                 <p style={{ fontSize: FontSize.xs, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>Templates</p>
                 <p style={{ fontSize: 20, fontWeight: 700, color: Colors.sage, margin: 0 }}>{data.templateTotals.totalTemplates}</p>

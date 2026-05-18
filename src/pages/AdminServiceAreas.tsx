@@ -573,7 +573,8 @@ export default function AdminServiceAreas() {
           {/* Coverage Status Breakdown */}
           <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid var(--border-color)` }}>
             <h4 style={{ fontSize: 14, fontWeight: 600, margin: '0 0 12px 0' }}>Coverage Levels</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            {/* 2026-05-15 (F21): mobile-responsive grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
               <div style={{ padding: 12, background: Colors.sageMuted, borderRadius: 6 }}>
                 <p style={{ fontSize: 12, color: Colors.sage, fontWeight: 600, margin: '0 0 4px 0' }}>
                   Well Covered (3+)

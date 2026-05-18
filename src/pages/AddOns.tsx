@@ -510,7 +510,11 @@ export default function AddOns() {
           }}>
             {ICON_MAP[est.icon] || '📋'}
           </div>
-          <div style={{ flex: 1 }}>
+          {/* 2026-05-15 (F19): minWidth: 0 so the flex child can actually
+              shrink below its intrinsic text width. Without it, long
+              service descriptions overflow the card on the right edge at
+              iPhone width. */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontWeight: 600, fontSize: 15, color: Colors.charcoal, margin: '0 0 2px' }}>{est.display_name}</p>
             <p style={{ fontSize: 12, color: Colors.medGray, margin: '0 0 6px', lineHeight: 1.4 }}>{est.description}</p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>

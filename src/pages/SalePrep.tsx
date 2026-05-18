@@ -51,6 +51,11 @@ function InspectionWedge({ homeId }: { homeId?: string }) {
     if (daysSince < 365) return null;
   }
 
+  // 2026-05-15 (F16): flex children need minWidth: 0 to honor flex-shrink
+  // against their intrinsic text width; otherwise the middle column refuses
+  // to shrink and the whole card overflows the page right edge on mobile.
+  // Also added flexWrap: 'wrap' so the CTA button drops below the text on
+  // narrow viewports rather than fighting for horizontal room.
   return (
     <div style={{
       padding: 18,
@@ -59,11 +64,12 @@ function InspectionWedge({ homeId }: { homeId?: string }) {
       background: `linear-gradient(135deg, ${Colors.cream} 0%, ${Colors.copper}15 100%)`,
       border: `1px solid ${Colors.copper}40`,
       display: 'flex',
+      flexWrap: 'wrap',
       gap: 14,
       alignItems: 'center',
     }}>
       <div aria-hidden="true" style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>🛡️</div>
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: '1 1 200px', minWidth: 0 }}>
         <p style={{ fontSize: FontSize.xs, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: Colors.copper, margin: 0 }}>
           Boost your list price
         </p>

@@ -940,7 +940,8 @@ export default function ProInspection() {
             >
               Overall Condition &mdash; {activeInspection.equipment_name}
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: Spacing.sm }}>
+            {/* 2026-05-15 (F21): mobile-responsive grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: Spacing.sm }}>
               {(['good', 'fair', 'needs_attention', 'critical'] as OverallCondition[]).map((condition) => {
                 const isActive = activeInspection.overall_condition === condition;
                 const color = CONDITION_COLORS[condition];

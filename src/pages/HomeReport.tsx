@@ -198,7 +198,11 @@ export default function HomeReport() {
           </h2>
           {home && (
             <div className="card" style={{ padding: 20 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 32px' }}>
+              {/* 2026-05-15 (F18): was a hardcoded 2-column grid even on
+                  mobile, which clipped labels like "Bedrooms / Bathrooms"
+                  and "Water / Sewer" at iPhone width. auto-fit lets it
+                  collapse to a single column at small widths. */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px 32px' }}>
                 <div><span style={{ fontSize: 12, color: Colors.medGray }}>Address</span><p style={{ fontWeight: 600 }}>{home.address}, {home.city}, {home.state} {home.zip_code}</p></div>
                 <div><span style={{ fontSize: 12, color: Colors.medGray }}>Year Built</span><p style={{ fontWeight: 600 }}>{home.year_built || 'N/A'}</p></div>
                 <div><span style={{ fontSize: 12, color: Colors.medGray }}>Square Footage</span><p style={{ fontWeight: 600 }}>{home.square_footage ? home.square_footage.toLocaleString() + ' sq ft' : 'N/A'}</p></div>
@@ -217,7 +221,10 @@ export default function HomeReport() {
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12, color: Colors.charcoal, borderBottom: `2px solid ${Colors.sage}`, paddingBottom: 6 }}>
             Maintenance Summary
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          {/* 2026-05-15 (F18): repeat(4, 1fr) crushed 4 stat cards into the
+              iPhone viewport. auto-fit with minmax(140px) keeps them 2x2
+              on mobile and 4x1 on desktop. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
             {/* Maintenance Summary stat grid: sage for counts, copper for currency.
                 Was 4 different colors (sage / copper / info-blue / charcoal-black) —
                 blue isn't in the brand and black was harsh on cream. Mobile parity. */}

@@ -549,32 +549,42 @@ export default function Dashboard() {
                 {unreadNotifications.length} notification{unreadNotifications.length > 1 ? 's' : ''}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {recentNotifications.map((notif) => (
-                  <button
-                    key={notif.id}
-                    onClick={() => {
-                      if (!notif.read) {
-                        markNotificationRead(notif.id).catch((err) => {
-                          logger.warn('Failed to mark notification as read:', err?.message);
-                        });
-                      }
-                      navigate('/notifications');
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      padding: 0,
-                      fontSize: 13,
-                      color: 'var(--color-copper)',
-                      textDecoration: 'underline',
-                      fontWeight: 500,
-                    }}
-                  >
-                    {notif.title}
-                  </button>
-                ))}
+                {recentNotifications.map((notif) => {
+                  // 2026-05-15 (F12): two notifications with the same title
+                  // (e.g. two "Daily Activity Summary" rows on different days)
+                  // looked like a render duplicate. Append a short date so
+                  // identical titles disambiguate visually.
+                  const when = notif.created_at
+                    ? new Date(notif.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                    : null;
+                  return (
+                    <button
+                      key={notif.id}
+                      onClick={() => {
+                        if (!notif.read) {
+                          markNotificationRead(notif.id).catch((err) => {
+                            logger.warn('Failed to mark notification as read:', err?.message);
+                          });
+                        }
+                        navigate('/notifications');
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        padding: 0,
+                        fontSize: 13,
+                        color: 'var(--color-copper)',
+                        textDecoration: 'underline',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {notif.title}
+                      {when ? <span style={{ color: 'var(--color-text-secondary)', textDecoration: 'none', fontWeight: 400 }}> · {when}</span> : null}
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <button
@@ -894,14 +904,15 @@ export default function Dashboard() {
       {/* DD-9: first-visit orientation card (Pro tier, before first visit completes) */}
       <FirstVisitOrientationCard />
 
-      {/* Post-onboarding setup checklist */}
-      <SetupChecklist
-        home={home}
-        equipment={equipment}
-        inspectionCount={inspectionCount}
-        householdMemberCount={memberCount}
-        homeAddOnCount={homeAddOnCount}
-      />
+      {/* 2026-05-15 (F13): SetupChecklist pill moved from here to the
+          bottom of the dashboard (just before ImageViewer). The pill's
+          "20% Finish setting up · 2/10" indicator was competing visually
+          with the Home Health donut directly below it — two progress
+          meters stacked at the top. The Home Health donut now owns the
+          primary top-of-page progress indicator; the SetupChecklist
+          pill remains accessible at the bottom as the entry point to
+          its modal drawer. Matches the DD-4 docstring intent
+          ("mounted last") and the audit's F13 recommendation. */}
 
       {/* Post-task add-on nudge (fires from quickCompleteTask handlers below) */}
       <AddOnNudge />
@@ -1481,6 +1492,17 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* 2026-05-15 (F13): SetupChecklist relocated here from the top of
+          the dashboard. See comment above (where it used to live) for
+          context. */}
+      <SetupChecklist
+        home={home}
+        equipment={equipment}
+        inspectionCount={inspectionCount}
+        householdMemberCount={memberCount}
+        homeAddOnCount={homeAddOnCount}
+      />
 
       {/* Image Viewer Modal */}
       {viewerOpen && (

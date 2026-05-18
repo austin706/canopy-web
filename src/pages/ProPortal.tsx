@@ -493,7 +493,7 @@ export default function ProPortal() {
         </div>
 
         {/* Admin Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 24 }}>
           {[
             { label: 'Providers', value: adminStats.totalProviders, color: Colors.sage },
             { label: 'Available', value: adminStats.availableProviders, color: Colors.success },
@@ -509,7 +509,7 @@ export default function ProPortal() {
         </div>
 
         {/* Quick Actions */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 32 }}>
           <button className="card" onClick={() => navigate('/pro-portal/visit-schedule')}
             style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: `2px solid ${Colors.sage}`, fontWeight: 600, fontSize: FontSize.md }}>
             Visit Schedule
@@ -767,7 +767,7 @@ export default function ProPortal() {
       )}
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
         <div className="card" style={{ textAlign: 'center', padding: '24px 16px' }}>
           <div style={{ fontSize: FontSize.xxl, fontWeight: 'bold', color: Colors.sage, marginBottom: 4 }}>{stats.upcomingVisits}</div>
           <p style={{ margin: 0, fontSize: FontSize.sm, color: Colors.medGray }}>Upcoming Visits</p>
@@ -783,7 +783,7 @@ export default function ProPortal() {
       </div>
 
       {/* Quick Actions */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 32 }}>
         <button className="card" onClick={() => navigate('/pro-portal/visit-schedule')}
           style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: `2px solid ${Colors.sage}`, fontWeight: 600, fontSize: FontSize.md }}>
           Service Calendar

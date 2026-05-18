@@ -6,7 +6,11 @@ import type { BillingInterval } from '@/constants/pricing';
 import { trackEvent } from '@/utils/analytics';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 import ZipPreCheck from '@/components/ZipPreCheck';
-import TulsaTrustStrip from '@/components/TulsaTrustStrip';
+// 2026-05-15: TulsaTrustStrip removed from landing per Austin — the
+// "47+ Tulsa homes" stat felt small/awkward pre-launch and the local
+// framing didn't fit the (national) Home tier pitch. Component file kept
+// intact in case we want to bring it back as a geo-targeted variant.
+// import TulsaTrustStrip from '@/components/TulsaTrustStrip';
 import TestimonialsSection from '@/components/TestimonialsSection';
 
 // FAQ content. Defined at module scope so the JSON-LD schema effect and the
@@ -2422,20 +2426,11 @@ export default function Landing() {
             marketplace as recurring add-ons, different cadence. Pairs with
             AddOnsSection so the marketplace story is complete. */}
         <CertifiedProNetworkSection />
-        {/* 2026-05-06 round-6: Tulsa local-proof bar (Tulsa homes count,
-            Priya pull quote, Checkr-verified badge, Security link). Sits
-            right after the two geo-gated sections (AddOns + Certified Pro
-            Network) so it answers the "is this for me here" question
-            instead of leading the page with Tulsa branding that contradicts
-            the national Home tier. Wrapped in a sage-tinted backdrop so it
-            reads as a deliberate local-proof moment, not a duplicate hero. */}
-        <section style={{
-          background: Colors.warmWhite,
-          padding: isMobile ? '32px 16px' : '48px 24px',
-          fontFamily: fontStack,
-        }}>
-          <TulsaTrustStrip isMobile={isMobile} />
-        </section>
+        {/* 2026-05-15: TulsaTrustStrip section removed per Austin —
+            the "47+ Tulsa homes" stat felt small/awkward and the local
+            framing didn't fit the (national) Home-tier pitch. Component
+            file kept; re-wire here if/when a geo-targeted variant
+            is reintroduced. */}
         <WhoIsItFor />
         <FeaturesSection />
         <StatsSection />

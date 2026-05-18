@@ -138,7 +138,7 @@ export default function TestimonialsSection({ isMobile }: Props) {
         padding: isMobile ? '56px 16px' : '88px 24px',
         fontFamily: fontStack,
       }}
-      aria-label="Real Tulsa homeowners"
+      aria-label="See what homeowners have to say"
     >
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <p
@@ -152,7 +152,7 @@ export default function TestimonialsSection({ isMobile }: Props) {
             textAlign: 'center',
           }}
         >
-          Real Tulsa homeowners
+          See what homeowners have to say
         </p>
         <h2
           style={{
@@ -175,8 +175,8 @@ export default function TestimonialsSection({ isMobile }: Props) {
             lineHeight: 1.6,
           }}
         >
-          Homeowners in Midtown, South Tulsa, Broken Arrow, and Jenks use Canopy to stop
-          forgetting maintenance and keep a clean service record for when they sell.
+          Homeowners use Canopy to stop forgetting maintenance and keep a clean
+          service record for when they sell.
         </p>
 
         <div

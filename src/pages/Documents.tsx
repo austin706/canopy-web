@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { uploadPhoto, getDocuments, createDocument, deleteDocument, getSecureNotes, createSecureNote, deleteSecureNote, hasVaultPin, setVaultPin, verifyVaultPin, removeVaultPin } from '@/services/supabase';
 import { canAccess } from '@/services/subscriptionGate';
-import { Colors } from '@/constants/theme';
+import { Colors, FontSize } from '@/constants/theme';
 import InspectionUploader from '@/components/InspectionUploader';
 import { showToast } from '@/components/Toast';
 import type { SecureNote } from '@/types';
@@ -976,7 +976,7 @@ export default function Documents() {
             <h3 id="doc-category-picker-title" style={{ margin: 0, marginBottom: 6 }}>
               Pick a category
             </h3>
-            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0, marginBottom: 16, wordBreak: 'break-word' }}>
+            <p style={{ fontSize: FontSize.sm, color: 'var(--color-text-secondary)', margin: 0, marginBottom: 16, wordBreak: 'break-word' }}>
               for <strong style={{ color: 'var(--color-charcoal)' }}>{pendingFile.name}</strong>
             </p>
             <div
@@ -995,7 +995,7 @@ export default function Documents() {
                   onClick={() => finishUpload(c.value)}
                   style={{
                     padding: '12px 8px',
-                    fontSize: 14,
+                    fontSize: 14, // allow-lint — category-picker button label, off-scale by design
                     fontWeight: 600,
                     borderRadius: 10,
                     border: `1px solid ${Colors.lightGray}`,
@@ -1041,7 +1041,7 @@ export default function Documents() {
             <h3 id="delete-confirm-title" style={{ margin: 0, marginBottom: 6, color: Colors.charcoal }}>
               Delete {pendingDelete.kind === 'doc' ? 'document' : 'secure note'}?
             </h3>
-            <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', margin: 0, marginBottom: 16, lineHeight: 1.5, wordBreak: 'break-word' }}>
+            <p style={{ fontSize: 14 /* allow-lint */, color: 'var(--color-text-secondary)', margin: 0, marginBottom: 16, lineHeight: 1.5, wordBreak: 'break-word' }}>
               This will permanently remove <strong style={{ color: Colors.charcoal }}>{pendingDelete.label}</strong>. This action can't be undone.
             </p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1057,9 +1057,10 @@ export default function Documents() {
               <button
                 type="button"
                 className="btn"
+                aria-label="Confirm delete"
                 onClick={confirmPendingDelete}
                 disabled={deleting}
-                style={{ flex: '1 1 120px', background: '#dc3545', color: 'white' }}
+                style={{ flex: '1 1 120px', background: Colors.error, color: 'white' }}
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>

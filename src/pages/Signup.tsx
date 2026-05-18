@@ -3,7 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { signUp } from '@/services/supabase';
 import { CanopyLogo } from '@/components/icons/CanopyLogo';
 import { Button } from '@/components/ui';
-import { Colors } from '@/constants/theme';
+import { Colors, FontSize } from '@/constants/theme';
 import { getErrorMessage } from '@/utils/errors';
 import { trackEvent } from '@/utils/analytics';
 
@@ -159,7 +159,7 @@ export default function Signup() {
               two adjacent surfaces. Match Login's treatment. */}
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
             <div style={{ marginBottom: 12 }}><img src="/canopy-watercolor-logo.png" alt="Canopy" style={{ height: 48, width: 'auto', objectFit: 'contain' }} /></div>
-            <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Canopy</h1>
+            <h1 style={{ fontSize: FontSize.xxl, fontWeight: 700, marginBottom: 4 }}>Canopy</h1>
             <p className="subtitle">Create your account</p>
           </div>
           {error && <div style={{ background: 'var(--color-error-muted, #E5393520)', color: 'var(--color-error)', padding: '10px 16px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{error}</div>}

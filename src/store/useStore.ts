@@ -30,6 +30,9 @@ interface CanopyState {
   removeConsumable: (id: string) => void;
   customTemplates: TaskTemplateDB[];
   setCustomTemplates: (templates: TaskTemplateDB[]) => void;
+  // 2026-05-18 (migration 086): per-home disabled templates the engine skips.
+  disabledTemplateIds: string[];
+  setDisabledTemplateIds: (ids: string[]) => void;
   tasks: MaintenanceTask[];
   setTasks: (tasks: MaintenanceTask[]) => void;
   setTask: (task: MaintenanceTask) => void;
@@ -90,6 +93,8 @@ export const useStore = create<CanopyState>()(
       removeConsumable: (id) => set((s) => ({ consumables: s.consumables.filter((c) => c.id !== id) })),
       customTemplates: [],
       setCustomTemplates: (customTemplates) => set({ customTemplates }),
+      disabledTemplateIds: [],
+      setDisabledTemplateIds: (disabledTemplateIds) => set({ disabledTemplateIds }),
       tasks: [],
       setTasks: (tasks) => set({ tasks }),
       setTask: (task) => set((s) => ({
@@ -139,7 +144,7 @@ export const useStore = create<CanopyState>()(
       setOnboardingStep: (onboardingStep) => set({ onboardingStep }),
       pendingReschedule: null,
       setPendingReschedule: (pendingReschedule) => set({ pendingReschedule }),
-      reset: () => set({ user: null, isAuthenticated: false, home: null, homes: [], activeHomeId: null, equipment: [], consumables: [], customTemplates: [], tasks: [], maintenanceLogs: [], weather: null, agent: null, onboardingStep: 0, pendingReschedule: null }),
+      reset: () => set({ user: null, isAuthenticated: false, home: null, homes: [], activeHomeId: null, equipment: [], consumables: [], customTemplates: [], disabledTemplateIds: [], tasks: [], maintenanceLogs: [], weather: null, agent: null, onboardingStep: 0, pendingReschedule: null }),
     }),
     {
       name: 'canopy-web-store',
@@ -152,6 +157,7 @@ export const useStore = create<CanopyState>()(
         equipment: state.equipment,
         consumables: state.consumables,
         customTemplates: state.customTemplates,
+        disabledTemplateIds: state.disabledTemplateIds,
         tasks: state.tasks,
         maintenanceLogs: state.maintenanceLogs,
         weather: state.weather,

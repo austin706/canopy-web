@@ -56,7 +56,7 @@ const SERVICE_BADGE_STYLES: Record<string, { label: string; bg: string; color: s
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, home, weather, tasks, equipment, consumables, customTemplates, maintenanceLogs, setWeather, setTasks } = useStore();
+  const { user, home, weather, tasks, equipment, consumables, customTemplates, disabledTemplateIds, maintenanceLogs, setWeather, setTasks } = useStore();
   const tier = user?.subscription_tier || 'free';
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
@@ -240,7 +240,7 @@ export default function Dashboard() {
         } else {
           // No tasks in DB — generate from home profile and persist
           // Pass empty array as existingTasks since DB confirmed empty
-          const generated = generateTasksForHome(home, equipment, [], consumables || [], user?.user_preferences, customTemplates);
+          const generated = generateTasksForHome(home, equipment, [], consumables || [], user?.user_preferences, customTemplates, disabledTemplateIds);
           if (generated.length > 0) {
             try {
               const saved = await createTasks(generated);
@@ -296,6 +296,7 @@ export default function Dashboard() {
         consumables || [],
         user?.user_preferences,
         customTemplates,
+        disabledTemplateIds,
       );
       // Only the newly-generated tasks need persisting (generateTasksForHome dedups).
       const toPersist = generated.filter((g) => !remaining.some((r) => r.id === g.id));
@@ -1152,6 +1153,7 @@ export default function Dashboard() {
                             consumables || [],
                             user?.user_preferences,
                             customTemplates,
+                            disabledTemplateIds,
                           );
                           if (generated.length > 0) {
                             const saved = await createTasks(generated);

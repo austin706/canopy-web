@@ -107,7 +107,7 @@ function normalizeImportedTemplate(row: any): Partial<TaskTemplateDB> & { title:
     title: String(row.title || '').trim(),
     category: String(row.category || '').trim(),
     description: row.description ?? null,
-    instructions: row.instructions ?? null,
+    // 2026-05-18 (migration 082): legacy `instructions` text column dropped.
     instructions_json: splitList(row.instructions_json ?? row.steps),
     items_to_have_on_hand: splitList(row.items_to_have_on_hand ?? row.tools),
     safety_warnings: splitList(row.safety_warnings ?? row.warnings),
@@ -604,10 +604,8 @@ export default function AdminReferenceData() {
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Description</label>
                 <textarea className="form-input" value={editingTemplate.description || ''} onChange={e => setEditingTemplate({ ...editingTemplate, description: e.target.value })} style={{ minHeight: 40 }} />
               </div>
-              <div style={{ marginTop: 8 }}>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Legacy Instructions (single paragraph, prefer Steps below)</label>
-                <textarea className="form-input" value={editingTemplate.instructions || ''} onChange={e => setEditingTemplate({ ...editingTemplate, instructions: e.target.value })} style={{ minHeight: 40, fontSize: 12 }} />
-              </div>
+              {/* 2026-05-18 (migration 082): the legacy "Instructions" single-paragraph
+                  textarea was removed. instructions_json is the only source of truth. */}
 
               {/* Ordered How-To Steps (instructions_json) */}
               <StringListEditor
@@ -693,6 +691,63 @@ export default function AdminReferenceData() {
               </div>
             </div>
           )}
+
+          {/* 2026-05-18: AI Review Queue banner. saveAIGeneratedTemplates now
+              inserts with active=false; admins approve here before they appear
+              in user calendars. The banner only shows when there's something
+              to review. */}
+          {(() => {
+            const pendingAi = templates.filter(t => (t as any).source === 'ai_generated' && !t.active);
+            if (pendingAi.length === 0) return null;
+            return (
+              <div style={{
+                margin: '0 0 16px 0',
+                padding: 12,
+                background: '#FFF7E6', // allow-lint — AI review banner amber, off-scale
+                border: '1px solid #E0A05E', // allow-lint
+                borderRadius: 8,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                    <p style={{ margin: 0, fontWeight: 600, color: '#7A4E1B', fontSize: 13 }}> {/* allow-lint */}
+                      {pendingAi.length} AI-generated template{pendingAi.length === 1 ? '' : 's'} pending review
+                    </p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: 12, color: '#7A4E1B', opacity: 0.85 }}> {/* allow-lint */}
+                      Produced by equipment-scan AI. They won't appear in user calendars until you approve (set Active).
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setEditingTemplate(pendingAi[0])}
+                      style={{ fontSize: 12 /* allow-lint */ }}
+                    >
+                      Review oldest
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={async () => {
+                        // Approve-all = set active=true on each
+                        if (!confirm(`Approve all ${pendingAi.length} pending AI templates as-is?`)) return;
+                        try {
+                          for (const t of pendingAi) {
+                            await upsertTaskTemplate({ ...t, active: true });
+                          }
+                          const data = await getTaskTemplates(true);
+                          setTemplates(data);
+                        } catch (err: any) {
+                          alert('Approve-all failed: ' + (err.message || 'unknown error'));
+                        }
+                      }}
+                      style={{ fontSize: 12, color: Colors.success }}
+                    >
+                      Approve all
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {loading ? (
             <div className="page-wide"><PageSkeleton rows={6} /></div>

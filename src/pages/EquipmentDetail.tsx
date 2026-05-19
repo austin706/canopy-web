@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { upsertEquipment, deleteEquipment as deleteEquipApi, createProRequest, getWarrantiesForEquipment, deleteWarranty, upsertWarranty } from '@/services/supabase';
 import { Colors } from '@/constants/theme';
-import { ROOF_LIFESPANS } from '@/services/taskEngine';
+import { ROOF_LIFESPANS, getLifecycleThresholds } from '@/services/taskEngine';
 import { showToast } from '@/components/Toast';
 import { WarrantyForm } from '@/components/WarrantyForm';
 import type { Equipment as EquipmentType, EquipmentCategory, Warranty } from '@/types';
@@ -49,6 +49,10 @@ export default function EquipmentDetail() {
     serial_number: item?.serial_number || '',
     install_date: item?.install_date || '',
     expected_lifespan_years: item?.expected_lifespan_years?.toString() || '',
+    // 2026-05-18 (migration 085): per-instance lifecycle threshold overrides.
+    // Empty string = NULL (use category default).
+    lifecycle_inspect_threshold_pct: item?.lifecycle_inspect_threshold_pct?.toString() || '',
+    lifecycle_replace_threshold_pct: item?.lifecycle_replace_threshold_pct?.toString() || '',
     location_in_home: item?.location_in_home || '',
     notes: item?.notes || '',
     filter_size: item?.filter_size || '',
@@ -129,8 +133,11 @@ export default function EquipmentDetail() {
   const lifespanPercent = lifespanValid
     ? Math.max(0, Math.min(100, (age / expectedLifespan) * 100))
     : 0;
-  const isReplacementDue = lifespanValid && lifespanPercent >= 95;
-  const isInspectionDue = lifespanValid && lifespanPercent >= 80 && lifespanPercent < 95;
+  // 2026-05-18: thresholds are per-category (water heater fires earlier than
+  // a 30-year roof) AND per-equipment-instance (migration 085 overrides).
+  const lifecycleThresholds = getLifecycleThresholds(item.category, item);
+  const isReplacementDue = lifespanValid && lifespanPercent >= lifecycleThresholds.replace * 100;
+  const isInspectionDue = lifespanValid && lifespanPercent >= lifecycleThresholds.inspect * 100 && lifespanPercent < lifecycleThresholds.replace * 100;
 
   const handleGetProQuote = async () => {
     if (!user || !home) return;
@@ -175,6 +182,15 @@ export default function EquipmentDetail() {
         serial_number: editForm.serial_number || undefined,
         install_date: editForm.install_date || undefined,
         expected_lifespan_years: editForm.expected_lifespan_years ? parseInt(editForm.expected_lifespan_years) : undefined,
+        // 2026-05-18 (migration 085): empty/blank → null (use category default).
+        // Persist parsed 0–1 fractions; the constraint check on the DB
+        // enforces 0–1.5 and inspect <= replace.
+        lifecycle_inspect_threshold_pct: editForm.lifecycle_inspect_threshold_pct
+          ? Math.max(0, Math.min(1.5, parseFloat(editForm.lifecycle_inspect_threshold_pct)))
+          : null,
+        lifecycle_replace_threshold_pct: editForm.lifecycle_replace_threshold_pct
+          ? Math.max(0, Math.min(1.5, parseFloat(editForm.lifecycle_replace_threshold_pct)))
+          : null,
         location_in_home: editForm.location_in_home || undefined,
         notes: editForm.notes || undefined,
         updated_at: new Date().toISOString(),
@@ -278,6 +294,49 @@ export default function EquipmentDetail() {
                 <label>Location in Home</label>
                 <input className="form-input" value={editForm.location_in_home} onChange={(e) => setEditForm({ ...editForm, location_in_home: e.target.value })} />
               </div>
+
+              {/* 2026-05-18 (migration 085): per-instance lifecycle alert
+                  sensitivity. Defaults blank = category default (e.g. HVAC
+                  fires at 75% / 90%). Advanced users can tune for coastal
+                  conditions, heavy use, etc. */}
+              <details style={{ marginTop: 4 }}>
+                <summary style={{ cursor: 'pointer', fontSize: 13 /* allow-lint */, color: 'var(--color-text-secondary)' }}>
+                  Advanced — lifecycle alert sensitivity
+                </summary>
+                <div style={{ marginTop: 8, padding: 12, background: 'var(--color-background)', borderRadius: 8 }}>
+                  <p style={{ fontSize: 12 /* allow-lint */, color: 'var(--color-text-secondary)', margin: '0 0 12px 0', lineHeight: 1.5 }}>
+                    When should we alert you about this specific item? Numbers are fractions of expected lifespan (0.65 = 65%). Leave blank to use the category default.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+                    <div className="form-group">
+                      <label>Inspect at (0–1.5)</label>
+                      <input
+                        className="form-input"
+                        type="number"
+                        step="0.05"
+                        min="0"
+                        max="1.5"
+                        placeholder="(category default)"
+                        value={editForm.lifecycle_inspect_threshold_pct}
+                        onChange={(e) => setEditForm({ ...editForm, lifecycle_inspect_threshold_pct: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Plan replacement at (0–1.5)</label>
+                      <input
+                        className="form-input"
+                        type="number"
+                        step="0.05"
+                        min="0"
+                        max="1.5"
+                        placeholder="(category default)"
+                        value={editForm.lifecycle_replace_threshold_pct}
+                        onChange={(e) => setEditForm({ ...editForm, lifecycle_replace_threshold_pct: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </details>
             </div>
           </div>
 

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { PriorityColors, StatusColors, Colors } from '@/constants/theme';
 import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/utils';
-import { reopenTask as reopenTaskApi, deleteTask as deleteTaskApi, batchMatchAffiliateLinksForItems, type AffiliateProduct } from '@/services/supabase';
+import { reopenTask as reopenTaskApi, deleteTask as deleteTaskApi, batchMatchAffiliateLinksForItems, disableTemplateForHome, type AffiliateProduct } from '@/services/supabase';
 import { getDisplayStatus } from '@/services/taskEngine';
 import { TASK_TEMPLATES } from '@/constants/maintenance';
 import { supabase } from '@/services/supabase';
@@ -13,7 +13,7 @@ import logger from '@/utils/logger';
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { tasks, reopenTask, setTasks, user, home } = useStore();
+  const { tasks, reopenTask, setTasks, user, home, disabledTemplateIds, setDisabledTemplateIds } = useStore();
 
   const rawTask = tasks.find(t => t.id === id);
   const [dbTask, setDbTask] = useState<any>(null);
@@ -628,6 +628,41 @@ export default function TaskDetail() {
                 </button>
               </div>
             </div>
+
+            {/* 2026-05-18 (migration 086): user-level disable for the
+                underlying template. Hidden if no template_id (e.g. lifecycle
+                alerts that aren't from the catalog yet, or hand-created
+                one-offs). Hidden once the template is already disabled. */}
+            {task.template_id && !disabledTemplateIds.includes(task.template_id) && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!home?.id || !task.template_id) return;
+                  if (!confirm("Stop generating this task automatically? You can re-enable it later from settings.")) return;
+                  try {
+                    await disableTemplateForHome(home.id, task.template_id, 'user_dismissed');
+                    setDisabledTemplateIds([...disabledTemplateIds, task.template_id]);
+                    showToast({ message: "Got it — we won't generate this task again." });
+                    navigate(-1);
+                  } catch (err: any) {
+                    showToast({ message: 'Failed to update preferences: ' + (err.message || 'unknown error') });
+                  }
+                }}
+                style={{
+                  display: 'block',
+                  marginTop: 16,
+                  marginInline: 'auto',
+                  background: 'none',
+                  border: 'none',
+                  color: Colors.medGray,
+                  fontSize: 12, // allow-lint — disable-template link, off-scale
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
+              >
+                Don't generate this task for my home anymore
+              </button>
+            )}
           </div>
         )}
 

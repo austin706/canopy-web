@@ -414,7 +414,8 @@ export interface TaskTemplateDB {
   id: string;
   title: string;
   description: string | null;
-  instructions: string | null;
+  // 2026-05-18 (migration 082): legacy `instructions` text column dropped.
+  // `instructions_json` (below) is now the single source of truth.
   category: string;
   priority: string;
   frequency: string;
@@ -474,6 +475,92 @@ export const getTaskTemplates = async (includeInactive = false): Promise<TaskTem
   const { data, error } = await query;
   if (error) throw error;
   return data || [];
+};
+
+/**
+ * Per-template performance stats from the `task_template_stats` DB view
+ * (migration 083). Backs the admin AdminAnalytics "Template Performance"
+ * section without re-aggregating maintenance_tasks rows in the client.
+ *
+ * Access is gated by the `get_task_template_stats` SECURITY DEFINER RPC,
+ * which checks profiles.role = 'admin' before returning anything.
+ */
+export interface TaskTemplateStats {
+  template_id: string;
+  title: string;
+  category: string;
+  priority: string;
+  frequency: string;
+  active: boolean;
+  source: string;
+  task_level: string;
+  generated_count: number;
+  completed_count: number;
+  skipped_count: number;
+  pending_count: number;
+  overdue_count: number;
+  distinct_homes: number;
+  last_generated_at: string | null;
+  last_completed_at: string | null;
+  /** 0–1; null when no completed+skipped decisions yet */
+  completion_rate: number | null;
+  /** 0–1; null when no completed+skipped decisions yet */
+  skip_rate: number | null;
+  /** Days; negative = done early, positive = done late */
+  avg_days_to_complete: number;
+  /** 0–100; null when <5 decisions for that template */
+  quality_score: number | null;
+}
+
+export const getTaskTemplateStats = async (): Promise<TaskTemplateStats[]> => {
+  const { data, error } = await supabase.rpc('get_task_template_stats');
+  if (error) throw error;
+  return (data || []) as TaskTemplateStats[];
+};
+
+/**
+ * 2026-05-18 (migration 086): disabled-template overrides per home.
+ * The task engine filters out templates listed here before generation.
+ */
+export interface DisabledTemplateOverride {
+  id: string;
+  home_id: string;
+  template_id: string;
+  disabled_at: string;
+  reason: string | null;
+  created_by: string | null;
+}
+
+export const getDisabledTemplates = async (homeId: string): Promise<DisabledTemplateOverride[]> => {
+  const { data, error } = await supabase
+    .from('disabled_template_overrides')
+    .select('*')
+    .eq('home_id', homeId);
+  if (error) throw error;
+  return (data || []) as DisabledTemplateOverride[];
+};
+
+export const disableTemplateForHome = async (
+  homeId: string,
+  templateId: string,
+  reason: 'user_dismissed' | 'frequently_skipped' | 'not_applicable' | string = 'user_dismissed',
+): Promise<void> => {
+  const { error } = await supabase
+    .from('disabled_template_overrides')
+    .upsert(
+      { home_id: homeId, template_id: templateId, reason },
+      { onConflict: 'home_id,template_id' },
+    );
+  if (error) throw error;
+};
+
+export const enableTemplateForHome = async (homeId: string, templateId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('disabled_template_overrides')
+    .delete()
+    .eq('home_id', homeId)
+    .eq('template_id', templateId);
+  if (error) throw error;
 };
 
 export const upsertTaskTemplate = async (template: Partial<TaskTemplateDB> & { title: string; category: string }) => {

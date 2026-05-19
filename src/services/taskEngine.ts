@@ -131,6 +131,8 @@ export function generateTasksForHome(
   consumables: EquipmentConsumable[] = [],
   userPreferences: UserPreferences = DEFAULT_USER_PREFERENCES,
   customTemplates: TaskTemplateDB[] = [],
+  // 2026-05-18 (migration 086): per-home disabled template ids.
+  disabledTemplateIds: string[] = [],
 ): MaintenanceTask[] {
   // Guard against concurrent task generation that could cause race conditions
   // or duplicate task creation
@@ -140,7 +142,7 @@ export function generateTasksForHome(
 
   taskGenerationInProgress = true;
   try {
-    return generateTasksForHomeImpl(home, equipment, existingTasks, consumables, userPreferences, customTemplates);
+    return generateTasksForHomeImpl(home, equipment, existingTasks, consumables, userPreferences, customTemplates, disabledTemplateIds);
   } finally {
     taskGenerationInProgress = false;
   }
@@ -169,7 +171,9 @@ function dbTemplateToInternal(db: TaskTemplateDB): TaskTemplate {
     id: db.id,
     title: db.title,
     description: db.description || '',
-    instructions: db.instructions_json || (db.instructions ? [db.instructions] : []),
+    // 2026-05-18 (migration 082): legacy `db.instructions` text column dropped;
+    // instructions_json is the single source of truth.
+    instructions: db.instructions_json || [],
     category: db.category as TaskTemplate['category'],
     priority: (db.priority || 'medium') as TaskPriority,
     frequency: (db.frequency || 'annual') as any,
@@ -220,7 +224,9 @@ function generateTasksForHomeImpl(
   consumables: EquipmentConsumable[] = [],
   userPreferences: UserPreferences = DEFAULT_USER_PREFERENCES,
   customTemplates: TaskTemplateDB[] = [],
+  disabledTemplateIds: string[] = [],
 ): MaintenanceTask[] {
+  const disabledTemplateSet = new Set(disabledTemplateIds);
   const newTasks: MaintenanceTask[] = [];
   const today = new Date();
   const currentMonth = getMonth(today) + 1; // getMonth returns 0-11
@@ -285,6 +291,11 @@ function generateTasksForHomeImpl(
 
   // Process each template
   allTemplates.forEach((template) => {
+    // 2026-05-18 (migration 086): respect per-home disabled-template overrides.
+    if (disabledTemplateSet.has(template.id)) {
+      return;
+    }
+
     // Skip if this template requires equipment the user doesn't have
     if (
       template.requires_equipment &&
@@ -854,6 +865,327 @@ export function getTemplateIdsForEquipmentCategory(
  * falls back to roof_age_years for backward compatibility,
  * cross-references expected lifespan by roof type.
  */
+/**
+ * 2026-05-18: Per-category lifecycle content. Mirrors Canopy-App/services/
+ * taskEngine.ts — see that file's header comment for the rationale. Web-only
+ * note: this codebase currently emits *only* the 'inspect' phase as a
+ * calendar task (the 'replace' phase is rendered as an Equipment-page banner,
+ * not a task). The 'replace' content is still defined here for parity so
+ * either codebase can flip the policy in one place later.
+ */
+type LifecyclePhase = 'inspect' | 'replace';
+interface LifecycleContent {
+  title: (equipmentName: string) => string;
+  description: (equipmentName: string) => string;
+  instructions: string[];
+  estimated_minutes: number;
+  estimated_cost_low: number;
+  estimated_cost_high: number;
+  pro_recommended: boolean;
+  items_to_have_on_hand?: string[];
+  service_purpose?: string;
+}
+
+// 2026-05-18: Per-category lifecycle thresholds. See header comment in
+// Canopy-App/services/taskEngine.ts for the per-category rationale.
+interface LifecycleThresholds {
+  inspect: number;
+  replace: number;
+}
+
+const DEFAULT_LIFECYCLE_THRESHOLDS: LifecycleThresholds = {
+  inspect: 0.80,
+  replace: 0.95,
+};
+
+const LIFECYCLE_THRESHOLDS: Partial<Record<string, LifecycleThresholds>> = {
+  hvac:         { inspect: 0.75, replace: 0.90 },
+  water_heater: { inspect: 0.67, replace: 0.83 },
+  plumbing:     { inspect: 0.75, replace: 0.90 },
+  electrical:   { inspect: 0.85, replace: 0.95 },
+};
+
+/**
+ * 2026-05-18: thresholds resolution order:
+ *   1. Per-instance overrides on the Equipment row (migration 085).
+ *   2. Category default from LIFECYCLE_THRESHOLDS.
+ *   3. DEFAULT_LIFECYCLE_THRESHOLDS (0.80 / 0.95).
+ */
+export function getLifecycleThresholds(
+  category: string,
+  equipment?: Pick<Equipment, 'lifecycle_inspect_threshold_pct' | 'lifecycle_replace_threshold_pct'>
+): LifecycleThresholds {
+  const base = LIFECYCLE_THRESHOLDS[category] ?? DEFAULT_LIFECYCLE_THRESHOLDS;
+  if (!equipment) return base;
+  return {
+    inspect: equipment.lifecycle_inspect_threshold_pct ?? base.inspect,
+    replace: equipment.lifecycle_replace_threshold_pct ?? base.replace,
+  };
+}
+
+const GENERIC_LIFECYCLE_CONTENT: Record<LifecyclePhase, LifecycleContent> = {
+  inspect: {
+    title: (n) => `End-of-life inspection: ${n}`,
+    description: (n) =>
+      `${n} is at ~80% of its expected lifespan. Getting eyes on it now catches preventable failures and gives you time to plan replacement instead of reacting to a breakdown.`,
+    instructions: [
+      'Look for visible wear, corrosion, leaks, unusual noises, or efficiency drops since last year.',
+      'Photograph any concerns and attach to the equipment record.',
+      'If anything looks off — or you\'re not sure — schedule a professional inspection before the next heavy-use season.',
+    ],
+    estimated_minutes: 20,
+    estimated_cost_low: 0,
+    estimated_cost_high: 150,
+    pro_recommended: false,
+    service_purpose:
+      'Identify issues before they become emergencies, and start budgeting for replacement on your timeline rather than during a failure.',
+  },
+  replace: {
+    title: (n) => `Plan replacement: ${n}`,
+    description: (n) =>
+      `${n} is at ~95% of its expected lifespan. Older equipment fails at a sharply rising rate past this point, often at the worst possible moment. Start gathering quotes now so you can replace on a planned schedule.`,
+    instructions: [
+      'Get 2–3 quotes from licensed contractors with at least one local reference.',
+      'Ask about energy-efficiency rebates, tax credits, and financing options.',
+      'Capture warranty length, expected lifespan, and labor terms in writing.',
+      'Schedule replacement during shoulder season (Spring/Fall) when contractor pricing is best.',
+    ],
+    estimated_minutes: 60,
+    estimated_cost_low: 0,
+    estimated_cost_high: 0,
+    pro_recommended: true,
+    service_purpose:
+      'Avoid emergency replacement pricing and downtime by planning ahead. Mid-failure replacements typically cost 20–40% more than scheduled ones.',
+  },
+};
+
+const LIFECYCLE_CONTENT: Partial<Record<string, Record<LifecyclePhase, LifecycleContent>>> = {
+  hvac: {
+    inspect: {
+      title: (n) => `End-of-life HVAC inspection: ${n}`,
+      description: (n) =>
+        `${n} is at ~80% of its expected lifespan. Aging HVAC systems typically lose 1–2% efficiency per year past this point. A pro inspection now catches refrigerant leaks, coil corrosion, and heat-exchanger wear before they cause a mid-season failure.`,
+      instructions: [
+        'Schedule an HVAC pro for an end-of-life condition assessment (not a basic tune-up).',
+        'Ask them to evaluate: refrigerant levels, coil condition, blower motor wear, heat exchanger integrity, and overall efficiency vs nameplate spec.',
+        'Get a written report with photos so you can compare quotes when replacement time comes.',
+        'Confirm whether parts are still being manufactured for your model — discontinued parts are a strong replacement signal.',
+      ],
+      estimated_minutes: 90,
+      estimated_cost_low: 90,
+      estimated_cost_high: 250,
+      pro_recommended: true,
+      items_to_have_on_hand: ['Maintenance history (if available)', 'Original install paperwork or model number'],
+      service_purpose:
+        'Catch failures before they happen and decide whether to keep paying repair-by-repair or invest in a high-efficiency replacement that pays back through energy savings.',
+    },
+    replace: {
+      title: (n) => `Plan HVAC replacement: ${n}`,
+      description: (n) =>
+        `${n} is at ~95% of its expected lifespan. HVAC failures typically happen during temperature extremes when contractor availability is lowest and pricing is highest. Planning now lets you replace on your terms.`,
+      instructions: [
+        'Get 3 quotes from licensed HVAC contractors. Confirm each includes a Manual J load calculation, not just a same-size swap.',
+        'Compare SEER2 and HSPF2 ratings. A 15+ SEER2 unit can save 20–40% vs an old 8–10 SEER unit.',
+        'Ask about federal Inflation Reduction Act rebates (up to $2,000 for heat pumps), utility rebates, and 0% financing.',
+        'Schedule replacement during Spring or Fall shoulder season — pricing is 10–20% lower than peak summer/winter.',
+        'Confirm warranty: 10 years on parts is standard; 12+ on compressor is a premium signal.',
+      ],
+      estimated_minutes: 120,
+      estimated_cost_low: 5000,
+      estimated_cost_high: 14000,
+      pro_recommended: true,
+      service_purpose:
+        'A planned HVAC replacement costs 20–40% less than an emergency one, qualifies for rebates, and gives you the chance to upgrade efficiency.',
+    },
+  },
+  water_heater: {
+    inspect: {
+      title: (n) => `End-of-life water heater inspection: ${n}`,
+      description: (n) =>
+        `${n} is at ~80% of its expected lifespan. Water heater tanks corrode from the inside out — visible rust at fittings, popping noises, or rust-tinged hot water mean the inside is much worse than the outside looks.`,
+      instructions: [
+        'Inspect the tank exterior for rust streaks, moisture at the base, or bulging.',
+        'Listen during a heating cycle for popping, rumbling, or knocking — sediment buildup signals the tank is near end of life.',
+        'Test the T&P (temperature & pressure) relief valve by lifting the lever briefly — water should discharge, then stop cleanly.',
+        'If you can pull the anode rod (gas heaters), check for >50% consumption — replacement extends life 3–5 years.',
+        'Photograph any rust or corrosion and consider an immediate plumber visit if you see standing water.',
+      ],
+      estimated_minutes: 20,
+      estimated_cost_low: 0,
+      estimated_cost_high: 200,
+      pro_recommended: false,
+      items_to_have_on_hand: ['Flashlight', 'Bucket', 'Garden hose (for T&P test)'],
+      service_purpose:
+        'Tank failure dumps 40–80 gallons of water into your home, often causing $1,000s in damage. Catching wear early lets you replace before the leak.',
+    },
+    replace: {
+      title: (n) => `Plan water heater replacement: ${n}`,
+      description: (n) =>
+        `${n} is at ~95% of its expected lifespan. Tank water heaters typically fail by leaking, not by stopping — meaning the failure mode is water damage, not just no hot water. Replace before it happens.`,
+      instructions: [
+        'Decide tank vs tankless: tankless costs ~2× upfront but lasts ~20 years vs 12, and saves ~20% on energy.',
+        'Get 2–3 plumber quotes; confirm haul-away of the old unit and expansion-tank replacement are included.',
+        'For gas heaters, check whether your venting (atmospheric vs power-vent) is up to current code — a new unit may require venting changes.',
+        'Heat pump water heaters qualify for federal rebates up to $2,000 and ~$300–600 utility rebates in many areas.',
+        'Schedule mid-week, mid-month for best plumber availability and pricing.',
+      ],
+      estimated_minutes: 60,
+      estimated_cost_low: 1200,
+      estimated_cost_high: 4500,
+      pro_recommended: true,
+      service_purpose:
+        'A planned replacement costs $1,200–$4,500 installed; a failed tank that floods a finished basement can easily exceed $10,000 in repairs.',
+    },
+  },
+  roof: {
+    inspect: {
+      title: (n) => `End-of-life roof inspection: ${n}`,
+      description: (n) =>
+        `${n} is at ~80% of its expected lifespan. The visible wear (granule loss, curling shingles, exposed nails) is usually well behind the underlying damage (flashing fatigue, deck moisture, ventilation issues). A pro inspection at this stage prevents leaks before they show on the ceiling.`,
+      instructions: [
+        'Schedule a licensed roofer for an end-of-life inspection — many offer this free with a future quote.',
+        'Ask them to evaluate: shingle granule loss, flashing at chimneys/valleys, attic ventilation, soffit/fascia condition, and any active leaks.',
+        'Get a written report with photos from the roof and the attic.',
+        'If they recommend immediate repair vs full replacement, get a second opinion before committing.',
+      ],
+      estimated_minutes: 60,
+      estimated_cost_low: 0,
+      estimated_cost_high: 300,
+      pro_recommended: true,
+      items_to_have_on_hand: ['Original roof install date or paperwork (if available)', 'Insurance policy details'],
+      service_purpose:
+        'A small repaired leak costs hundreds. A leak that\'s been hidden in your attic for 18 months costs tens of thousands in mold, structure, and ceiling repair.',
+    },
+    replace: {
+      title: (n) => `Plan roof replacement: ${n}`,
+      description: (n) =>
+        `${n} is at or past its expected lifespan. Roof failures are unpredictable — a single heavy storm can move you from "due soon" to "active leak" overnight. Plan replacement during the next available dry-weather window.`,
+      instructions: [
+        'Get 3 quotes from licensed, insured, locally-reviewed roofers. Avoid storm-chaser pop-up companies.',
+        'Confirm each quote includes: full tear-off (not overlay), new underlayment, flashing replacement, and ice/water shield in valleys.',
+        'Ask about warranty: 25-year on architectural shingles is standard; check labor warranty separately.',
+        'If you\'re in hail country, ask about Class 4 impact-resistant shingles — they cost 10–20% more but typically earn a 5–25% homeowners-insurance discount.',
+        'Check whether your insurance has a roof-age limit (some refuse coverage after 20 years). Replacement may be required for coverage continuity.',
+        'Schedule during Spring or Fall for best contractor availability and cooler installation temps.',
+      ],
+      estimated_minutes: 120,
+      estimated_cost_low: 8000,
+      estimated_cost_high: 25000,
+      pro_recommended: true,
+      service_purpose:
+        'Replacing on a schedule lets you compare quotes, pick high-impact materials, and time the work around weather. Replacing under a leak emergency costs 30–50% more and locks you into whoever can start fastest.',
+    },
+  },
+  appliance: {
+    inspect: {
+      title: (n) => `End-of-life appliance check: ${n}`,
+      description: (n) =>
+        `${n} is at ~80% of its expected lifespan. Major appliances often fail in cascades — one $400 part fix can buy two more years, OR can be money thrown at a unit that's about to fail again. Use the inspection to decide which.`,
+      instructions: [
+        'Look up the cost of the most likely failing part for your model online.',
+        'Compare that part cost (+ ~$150 labor) against the cost of a new comparable appliance.',
+        'Rule of thumb: if repair cost is >50% of replacement, replace.',
+        'Check whether the manufacturer still produces replacement parts for your model — discontinued parts are a strong replacement signal.',
+      ],
+      estimated_minutes: 30,
+      estimated_cost_low: 0,
+      estimated_cost_high: 0,
+      pro_recommended: false,
+      service_purpose:
+        'Decide whether to repair, replace, or run until failure based on real numbers, not gut feel.',
+    },
+    replace: {
+      title: (n) => `Plan appliance replacement: ${n}`,
+      description: (n) =>
+        `${n} is at ~95% of its expected lifespan. Plan the replacement so you can shop sales (Black Friday, Memorial Day, Labor Day) and pick the model you want, not whatever's in stock when yours dies.`,
+      instructions: [
+        'Identify the model you want and watch for it across multiple retailers — Energy Star versions typically rebate $50–$300.',
+        'Verify exact dimensions vs the current cutout — modern appliances are often slightly different sizes.',
+        'For dishwashers / washers / dryers, confirm the existing water/drain/vent setup matches what the new unit needs.',
+        'Schedule installation at delivery — DIY swap saves $100–$200 but adds risk on water/gas hookups.',
+      ],
+      estimated_minutes: 90,
+      estimated_cost_low: 600,
+      estimated_cost_high: 3500,
+      pro_recommended: false,
+      service_purpose:
+        'Planned replacements let you shop sales, pick exactly what you want, and avoid the emergency-purchase tax.',
+    },
+  },
+  electrical: {
+    inspect: {
+      title: (n) => `End-of-life electrical inspection: ${n}`,
+      description: (n) =>
+        `${n} is at ~80% of its expected lifespan. Electrical components don't visibly degrade — failures often present as breakers tripping, dimming lights, or warm outlets. A licensed electrician can test for the early signs before a fire risk emerges.`,
+      instructions: [
+        'Schedule a licensed electrician for an end-of-life condition check.',
+        'Ask them to test breaker function, panel temperature under load, and any aluminum-wiring connection points if applicable.',
+        'Get a written assessment with photos.',
+      ],
+      estimated_minutes: 60,
+      estimated_cost_low: 150,
+      estimated_cost_high: 350,
+      pro_recommended: true,
+      service_purpose:
+        'Electrical failures can be silent and dangerous. Catching a deteriorating panel or breaker prevents fire risk.',
+    },
+    replace: {
+      title: (n) => `Plan electrical replacement: ${n}`,
+      description: (n) =>
+        `${n} is at ~95% of its expected lifespan. Electrical replacements are permit work — plan ahead to avoid an emergency unlicensed fix.`,
+      instructions: [
+        'Get 2–3 quotes from licensed electricians; confirm permit and inspection are included.',
+        'Ask about panel upgrades (100A → 200A) if you have any EV / heat-pump / solar plans within the next 5 years.',
+        'Confirm whether AFCI/GFCI breakers are required by current code in your area for the replacement scope.',
+      ],
+      estimated_minutes: 90,
+      estimated_cost_low: 500,
+      estimated_cost_high: 4500,
+      pro_recommended: true,
+      service_purpose:
+        'Planned electrical work is permitted, inspected, and code-compliant. Emergency electrical work often skips those steps and creates insurance + resale problems later.',
+    },
+  },
+  plumbing: {
+    inspect: {
+      title: (n) => `End-of-life plumbing inspection: ${n}`,
+      description: (n) =>
+        `${n} is at ~80% of its expected lifespan. Plumbing failures cause more home insurance claims than any other category. An end-of-life inspection catches corrosion, scale, and pressure issues before they cause water damage.`,
+      instructions: [
+        'Schedule a licensed plumber for an end-of-life pipe/fitting condition check.',
+        'Ask for a sediment + corrosion assessment, including under sinks and behind/around toilets.',
+        'For galvanized or polybutylene piping, ask about full or partial repipe options — both are insurance-exclusion materials.',
+      ],
+      estimated_minutes: 60,
+      estimated_cost_low: 150,
+      estimated_cost_high: 400,
+      pro_recommended: true,
+      service_purpose:
+        'A small slow leak detected during an inspection costs hundreds. The same leak found by drywall stains costs tens of thousands.',
+    },
+    replace: {
+      title: (n) => `Plan plumbing replacement: ${n}`,
+      description: (n) =>
+        `${n} is at or past its expected lifespan. Schedule replacement before failure to avoid water damage.`,
+      instructions: [
+        'Get 2–3 quotes from licensed plumbers.',
+        'Confirm permit + final inspection are included.',
+        'If a partial repipe, confirm the new piping material connects safely to existing (avoid mixing copper + galvanized without dielectric unions).',
+      ],
+      estimated_minutes: 90,
+      estimated_cost_low: 400,
+      estimated_cost_high: 8000,
+      pro_recommended: true,
+      service_purpose:
+        'Planned plumbing work prevents water damage. Reactive work pairs the repair with water-damage restoration.',
+    },
+  },
+};
+
+function getLifecycleContent(category: string, phase: LifecyclePhase): LifecycleContent {
+  return LIFECYCLE_CONTENT[category]?.[phase] ?? GENERIC_LIFECYCLE_CONTENT[phase];
+}
+
 export function generateEquipmentLifecycleAlerts(
   equipment: Equipment[],
   home: Home
@@ -862,6 +1194,8 @@ export function generateEquipmentLifecycleAlerts(
   const today = new Date();
 
   equipment.forEach((item) => {
+    const thresholds = getLifecycleThresholds(item.category, item);
+
     // Special handling for roof
     if (item.category === 'roof' && home.roof_type) {
       // Validate that roof_type key exists in ROOF_LIFESPANS before accessing
@@ -876,10 +1210,8 @@ export function generateEquipmentLifecycleAlerts(
 
       // "Plan Replacement" alerts now show on the Equipment page, not as calendar tasks.
       // Only "Inspect" alerts generate calendar tasks.
-      if (percentageThrough >= 0.8 && percentageThrough < 0.95) {
-        alerts.push(
-          createLifecycleTask('high', `Inspect: ${item.name}`, item, home)
-        );
+      if (percentageThrough >= thresholds.inspect && percentageThrough < thresholds.replace) {
+        alerts.push(createLifecycleTask('high', 'inspect', item, home));
       }
 
       return;
@@ -898,10 +1230,8 @@ export function generateEquipmentLifecycleAlerts(
     const percentageThrough = daysSinceInstall / daysInLifespan;
 
     // "Plan Replacement" alerts now show on the Equipment page, not as calendar tasks.
-    if (percentageThrough >= 0.8 && percentageThrough < 0.95) {
-      alerts.push(
-        createLifecycleTask('high', `Inspect: ${item.name}`, item, home)
-      );
+    if (percentageThrough >= thresholds.inspect && percentageThrough < thresholds.replace) {
+      alerts.push(createLifecycleTask('high', 'inspect', item, home));
     }
   });
 
@@ -909,27 +1239,34 @@ export function generateEquipmentLifecycleAlerts(
 }
 
 /**
- * Helper: creates a lifecycle alert task
+ * Helper: creates a lifecycle alert task. 2026-05-18: now reads per-category
+ * content from LIFECYCLE_CONTENT (with a generic fallback), and sets a
+ * synthetic template_id so the engine's dedup key works.
  */
 function createLifecycleTask(
   priority: TaskPriority,
-  title: string,
+  phase: LifecyclePhase,
   equipment: Equipment,
   home: Home
 ): MaintenanceTask {
+  const content = getLifecycleContent(equipment.category, phase);
   return {
     id: generateUUID(),
     home_id: home.id,
     equipment_id: equipment.id,
-    title,
-    description: `${equipment.name} is nearing the end of its expected lifespan.`,
+    template_id: `lifecycle-${phase}-${equipment.category}`,
+    title: content.title(equipment.name),
+    description: content.description(equipment.name),
+    instructions: content.instructions,
     category: equipment.category,
     priority,
     status: 'upcoming',
     frequency: 'as_needed',
     due_date: format(new Date(), 'yyyy-MM-dd'),
-    estimated_minutes: 30,
-    estimated_cost: 0,
+    estimated_minutes: content.estimated_minutes,
+    estimated_cost: content.estimated_cost_low,
+    items_to_have_on_hand: content.items_to_have_on_hand,
+    service_purpose: content.service_purpose,
     is_weather_triggered: false,
     applicable_months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     scheduling_type: 'seasonal',

@@ -151,6 +151,7 @@ export default function AdminAnalytics() {
         signupsTodayRes, totalNotif24hRes, failedNotif24hRes,
         openTicketsRes, recentTicketsRes,
         totalProfilesCountRes, totalTasksCountRes,
+        templateStatsRes,
       ] = await Promise.all([
         // 2026-05-02: include subscription_status + subscription_expires_at + updated_at so we
         // can compute a real churn signal instead of the 0 placeholder.
@@ -181,6 +182,10 @@ export default function AdminAnalytics() {
         // analysis. Surfaces a banner if totalUsers > LIMIT_PROFILES.
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('maintenance_tasks').select('id', { count: 'exact', head: true }),
+        // 2026-05-18: server-side template stats via migration 083/084 RPC.
+        // Replaces the client-side aggregation that used to compute
+        // generated/completed/skipped from the 200K-task pull.
+        supabase.rpc('get_task_template_stats'),
       ]);
 
       const profiles = profilesRes.data || [];
@@ -360,54 +365,43 @@ export default function AdminAnalytics() {
         ? Math.round((timesToAssignment.reduce((a, b) => a + b, 0) / timesToAssignment.length) * 10) / 10
         : 0;
 
-      // Task Template Performance (Item 17)
-      const templateBuckets = new Map<string, { generated: number; completed: number; skipped: number; overdue: number; daysToComplete: number[]; lastCompleted: string | null }>();
-      const todayIso = new Date().toISOString().slice(0, 10);
-      tasks.forEach((t: any) => {
-        if (!t.template_id) return;
-        const b = templateBuckets.get(t.template_id) || { generated: 0, completed: 0, skipped: 0, overdue: 0, daysToComplete: [], lastCompleted: null };
-        b.generated += 1;
-        if (t.status === 'completed') {
-          b.completed += 1;
-          if (t.due_date && t.completed_date) {
-            const due = new Date(t.due_date).getTime();
-            const done = new Date(t.completed_date).getTime();
-            if (Number.isFinite(due) && Number.isFinite(done)) {
-              b.daysToComplete.push(Math.round((done - due) / 86400000));
-            }
-          }
-          if (t.completed_date && (!b.lastCompleted || new Date(t.completed_date) > new Date(b.lastCompleted))) {
-            b.lastCompleted = t.completed_date;
-          }
-        } else if (t.status === 'skipped') {
-          b.skipped += 1;
-        } else if (t.status !== 'completed' && t.due_date && t.due_date < todayIso) {
-          b.overdue += 1;
-        }
-        templateBuckets.set(t.template_id, b);
-      });
-      const templateStats: TemplateStat[] = templatesList.map((tpl: any) => {
-        const b = templateBuckets.get(tpl.id) || { generated: 0, completed: 0, skipped: 0, overdue: 0, daysToComplete: [], lastCompleted: null };
-        const nonSkipped = b.generated - b.skipped;
-        const completionRate = nonSkipped > 0 ? Math.round((b.completed / nonSkipped) * 1000) / 10 : 0;
-        const avgDays = b.daysToComplete.length > 0
-          ? Math.round((b.daysToComplete.reduce((a, c) => a + c, 0) / b.daysToComplete.length) * 10) / 10
-          : null;
-        return {
-          id: tpl.id,
-          title: tpl.title,
-          category: tpl.category,
-          source: tpl.source || 'built_in',
-          task_level: tpl.task_level || 'standard',
-          generated: b.generated,
-          completed: b.completed,
-          skipped: b.skipped,
-          overdue: b.overdue,
-          completionRate,
-          avgDaysToComplete: avgDays,
-          lastCompletedAt: b.lastCompleted,
-        };
-      }).sort((a, b) => b.generated - a.generated);
+      // Task Template Performance (Item 17). 2026-05-18: aggregation moved
+      // to the server-side `task_template_stats` VIEW (migration 083/084),
+      // queried via the `get_task_template_stats` admin-gated RPC. Replaces
+      // the prior client-side bucket math that scanned the 200K-task pull.
+      // Same final shape (TemplateStat[]) so the render code below is
+      // unchanged.
+      const statsRows = (templateStatsRes.data || []) as Array<{
+        template_id: string; title: string; category: string;
+        source: string; task_level: string;
+        generated_count: number; completed_count: number;
+        skipped_count: number; overdue_count: number;
+        completion_rate: number | null;
+        avg_days_to_complete: number;
+        last_completed_at: string | null;
+      }>;
+      const templateStats: TemplateStat[] = statsRows.map(r => ({
+        id: r.template_id,
+        title: r.title,
+        category: r.category,
+        source: r.source || 'built_in',
+        task_level: r.task_level || 'standard',
+        generated: r.generated_count,
+        completed: r.completed_count,
+        skipped: r.skipped_count,
+        overdue: r.overdue_count,
+        // completion_rate is 0–1 from the view; the UI wants a 0–100 percent
+        // with one decimal place to match the old format exactly.
+        completionRate: r.completion_rate === null
+          ? 0
+          : Math.round(r.completion_rate * 1000) / 10,
+        // The view returns 0 when no completed tasks exist; preserve the
+        // prior "null when no data" convention for the UI.
+        avgDaysToComplete: r.completed_count > 0
+          ? Math.round(r.avg_days_to_complete * 10) / 10
+          : null,
+        lastCompletedAt: r.last_completed_at,
+      })).sort((a, b) => b.generated - a.generated);
 
       const totalGenerated = templateStats.reduce((s, t) => s + t.generated, 0);
       const totalCompleted = templateStats.reduce((s, t) => s + t.completed, 0);

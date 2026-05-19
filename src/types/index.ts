@@ -633,6 +633,10 @@ export interface Equipment {
   install_date?: string;
   warranty_expiry?: string;
   expected_lifespan_years?: number;
+  /** 2026-05-18 (migration 085): per-instance lifecycle alert override.
+   *  Fraction of expected_lifespan_years. NULL = use category default. */
+  lifecycle_inspect_threshold_pct?: number | null;
+  lifecycle_replace_threshold_pct?: number | null;
   location_in_home?: string;
   notes?: string;
   photo_url?: string;

@@ -6,7 +6,7 @@ import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/ut
 import { reopenTask as reopenTaskApi, deleteTask as deleteTaskApi, batchMatchAffiliateLinksForItems, disableTemplateForHome, type AffiliateProduct } from '@/services/supabase';
 import { getDisplayStatus } from '@/services/taskEngine';
 import { TASK_TEMPLATES } from '@/constants/maintenance';
-import { getServiceTypeMeta, isProRecommendedTag } from '@/utils/serviceType';
+import { getServiceTypeMeta } from '@/utils/serviceType';
 import { humanizeCategory } from '@/utils/categories';
 import { getCostMeta } from '@/utils/cost';
 import { supabase } from '@/services/supabase';
@@ -16,7 +16,7 @@ import logger from '@/utils/logger';
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { tasks, reopenTask, setTasks, user, home, disabledTemplateIds, setDisabledTemplateIds } = useStore();
+  const { tasks, reopenTask, setTasks, user, home, customTemplates, disabledTemplateIds, setDisabledTemplateIds } = useStore();
 
   const rawTask = tasks.find(t => t.id === id);
   const [dbTask, setDbTask] = useState<any>(null);
@@ -46,6 +46,25 @@ export default function TaskDetail() {
 
   const resolvedRaw = rawTask || dbTask;
   const task = useMemo(() => resolvedRaw ? { ...resolvedRaw, status: getDisplayStatus(resolvedRaw) } : undefined, [resolvedRaw]);
+
+  // 2026-05-18 (bug fix): the previous lookup used the hardcoded TASK_TEMPLATES
+  // constant (text-slug ids) but most templates live in the DB with UUID ids.
+  // That made every DB-seeded template silently fall through to "no
+  // service_type known," which broke the service-type banner and the Pro CTA
+  // labeling. Resolution order:
+  //   1) task.service_type if snapshotted at generation time
+  //   2) DB-loaded customTemplates from the store
+  //   3) hardcoded TASK_TEMPLATES constant (legacy fallback only)
+  const resolvedServiceType: string | undefined = useMemo(() => {
+    if (!task) return undefined;
+    const direct = (task as any)?.service_type;
+    if (direct) return direct;
+    if (!task.template_id) return undefined;
+    const fromDb = customTemplates.find((t) => t.id === task.template_id);
+    if ((fromDb as any)?.service_type) return (fromDb as any).service_type;
+    const fromConst = TASK_TEMPLATES.find((t) => t.id === task.template_id);
+    return (fromConst as any)?.service_type;
+  }, [task, customTemplates]);
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
   const [showCategoryBundleModal, setShowCategoryBundleModal] = useState(false);
   const [bundleTasksList, setBundleTasksList] = useState<any[]>([]);
@@ -276,15 +295,10 @@ export default function TaskDetail() {
       </div>
 
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
-        {/* Service Type Banner (2026-05-18: centralized via getServiceTypeMeta;
-            previously checked nonexistent enum values 'visit'/'add_on' so it
-            never rendered. Now shows for every service_type with consistent
-            user-facing copy.) */}
+        {/* Service Type Banner */}
         {(() => {
-          const tpl = TASK_TEMPLATES.find(t => t.id === task.template_id);
-          const serviceType = (tpl as any)?.service_type;
-          if (!serviceType) return null;
-          const meta = getServiceTypeMeta(serviceType);
+          if (!resolvedServiceType) return null;
+          const meta = getServiceTypeMeta(resolvedServiceType);
           return (
             <div
               className="card mb-lg"
@@ -344,14 +358,15 @@ export default function TaskDetail() {
             now it's clearly labeled (e.g. "Est. supplies cost") with an (i)
             tooltip explaining what the range represents. */}
         {(() => {
-          const tpl = TASK_TEMPLATES.find(t => t.id === task.template_id);
-          const serviceType = (tpl as any)?.service_type;
           const userIsPro = user?.subscription_tier === 'pro' || user?.subscription_tier === 'pro_2';
+          // Look up the template (DB first, then hardcoded) for the high-end cost
+          const dbTpl = task.template_id ? customTemplates.find((t) => t.id === task.template_id) : undefined;
+          const constTpl = task.template_id ? TASK_TEMPLATES.find((t) => t.id === task.template_id) : undefined;
           const cost = getCostMeta({
             estimatedCost: task.estimated_cost,
-            estimatedCostLow: (tpl as any)?.estimated_cost ?? task.estimated_cost,
-            estimatedCostHigh: (tpl as any)?.estimated_pro_cost ?? null,
-            serviceType,
+            estimatedCostLow: (dbTpl as any)?.estimated_cost_low ?? (constTpl as any)?.estimated_cost ?? task.estimated_cost,
+            estimatedCostHigh: (dbTpl as any)?.estimated_cost_high ?? (constTpl as any)?.estimated_pro_cost ?? null,
+            serviceType: resolvedServiceType,
             userIsPro,
           });
           const shouldShow = task.estimated_minutes || cost.amount || cost.label;
@@ -584,19 +599,23 @@ export default function TaskDetail() {
                   <p style={{ fontSize: 14, fontWeight: 600, color: Colors.copper }}>Pro Request Pending</p>
                 </div>
               ) : (
-                // 2026-04-24 — overdue tasks are exactly the ones a homeowner is most likely to want to outsource;
-                // gating to upcoming/due meant the button vanished right when it became most useful.
-                // 2026-05-18 — prominence now depends on service_type:
-                //   canopy_pro / licensed_pro → prominent copper button (primary action)
-                //   diy / canopy_visit         → subtle text link below the main actions
-                //                                 (rendered AFTER the action grid; see below)
+                // 2026-04-24 — overdue tasks are exactly the ones a homeowner is
+                // most likely to want to outsource; gating to upcoming/due meant
+                // the button vanished right when it became most useful.
+                //
+                // 2026-05-18 (revised) — prominent button for every active task
+                // for visual cohesion; the LABEL varies by service_type so the
+                // CTA stays appropriate without becoming pro-pushy on DIY tasks.
+                //   diy           → "Prefer a pro? Get a quote"
+                //   canopy_visit  → "Add to my next Pro visit"
+                //   canopy_pro    → "Request a Canopy add-on"
+                //   licensed_pro  → "Get a quote from a licensed pro"
                 ['upcoming', 'due', 'overdue'].includes(task.status) && (() => {
-                  const tpl = TASK_TEMPLATES.find(t => t.id === task.template_id);
-                  const serviceType = (tpl as any)?.service_type;
-                  if (!isProRecommendedTag(serviceType)) return null;
-                  const proLabel = serviceType === 'licensed_pro'
-                    ? 'Get a quote from a licensed pro'
-                    : 'Request a Canopy add-on';
+                  const proLabel =
+                    resolvedServiceType === 'licensed_pro' ? 'Get a quote from a licensed pro' :
+                    resolvedServiceType === 'canopy_pro'   ? 'Request a Canopy add-on' :
+                    resolvedServiceType === 'canopy_visit' ? 'Add to my next Pro visit' :
+                    'Prefer a pro? Get a quote';
                   return (
                     <button
                       className="btn"
@@ -695,38 +714,6 @@ export default function TaskDetail() {
                 </button>
               </div>
             </div>
-
-            {/* 2026-05-18: subtle "Prefer a pro?" link for DIY / canopy_visit
-                tasks. Pro-recommended tasks already show the prominent copper
-                button above; this is the always-available-but-quiet path for
-                homeowners who'd rather not DIY a specific job. */}
-            {(() => {
-              const tpl = TASK_TEMPLATES.find(t => t.id === task.template_id);
-              const serviceType = (tpl as any)?.service_type;
-              if (isProRecommendedTag(serviceType)) return null;
-              if (['upcoming', 'due', 'overdue'].indexOf(task.status) === -1) return null;
-              if (hasProRequest) return null;
-              return (
-                <button
-                  type="button"
-                  onClick={handleRequestProClick}
-                  disabled={isLoadingProRequest}
-                  style={{
-                    display: 'block',
-                    marginTop: 16,
-                    marginInline: 'auto',
-                    background: 'none',
-                    border: 'none',
-                    color: Colors.copper,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                  }}
-                >
-                  {isLoadingProRequest ? 'Loading...' : "Prefer a pro? Request a Canopy visit or quote"}
-                </button>
-              );
-            })()}
 
             {/* 2026-05-18 (migration 086): user-level disable for the
                 underlying template. Hidden if no template_id (e.g. lifecycle

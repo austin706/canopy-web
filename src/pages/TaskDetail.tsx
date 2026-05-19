@@ -66,6 +66,7 @@ export default function TaskDetail() {
     return (fromConst as any)?.service_type;
   }, [task, customTemplates]);
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
+  const [showCostTooltip, setShowCostTooltip] = useState(false);
   const [showCategoryBundleModal, setShowCategoryBundleModal] = useState(false);
   const [bundleTasksList, setBundleTasksList] = useState<any[]>([]);
   const [selectedBundleTasks, setSelectedBundleTasks] = useState<Set<string>>(new Set());
@@ -385,30 +386,52 @@ export default function TaskDetail() {
                   <div>
                     <p className="text-xs text-gray" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span>{cost.label}</span>
-                      <span
-                        title={cost.tooltip}
-                        aria-label={cost.tooltip}
+                      <button
+                        type="button"
+                        onClick={() => setShowCostTooltip((v) => !v)}
+                        aria-expanded={showCostTooltip}
+                        aria-label={showCostTooltip ? 'Hide cost details' : 'Show cost details'}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          width: 14,
-                          height: 14,
+                          width: 16,
+                          height: 16,
                           borderRadius: '50%',
-                          border: `1px solid ${Colors.medGray}`,
-                          color: Colors.medGray,
+                          border: `1px solid ${showCostTooltip ? Colors.copper : Colors.medGray}`,
+                          background: showCostTooltip ? Colors.copper : 'transparent',
+                          color: showCostTooltip ? Colors.white : Colors.medGray,
                           fontSize: 10,
                           fontWeight: 700,
-                          cursor: 'help',
+                          cursor: 'pointer',
                           flexShrink: 0,
+                          padding: 0,
+                          lineHeight: 1,
                         }}
                       >
                         i
-                      </span>
+                      </button>
                     </p>
                     <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal, marginTop: 2 }}>
                       {cost.amount || '—'}
                     </p>
+                    {showCostTooltip && (
+                      <p
+                        role="note"
+                        style={{
+                          fontSize: 12,
+                          color: Colors.medGray,
+                          lineHeight: 1.5,
+                          marginTop: 8,
+                          padding: '8px 10px',
+                          background: 'var(--color-background)',
+                          borderLeft: `3px solid ${Colors.copper}`,
+                          borderRadius: 4,
+                        }}
+                      >
+                        {cost.tooltip}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

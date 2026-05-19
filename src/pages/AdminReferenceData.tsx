@@ -15,6 +15,7 @@ import {
 import { logAdminAction } from '@/services/auditLog';
 import { Colors } from '@/constants/theme';
 import logger from '@/utils/logger';
+import { getServiceTypeLabel } from '@/utils/serviceType';
 
 const TYPE_LABELS: Record<string, string> = {
   equipment_category: 'Equipment Categories',
@@ -785,7 +786,7 @@ export default function AdminReferenceData() {
                         background: t.service_type === 'canopy_visit' ? '#E8F0E4' : t.service_type === 'canopy_pro' ? '#FDF0E6' : t.service_type === 'licensed_pro' ? '#FDE8E8' : '#F0F0F0',
                         color: t.service_type === 'canopy_visit' ? '#5A7A4A' : t.service_type === 'canopy_pro' ? '#A0623A' : t.service_type === 'licensed_pro' ? '#A04040' : '#666',
                       }}>
-                        {t.service_type === 'canopy_visit' ? 'Canopy Visit' : t.service_type === 'canopy_pro' ? 'Canopy Pro' : t.service_type === 'licensed_pro' ? 'Licensed Pro' : 'DIY'}
+                        {getServiceTypeLabel(t.service_type)}
                       </span>
                     </td>
                     <td style={{ padding: '10px 16px', fontSize: 12 }}>

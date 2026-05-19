@@ -56,6 +56,43 @@ export function getItemsToHaveOnHand(selectedTaskIds: string[]): string[] {
   return Array.from(items).sort();
 }
 
+/**
+ * 2026-05-18: return the actual task summaries (title, category, est minutes)
+ * for the visit's `selected_task_ids`. Used by the Visits page to render a
+ * "What we'll do on this visit" preview, alongside the existing
+ * `getItemsToHaveOnHand` supply list.
+ */
+export interface VisitTaskSummary {
+  id: string;
+  title: string;
+  category: string;
+  estimated_minutes: number;
+  priority: string;
+}
+
+export function getVisitTaskSummaries(selectedTaskIds: string[]): VisitTaskSummary[] {
+  const out: VisitTaskSummary[] = [];
+  selectedTaskIds.forEach(taskId => {
+    const t = TASK_TEMPLATES.find(tpl => tpl.id === taskId);
+    if (!t) return;
+    out.push({
+      id: t.id,
+      title: t.title,
+      category: t.category,
+      estimated_minutes: t.estimated_minutes ?? 0,
+      priority: t.priority ?? 'medium',
+    });
+  });
+  // Sort by priority then title for stable presentation.
+  const ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+  return out.sort((a, b) => {
+    const ap = ORDER[a.priority] ?? 4;
+    const bp = ORDER[b.priority] ?? 4;
+    if (ap !== bp) return ap - bp;
+    return a.title.localeCompare(b.title);
+  });
+}
+
 // ─── Homeowner Functions ───
 
 export async function getUpcomingVisits(homeownerId: string): Promise<ProMonthlyVisit[]> {

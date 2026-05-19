@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { isProOrHigher } from '@/services/subscriptionGate';
 import { Colors, StatusColors } from '@/constants/theme';
-import { getItemsToHaveOnHand, getUpcomingVisits, getPastVisits, confirmVisit, cancelVisit, rescheduleVisit, rateVisit } from '@/services/proVisits';
+import { getItemsToHaveOnHand, getVisitTaskSummaries, getUpcomingVisits, getPastVisits, confirmVisit, cancelVisit, rescheduleVisit, rateVisit } from '@/services/proVisits';
 import { uploadInspectionDoc, getVisitDocuments, deleteInspectionDoc, type InspectionDocument } from '@/services/inspectionDocs';
 import { getEquipmentTrends, type EquipmentTrend } from '@/services/equipmentTrending';
 import type { ProMonthlyVisit, VisitAllocation } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
 import { showToast } from '@/components/Toast';
 import logger from '@/utils/logger';
+import { humanizeCategory } from '@/utils/categories';
 
 export default function Visits() {
   const { user, home } = useStore();
@@ -35,6 +36,8 @@ export default function Visits() {
   const [trends, setTrends] = useState<EquipmentTrend[]>([]);
   const [trendsLoading, setTrendsLoading] = useState(false);
   const [expandedTrend, setExpandedTrend] = useState<string | null>(null);
+  // 2026-05-18: expanded-tasks toggle per visit (separate from ai_summary expanded state)
+  const [expandedTasks, setExpandedTasks] = useState<string | null>(null);
 
   const tier = user?.subscription_tier || 'free';
   const hasPro = isProOrHigher(tier);
@@ -238,6 +241,61 @@ export default function Visits() {
       <div style={{ marginBottom: 32 }}>
         <h2 style={{ fontSize: 18, marginBottom: 16, fontWeight: 600 }}>Upcoming Visit</h2>
 
+        {/* 2026-05-18: "What we'll do on this visit" preview. Renders the
+            actual scheduled tasks (titles + category + time estimate) so
+            homeowners know exactly what their Canopy Pro will be doing, not
+            just what supplies to stock. Sits ABOVE the supplies card. */}
+        {upcomingVisit && (() => {
+          const summaries = getVisitTaskSummaries(upcomingVisit.selected_task_ids || []);
+          if (summaries.length === 0) return null;
+          const totalMin = summaries.reduce((s, t) => s + (t.estimated_minutes || 0), 0);
+          return (
+            <div
+              className="card"
+              style={{
+                background: 'var(--color-sage-muted, #ECF1E8)',
+                borderLeft: `4px solid var(--color-sage)`,
+                marginBottom: 16,
+                padding: 16,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+                <div style={{ fontSize: 24 }}>🌿</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, color: Colors.charcoal, marginBottom: 4 }}>
+                    What we'll do on this visit
+                  </h3>
+                  <p style={{ fontSize: 13, color: Colors.medGray, marginBottom: 12 }}>
+                    {summaries.length} task{summaries.length === 1 ? '' : 's'} · ~{Math.max(15, Math.round(totalMin / 5) * 5)} min total on site
+                  </p>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {summaries.map((t) => (
+                      <li
+                        key={t.id}
+                        style={{
+                          display: 'flex',
+                          gap: 10,
+                          alignItems: 'baseline',
+                          padding: '6px 0',
+                          borderBottom: `1px solid ${Colors.sage}20`,
+                        }}
+                      >
+                        <span aria-hidden="true" style={{ color: Colors.sage, fontWeight: 700, flexShrink: 0 }}>·</span>
+                        <span style={{ flex: 1, fontSize: 14, color: Colors.charcoal, fontWeight: 500 }}>{t.title}</span>
+                        <span style={{ fontSize: 11, color: Colors.medGray, flexShrink: 0, textTransform: 'capitalize' }}>{humanizeCategory(t.category)}</span>
+                        <span style={{ fontSize: 11, color: Colors.medGray, flexShrink: 0 }}>~{t.estimated_minutes || '–'}m</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p style={{ fontSize: 11, color: Colors.medGray, fontStyle: 'italic', marginTop: 10, marginBottom: 0 }}>
+                    Your Canopy Pro will check off each task and leave notes you'll see in the visit recap.
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {upcomingVisit && (
           <div
             className="card"
@@ -400,9 +458,53 @@ export default function Visits() {
                   </div>
                   <span className="badge" style={{ background: Colors.success + '20', color: Colors.success }}>Completed</span>
                 </div>
-                {visit.selected_task_ids && visit.selected_task_ids.length > 0 && (
-                  <p className="text-sm text-gray mb-sm">Tasks: {visit.selected_task_ids.length} completed</p>
-                )}
+                {visit.selected_task_ids && visit.selected_task_ids.length > 0 && (() => {
+                  const summaries = getVisitTaskSummaries(visit.selected_task_ids);
+                  if (summaries.length === 0) return (
+                    <p className="text-sm text-gray mb-sm">Tasks: {visit.selected_task_ids.length} completed</p>
+                  );
+                  const isExpanded = expandedTasks === visit.id;
+                  return (
+                    <div className="mb-sm">
+                      <button
+                        onClick={() => setExpandedTasks(isExpanded ? null : visit.id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          color: Colors.sage,
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        {summaries.length} task{summaries.length === 1 ? '' : 's'} completed — {isExpanded ? 'hide' : 'see what was done'}
+                      </button>
+                      {isExpanded && (
+                        <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {summaries.map((t) => (
+                            <li
+                              key={t.id}
+                              style={{
+                                display: 'flex',
+                                gap: 8,
+                                alignItems: 'baseline',
+                                fontSize: 13,
+                                color: Colors.charcoal,
+                                paddingLeft: 4,
+                              }}
+                            >
+                              <span aria-hidden="true" style={{ color: Colors.success }}>✓</span>
+                              <span style={{ flex: 1 }}>{t.title}</span>
+                              <span style={{ fontSize: 11, color: Colors.medGray, textTransform: 'capitalize' }}>{humanizeCategory(t.category)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })()}
                 {visit.time_spent_minutes && (
                   <p className="text-sm text-gray mb-sm">Duration: {visit.time_spent_minutes} minutes</p>
                 )}

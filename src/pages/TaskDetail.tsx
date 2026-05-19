@@ -6,6 +6,9 @@ import { quickCompleteTask, quickSkipTask, quickSnoozeTask } from '@/services/ut
 import { reopenTask as reopenTaskApi, deleteTask as deleteTaskApi, batchMatchAffiliateLinksForItems, disableTemplateForHome, type AffiliateProduct } from '@/services/supabase';
 import { getDisplayStatus } from '@/services/taskEngine';
 import { TASK_TEMPLATES } from '@/constants/maintenance';
+import { getServiceTypeMeta, isProRecommendedTag } from '@/utils/serviceType';
+import { humanizeCategory } from '@/utils/categories';
+import { getCostMeta } from '@/utils/cost';
 import { supabase } from '@/services/supabase';
 import { showToast } from '@/components/Toast';
 import logger from '@/utils/logger';
@@ -273,27 +276,38 @@ export default function TaskDetail() {
       </div>
 
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
-        {/* Service Type Banner */}
+        {/* Service Type Banner (2026-05-18: centralized via getServiceTypeMeta;
+            previously checked nonexistent enum values 'visit'/'add_on' so it
+            never rendered. Now shows for every service_type with consistent
+            user-facing copy.) */}
         {(() => {
           const tpl = TASK_TEMPLATES.find(t => t.id === task.template_id);
-          if (!tpl) return null;
-          if (tpl.service_type === 'visit') return (
-            <div className="card mb-lg" style={{ background: Colors.sage + '10', border: `1px solid ${Colors.sage}30`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 18 }}>&#128736;</span>
-              <p style={{ fontSize: 13, color: Colors.sage, fontWeight: 500, margin: 0 }}>
-                Your Canopy pro handles this during their bimonthly visit.
-              </p>
+          const serviceType = (tpl as any)?.service_type;
+          if (!serviceType) return null;
+          const meta = getServiceTypeMeta(serviceType);
+          return (
+            <div
+              className="card mb-lg"
+              style={{
+                background: meta.accent + '10',
+                border: `1px solid ${meta.accent}30`,
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
+              <span style={{ fontSize: 18, flexShrink: 0 }} role="img" aria-hidden="true">{meta.icon}</span>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p style={{ fontSize: 12, color: meta.accent, fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  {meta.label}
+                </p>
+                <p style={{ fontSize: 13, color: 'var(--color-charcoal)', margin: '2px 0 0', lineHeight: 1.5 }}>
+                  {meta.banner}
+                </p>
+              </div>
             </div>
           );
-          if (tpl.service_type === 'add_on') return (
-            <div className="card mb-lg" style={{ background: Colors.copper + '10', border: `1px solid ${Colors.copper}30`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 18 }}>&#9889;</span>
-              <p style={{ fontSize: 13, color: Colors.copper, fontWeight: 500, margin: 0 }}>
-                This requires a licensed specialist. Available as a Canopy add-on or through your own provider.
-              </p>
-            </div>
-          );
-          return null;
         })()}
 
         {/* Category & Priority */}
@@ -306,7 +320,7 @@ export default function TaskDetail() {
               background: PriorityColors[task.priority]
             }} />
             <div>
-              <p style={{ fontSize: 12, color: Colors.medGray, textTransform: 'uppercase', fontWeight: 600 }}>{task.category}</p>
+              <p style={{ fontSize: 12, color: Colors.medGray, textTransform: 'uppercase', fontWeight: 600 }}>{humanizeCategory(task.category)}</p>
               <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>{task.priority.toUpperCase()} Priority</p>
             </div>
           </div>
@@ -325,26 +339,67 @@ export default function TaskDetail() {
           </div>
         </div>
 
-        {/* Estimated Time & Cost */}
-        {(task.estimated_minutes || task.estimated_cost) && (
-          <div className="card mb-lg">
-            <p style={{ fontWeight: 600, marginBottom: 12 }}>Estimate</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }}>
-              {task.estimated_minutes && (
-                <div>
-                  <p className="text-xs text-gray">Time</p>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>~{task.estimated_minutes} min</p>
-                </div>
-              )}
-              {task.estimated_cost && (
-                <div>
-                  <p className="text-xs text-gray">Cost</p>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>${task.estimated_cost}</p>
-                </div>
-              )}
+        {/* Estimated Time & Cost — 2026-05-18: cost label is now service-type
+            + Pro-subscriber aware. "$15" alone read like a Pro request price;
+            now it's clearly labeled (e.g. "Est. supplies cost") with an (i)
+            tooltip explaining what the range represents. */}
+        {(() => {
+          const tpl = TASK_TEMPLATES.find(t => t.id === task.template_id);
+          const serviceType = (tpl as any)?.service_type;
+          const userIsPro = user?.subscription_tier === 'pro' || user?.subscription_tier === 'pro_2';
+          const cost = getCostMeta({
+            estimatedCost: task.estimated_cost,
+            estimatedCostLow: (tpl as any)?.estimated_cost ?? task.estimated_cost,
+            estimatedCostHigh: (tpl as any)?.estimated_pro_cost ?? null,
+            serviceType,
+            userIsPro,
+          });
+          const shouldShow = task.estimated_minutes || cost.amount || cost.label;
+          if (!shouldShow) return null;
+          return (
+            <div className="card mb-lg">
+              <p style={{ fontWeight: 600, marginBottom: 12 }}>Estimate</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
+                {task.estimated_minutes && (
+                  <div>
+                    <p className="text-xs text-gray">Time</p>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal }}>~{task.estimated_minutes} min</p>
+                  </div>
+                )}
+                {(cost.amount || cost.label) && (
+                  <div>
+                    <p className="text-xs text-gray" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span>{cost.label}</span>
+                      <span
+                        title={cost.tooltip}
+                        aria-label={cost.tooltip}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 14,
+                          height: 14,
+                          borderRadius: '50%',
+                          border: `1px solid ${Colors.medGray}`,
+                          color: Colors.medGray,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          cursor: 'help',
+                          flexShrink: 0,
+                        }}
+                      >
+                        i
+                      </span>
+                    </p>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: Colors.charcoal, marginTop: 2 }}>
+                      {cost.amount || '—'}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Items to Have on Hand */}
         {task.items_to_have_on_hand && task.items_to_have_on_hand.length > 0 && (
@@ -531,23 +586,35 @@ export default function TaskDetail() {
               ) : (
                 // 2026-04-24 — overdue tasks are exactly the ones a homeowner is most likely to want to outsource;
                 // gating to upcoming/due meant the button vanished right when it became most useful.
-                ['upcoming', 'due', 'overdue'].includes(task.status) && (
-                  <button
-                    className="btn"
-                    onClick={handleRequestProClick}
-                    disabled={isLoadingProRequest}
-                    style={{
-                      width: '100%',
-                      background: Colors.copper,
-                      color: Colors.white,
-                      border: 'none',
-                      fontWeight: 600,
-                      opacity: isLoadingProRequest ? 0.6 : 1
-                    }}
-                  >
-                    {isLoadingProRequest ? 'Loading...' : 'Request a Pro'}
-                  </button>
-                )
+                // 2026-05-18 — prominence now depends on service_type:
+                //   canopy_pro / licensed_pro → prominent copper button (primary action)
+                //   diy / canopy_visit         → subtle text link below the main actions
+                //                                 (rendered AFTER the action grid; see below)
+                ['upcoming', 'due', 'overdue'].includes(task.status) && (() => {
+                  const tpl = TASK_TEMPLATES.find(t => t.id === task.template_id);
+                  const serviceType = (tpl as any)?.service_type;
+                  if (!isProRecommendedTag(serviceType)) return null;
+                  const proLabel = serviceType === 'licensed_pro'
+                    ? 'Get a quote from a licensed pro'
+                    : 'Request a Canopy add-on';
+                  return (
+                    <button
+                      className="btn"
+                      onClick={handleRequestProClick}
+                      disabled={isLoadingProRequest}
+                      style={{
+                        width: '100%',
+                        background: Colors.copper,
+                        color: Colors.white,
+                        border: 'none',
+                        fontWeight: 600,
+                        opacity: isLoadingProRequest ? 0.6 : 1
+                      }}
+                    >
+                      {isLoadingProRequest ? 'Loading...' : proLabel}
+                    </button>
+                  );
+                })()
               )}
 
               <button
@@ -628,6 +695,38 @@ export default function TaskDetail() {
                 </button>
               </div>
             </div>
+
+            {/* 2026-05-18: subtle "Prefer a pro?" link for DIY / canopy_visit
+                tasks. Pro-recommended tasks already show the prominent copper
+                button above; this is the always-available-but-quiet path for
+                homeowners who'd rather not DIY a specific job. */}
+            {(() => {
+              const tpl = TASK_TEMPLATES.find(t => t.id === task.template_id);
+              const serviceType = (tpl as any)?.service_type;
+              if (isProRecommendedTag(serviceType)) return null;
+              if (['upcoming', 'due', 'overdue'].indexOf(task.status) === -1) return null;
+              if (hasProRequest) return null;
+              return (
+                <button
+                  type="button"
+                  onClick={handleRequestProClick}
+                  disabled={isLoadingProRequest}
+                  style={{
+                    display: 'block',
+                    marginTop: 16,
+                    marginInline: 'auto',
+                    background: 'none',
+                    border: 'none',
+                    color: Colors.copper,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {isLoadingProRequest ? 'Loading...' : "Prefer a pro? Request a Canopy visit or quote"}
+                </button>
+              );
+            })()}
 
             {/* 2026-05-18 (migration 086): user-level disable for the
                 underlying template. Hidden if no template_id (e.g. lifecycle

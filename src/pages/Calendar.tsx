@@ -8,6 +8,7 @@ import { getDisplayStatus, normalizeDedupTitle } from '@/services/taskEngine';
 import { supabase } from '@/services/supabase';
 import type { MaintenanceTask, ProMonthlyVisit } from '@/types';
 import { EmptyState } from '@/components/ui';
+import { humanizeCategory } from '@/utils/categories';
 import logger from '@/utils/logger';
 
 const MaintenanceLogs = lazy(() => import('@/pages/MaintenanceLogs'));
@@ -727,7 +728,7 @@ export default function Calendar() {
                       <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', cursor: selectMode ? 'default' : 'pointer' }} onClick={() => !isDemo && !selectMode && navigate(`/task/${task.id}`)}>
                         <p style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</p>
                         <p className="text-xs text-gray">
-                          {task.category} &middot; ~{task.estimated_minutes || '?'} min
+                          {humanizeCategory(task.category)} &middot; ~{task.estimated_minutes || '?'} min
                           {!selectedDate && (
                             <span> &middot; {dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                           )}

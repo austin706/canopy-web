@@ -2,6 +2,7 @@ import { useMemo, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import logger from '@/utils/logger';
+import { humanizeCategory } from '@/utils/categories';
 import { canAccess, getTaskLimit, getHistoryDaysLimit, PLANS } from '@/services/subscriptionGate';
 import { Colors, PriorityColors, StatusColors } from '@/constants/theme';
 import DashboardChat from '@/components/DashboardChat';
@@ -1106,7 +1107,7 @@ export default function Dashboard() {
                         )}
                       </div>
                       <div className="task-meta">
-                        {task.category} &middot; ~{task.estimated_minutes || '?'} min &middot; {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {humanizeCategory(task.category)} &middot; ~{task.estimated_minutes || '?'} min &middot; {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </div>
                     </div>
                     <div className="task-actions">

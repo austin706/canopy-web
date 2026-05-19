@@ -7,6 +7,7 @@ import { quickCompleteTask, quickSnoozeTask, quickSkipTask } from '@/services/ut
 import { Colors } from '@/constants/theme';
 import type { MaintenanceTask } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
+import { humanizeCategory } from '@/utils/categories';
 import { useProgress } from '@/components/ProgressBar';
 import logger from '@/utils/logger';
 
@@ -1044,9 +1045,9 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                             {task.title}
                           </p>
                           <p style={{ fontSize: 11, color: Colors.medGray, margin: '2px 0 0' }}>
-                            {task.category}
+                            {humanizeCategory(task.category)}
                             {task.due_date && ` · Due ${new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-                            {task.estimated_cost > 0 && ` · ~$${task.estimated_cost}`}
+                            {task.estimated_cost > 0 && ` · est. ~$${task.estimated_cost}`}
                           </p>
                         </div>
 
@@ -1310,8 +1311,8 @@ export default function InspectionUploader({ onTasksCreated }: Props) {
                         <option key={key} value={key}>{label}</option>
                       ))}
                     </select>
-                    {task.estimated_cost > 0 && <span>~${task.estimated_cost}</span>}
-                    <span>{task.category}</span>
+                    {task.estimated_cost > 0 && <span title="Estimated typical cost — varies by region and home specifics">est. ~${task.estimated_cost}</span>}
+                    <span>{humanizeCategory(task.category)}</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

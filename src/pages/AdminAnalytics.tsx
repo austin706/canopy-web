@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabase';
 import { Colors, FontSize } from '@/constants/theme';
 import { PageSkeleton } from '@/components/Skeleton';
 import logger from '@/utils/logger';
+import { humanizeCategory } from '@/utils/categories';
 
 interface AnalyticsData {
   // User Growth
@@ -635,7 +636,7 @@ export default function AdminAnalytics() {
                       {t.subject}
                     </p>
                     <p style={{ fontSize: FontSize.xs, color: Colors.medGray, margin: '2px 0 0' }}>
-                      {t.category ? `${t.category} · ` : ''}{new Date(t.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      {t.category ? `${humanizeCategory(t.category)} · ` : ''}{new Date(t.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                     </p>
                   </div>
                   <span style={{ fontSize: FontSize.xs, color: Colors.medGray }}>→</span>
@@ -1157,7 +1158,7 @@ export default function AdminAnalytics() {
                   {data.templateStats.slice(0, 25).map(t => (
                     <tr key={t.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <td style={{ padding: '6px', fontWeight: 600 }}>{t.title}</td>
-                      <td style={{ padding: '6px', color: Colors.medGray }}>{t.category}</td>
+                      <td style={{ padding: '6px', color: Colors.medGray }}>{humanizeCategory(t.category)}</td>
                       <td style={{ padding: '6px', color: Colors.medGray, textTransform: 'capitalize' }}>{t.task_level}</td>
                       <td style={{ padding: '6px', textAlign: 'right' }}>{t.generated.toLocaleString()}</td>
                       <td style={{ padding: '6px', textAlign: 'right', color: Colors.success, fontWeight: 600 }}>{t.completed.toLocaleString()}</td>

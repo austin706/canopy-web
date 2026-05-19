@@ -7,6 +7,8 @@ import MessageBanner from '@/components/MessageBanner';
 import { getMessageVariant, messageColors } from '@/utils/messageType';
 import { enrollProSubscriber, findProviderForZip } from '@/services/proEnrollment';
 import { Colors } from '@/constants/theme';
+import { TASK_TEMPLATES } from '@/constants/maintenance';
+import { humanizeCategory } from '@/utils/categories';
 import type { SubscriptionTier } from '@/types';
 import { CheckCircleIcon, CheckIcon } from '@/components/icons/Icons';
 import ServiceAreaMap from '@/components/ServiceAreaMap';
@@ -509,6 +511,66 @@ export default function Subscription() {
           <CheckCircleIcon size={40} color={Colors.copper} />
         </div>
       </div>
+
+      {/* 2026-05-18: "What's included in Pro" preview card. Shown to anyone
+          who isn't on Pro or higher. Lists the canopy_visit-tagged tasks that
+          would actually fire for their home's specific features. */}
+      {tier !== 'pro' && tier !== 'pro_2' && home && (() => {
+        const visitTemplates = TASK_TEMPLATES.filter((t: any) => t.service_type === 'canopy_visit');
+        // Light home-feature filter so users see only relevant items.
+        const applicable = visitTemplates.filter((t: any) => {
+          if (t.requires_home_feature && !(home as any)[t.requires_home_feature]) return false;
+          return true;
+        });
+        if (applicable.length === 0) return null;
+        // Show up to 8 representative items, sorted by priority then title.
+        const ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+        const sorted = [...applicable].sort((a: any, b: any) => {
+          const ap = ORDER[a.priority] ?? 4;
+          const bp = ORDER[b.priority] ?? 4;
+          if (ap !== bp) return ap - bp;
+          return a.title.localeCompare(b.title);
+        }).slice(0, 8);
+        return (
+          <div
+            className="card mb-lg"
+            style={{
+              background: 'var(--color-sage-muted, #ECF1E8)',
+              borderLeft: `4px solid var(--color-sage)`,
+              padding: 16,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ fontSize: 24 }}>🌿</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 600, color: Colors.charcoal, margin: 0 }}>
+                  What you'd get on a Pro visit
+                </h3>
+                <p style={{ fontSize: 13, color: Colors.medGray, marginTop: 4, marginBottom: 12 }}>
+                  Your Canopy Pro handles these every two months, tailored to your home. {applicable.length} task{applicable.length === 1 ? '' : 's'} match your home today.
+                </p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {sorted.map((t: any) => (
+                    <li key={t.id} style={{ display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 13, color: Colors.charcoal }}>
+                      <span aria-hidden="true" style={{ color: Colors.sage, fontWeight: 700 }}>·</span>
+                      <span style={{ flex: 1 }}>{t.title}</span>
+                      <span style={{ fontSize: 11, color: Colors.medGray, textTransform: 'capitalize' }}>{humanizeCategory(t.category)}</span>
+                    </li>
+                  ))}
+                  {applicable.length > 8 && (
+                    <li style={{ fontSize: 12, color: Colors.medGray, fontStyle: 'italic', marginTop: 4, paddingLeft: 18 }}>
+                      …and {applicable.length - 8} more, based on your specific equipment and home features.
+                    </li>
+                  )}
+                </ul>
+                <p style={{ fontSize: 11, color: Colors.medGray, fontStyle: 'italic', marginTop: 12, marginBottom: 0 }}>
+                  Plus weather-triggered tasks (freeze drips, post-hail roof checks) and add-on services available à la carte.
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Plans Grid */}
       <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Available Plans</h2>

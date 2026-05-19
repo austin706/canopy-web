@@ -4,7 +4,7 @@ import { useStore } from '@/store/useStore';
 import logger from '@/utils/logger';
 import { humanizeCategory } from '@/utils/categories';
 import { canAccess, getTaskLimit, getHistoryDaysLimit, PLANS } from '@/services/subscriptionGate';
-import { Colors, PriorityColors, StatusColors } from '@/constants/theme';
+import { Colors, PriorityColors, StatusColors, FontSize } from '@/constants/theme';
 import DashboardChat from '@/components/DashboardChat';
 import { quickCompleteTask, calculateHealthScore } from '@/services/utils';
 import { sortTasksByHealthUrgency } from '@/services/taskOrdering';
@@ -14,6 +14,7 @@ import { getTasks, createTasks, getHomeJoinRequests, approveHomeJoinRequest, den
 import type { Warranty } from '@/types';
 import { listStaleTemplateTasks, clearStaleTemplateTasks, type StaleTemplateTask } from '@/services/tasks';
 import { fetchWeather } from '@/services/weather';
+import { syncWeatherAlertTasks } from '@/services/weatherAlertTasks';
 import { Skeleton } from '@/components/Skeleton';
 import { generateTasksForHome, getDisplayStatus } from '@/services/taskEngine';
 import { generateWeatherInsights } from '@/services/weatherInsights';
@@ -21,6 +22,11 @@ import { WeatherInsightCards } from '@/components/WeatherInsightCards';
 import { geocodeAddress } from '@/services/geocoding';
 import { upsertHome } from '@/services/supabase';
 import { CanopyLogo, NavWeather, NavHome } from '@/components/icons/CanopyLogo';
+import {
+  BellIcon, CloudRainIcon, WrenchIcon, GearIcon, AlertTriangleIcon,
+  MailIcon, CheckCircleIcon, CheckIcon,
+} from '@/components/icons/Icons';
+import { formatDateRelative } from '@/utils/format';
 import { generateCostForecast, FORECAST_DISCLAIMER } from '@/services/costForecast';
 import PendingInvites from '@/components/PendingInvites';
 import SetupChecklist from '@/components/SetupChecklist';
@@ -54,6 +60,32 @@ const SERVICE_BADGE_STYLES: Record<string, { label: string; bg: string; color: s
   add_on: { label: 'Add-On', bg: Colors.copper + '20', color: Colors.copper },
   // diy tasks get no badge — they're the default
 };
+
+/** 2026-05-19: per-category icon + accent color for the notifications panel
+ *  rows. Keeps the visual treatment in sync with NotificationCategory enum. */
+function notificationVisualMeta(category: string | null | undefined): {
+  Icon: React.FC<{ size?: number; color?: string }>;
+  color: string;
+} {
+  switch (category) {
+    case 'weather':
+      return { Icon: CloudRainIcon, color: Colors.sage };
+    case 'task':
+      return { Icon: WrenchIcon, color: Colors.copper };
+    case 'equipment':
+      return { Icon: GearIcon, color: Colors.copper };
+    case 'pro_visit':
+    case 'pro_quote':
+    case 'pro_invoice':
+      return { Icon: WrenchIcon, color: Colors.sage };
+    case 'payment':
+    case 'subscription':
+      return { Icon: MailIcon, color: Colors.copper };
+    case 'general':
+    default:
+      return { Icon: CheckCircleIcon, color: Colors.medGray };
+  }
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -373,6 +405,22 @@ export default function Dashboard() {
         setWeatherError(null);
         const weatherData = await fetchWeather(home.latitude!, home.longitude!);
         setWeather(weatherData);
+
+        // 2026-05-19: reconcile severe-weather (warning-severity) NWS alerts
+        // into maintenance_tasks so action items land in the user's main list.
+        // Idempotent — keyed on weather_alert_id. See weatherAlertTasks.ts.
+        if (weatherData && weatherData.alerts && weatherData.alerts.length > 0) {
+          try {
+            const result = await syncWeatherAlertTasks(home, weatherData.alerts, tasks);
+            if (result.created > 0 || result.soft_deleted > 0) {
+              // Refresh task list so the new weather-triggered rows render now.
+              const fresh = await getTasks(home.id);
+              setTasks(fresh || []);
+            }
+          } catch (syncErr) {
+            logger.warn('Weather alert task sync failed:', syncErr);
+          }
+        }
       } catch (error) {
         logger.error('Failed to fetch weather:', error);
         // Distinguish offline / TypeError (network) from server-side errors so
@@ -386,6 +434,9 @@ export default function Dashboard() {
       }
     };
     loadWeather();
+    // Note: intentionally NOT depending on `tasks` to avoid an infinite refetch
+    // loop — we read tasks for dedup but the sync runs once per weather refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [home, tier, setWeather]);
 
   // Load and check history warning dismissal
@@ -536,67 +587,151 @@ export default function Dashboard() {
         </h1>
       </div>
 
-      {/* Notification Banner */}
+      {/* Notification Banner — 2026-05-19 redesign:
+          Replaced flat copper underlined inline-links with proper card rows.
+          Each row: category-aware icon chip + title/body/relative-time + quick
+          dismiss (✓). Header now shows a Mark-all-read shortcut. Mobile parity
+          at app/(tabs)/index.tsx. */}
       {!notificationsLoading && unreadNotifications.length > 0 && (
         <div style={{
-          background: 'var(--color-cream)',
-          border: `1px solid var(--color-copper)40`,
-          borderRadius: 12,
-          padding: '14px 18px',
+          background: 'var(--color-white)',
+          border: `1px solid var(--color-copper)30`,
+          borderRadius: 14,
+          padding: 14,
           marginBottom: 20,
+          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
-                {unreadNotifications.length} notification{unreadNotifications.length > 1 ? 's' : ''}
+          {/* Header row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: 8,
+                background: `${Colors.copper}15`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <BellIcon size={15} color={Colors.copper} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {recentNotifications.map((notif) => {
-                  // 2026-05-15 (F12): two notifications with the same title
-                  // (e.g. two "Daily Activity Summary" rows on different days)
-                  // looked like a render duplicate. Append a short date so
-                  // identical titles disambiguate visually.
-                  const when = notif.created_at
-                    ? new Date(notif.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-                    : null;
-                  return (
-                    <button
-                      key={notif.id}
-                      onClick={() => {
-                        if (!notif.read) {
-                          markNotificationRead(notif.id).catch((err) => {
-                            logger.warn('Failed to mark notification as read:', err?.message);
-                          });
-                        }
-                        navigate('/notifications');
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        padding: 0,
-                        fontSize: 13,
-                        color: 'var(--color-copper)',
-                        textDecoration: 'underline',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {notif.title}
-                      {when ? <span style={{ color: 'var(--color-text-secondary)', textDecoration: 'none', fontWeight: 400 }}> · {when}</span> : null}
-                    </button>
-                  );
-                })}
+              <div style={{ fontSize: FontSize.sm, fontWeight: 600, color: Colors.charcoal }}>
+                {unreadNotifications.length} unread notification{unreadNotifications.length > 1 ? 's' : ''}
               </div>
             </div>
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => navigate('/notifications')}
-              style={{ whiteSpace: 'nowrap', fontSize: 12 }}
+              style={{ whiteSpace: 'nowrap', fontSize: 12 /* allow-lint */, padding: '4px 10px' }}
+              aria-label={`View all ${unreadNotifications.length} notifications`}
             >
               View all &rarr;
             </button>
           </div>
+
+          {/* Notification rows */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {recentNotifications.map((notif) => {
+              const meta = notificationVisualMeta(notif.category);
+              const Icon = meta.Icon;
+              return (
+                <div
+                  key={notif.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    if (!notif.read) {
+                      markNotificationRead(notif.id).catch((err) => {
+                        logger.warn('Failed to mark notification as read:', err?.message);
+                      });
+                    }
+                    navigate(notif.action_url || '/notifications');
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      (e.currentTarget as HTMLDivElement).click();
+                    }
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 10,
+                    padding: '10px 8px',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    transition: 'background 120ms ease',
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = `${Colors.cream}80`; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                >
+                  <div style={{
+                    width: 30, height: 30, borderRadius: 8,
+                    background: `${meta.color}15`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0, marginTop: 1,
+                  }}>
+                    <Icon size={15} color={meta.color} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: FontSize.sm, fontWeight: 600, color: Colors.charcoal,
+                      lineHeight: 1.3,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {notif.title}
+                    </div>
+                    {notif.body && (
+                      <div style={{
+                        fontSize: 12 /* allow-lint */, color: Colors.medGray, marginTop: 2,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {notif.body}
+                      </div>
+                    )}
+                    <div style={{ fontSize: FontSize.xs, color: Colors.medGray, marginTop: 2 }}>
+                      {formatDateRelative(notif.created_at)}
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markNotificationRead(notif.id).catch((err) => {
+                        logger.warn('Failed to mark notification as read:', err?.message);
+                      });
+                      setNotifications((prev) => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+                    }}
+                    aria-label="Mark as read"
+                    title="Mark as read"
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      padding: 6, borderRadius: 6, flexShrink: 0,
+                      color: Colors.medGray,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background = `${Colors.sage}15`;
+                      (e.currentTarget as HTMLButtonElement).style.color = Colors.sage;
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                      (e.currentTarget as HTMLButtonElement).style.color = Colors.medGray;
+                    }}
+                  >
+                    <CheckIcon size={16} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {unreadNotifications.length > recentNotifications.length && (
+            <button
+              onClick={() => navigate('/notifications')}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 12 /* allow-lint */, color: Colors.medGray, padding: '6px 8px 0',
+                width: '100%', textAlign: 'left',
+              }}
+            >
+              + {unreadNotifications.length - recentNotifications.length} more
+            </button>
+          )}
         </div>
       )}
 
@@ -990,19 +1125,65 @@ export default function Dashboard() {
                       <p className="text-sm text-gray">Wind: {displayWeather.wind_speed} mph</p>
                     </div>
                   </div>
-                  {displayWeather.alerts.length > 0 && (
-                    <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--color-error)20', borderRadius: 8, fontSize: 13, color: 'var(--color-error)' }}>
-                      Warning: {displayWeather.alerts.length} active weather alert{displayWeather.alerts.length > 1 ? 's' : ''}
-                    </div>
-                  )}
+                  {/* 2026-05-19: surface the actual NWS alert headline + severity
+                      instead of just a count. Tornado/Flood/Freeze warnings have
+                      vastly different action urgency — a count-only badge buried
+                      that. Click jumps to /weather for the full action items. */}
+                  {displayWeather.alerts.length > 0 && (() => {
+                    const topAlert = displayWeather.alerts[0];
+                    const sev = topAlert.severity;
+                    const accent = sev === 'warning' ? 'var(--color-error, #E53935)'
+                      : sev === 'watch' ? 'var(--color-warning, #FF9800)'
+                      : 'var(--color-copper, #B8763E)';
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => navigate('/weather')}
+                        style={{
+                          marginTop: 12, padding: '10px 14px',
+                          background: `${accent}15`,
+                          border: `1px solid ${accent}50`,
+                          borderRadius: 8,
+                          width: '100%', textAlign: 'left',
+                          cursor: 'pointer',
+                          display: 'flex', alignItems: 'flex-start', gap: 10,
+                        }}
+                        aria-label={`${topAlert.title} — ${sev} from ${topAlert.source}. Tap to view ${displayWeather.alerts.length} alert${displayWeather.alerts.length > 1 ? 's' : ''}`}
+                      >
+                        <span style={{ fontSize: 16 /* allow-lint */, lineHeight: 1, marginTop: 1 }} aria-hidden>⚠️</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: FontSize.sm, fontWeight: 700, color: accent, lineHeight: 1.3 }}>
+                            {topAlert.title}
+                          </div>
+                          <div style={{ fontSize: FontSize.xs, color: Colors.medGray, marginTop: 2, textTransform: 'capitalize' }}>
+                            {sev} · {topAlert.source}
+                            {displayWeather.alerts.length > 1 && (
+                              <span> · +{displayWeather.alerts.length - 1} more</span>
+                            )}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: FontSize.xs, color: accent, fontWeight: 600, whiteSpace: 'nowrap' }}>View →</span>
+                      </button>
+                    );
+                  })()}
                 </>
               )}
             </div>
           )}
 
-          {/* Weather Insights (Smart Weather-to-Task Scheduling) */}
-          {hasWeather && weather && weather.forecast && weather.forecast.length > 0 && tier !== 'free' && (
-            <WeatherInsightCards insights={generateWeatherInsights(weather.forecast, displayTasks)} />
+          {/* Weather Insights (Smart Weather-to-Task Scheduling)
+              2026-05-19: also render when NWS alerts are present, even if the
+              forecast is empty — a tornado warning is relevant on its own. */}
+          {hasWeather && weather && tier !== 'free' && (
+            ((weather.forecast && weather.forecast.length > 0) || (weather.alerts && weather.alerts.length > 0))
+          ) && (
+            <WeatherInsightCards
+              insights={generateWeatherInsights(
+                weather.forecast || [],
+                displayTasks,
+                weather.alerts || [],
+              )}
+            />
           )}
 
           {/* Home Health Score gauge removed 2026-04-21 (Wave E jank pass).

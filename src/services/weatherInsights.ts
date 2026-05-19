@@ -3,12 +3,16 @@
 // ═══════════════════════════════════════════════════════════════
 // Generates actionable insight cards by cross-referencing 7-day
 // forecast with upcoming outdoor tasks. Pure function, no API calls.
+//
+// 2026-05-19: also accepts NWS alerts. NWS-issued warnings/watches/advisories
+// are authoritative and should override our forecast-icon heuristics. A
+// freeze warning from NWS beats us inferring 'freeze' from forecast.low<=32.
 
-import type { DayForecast, MaintenanceTask } from '@/types';
+import type { DayForecast, MaintenanceTask, WeatherAlert } from '@/types';
 
 export interface WeatherInsight {
   id: string;
-  type: 'rain_coming' | 'nice_weather' | 'freeze_warning' | 'heat_advisory' | 'high_wind' | 'snow_ice';
+  type: 'rain_coming' | 'nice_weather' | 'freeze_warning' | 'heat_advisory' | 'high_wind' | 'snow_ice' | 'tornado' | 'flood' | 'fire' | 'storm';
   title: string;
   description: string;
   affectedTasks: { id: string; title: string }[];
@@ -16,6 +20,10 @@ export interface WeatherInsight {
   urgency: 'low' | 'medium' | 'high';
   forecastDay: string; // ISO date string
   icon: string; // emoji
+  /** Set when this insight came from an NWS alert (authoritative). */
+  source?: 'nws' | 'forecast';
+  /** NWS alert ID, for click-through linkage. Only set when source='nws'. */
+  alertId?: string;
 }
 
 /**
@@ -163,18 +171,84 @@ function hasNiceWeatherWindow(forecast: DayForecast[]): { start: DayForecast; co
   return undefined;
 }
 
+/** Map NWS alert types onto our insight types for visual consistency. */
+function alertTypeToInsight(t: WeatherAlert['type']): WeatherInsight['type'] {
+  switch (t) {
+    case 'freeze': return 'freeze_warning';
+    case 'heat': return 'heat_advisory';
+    case 'wind': return 'high_wind';
+    case 'hail': return 'storm';
+    case 'storm': return 'storm';
+    case 'tornado': return 'tornado';
+    case 'flood': return 'flood';
+    case 'fire': return 'fire';
+  }
+}
+
+/** Map NWS severity onto our urgency scale. Warnings = high, watches = medium,
+ *  advisories = low. */
+function severityToUrgency(s: WeatherAlert['severity']): WeatherInsight['urgency'] {
+  return s === 'warning' ? 'high' : s === 'watch' ? 'medium' : 'low';
+}
+
+const ALERT_ICONS: Record<WeatherAlert['type'], string> = {
+  freeze: '❄️',
+  wind: '💨',
+  hail: '🧊',
+  heat: '🌡️',
+  storm: '⛈️',
+  tornado: '🌪️',
+  flood: '🌊',
+  fire: '🔥',
+};
+
+/** Convert an NWS alert into an insight card. Used when alerts[] is provided
+ *  alongside forecast[]. */
+function alertToInsight(alert: WeatherAlert): WeatherInsight {
+  return {
+    id: `nws-${alert.id}`,
+    type: alertTypeToInsight(alert.type),
+    title: alert.title || `${alert.type[0].toUpperCase()}${alert.type.slice(1)} ${alert.severity}`,
+    description:
+      alert.description?.slice(0, 240) ||
+      `${alert.severity.toUpperCase()}: ${alert.type} alert from ${alert.source}.`,
+    affectedTasks: [],
+    suggestedAction: alert.action_items?.[0] || 'Check the weather page for full action items.',
+    urgency: severityToUrgency(alert.severity),
+    forecastDay: alert.start_time || new Date().toISOString(),
+    icon: ALERT_ICONS[alert.type] || '⚠️',
+    source: 'nws',
+    alertId: alert.id,
+  };
+}
+
 /**
- * Main function: generates weather insights from forecast and tasks
- * Pure function — no side effects or external calls
+ * Main function: generates weather insights from forecast, alerts, and tasks.
+ * Pure function — no side effects or external calls.
+ *
+ * `alerts` is optional for backward compatibility with callers that only have
+ * forecast data. When provided, NWS alerts are merged in first and their
+ * types are used to suppress forecast-derived heuristics of the same type
+ * (e.g. NWS Freeze Warning → suppress our forecast.low<=32 inference).
  */
 export function generateWeatherInsights(
   forecast: DayForecast[],
-  tasks: MaintenanceTask[]
+  tasks: MaintenanceTask[],
+  alerts: WeatherAlert[] = []
 ): WeatherInsight[] {
   const insights: WeatherInsight[] = [];
   const relevantTasks = getRelevantOutdoorTasks(tasks);
 
-  if (relevantTasks.length === 0 || forecast.length === 0) {
+  // 2026-05-19: when NWS has authoritative alerts, surface them even if the
+  // user has no outdoor tasks — a tornado warning is relevant regardless.
+  if (alerts.length > 0) {
+    for (const a of alerts) insights.push(alertToInsight(a));
+  }
+
+  if (forecast.length === 0) {
+    return finalizeInsights(insights);
+  }
+  if (relevantTasks.length === 0 && alerts.length === 0) {
     return [];
   }
 
@@ -309,18 +383,30 @@ export function generateWeatherInsights(
     });
   }
 
-  // ─── Sort and consolidate ───
-  // Remove duplicates (e.g., multiple freeze/heat warnings → keep first)
-  const seen = new Set<WeatherInsight['type']>();
-  const unique = insights.filter(i => {
-    if (seen.has(i.type)) return false;
-    seen.add(i.type);
-    return true;
-  });
+  return finalizeInsights(insights);
+}
+
+/** Sort + dedup + cap. NWS-sourced insights always win over forecast-derived
+ *  insights of the same type. */
+function finalizeInsights(insights: WeatherInsight[]): WeatherInsight[] {
+  // Dedup by type, preferring source='nws' (authoritative). If two NWS alerts
+  // share a type we keep the more severe one.
+  const urgencyOrder = { high: 0, medium: 1, low: 2 } as const;
+  const byType = new Map<WeatherInsight['type'], WeatherInsight>();
+  for (const i of insights) {
+    const existing = byType.get(i.type);
+    if (!existing) { byType.set(i.type, i); continue; }
+    // Prefer NWS over forecast
+    if (i.source === 'nws' && existing.source !== 'nws') { byType.set(i.type, i); continue; }
+    if (existing.source === 'nws' && i.source !== 'nws') continue;
+    // Same source — prefer higher urgency
+    if (urgencyOrder[i.urgency] < urgencyOrder[existing.urgency]) byType.set(i.type, i);
+  }
+
+  const unique = Array.from(byType.values());
 
   // Sort by urgency (high → medium → low) then by date
   unique.sort((a, b) => {
-    const urgencyOrder = { high: 0, medium: 1, low: 2 };
     if (urgencyOrder[a.urgency] !== urgencyOrder[b.urgency]) {
       return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
     }

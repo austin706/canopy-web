@@ -25,7 +25,7 @@ export default function Privacy() {
         <li style={{ marginBottom: 8 }}><strong>Maintenance records:</strong> task history, completion dates, notes, and photos related to home maintenance activities.</li>
         <li style={{ marginBottom: 8 }}><strong>Agent information:</strong> brokerage name, license number, client relationships, and gift code distribution records.</li>
         <li style={{ marginBottom: 8 }}><strong>Pro Provider information:</strong> business name, service categories, license and insurance details, service area, availability, and professional qualifications.</li>
-        <li style={{ marginBottom: 8 }}><strong>Payment information:</strong> subscription purchases are processed through Apple's App Store or Google Play Store. We do not directly collect or store your credit card or payment details.</li>
+        <li style={{ marginBottom: 8 }}><strong>Payment information:</strong> subscription purchases are processed by one of our payment partners depending on how you subscribed — <a href="https://stripe.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-sage)' }}>Stripe</a> for web purchases and external-link mobile purchases (Pro tier, add-on services, Agent gift codes), Apple's App Store for iOS in-app purchases (Home tier on iOS), or Google Play for Android in-app purchases (Home tier on Android). We do not directly collect or store your full credit card number or bank account details. We do receive limited transaction metadata from these processors (e.g., last four digits of card, transaction status, subscription state) to manage your account.</li>
       </ul>
 
       <h3 style={{ fontSize: 18, fontWeight: 600, marginTop: 20, marginBottom: 8 }}>Information Collected Automatically</h3>
@@ -95,10 +95,13 @@ export default function Privacy() {
       <p>The Service may contain links to third-party websites or services. We are not responsible for the privacy practices of those third parties. We encourage you to review the privacy policies of any third-party services you access through Canopy.</p>
       <p>Key third-party services we use include:</p>
       <ul style={{ paddingLeft: 24, marginTop: 8 }}>
-        <li style={{ marginBottom: 8 }}><strong>Supabase</strong> — database and authentication services</li>
-        <li style={{ marginBottom: 8 }}><strong>RevenueCat</strong> — subscription management</li>
-        <li style={{ marginBottom: 8 }}><strong>Expo / EAS</strong> — mobile app build and distribution</li>
-        <li style={{ marginBottom: 8 }}><strong>Apple App Store / Google Play Store</strong> — app distribution and payment processing</li>
+        <li style={{ marginBottom: 8 }}><strong><a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-sage)' }}>Stripe</a></strong> — payment processing for web purchases, external-link mobile purchases (Pro tier and add-on services), and Agent gift code purchases</li>
+        <li style={{ marginBottom: 8 }}><strong><a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-sage)' }}>Supabase</a></strong> — database, authentication, file storage, and edge-function hosting</li>
+        <li style={{ marginBottom: 8 }}><strong><a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-sage)' }}>RevenueCat</a></strong> — mobile in-app subscription management (App Store / Google Play)</li>
+        <li style={{ marginBottom: 8 }}><strong><a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-sage)' }}>Resend</a></strong> — transactional and notification email delivery</li>
+        <li style={{ marginBottom: 8 }}><strong><a href="https://expo.dev/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-sage)' }}>Expo / EAS</a></strong> — mobile app build, distribution, and push notification delivery</li>
+        <li style={{ marginBottom: 8 }}><strong>Apple App Store / Google Play Store</strong> — mobile app distribution and in-app purchase processing for Home tier subscriptions</li>
+        <li style={{ marginBottom: 8 }}><strong><a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-sage)' }}>Anthropic</a></strong> — AI features (Home Assistant, equipment scanning, maintenance recommendations). Conversation content is processed by Anthropic's Claude API under Anthropic's commercial terms; data is not used to train Anthropic's models.</li>
       </ul>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>10. California Privacy Rights (CCPA/CPRA)</h2>

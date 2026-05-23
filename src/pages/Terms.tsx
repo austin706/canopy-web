@@ -28,13 +28,19 @@ export default function Terms() {
       </ul>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>3. Subscriptions and Payments</h2>
-      <p>Canopy offers both free and paid subscription tiers. Paid subscriptions are billed on a monthly or annual basis through Apple's App Store or Google Play Store. By subscribing, you authorize recurring charges to your chosen payment method.</p>
+      <p>Canopy offers both free and paid subscription tiers. Paid subscriptions are billed on a monthly or annual basis through the payment processor that corresponds to how you signed up. By subscribing, you authorize recurring charges to your chosen payment method.</p>
+      <p>Payment processors:</p>
+      <ul style={{ paddingLeft: 24, marginTop: 8 }}>
+        <li style={{ marginBottom: 8 }}><strong>Web (canopyhome.app):</strong> All subscriptions purchased on the web are processed by <a href="https://stripe.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-sage)' }}>Stripe</a>. Stripe is our merchant of record on the web and handles credit card and ACH processing in accordance with PCI DSS standards.</li>
+        <li style={{ marginBottom: 8 }}><strong>iOS app:</strong> Home tier subscriptions purchased inside the iOS app are processed by Apple's App Store via in-app purchase. Pro tier subscriptions and add-on services from the iOS app are processed by Stripe via an external web link.</li>
+        <li style={{ marginBottom: 8 }}><strong>Android app:</strong> Home tier subscriptions purchased inside the Android app are processed by Google Play. Pro tier subscriptions and add-on services from the Android app are processed by Stripe via an external web link.</li>
+      </ul>
       <p>Subscription details:</p>
       <ul style={{ paddingLeft: 24, marginTop: 8 }}>
-        <li style={{ marginBottom: 8 }}>Subscriptions automatically renew unless canceled at least 24 hours before the end of the current billing period.</li>
-        <li style={{ marginBottom: 8 }}>You can manage or cancel your subscription through your device's app store settings or through Canopy's in-app subscription management.</li>
-        <li style={{ marginBottom: 8 }}>Refunds are handled according to the policies of the applicable app store (Apple App Store or Google Play Store).</li>
-        <li style={{ marginBottom: 8 }}>Gift code subscriptions provided by Agents are subject to the terms specified at the time of redemption.</li>
+        <li style={{ marginBottom: 8 }}>Subscriptions automatically renew unless canceled at least 24 hours before the end of the current billing period (or any longer notice period required by your payment processor).</li>
+        <li style={{ marginBottom: 8 }}>You can manage or cancel your subscription through the channel that issued the subscription: for Stripe-billed plans, through your Canopy account billing settings; for App Store plans, through your Apple ID subscription settings; for Google Play plans, through your Google Play subscriptions page.</li>
+        <li style={{ marginBottom: 8 }}>Refunds are handled by the payment processor that issued the original charge: Stripe for web and external-link mobile purchases; Apple for App Store in-app purchases; Google Play for Google Play in-app purchases. Refund eligibility may also be subject to applicable consumer protection laws in your jurisdiction.</li>
+        <li style={{ marginBottom: 8 }}>Gift code subscriptions provided by Agents are subject to the terms specified at the time of redemption. Gift code purchases by Agents are processed by Stripe.</li>
       </ul>
 
       <h2 style={{ fontSize: 22, fontWeight: 600, marginTop: 32, marginBottom: 12 }}>4. Agent-Specific Terms</h2>

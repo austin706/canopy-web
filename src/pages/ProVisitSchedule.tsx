@@ -551,7 +551,7 @@ export default function ProVisitSchedule() {
               </select>
               {clients.length === 0 && (
                 <p style={{ fontSize: 11, color: Colors.medGray, marginTop: 4 }}>
-                  No Pro/Pro+ clients in your service area.
+                  No Pro clients in your service area.
                 </p>
               )}
             </div>

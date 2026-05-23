@@ -350,7 +350,7 @@ export default function ServiceAreaMap({ userZip, compact = false }: ServiceArea
             fontSize: 13,
             fontWeight: 500,
           }}>
-            ✓ Pro services are available in your area! You can upgrade to Home Pro or Home Pro+.
+            ✓ Pro services are available in your area! You can upgrade to Home Pro.
           </div>
         )}
 

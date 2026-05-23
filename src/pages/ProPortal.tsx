@@ -497,7 +497,7 @@ export default function ProPortal() {
           {[
             { label: 'Providers', value: adminStats.totalProviders, color: Colors.sage },
             { label: 'Available', value: adminStats.availableProviders, color: Colors.success },
-            { label: 'Pro/Pro+ Clients', value: adminStats.totalClients, color: Colors.copper },
+            { label: 'Pro Clients', value: adminStats.totalClients, color: Colors.copper },
             { label: 'Pending Requests', value: adminStats.pendingRequests, color: Colors.warning },
             { label: 'Upcoming Visits', value: adminStats.upcomingVisits, color: Colors.info },
           ].map(s => (
@@ -677,7 +677,7 @@ export default function ProPortal() {
 
             {providerClients.length === 0 ? (
               <div className="card" style={{ textAlign: 'center', padding: 32, color: Colors.medGray }}>
-                <p>No Pro/Pro+ clients in this provider's zip codes.</p>
+                <p>No Pro clients in this provider's zip codes.</p>
               </div>
             ) : (
               <div className="card table-container">

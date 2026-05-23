@@ -34,8 +34,11 @@ function asLegalDate(iso: string): LegalDate {
 }
 
 export const LEGAL_DATES = {
-  terms: asLegalDate('2026-04-14'),
-  privacy: asLegalDate('2026-04-11'),
+  // 2026-05-22: bumped terms + privacy after P0-12 + P0-13 fixes (multi-channel
+  // payment processor disclosure: Stripe added to both as merchant of record
+  // for web and external-link mobile purchases).
+  terms: asLegalDate('2026-05-22'),
+  privacy: asLegalDate('2026-05-22'),
   cancellation: asLegalDate('2026-04-14'),
   aiDisclaimer: asLegalDate('2026-04-03'),
   pciCompliance: asLegalDate('2026-04-03'),

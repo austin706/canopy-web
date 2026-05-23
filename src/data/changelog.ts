@@ -33,7 +33,6 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Home Token: your complete home record with edit history, completeness score, and verification badges.',
       'Home transfer flow lets you hand your Canopy record to the next owner when you sell.',
       'Redesigned 6-step onboarding with per-fireplace and per-filter detail capture.',
-      'USPS address standardization for every new home.',
     ],
   },
   {
@@ -42,7 +41,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     title: 'Certified Pro network and pro portal polish',
     tag: 'improved',
     highlights: [
-      'Certified Pros are now invitation-only and vetted — Pro+ gets bi-monthly home visits.',
+      'Certified Pros are now invitation-only and vetted — Pro subscribers get bi-monthly home visits.',
       'Technician onboarding, background checks, and insurance verification built into the admin flow.',
       'Pro portal: jobs, visits, quotes, invoices, and availability all in one place.',
     ],

@@ -41,8 +41,15 @@ export const linkAgent = async (userId: string, agentId: string) => {
 
 // --- Gift Codes ---
 export const redeemGiftCode = async (code: string, userId: string) => {
-  const { data: gc, error: lookupErr } = await supabase.from('gift_codes').select('*').eq('code', code.trim().toUpperCase()).single();
-  if (lookupErr || !gc) throw new Error('Invalid code');
+  // 2026-05-22 (P0-5 / migration 094): redemption lookups now go through a
+  // SECURITY DEFINER RPC instead of direct SELECT against gift_codes. The
+  // direct read worked but required an open `qual = true` SELECT RLS policy
+  // that let any authenticated user enumerate every unredeemed code. The
+  // RPC returns the single matching row only.
+  const { data: rows, error: lookupErr } = await supabase.rpc('lookup_gift_code_for_redemption', { code_input: code.trim().toUpperCase() });
+  if (lookupErr) throw lookupErr;
+  const gc = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  if (!gc) throw new Error('Invalid code');
   if (gc.redeemed_by) throw new Error('Code already redeemed');
   if (gc.expires_at && new Date(gc.expires_at) < new Date()) throw new Error('Code expired');
 

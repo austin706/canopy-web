@@ -56,13 +56,15 @@ export default function AgentRedeem() {
       // was issued by the same agent whose branded URL the user landed on. Stops
       // a code issued by agent A from being redeemed on agent B's /a/<slug> page
       // (would otherwise leak attribution + assign the wrong connected agent).
+      // 2026-05-22 (P0-5 / migration 094): swapped direct SELECT for the
+      // lookup_gift_code_for_redemption RPC so the cross-agent guard
+      // doesn't depend on the open gift_codes SELECT RLS policy.
       if (agent?.id) {
-        const { data: gc, error: gcErr } = await supabase
-          .from('gift_codes')
-          .select('id, agent_id, redeemed_by, expires_at')
-          .eq('code', giftCode.trim().toUpperCase())
-          .maybeSingle();
+        const { data: rows, error: gcErr } = await supabase.rpc('lookup_gift_code_for_redemption', {
+          code_input: giftCode.trim().toUpperCase(),
+        });
         if (gcErr) throw gcErr;
+        const gc = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
         if (!gc) {
           setRedeemError('Invalid code.');
           setRedeeming(false);

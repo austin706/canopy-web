@@ -21,7 +21,8 @@ import {
   completeInspection as completeInspectionService,
   uploadVisitPhoto,
 } from '@/services/inspections';
-import { createNextDynamicTask } from '@/services/taskEngine';
+// 2026-05-29 (parity pass P1): createNextDynamicTask removed — next-occurrence
+// generation now happens server-side inside complete_pro_visit RPC.
 import { createTask } from '@/services/supabase';
 import { proposeNextVisit } from '@/services/proEnrollment';
 import type { MaintenanceTask, TaskPriority } from '@/types';
@@ -353,88 +354,35 @@ export default function ProInspection() {
   };
 
   // ─── Complete Entire Visit + Trigger AI Summary ───
+  // 2026-05-29 (parity pass P1): single server-authoritative RPC. The
+  // complete_pro_visit RPC now owns the full completion atomically — visit
+  // status update + maintenance_tasks reconciliation + maintenance_logs +
+  // next-occurrence generation for recurring dynamic tasks + the optional
+  // Home-Token stamp. Web previously did this client-side (~50 lines) and
+  // mobile did NOTHING for tasks/logs — silent platform drift. Both clients
+  // now pass the user's promoteToHomeToken state (default true) so they
+  // behave identically on the Home-Token stamp.
   const handleCompleteVisit = async () => {
     if (!visit) return;
 
     try {
       setSaving(true);
 
-      // Calculate actual time spent
+      // Keep client-computed time spent (server-side has no started_at lookup logic).
       const startTime = new Date(visit.started_at || new Date()).getTime();
       const endTime = new Date().getTime();
       const timeSpentMinutes = Math.round((endTime - startTime) / (1000 * 60));
 
-      // Update visit status
-      const { error } = await supabase
-        .from('pro_monthly_visits')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          time_spent_minutes: timeSpentMinutes,
-          pro_notes: finalNotes,
-          homeowner_signature_data_url: homeownerSignature,
-          homeowner_signature_name: homeownerSignature ? homeownerName.trim() : null,
-          homeowner_signed_at: homeownerSignature ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', visitId);
-
+      const { error } = await supabase.rpc('complete_pro_visit', {
+        p_visit_id: visitId,
+        p_pro_notes: finalNotes,
+        p_time_spent_minutes: timeSpentMinutes,
+        p_homeowner_signature_data_url: homeownerSignature || null,
+        p_homeowner_signature_name: homeownerSignature ? homeownerName.trim() : null,
+        p_promote_to_home_token: promoteToHomeToken,
+        p_overall_grade: 'good',
+      });
       if (error) throw error;
-
-      // ─── Mark homeowner's selected tasks as completed by pro ───
-      if (visit.selected_task_ids && visit.selected_task_ids.length > 0 && visit.home_id) {
-        try {
-          // Find matching maintenance_tasks for this home that are still pending
-          const { data: matchingTasks } = await supabase
-            .from('maintenance_tasks')
-            .select('*')
-            .eq('home_id', visit.home_id)
-            .in('template_id', visit.selected_task_ids)
-            .in('status', ['upcoming', 'due', 'overdue']);
-
-          if (matchingTasks && matchingTasks.length > 0) {
-            const now = new Date().toISOString();
-            const taskIds = matchingTasks.map((t: any) => t.id);
-
-            // Batch update tasks to completed
-            await supabase
-              .from('maintenance_tasks')
-              .update({
-                status: 'completed',
-                completed_date: now,
-                completed_by: 'pro',
-                completion_notes: `Completed during pro visit on ${new Date().toLocaleDateString()}`,
-              })
-              .in('id', taskIds);
-
-            // Create maintenance log entries for each completed task
-            const logEntries = matchingTasks.map((task: any) => ({
-              home_id: visit.home_id,
-              task_id: task.id,
-              title: task.title,
-              description: task.description,
-              category: task.category,
-              completed_date: now,
-              completed_by: 'pro',
-              notes: `Completed by pro provider during bimonthly visit`,
-              photos: [],
-              created_at: now,
-            }));
-            await supabase.from('maintenance_logs').insert(logEntries);
-
-            // Generate next occurrences for dynamic tasks
-            for (const task of matchingTasks) {
-              const nextTask = createNextDynamicTask(task, now);
-              if (nextTask) {
-                try { await createTask(nextTask); } catch (e) { /* non-blocking */ }
-              }
-            }
-          }
-        } catch (taskError) {
-          console.warn('Pro task completion failed (non-blocking):', taskError);
-          // Don't fail the visit completion if task marking fails
-        }
-      }
 
       // Call AI summary edge function if checkbox is checked
       if (generateAISummary && SUPABASE_URL) {
@@ -455,7 +403,6 @@ export default function ProInspection() {
           });
         } catch (aiError) {
           console.warn('AI summary generation failed (non-blocking):', aiError);
-          // Don't fail the visit completion if AI summary fails
         }
       }
 
@@ -467,25 +414,6 @@ export default function ProInspection() {
         }
       } catch (nextErr) {
         console.warn('Auto-propose next visit failed (non-blocking):', nextErr);
-      }
-
-      // 2026-05-02 (INSPECTION_STRATEGY): one-click Home Token auto-stamp.
-      // Calls promote_visit_to_home_inspection RPC which rolls the visit's
-      // findings into a home_inspections row, HMAC-stamps it, and triggers
-      // the homeowner notification + buyer-facing PDF generation. Failure
-      // is non-blocking — the visit itself is already saved.
-      if (promoteToHomeToken && visitId) {
-        try {
-          const { error: promoteErr } = await supabase.rpc('promote_visit_to_home_inspection', {
-            p_visit_id: visitId,
-            p_overall_grade: 'good',
-          });
-          if (promoteErr) {
-            console.warn('promote_visit_to_home_inspection failed (non-blocking):', promoteErr);
-          }
-        } catch (promoteErr) {
-          console.warn('promote_visit_to_home_inspection threw (non-blocking):', promoteErr);
-        }
       }
 
       setShowCompleteModal(false);

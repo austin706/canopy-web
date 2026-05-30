@@ -87,7 +87,7 @@ export default function AdminUserView() {
         if (homeIds.length) {
           const [{ data: vs }, { data: ds }] = await Promise.all([
             supabase
-              .from('service_visits')
+              .from('pro_service_appointments')
               .select('id, scheduled_date, status, home_id')
               .in('home_id', homeIds)
               .order('scheduled_date', { ascending: false })

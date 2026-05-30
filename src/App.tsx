@@ -141,6 +141,12 @@ const AdminBuilders = lazyRetry(() => import('@/pages/AdminBuilders'));
 const AdminVerifications = lazyRetry(() => import('@/pages/AdminVerifications'));
 const AdminAffiliateProducts = lazyRetry(() => import('@/pages/AdminAffiliateProducts'));
 const AdminAddOns = lazyRetry(() => import('@/pages/AdminAddOns'));
+// Phase 1 — Add-On Provider portal (mirror of ApplyPro / pro-portal scaffolds,
+// keyed on add_on_providers, gated on the row's lifecycle status from
+// migration_105). Public apply page + auth-gated onboarding + dashboard.
+const ApplyAddOnProvider = lazyRetry(() => import('@/pages/ApplyAddOnProvider'));
+const AddOnProviderOnboarding = lazyRetry(() => import('@/pages/AddOnProviderOnboarding'));
+const AddOnProviderDashboard = lazyRetry(() => import('@/pages/AddOnProviderDashboard'));
 const TechnicianOnboarding = lazyRetry(() => import('@/pages/TechnicianOnboarding'));
 const ProOnboardingSuccess = lazyRetry(() => import('@/pages/ProOnboardingSuccess'));
 const ProOnboardingRefresh = lazyRetry(() => import('@/pages/ProOnboardingRefresh'));
@@ -444,6 +450,26 @@ export default function App() {
           <Route path="/sale-prep-preview" element={<SalePrepPreview />} />
           <Route path="/testimonial/submit" element={<TestimonialSubmit />} />
           <Route path="/apply-pro" element={<ApplyPro />} />
+          {/* Phase 1 add-on provider portal — apply page is public; onboarding +
+              dashboard are auth-gated (the pages themselves enforce the
+              add_on_providers row check, so we don't need a dedicated role). */}
+          <Route path="/apply-add-on-provider" element={<ApplyAddOnProvider />} />
+          <Route
+            path="/add-on-provider/onboarding"
+            element={<ProtectedRoute><AddOnProviderOnboarding /></ProtectedRoute>}
+          />
+          <Route
+            path="/add-on-provider/onboarding/refresh"
+            element={<ProtectedRoute><AddOnProviderOnboarding /></ProtectedRoute>}
+          />
+          <Route
+            path="/add-on-provider/onboarding/success"
+            element={<ProtectedRoute><AddOnProviderOnboarding /></ProtectedRoute>}
+          />
+          <Route
+            path="/add-on-provider"
+            element={<ProtectedRoute><AddOnProviderDashboard /></ProtectedRoute>}
+          />
           <Route path="/for-agents" element={<AgentLanding />} />
           {/* 2026-05-15 (F10): legacy URL kept as a redirect so any external
               link or marketing artifact still pointing at /agent-landing

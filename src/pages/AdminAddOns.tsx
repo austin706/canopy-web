@@ -40,6 +40,24 @@ interface AddOnProvider {
   active: boolean;
 }
 
+// Phase 1 (migration_105): applicants come in via apply_as_add_on_provider with
+// status='applied'. Admins approve via approve_add_on_provider, which flips the
+// row to status='active' + active=true and stamps approved_at/approved_by.
+interface AddOnApplicant {
+  id: string;
+  provider_id: string;
+  category_id: string;
+  company_name: string;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  license_number: string | null;
+  service_zip_codes: string[] | null;
+  service_radius_miles: number | null;
+  applied_at: string;
+  status: string;
+}
+
 const STATUS_STYLES: Record<string, { label: string; bg: string; color: string }> = {
   requested: { label: 'Requested', bg: Colors.warning + '20', color: Colors.warning },
   assessing: { label: 'Assessing', bg: Colors.info + '20', color: Colors.info },
@@ -78,7 +96,12 @@ export default function AdminAddOns() {
   const [quoteNotes, setQuoteNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { loadData(); }, []);
+  // Phase 1: applicants needing admin approval.
+  const [applicants, setApplicants] = useState<AddOnApplicant[]>([]);
+  const [applicantsLoading, setApplicantsLoading] = useState(true);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+
+  useEffect(() => { loadData(); loadApplicants(); }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -121,6 +144,53 @@ export default function AdminAddOns() {
   }, [filter]);
 
   useEffect(() => { loadData(); }, [filter, loadData]);
+
+  // Phase 1 (migration_105): list providers in status='applied' so an admin can
+  // approve them via the approve_add_on_provider RPC. We fetch via the regular
+  // PostgREST select; admin RLS ("Admins manage add-on providers") makes this
+  // visible without SECURITY DEFINER.
+  const loadApplicants = useCallback(async () => {
+    setApplicantsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('add_on_providers')
+        .select(
+          'id, provider_id, category_id, company_name, contact_name, contact_email, contact_phone, license_number, service_zip_codes, service_radius_miles, applied_at, status',
+        )
+        .eq('status', 'applied')
+        .order('applied_at', { ascending: false });
+      if (error) throw error;
+      setApplicants((data || []) as AddOnApplicant[]);
+    } catch (err) {
+      logger.error('Failed to load add-on provider applicants:', err);
+    } finally {
+      setApplicantsLoading(false);
+    }
+  }, []);
+
+  const handleApproveApplicant = async (applicant: AddOnApplicant) => {
+    setApprovingId(applicant.id);
+    try {
+      const { error: rpcErr } = await supabase.rpc('approve_add_on_provider', {
+        p_provider_id: applicant.id,
+      });
+      if (rpcErr) throw rpcErr;
+
+      // Audit-log the activation so we can trace who approved which provider.
+      logAdminAction('add_on_provider.approve', 'add_on_provider', applicant.id, {
+        category_id: applicant.category_id,
+        company_name: applicant.company_name,
+        contact_email: applicant.contact_email,
+      }).catch(() => {});
+
+      showToast({ message: `Approved ${applicant.company_name}` });
+      await Promise.all([loadApplicants(), loadData()]);
+    } catch (err: any) {
+      showToast({ message: err?.message || 'Failed to approve applicant' });
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   const handleSubmitQuote = async (addOnId: string) => {
     const price = parseFloat(quotePrice);
@@ -191,11 +261,91 @@ export default function AdminAddOns() {
     <div className="page-wide">
       <div className="admin-page-header mb-lg">
         <div>
-          <h1 style={{ fontSize: 28, margin: 0 }}>Add-On Services</h1>
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+          <h1 style={{ fontSize: 28 /* allow-lint */, margin: 0 }}>Add-On Services</h1>
+          <p style={{ fontSize: 14 /* allow-lint */, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
             Manage add-on quotes, assignments, and service status
           </p>
         </div>
+      </div>
+
+      {/* Phase 1 (migration_105): provider applicants awaiting admin approval. */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 18 /* allow-lint */, fontWeight: 600, margin: '0 0 4px 0' }}>
+          Provider Applicants ({applicants.length})
+        </h2>
+        <p style={{ fontSize: 13 /* allow-lint */, color: 'var(--text-secondary)', margin: '0 0 12px 0' }}>
+          Add-on providers who have applied but are not yet active. Approving
+          flips them to status='active' via the approve_add_on_provider RPC.
+        </p>
+        {applicantsLoading ? (
+          <div style={{ padding: 16, color: 'var(--text-secondary)' }}>Loading applicants…</div>
+        ) : applicants.length === 0 ? (
+          <div style={{ padding: 16, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+            No pending applicants.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {applicants.map((a) => (
+              <div
+                key={a.id}
+                style={{
+                  background: 'var(--color-card)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 10,
+                  padding: '14px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                }}
+              >
+                <div style={{ flex: 1, fontSize: 13 /* allow-lint */, lineHeight: 1.6 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 /* allow-lint */, marginBottom: 4 }}>
+                    {a.company_name}{' '}
+                    <span style={{ fontSize: 11 /* allow-lint */, color: Colors.medGray, fontWeight: 500 }}>
+                      [{a.category_id}]
+                    </span>
+                  </div>
+                  <div>
+                    <strong>Contact:</strong> {a.contact_name || '—'} ·{' '}
+                    {a.contact_email || '—'} · {a.contact_phone || '—'}
+                  </div>
+                  <div>
+                    <strong>License:</strong> {a.license_number || '—'} ·{' '}
+                    <strong>Radius:</strong>{' '}
+                    {a.service_radius_miles ? `${a.service_radius_miles} mi` : '—'}
+                  </div>
+                  <div>
+                    <strong>ZIPs:</strong>{' '}
+                    {a.service_zip_codes && a.service_zip_codes.length > 0
+                      ? a.service_zip_codes.join(', ')
+                      : '—'}
+                  </div>
+                  <div style={{ fontSize: 11 /* allow-lint */, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                    Applied {new Date(a.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleApproveApplicant(a)}
+                  disabled={approvingId === a.id}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: 6,
+                    fontSize: 13 /* allow-lint */,
+                    fontWeight: 600,
+                    background: Colors.sage,
+                    color: Colors.white,
+                    border: 'none',
+                    cursor: approvingId === a.id ? 'wait' : 'pointer',
+                    opacity: approvingId === a.id ? 0.6 : 1,
+                  }}
+                >
+                  {approvingId === a.id ? 'Approving…' : 'Approve'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* KPI Cards */}
@@ -225,7 +375,7 @@ export default function AdminAddOns() {
             key={tab.key}
             onClick={() => setFilter(tab.key)}
             style={{
-              padding: '8px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              padding: '8px 16px', borderRadius: 6, fontSize: 13 /* allow-lint */, fontWeight: 600, cursor: 'pointer',
               border: filter === tab.key ? `2px solid ${Colors.sage}` : '1px solid var(--color-border)',
               background: filter === tab.key ? Colors.sage + '15' : 'var(--color-card)',
               color: filter === tab.key ? Colors.sage : 'var(--text-secondary)',
@@ -263,16 +413,16 @@ export default function AdminAddOns() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                      <span style={{ fontWeight: 700, fontSize: 15 }}>
+                      <span style={{ fontWeight: 700, fontSize: 15 /* allow-lint */ }}>
                         {addon.category?.display_name || addon.category_id}
                       </span>
                       <span style={{
                         display: 'inline-block', padding: '3px 10px', borderRadius: 5,
-                        fontSize: 11, fontWeight: 600, backgroundColor: ss.bg, color: ss.color,
+                        fontSize: 11 /* allow-lint */, fontWeight: 600, backgroundColor: ss.bg, color: ss.color,
                       }}>{ss.label}</span>
                     </div>
 
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    <div style={{ fontSize: 13 /* allow-lint */, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                       <div>
                         <strong>Homeowner:</strong> {addon.profile?.first_name} {addon.profile?.last_name} ({addon.profile?.email})
                       </div>
@@ -291,7 +441,7 @@ export default function AdminAddOns() {
                       {addon.service_notes && (
                         <div><strong>Customer Notes:</strong> {addon.service_notes}</div>
                       )}
-                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                      <div style={{ fontSize: 11 /* allow-lint */, color: 'var(--text-tertiary)', marginTop: 4 }}>
                         Requested {new Date(addon.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </div>
                     </div>
@@ -307,7 +457,7 @@ export default function AdminAddOns() {
                           setQuoteFrequency(addon.billing_frequency || addon.category?.frequency || 'monthly');
                         }}
                         style={{
-                          padding: '8px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600,
+                          padding: '8px 16px', borderRadius: 6, fontSize: 13 /* allow-lint */, fontWeight: 600,
                           background: Colors.sage, color: Colors.white, border: 'none', cursor: 'pointer',
                         }}
                       >
@@ -318,7 +468,7 @@ export default function AdminAddOns() {
                       <button
                         onClick={() => { setQuotingId(null); setQuotePrice(''); setQuoteNotes(''); }}
                         style={{
-                          padding: '6px 12px', borderRadius: 6, fontSize: 12,
+                          padding: '6px 12px', borderRadius: 6, fontSize: 12 /* allow-lint */,
                           background: 'transparent', color: Colors.medGray,
                           border: `1px solid ${Colors.medGray}`, cursor: 'pointer',
                         }}
@@ -337,11 +487,11 @@ export default function AdminAddOns() {
                     display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12,
                   }}>
                     <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                      <label style={{ fontSize: 12 /* allow-lint */, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                         Quoted Price *
                       </label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 15, fontWeight: 600 }}>$</span>
+                        <span style={{ fontSize: 15 /* allow-lint */, fontWeight: 600 }}>$</span>
                         <input
                           type="number"
                           step="0.01"
@@ -350,7 +500,7 @@ export default function AdminAddOns() {
                           onChange={e => setQuotePrice(e.target.value)}
                           placeholder="85.00"
                           style={{
-                            flex: 1, padding: '8px 12px', borderRadius: 6, fontSize: 14,
+                            flex: 1, padding: '8px 12px', borderRadius: 6, fontSize: 14 /* allow-lint */,
                             border: '1px solid var(--color-border)', background: 'var(--color-bg)',
                             color: 'var(--text-primary)',
                           }}
@@ -359,14 +509,14 @@ export default function AdminAddOns() {
                     </div>
 
                     <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                      <label style={{ fontSize: 12 /* allow-lint */, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                         Billing Frequency
                       </label>
                       <select
                         value={quoteFrequency}
                         onChange={e => setQuoteFrequency(e.target.value)}
                         style={{
-                          width: '100%', padding: '8px 12px', borderRadius: 6, fontSize: 14,
+                          width: '100%', padding: '8px 12px', borderRadius: 6, fontSize: 14 /* allow-lint */,
                           border: '1px solid var(--color-border)', background: 'var(--color-bg)',
                           color: 'var(--text-primary)',
                         }}
@@ -379,14 +529,14 @@ export default function AdminAddOns() {
 
                     {categoryProviders.length > 0 && (
                       <div>
-                        <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                        <label style={{ fontSize: 12 /* allow-lint */, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                           Assign Provider
                         </label>
                         <select
                           value={quoteProviderId}
                           onChange={e => setQuoteProviderId(e.target.value)}
                           style={{
-                            width: '100%', padding: '8px 12px', borderRadius: 6, fontSize: 14,
+                            width: '100%', padding: '8px 12px', borderRadius: 6, fontSize: 14 /* allow-lint */,
                             border: '1px solid var(--color-border)', background: 'var(--color-bg)',
                             color: 'var(--text-primary)',
                           }}
@@ -400,7 +550,7 @@ export default function AdminAddOns() {
                     )}
 
                     <div style={{ gridColumn: categoryProviders.length > 0 ? '2' : '1 / -1' }}>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                      <label style={{ fontSize: 12 /* allow-lint */, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                         Provider Notes (optional)
                       </label>
                       <input
@@ -409,7 +559,7 @@ export default function AdminAddOns() {
                         onChange={e => setQuoteNotes(e.target.value)}
                         placeholder="e.g. Assessed on-site 4/15, standard lot"
                         style={{
-                          width: '100%', padding: '8px 12px', borderRadius: 6, fontSize: 14,
+                          width: '100%', padding: '8px 12px', borderRadius: 6, fontSize: 14 /* allow-lint */,
                           border: '1px solid var(--color-border)', background: 'var(--color-bg)',
                           color: 'var(--text-primary)',
                         }}
@@ -421,7 +571,7 @@ export default function AdminAddOns() {
                         onClick={() => handleSubmitQuote(addon.id)}
                         disabled={submitting || !quotePrice}
                         style={{
-                          padding: '10px 24px', borderRadius: 6, fontSize: 14, fontWeight: 700,
+                          padding: '10px 24px', borderRadius: 6, fontSize: 14 /* allow-lint */, fontWeight: 700,
                           background: Colors.sage, color: Colors.white, border: 'none',
                           cursor: submitting ? 'wait' : 'pointer',
                           opacity: submitting || !quotePrice ? 0.6 : 1,

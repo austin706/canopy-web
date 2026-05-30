@@ -2,7 +2,7 @@
 // Home & Property Management Domain
 // ===============================================================
 import { supabase } from './supabaseClient';
-import { sendNotification } from './notifications';
+import { sendNotification, sendDirectEmailNotification } from './notifications';
 import type { Home } from '@/types';
 
 // --- Home Profile ---
@@ -372,8 +372,21 @@ export const inviteHomeMember = async (homeId: string, email: string, role: 'edi
         category: 'home_invite',
         action_url: '/dashboard',
       });
+    } else {
+      // Email-only branch — invitee has no Canopy account yet, so route through
+      // sendDirectEmailNotification which queues a notifications row that the
+      // process-queue cron picks up and ships to Resend. Mirrors the account-
+      // holder branch above so both invitees get a consistent invite touch.
+      await sendDirectEmailNotification({
+        recipient_email: email,
+        title: 'Home Invitation',
+        subject: `You've been invited to join ${addr} on Canopy`,
+        body: `You've been invited to join ${addr} on Canopy as ${role === 'editor' ? 'an editor' : 'a viewer'}. Create your account to accept the invitation.`,
+        category: 'home_invite',
+        action_url: '/signup',
+        action_label: 'Create your account',
+      });
     }
-    // TODO: sendDirectEmailNotification for users without accounts
   } catch {}
 
   return data;

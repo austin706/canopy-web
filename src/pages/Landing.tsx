@@ -2357,6 +2357,7 @@ export default function Landing() {
                 { label: 'Add-On Services', href: '/add-ons' },
                 { label: 'For Agents', href: '/for-agents' },
                 { label: 'For Pros', href: '/for-pros' },
+                { label: 'For Builders', href: '/builder-application' },
                 { label: 'Support', href: '/support' },
               ],
             },

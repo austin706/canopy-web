@@ -645,6 +645,9 @@ export default function Profile() {
           <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/logs')}>
             Maintenance Logs
           </button>
+          <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/whats-new')}>
+            What's New
+          </button>
           {user?.role === 'admin' && (
             <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', borderBottom: '1px solid var(--light-gray)' }} onClick={() => navigate('/admin')}>
               Admin Portal

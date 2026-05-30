@@ -40,76 +40,69 @@ export const linkAgent = async (userId: string, agentId: string) => {
 };
 
 // --- Gift Codes ---
+// 2026-05-29 (subscription hardening / migration 101): atomic, server-
+// authoritative redemption via the `redeem_gift_code` RPC. The RPC does the
+// single-use claim AND the subscription grant under SECURITY DEFINER (so it
+// passes migration 102's BEFORE UPDATE trigger on profiles). Client only
+// builds pre-configured home/equipment + sends the welcome notification.
 export const redeemGiftCode = async (code: string, userId: string) => {
-  // 2026-05-22 (P0-5 / migration 094): redemption lookups now go through a
-  // SECURITY DEFINER RPC instead of direct SELECT against gift_codes. The
-  // direct read worked but required an open `qual = true` SELECT RLS policy
-  // that let any authenticated user enumerate every unredeemed code. The
-  // RPC returns the single matching row only.
-  const { data: rows, error: lookupErr } = await supabase.rpc('lookup_gift_code_for_redemption', { code_input: code.trim().toUpperCase() });
-  if (lookupErr) throw lookupErr;
-  const gc = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-  if (!gc) throw new Error('Invalid code');
-  if (gc.redeemed_by) throw new Error('Code already redeemed');
-  if (gc.expires_at && new Date(gc.expires_at) < new Date()) throw new Error('Code expired');
+  const { data, error } = await supabase.rpc('redeem_gift_code', {
+    p_code: code.trim().toUpperCase(),
+  });
+  if (error) throw error;
+  if (!data?.success) {
+    const msg = (
+      {
+        not_authenticated: 'Please sign in to redeem this code.',
+        invalid_code: 'Invalid code',
+        code_not_found: 'Invalid code',
+        already_redeemed: 'Code already redeemed',
+        expired: 'Code expired',
+      } as Record<string, string>
+    )[String(data?.error || '')] || 'Invalid code';
+    throw new Error(msg);
+  }
 
-  const newExpiry = new Date();
-  newExpiry.setMonth(newExpiry.getMonth() + (gc.duration_months || 12));
-  const { data: claimedRows, error: claimErr } = await supabase.from('gift_codes').update({ redeemed_by: userId, redeemed_at: new Date().toISOString() }).eq('id', gc.id).is('redeemed_by', null).select('id');
-  if (claimErr) throw claimErr;
-  // Atomic single-use guard: 0 rows claimed means another redemption won the race.
-  if (!claimedRows || claimedRows.length === 0) throw new Error('Code already redeemed');
-  // P0-12 (2026-04-22): always write subscription_source='gift' + status='active'
-  // so revenue attribution, RC listener guard, and renewal flows all agree on
-  // provenance. Without this, a gift redemption on a user previously on
-  // stripe/RC could be silently overwritten by a stale stripe listener.
-  const profileUpdate: Record<string, unknown> = {
-    subscription_tier: gc.tier,
-    subscription_status: 'active',
-    subscription_source: 'gift',
-    subscription_expires_at: newExpiry.toISOString(),
-    agent_id: gc.agent_id,
-  };
-  if (gc.client_name) profileUpdate.full_name = gc.client_name;
-  await supabase.from('profiles').update(profileUpdate).eq('id', userId);
+  // 2026-05-29: client_name is no longer auto-written to the user's
+  // full_name by the RPC (full_name is a privileged column under migration
+  // 100's trigger surface). Write it client-side only if the user's profile
+  // currently has no full_name set — otherwise leave alone.
+  if (data.client_name) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', userId)
+      .maybeSingle();
+    if (profile && !profile.full_name) {
+      await supabase.from('profiles').update({ full_name: data.client_name }).eq('id', userId);
+    }
+  }
 
-  // If the gift code has a pending home (pre-configured by agent), create it for the user
+  // Build pending_home (non-sensitive — homes are a separate concern).
   let createdHomeId: string | null = null;
-  if (gc.pending_home && typeof gc.pending_home === 'object') {
+  if (data.pending_home && typeof data.pending_home === 'object') {
     createdHomeId = crypto.randomUUID();
     const homeData = {
       id: createdHomeId,
       user_id: userId,
-      ...gc.pending_home,
+      ...data.pending_home,
       created_at: new Date().toISOString(),
     };
     await supabase.from('homes').upsert(homeData);
-    // Mark onboarding as complete since home is set up
     await supabase.from('profiles').update({ onboarding_complete: true }).eq('id', userId);
   }
 
-  // 2026-05-07 (Phase 2): apply pending_equipment if the agent pre-captured
-  // any equipment for this home. Each entry becomes an equipment row tied
-  // to the newly-created home. Only fires if a home was created from
-  // pending_home — equipment without a home would orphan, so we skip it.
-  if (createdHomeId && Array.isArray(gc.pending_equipment) && gc.pending_equipment.length > 0) {
-    const rawList = gc.pending_equipment as Array<Record<string, unknown>>;
+  if (createdHomeId && Array.isArray(data.pending_equipment) && data.pending_equipment.length > 0) {
+    const rawList = data.pending_equipment as Array<Record<string, unknown>>;
     const cleanRows: Array<Record<string, unknown>> = rawList
       .filter((e: unknown): e is Record<string, unknown> => e !== null && typeof e === 'object')
       .map((eq: Record<string, unknown>) => {
-        // Defaults satisfy the NOT NULL constraints. Agent UIs should
-        // always populate `name` + `category`, but if a record sneaks
-        // through without them we don't want the whole transaction to
-        // fail — better to land an equipment row that the buyer can
-        // edit than to lose the entire pre-onboard.
         const fallbackName = typeof eq.make === 'string' && typeof eq.model === 'string'
           ? `${eq.make} ${eq.model}`
           : 'Equipment';
         return {
           ...eq,
           id: crypto.randomUUID(),
-          // Force home_id over anything in the JSONB so a malformed entry
-          // can't write equipment to a different home.
           home_id: createdHomeId!,
           category: typeof eq.category === 'string' ? eq.category : 'other',
           name: typeof eq.name === 'string' ? eq.name : fallbackName,
@@ -118,8 +111,6 @@ export const redeemGiftCode = async (code: string, userId: string) => {
       });
     if (cleanRows.length > 0) {
       const { error: equipErr } = await supabase.from('equipment').insert(cleanRows);
-      // Non-fatal: if equipment insert fails (RLS, constraint, etc.), we
-      // still want the redemption to succeed. The buyer can re-add later.
       if (equipErr) {
         // eslint-disable-next-line no-console
         console.warn('[redeemGiftCode] pending_equipment insert failed:', equipErr);
@@ -128,14 +119,14 @@ export const redeemGiftCode = async (code: string, userId: string) => {
   }
 
   let agent = null;
-  if (gc.agent_id) {
-    const { data } = await supabase.from('agents').select('*').eq('id', gc.agent_id).single();
-    agent = data;
+  if (data.agent_id) {
+    const { data: agentRow } = await supabase.from('agents').select('*').eq('id', data.agent_id).single();
+    agent = agentRow;
   }
 
-  // Notify the user of their new subscription
+  // Welcome notification (non-blocking).
   try {
-    const tierLabel = gc.tier === 'home' ? 'Canopy Home' : gc.tier === 'pro' ? 'Canopy Pro' : gc.tier;
+    const tierLabel = data.tier === 'home' ? 'Canopy Home' : data.tier === 'pro' ? 'Canopy Pro' : data.tier;
     await sendNotification({
       user_id: userId,
       title: 'Welcome to Canopy!',
@@ -145,7 +136,7 @@ export const redeemGiftCode = async (code: string, userId: string) => {
     });
   } catch {}
 
-  return { success: true, tier: gc.tier, expiresAt: newExpiry.toISOString(), agent };
+  return { success: true, tier: data.tier, expiresAt: data.expires_at, agent };
 };
 
 export const getAgent = async (agentId: string) => {
